@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riwayat PM — Unit 7</title>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">RIWAYAT</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">Riwayat Preventive Maintenance — Unit 7</div>
+  <div class="topbar-right"><div class="live-dot"></div></div>
+</div>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Database Supabase</div>
+      <div class="page-header-title">Riwayat <span>PM</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-label">Filter Modul</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-outline" onclick="loadHistory('')" style="font-size:12px;padding:6px 14px;flex:none">Semua</button>
+      <button class="btn btn-outline" onclick="loadHistory('FEGT')" style="font-size:12px;padding:6px 14px;flex:none">FEGT</button>
+      <button class="btn btn-outline" onclick="loadHistory('SO2')" style="font-size:12px;padding:6px 14px;flex:none">SO2</button>
+      <button class="btn btn-outline" onclick="loadHistory('OPACITY')" style="font-size:12px;padding:6px 14px;flex:none">Opacity</button>
+      <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR E4-E5')" style="font-size:12px;padding:6px 14px;flex:none">Belt E4/E5</button>
+      <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR E2-E3')" style="font-size:12px;padding:6px 14px;flex:none">Belt E2/E3</button>
+      <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR B1-B2')" style="font-size:12px;padding:6px 14px;flex:none">Belt B1/B2</button>
+    </div>
+    <div id="historyList" style="overflow-x:auto">
+      <div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Memuat...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* Mapping modul ke URL page */
+function modulToUrl(modul, id) {
+  var norm = normalizeModul(modul);
+  if (norm === 'FEGT')     return 'fegt.html?id=' + id;
+  if (norm === 'SO2')      return 'so2.html?id=' + id;
+  if (norm === 'OPACITY')  return 'opacity.html?id=' + id;
+  if (norm === 'BELT_E45') return 'beltscale-e45.html?id=' + id;
+  if (norm === 'BELT_E23') return 'beltscale-e23.html?id=' + id;
+  if (norm === 'BELT_B12') return 'beltscale-b12.html?id=' + id;
+  return 'index.html';
+}
+
+function modulToPrintUrl(modul, id) {
+  var norm = normalizeModul(modul);
+  if (norm === 'FEGT')     return 'fegt.html?id=' + id + '&print=1';
+  if (norm === 'SO2')      return 'so2.html?id=' + id + '&print=1';
+  if (norm === 'OPACITY')  return 'opacity.html?id=' + id + '&print=1';
+  if (norm === 'BELT_E45') return 'beltscale-e45.html?id=' + id + '&print=1';
+  if (norm === 'BELT_E23') return 'beltscale-e23.html?id=' + id + '&print=1';
+  if (norm === 'BELT_B12') return 'beltscale-b12.html?id=' + id + '&print=1';
+  return 'index.html';
+}
+
+function loadHistory(modul) {
+  var container = document.getElementById('historyList');
+  container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)">Memuat...</div>';
+  dbList(modul, function(rows) {
+    if (!rows.length) {
+      container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">Belum ada data tersimpan.</div>';
+      return;
+    }
+    var html = '<table class="manual-table" style="width:100%;font-size:12px">'+
+      '<thead><tr><th>Modul</th><th>Tanggal</th><th>PIC</th><th>Work Order</th><th>Disimpan</th><th>Aksi</th></tr></thead><tbody>';
+    rows.forEach(function(r) {
+      var saved = r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : '-';
+      var openUrl = modulToUrl(r.modul, r.id);
+      var printUrl = modulToPrintUrl(r.modul, r.id);
+      html += '<tr>'+
+        '<td><span class="path-label">'+r.modul+'</span></td>'+
+        '<td>'+(r.tanggal||'-')+'</td>'+
+        '<td>'+(r.pic||'-')+'</td>'+
+        '<td>'+(r.work_order||'-')+'</td>'+
+        '<td style="font-size:10px;color:var(--text3)">'+saved+'</td>'+
+        '<td style="white-space:nowrap">'+
+          '<button onclick="window.location.href=\''+openUrl+'\'" style="padding:4px 10px;font-size:11px;background:var(--ok);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#9998; Buka</button>'+
+          '<button onclick="window.open(\''+printUrl+'\',\'_blank\')" style="padding:4px 10px;font-size:11px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128438; Print</button>'+
+          '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>'+
+        '</td></tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  });
+}
+
+function historyDelete(id) {
+  if (!confirm('Hapus data ini?')) return;
+  supaFetch('DELETE', SUPA_TABLE + '?id=eq.' + id)
+    .then(function() {
+      dbShowToast('Data berhasil dihapus');
+      setTimeout(function(){ loadHistory(''); }, 500);
+    })
+    .catch(function(err){ alert('Gagal hapus: ' + (err.message||err)); });
+}
+
+/* Auto-load all on open */
+loadHistory('');
+</script>
+</body>
+</html>
