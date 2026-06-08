@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;padding:8px;overflow-x:hidden}
+.container{max-width:860px;margin:0 auto;background:#fff;border-radius:10px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.1)}
+.header{background:linear-gradient(135deg,#1a6b3a,#2ecc71);color:#fff;padding:16px;border-radius:8px;margin-bottom:20px}
+.header h1{font-size:1.2em;margin-bottom:4px}
+.header p{font-size:0.85em;opacity:0.9}
+.section-title{background:#e8f5e9;padding:10px 14px;border-left:4px solid #2ecc71;margin:18px 0 12px 0;font-weight:700;font-size:0.9em;color:#1a6b3a;border-radius:0 4px 4px 0}
+.form-group{margin-bottom:14px}
+label{display:block;font-weight:600;margin-bottom:5px;font-size:0.88em;color:#333}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:1em;font-family:inherit;color:#222;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#2ecc71;box-shadow:0 0 0 3px rgba(46,204,113,0.15)}
+textarea{min-height:80px;resize:vertical;line-height:1.5}
+select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%23999'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:540px){.row{grid-template-columns:1fr}}
+.section-box{background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-bottom:12px}
+.btn{padding:10px 16px;border:none;border-radius:6px;font-size:0.9em;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:opacity 0.2s}
+.btn:active{opacity:0.75}
+.btn-green{background:#2ecc71;color:#fff}
+.btn-blue{background:#3498db;color:#fff}
+.btn-red{background:#e74c3c;color:#fff;padding:6px 12px;font-size:0.82em}
+.btn-gray{background:#e0e0e0;color:#333}
+.btn-full{width:100%;justify-content:center;margin-bottom:10px}
+/* Image gallery */
+.img-gallery{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.img-thumb{position:relative;cursor:pointer}
+.img-thumb img{width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block}
+.img-thumb .del{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0;font-weight:700}
+/* CROP MODAL */
+#cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+#cropModal.show{display:flex}
+.crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
+.crop-header-hint{font-size:10px;color:#8aab96}
+#cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+#cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
+#cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
+.crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
+.crop-handle.nw{top:-6px;left:-6px;cursor:nw-resize}
+.crop-handle.ne{top:-6px;right:-6px;cursor:ne-resize}
+.crop-handle.sw{bottom:-6px;left:-6px;cursor:sw-resize}
+.crop-handle.se{bottom:-6px;right:-6px;cursor:se-resize}
+.crop-handle.n{width:10px;height:10px;top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize}
+.crop-handle.s{width:10px;height:10px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize}
+.crop-handle.w{width:10px;height:10px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize}
+.crop-handle.e{width:10px;height:10px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize}
+.crop-grid{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;background:
+  repeating-linear-gradient(0deg,transparent,transparent 33.3%,rgba(255,255,255,0.08) 33.3%,rgba(255,255,255,0.08) 33.4%,transparent 33.4%,transparent 66.6%,rgba(255,255,255,0.08) 66.6%,rgba(255,255,255,0.08) 66.7%,transparent 66.7%),
+  repeating-linear-gradient(90deg,transparent,transparent 33.3%,rgba(255,255,255,0.08) 33.3%,rgba(255,255,255,0.08) 33.4%,transparent 33.4%,transparent 66.6%,rgba(255,255,255,0.08) 66.6%,rgba(255,255,255,0.08) 66.7%,transparent 66.7%)}
+.crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30}
+.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
+.crop-btn-save{background:#2ecc71;color:#fff}
+@media print{.no-print{display:none!important}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="no-print header">
+    <h1>📋 Maintenance Report Form</h1>
+    <p>PM · CM · EM · DR · Other</p>
+  </div>
+  <div class="no-print form-group">
+    <label>Tipe Laporan</label>
+    <select id="reportType">
+      <option value="PM">PM — Preventive Maintenance</option>
+      <option value="CM">CM — Correction Maintenance</option>
+      <option value="EM" selected>EM — Emergency Maintenance</option>
+      <option value="DR">DR — Defect Report</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+  <div class="section-title">📌 Informasi Pekerjaan</div>
+  <div class="row">
+    <div class="form-group"><label>WO No.</label><input type="text" id="wo" placeholder="Nomor Work Order"></div>
+    <div class="form-group"><label>Tanggal</label><input type="date" id="workDate"></div>
+  </div>
+  <div class="row">
+    <div class="form-group"><label>Asset Tag</label><input type="text" id="assetTag" placeholder="7BG-ZT-905A"></div>
+    <div class="form-group"><label>Asset Description</label><input type="text" id="assetDesc" placeholder="ID FAN 7A..."></div>
+  </div>
+  <div class="form-group"><label>Failure Description</label><textarea id="failureDesc"></textarea></div>
+  <div class="row">
+    <div class="form-group"><label>PIC</label><input type="text" id="pic" placeholder="Nama teknisi"></div>
+    <div class="form-group"><label>Material Replacement</label><input type="text" id="material" placeholder="Material..."></div>
+  </div>
+  <div class="section-title">🔍 Finding / Problem</div>
+  <div id="findingsBox"></div>
+  <button class="btn btn-blue btn-full no-print" onclick="addItem('findings')">+ Tambah Finding</button>
+  <div class="section-title">🔧 Action</div>
+  <div id="actionsBox"></div>
+  <button class="btn btn-blue btn-full no-print" onclick="addItem('actions')">+ Tambah Action</button>
+  <div class="section-title">✅ Restore</div>
+  <div id="restoreBox"></div>
+  <button class="btn btn-blue btn-full no-print" onclick="addItem('restore')">+ Tambah Restore</button>
+  <div class="section-title">📝 Kesimpulan & Saran</div>
+  <div class="form-group"><textarea id="conclusion"></textarea></div>
+  <div class="no-print" style="margin-top:20px">
+    <button class="btn btn-green btn-full" onclick="exportPdf()" style="padding:13px;font-size:1em">
+⬇ Export ke PDF
+    </button>
+    <button class="btn btn-gray btn-full" onclick="printReport()" style="padding:13px;font-size:1em">
+🖨 Print Preview
+    </button>
+  </div>
+</div>
+
+<!-- CROP MODAL -->
+<div id="cropModal">
+  <div class="crop-dialog">
+    <div class="crop-header">
+      <div class="crop-header-title">✂️ Crop Gambar</div>
+      <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
+    </div>
+    <div id="cropWrap">
+      <img id="cropImg" src="">
+      <div id="cropBox">
+        <div class="crop-handle nw"></div>
+        <div class="crop-handle ne"></div>
+        <div class="crop-handle sw"></div>
+        <div class="crop-handle se"></div>
+        <div class="crop-handle n"></div>
+        <div class="crop-handle s"></div>
+        <div class="crop-handle w"></div>
+        <div class="crop-handle e"></div>
+        <div class="crop-grid"></div>
+      </div>
+    </div>
+    <div class="crop-footer">
+      <div class="crop-btns">
+        <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+        <button class="crop-btn crop-btn-outline" onclick="closeCropModal()">Batal</button>
+        <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+var sections = {
+  findings: [{title:'',desc:'',images:[]}],
+  actions: [{title:'',desc:'',images:[]}],
+  restore: [{title:'',desc:'',images:[]}]
+};
+
+var cropModal = document.getElementById('cropModal');
+cropModal._pending = null;
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+  renderAll();
+  initCropDrag();
+  initReportBackground();
+});
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderSection('findings','findingsBox');
+  renderSection('actions','actionsBox');
+  renderSection('restore','restoreBox');
+}
+
+function renderSection(type, boxId) {
+  var box = document.getElementById(boxId);
+  box.innerHTML = '';
+  sections[type].forEach(function(item, idx) {
+    var div = document.createElement('div');
+    div.className = 'section-box';
+    var html = '';
+    html += '<div class="form-group"><label>Judul '+(idx+1)+'</label>';
+    html += '<input type="text" value="'+esc(item.title)+'" oninput="sections.'+type+'['+idx+'].title=this.value"></div>';
+    html += '<div class="form-group"><label>Deskripsi</label>';
+    html += '<textarea oninput="sections.'+type+'['+idx+'].desc=this.value">'+esc(item.desc)+'</textarea></div>';
+    html += '<button class="btn btn-gray btn-full" onclick="triggerUpload(\''+type+'\','+idx+',-1)" style="margin-bottom:8px">📷 Upload & Crop</button>';
+    if (item.images.length > 0) {
+      html += '<div class="img-gallery">';
+      item.images.forEach(function(img, imgIdx) {
+        html += '<div class="img-thumb">';
+        html += '<img src="'+escAttr(img.dataUrl)+'" onclick="triggerUpload(\''+type+'\','+idx+','+imgIdx+')">';
+        html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    if (idx > 0) {
+      html += '<button class="btn btn-red btn-full" style="margin-top:10px;width:100%" onclick="deleteItem(\''+type+'\','+idx+')">🗑 Hapus</button>';
+    }
+    div.innerHTML = html;
+    box.appendChild(div);
+  });
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return esc(s).replace(/'/g,'&#39;'); }
+
+// ── SECTION ACTIONS ────────────────────────────────────────────────────────
+function addItem(type) {
+  sections[type].push({title:'',desc:'',images:[]});
+  renderSection(type, type+'Box');
+}
+
+function deleteItem(type, idx) {
+  sections[type].splice(idx, 1);
+  renderSection(type, type+'Box');
+}
+
+function deleteImg(type, idx, imgIdx) {
+  sections[type][idx].images.splice(imgIdx, 1);
+  renderSection(type, type+'Box');
+}
+
+// ── IMAGE UPLOAD FLOW ──────────────────────────────────────────────────────
+function triggerUpload(type, idx, replaceIdx) {
+  cropModal._pending = {type:type, idx:idx, replaceIdx:replaceIdx};
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileInput').click();
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  fileToDataUrl(file, function(dataUrl) {
+    if (!dataUrl) return;
+    openCropModal(dataUrl);
+  });
+});
+
+function fileToDataUrl(file, callback) {
+  var looksLikeImage = file && (/^image\//i.test(file.type || '') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name || ''));
+  if (!looksLikeImage) {
+    alert('File harus berupa gambar.');
+    callback(null);
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      try {
+        var c = document.createElement('canvas');
+        var maxSide = 1800;
+        var scale = Math.min(maxSide / (img.naturalWidth || maxSide), maxSide / (img.naturalHeight || maxSide), 1);
+        c.width = Math.max(1, Math.round((img.naturalWidth || 800) * scale));
+        c.height = Math.max(1, Math.round((img.naturalHeight || 600) * scale));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        callback(c.toDataURL('image/jpeg', 0.92));
+      } catch(e) {
+        callback(ev.target.result);
+      }
+    };
+    img.onerror = function() {
+      alert('Format gambar tidak bisa diproses. Gunakan JPG atau PNG.');
+      callback(null);
+    };
+    img.src = ev.target.result;
+  };
+  reader.onerror = function() { alert('Gagal membaca file'); callback(null); };
+  reader.readAsDataURL(file);
+}
+
+// ── CROP MODAL ─────────────────────────────────────────────────────────────
+function openCropModal(dataUrl) {
+  var img = document.getElementById('cropImg');
+  var token = Date.now() + '_' + Math.random();
+  img._loadToken = token;
+  img.onload = function() {
+    if (img._loadToken !== token) return;
+    cropModal.classList.add('show');
+    setTimeout(cropReset, 80);
+  };
+  img.onerror = function() {
+    if (img._loadToken !== token) return;
+    alert('Gambar gagal dimuat. Coba pilih foto JPG/PNG lain.');
+    closeCropModal();
+  };
+  img.src = dataUrl;
+  if (img.complete && img.naturalWidth) {
+    cropModal.classList.add('show');
+    setTimeout(cropReset, 80);
+  }
+}
+
+function cropReset() {
+  var img = document.getElementById('cropImg');
+  var box = document.getElementById('cropBox');
+  var wrap = document.getElementById('cropWrap');
+  var ww = wrap.clientWidth || 320;
+  var wh = wrap.clientHeight || 260;
+  var iw = img.naturalWidth || 800;
+  var ih = img.naturalHeight || 600;
+  var scale = Math.min(ww/iw, wh/ih, 1);
+  var dw = iw * scale;
+  var dh = ih * scale;
+  img.style.width = dw + 'px';
+  img.style.height = dh + 'px';
+  img.style.left = ((ww - dw) / 2) + 'px';
+  img.style.top = ((wh - dh) / 2) + 'px';
+  box.style.left = img.style.left;
+  box.style.top = img.style.top;
+  box.style.width = dw + 'px';
+  box.style.height = dh + 'px';
+}
+
+function closeCropModal() {
+  var img = document.getElementById('cropImg');
+  img._loadToken = '';
+  img.onload = null;
+  img.onerror = null;
+  cropModal.classList.remove('show');
+  img.removeAttribute('src');
+  document.getElementById('fileInput').value = '';
+}
+
+function cropAndSave() {
+  var img = document.getElementById('cropImg');
+  var box = document.getElementById('cropBox');
+  var p = cropModal._pending;
+  if (!p || !sections[p.type] || !sections[p.type][p.idx]) {
+    alert('Target upload tidak ditemukan. Coba upload ulang.');
+    closeCropModal();
+    return;
+  }
+  var iLeft = parseInt(img.style.left) || 0;
+  var iTop = parseInt(img.style.top) || 0;
+  var iW = img.offsetWidth;
+  var iH = img.offsetHeight;
+  if (!img.naturalWidth || !img.naturalHeight || !iW || !iH) {
+    alert('Gambar belum siap diproses. Coba tunggu sebentar lalu simpan lagi.');
+    return;
+  }
+  var bLeft = parseInt(box.style.left) || 0;
+  var bTop = parseInt(box.style.top) || 0;
+  var bW = box.offsetWidth;
+  var bH = box.offsetHeight;
+  var scale = img.naturalWidth / iW;
+  var sx = Math.max(0, (bLeft - iLeft) * scale);
+  var sy = Math.max(0, (bTop - iTop) * scale);
+  var sw = Math.min(img.naturalWidth - sx, bW * scale);
+  var sh = Math.min(img.naturalHeight - sy, bH * scale);
+  var canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(sw));
+  canvas.height = Math.max(1, Math.round(sh));
+  canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  var imgArr = sections[p.type][p.idx].images;
+  var MAX = 1 * 1024 * 1024;
+  var dataUrl;
+  for (var q = 0.85; q >= 0.25; q -= 0.1) {
+    dataUrl = canvas.toDataURL('image/jpeg', q);
+    var currentTotal = imgArr.reduce(function(a,im){ return a + (im.dataUrl ? im.dataUrl.length * 0.75 : 0); }, 0);
+    var newSize = dataUrl.length * 0.75;
+    if (currentTotal + newSize <= MAX) break;
+    if (q <= 0.25) {
+      var factor = Math.sqrt(MAX / (currentTotal + newSize));
+      var c2 = document.createElement('canvas');
+      c2.width = Math.max(50, Math.floor(canvas.width * factor));
+      c2.height = Math.max(50, Math.floor(canvas.height * factor));
+      c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
+      dataUrl = c2.toDataURL('image/jpeg', 0.7);
+      break;
+    }
+  }
+  var entry = {dataUrl: dataUrl};
+  if (p.replaceIdx >= 0) {
+    imgArr[p.replaceIdx] = entry;
+  } else {
+    imgArr.push(entry);
+  }
+  closeCropModal();
+  renderSection(p.type, p.type + 'Box');
+}
+
+// ── DRAG & RESIZE ──────────────────────────────────────────────────────────
+function initCropDrag() {
+  var box = document.getElementById('cropBox');
+  box.addEventListener('mousedown', onStart, false);
+  box.addEventListener('touchstart', onStart, {passive: false});
+  function onStart(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var t = e.touches ? e.touches[0] : e;
+    var startX = t.clientX, startY = t.clientY;
+    var startL = parseInt(box.style.left) || 0;
+    var startT = parseInt(box.style.top) || 0;
+    var startW = box.offsetWidth;
+    var startH = box.offsetHeight;
+    var rect = box.getBoundingClientRect();
+    var rx = t.clientX - rect.left;
+    var ry = t.clientY - rect.top;
+    var edge = 22;
+    var edgeX = rx < edge ? 'l' : rx > startW - edge ? 'r' : '';
+    var edgeY = ry < edge ? 't' : ry > startH - edge ? 'b' : '';
+    var mode = (edgeX || edgeY) ? edgeX + edgeY : 'move';
+    function onMove(ev) {
+      ev.preventDefault();
+      var mv = ev.touches ? ev.touches[0] : ev;
+      var dx = mv.clientX - startX;
+      var dy = mv.clientY - startY;
+      var img = document.getElementById('cropImg');
+      var iL = parseInt(img.style.left) || 0;
+      var iT = parseInt(img.style.top) || 0;
+      var iW = img.offsetWidth;
+      var iH = img.offsetHeight;
+      if (mode === 'move') {
+        box.style.left = clamp(startL + dx, iL, iL + iW - startW) + 'px';
+        box.style.top = clamp(startT + dy, iT, iT + iH - startH) + 'px';
+      } else {
+        var nl = startL, nt = startT, nw = startW, nh = startH;
+        if (mode.includes('r')) nw = clamp(startW + dx, 40, iL + iW - nl);
+        if (mode.includes('b')) nh = clamp(startH + dy, 40, iT + iH - nt);
+        if (mode.includes('l')) { nl = clamp(startL + dx, iL, startL + startW - 40); nw = startL + startW - nl; }
+        if (mode.includes('t')) { nt = clamp(startT + dy, iT, startT + startH - 40); nh = startT + startH - nt; }
+        box.style.left = nl + 'px';
+        box.style.top = nt + 'px';
+        box.style.width = nw + 'px';
+        box.style.height = nh + 'px';
+      }
+    }
+    function onEnd() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('touchend', onEnd);
+    }
+    document.addEventListener('mousemove', onMove, {passive: false});
+    document.addEventListener('touchmove', onMove, {passive: false});
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+  }
+}
+
+function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+function syncSectionsFromDom() {
+  ['findings','actions','restore'].forEach(function(type) {
+    var box = document.getElementById(type+'Box');
+    if (!box) return;
+    var cards = box.querySelectorAll('.section-box');
+    cards.forEach(function(card, idx) {
+      if (!sections[type][idx]) return;
+      var title = card.querySelector('input[type="text"]');
+      var desc = card.querySelector('textarea');
+      if (title) sections[type][idx].title = title.value;
+      if (desc) sections[type][idx].desc = desc.value;
+    });
+  });
+}
+
+function printReport() {
+  syncSectionsFromDom();
+  window.print();
+}
+
+// ── BACKGROUND IMAGE ───────────────────────────────────────────────────────
+var reportBgImg = null;
+var reportBgReady = false;
+var reportBgCallbacks = [];
+
+function initReportBackground() {
+  if (reportBgImg) return;
+  reportBgImg = new Image();
+  reportBgImg.onload = function() {
+    reportBgReady = true;
+    reportBgCallbacks.splice(0).forEach(function(cb){ cb(); });
+  };
+  reportBgImg.onerror = function() {
+    reportBgReady = false;
+    reportBgCallbacks.splice(0).forEach(function(cb){ cb(); });
+  };
+  reportBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+
+function ensureReportBackground(callback) {
+  initReportBackground();
+  if (reportBgReady || (reportBgImg && reportBgImg.complete && reportBgImg.naturalWidth)) {
+    reportBgReady = true;
+    callback();
+    return;
+  }
+  reportBgCallbacks.push(callback);
+}
+
+function drawPdfBackground(doc, pw, ph) {
+  if (!reportBgImg || !reportBgReady) return;
+  try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+
+function getReportTypeLabel() {
+  var value = document.getElementById('reportType').value;
+  var labels = {
+    PM: 'PM (Preventive Maintenance)',
+    CM: 'CM (Correction Maintenance)',
+    EM: 'EM (Emergency Report)',
+    DR: 'DR (Defect Report)',
+    Other: 'Other'
+  };
+  return labels[value] || value;
+}
+
+// ── PDF EXPORT (jsPDF) ─────────────────────────────────────────────────────
+function exportPdf() {
+  syncSectionsFromDom();
+  var jsPDF = window.jspdf ? window.jspdf.jsPDF : null;
+  if (!jsPDF) {
+    alert('PDF library belum siap. Print preview akan dibuka sebagai fallback.');
+    printReport();
+    return;
+  }
+  ensureReportBackground(function() {
+  try {
+    var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    var pw = doc.internal.pageSize.getWidth();
+    var ph = doc.internal.pageSize.getHeight();
+    var now = new Date();
+    var ts = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
+    var marginX = 15;
+    var marginTop = 30;
+    var marginBottom = 30;
+    var contentW = pw - (marginX * 2);
+    var y = marginTop;
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function checkPage(need) { if (y + need > ph - marginBottom) { doc.addPage(); drawPdfBackground(doc,pw,ph); y = marginTop; } }
+    function safe(v) { return (v||'').toString().trim(); }
+
+    drawPdfBackground(doc,pw,ph);
+
+    // INFO BOX
+    doc.setDrawColor(180, 220, 190);
+    doc.setLineWidth(0.4);
+    doc.rect(marginX, y, contentW, 32, 'S');
+    var infoRows = [
+      ['Tipe', getReportTypeLabel(), 'WO No', safe(document.getElementById('wo').value)],
+      ['Tanggal',safe(document.getElementById('workDate').value), 'Asset', safe(document.getElementById('assetTag').value)],
+      ['PIC', safe(document.getElementById('pic').value), 'Material',safe(document.getElementById('material').value)]
+    ];
+    var iy = y + 7;
+    infoRows.forEach(function(row) {
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(8);
+      doc.setTextColor(26,107,58);
+      doc.text(row[0]+':', marginX+3, iy);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(30,30,30);
+      doc.text(row[1].substring(0,40), marginX+22, iy);
+      doc.setFont('helvetica','bold');
+      doc.setTextColor(26,107,58);
+      doc.text(row[2]+':', marginX+(contentW/2)+5, iy);
+      doc.setFont('helvetica','normal');
+      doc.setTextColor(30,30,30);
+      doc.text(row[3].substring(0,40), marginX+(contentW/2)+22, iy);
+      iy += 9;
+    });
+    y += 36;
+
+    // Asset Desc
+    var assetDesc = safe(document.getElementById('assetDesc').value);
+    if (assetDesc) {
+      checkPage(8);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,50,50);
+      doc.text('Asset Desc: '+assetDesc, marginX+3, y); y += 6;
+    }
+
+    // Failure Desc
+    var failureDesc = safe(document.getElementById('failureDesc').value);
+    if (failureDesc) {
+      checkPage(14);
+      doc.setFillColor(255,243,205);
+      var fdLines = doc.splitTextToSize(failureDesc, contentW-6);
+      doc.rect(marginX, y, contentW, 5 + fdLines.length*4, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,107,58);
+      doc.text('Failure Description:', marginX+3, y+4); y += 7;
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+      fdLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y += 4; });
+      y += 3;
+    }
+
+    // Sections
+    [['findings','Finding / Problem'],['actions','Action'],['restore','Restore']].forEach(function(pair) {
+      var type = pair[0];
+      var label = pair[1];
+      var items = sections[type];
+      var hasContent = items.some(function(it){ return it.title||it.desc||it.images.length; });
+      if (!hasContent) return;
+      checkPage(12);
+      doc.setFillColor(232,245,233);
+      doc.rect(marginX, y, contentW, 8, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(26,107,58);
+      doc.text(label, marginX+3, y+5.5); y += 11;
+      items.forEach(function(item, idx) {
+        if (!item.title && !item.desc && !item.images.length) return;
+        checkPage(10);
+        if (item.title) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(30,30,30);
+          doc.text((idx+1)+'. '+item.title, marginX+3, y); y += 5;
+        }
+        if (item.desc) {
+          doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,50,50);
+          var dLines = doc.splitTextToSize(item.desc, contentW-6);
+          dLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+6, y); y += 4; });
+        }
+        // Images grid 3 per row
+        if (item.images.length > 0) {
+          var imgW=52, imgH=40, gap=4, perRow=3, x=marginX+3;
+          y += 2;
+          item.images.forEach(function(im, i) {
+            checkPage(imgH + 5);
+            if (y + imgH > ph - marginBottom) { doc.addPage(); drawPdfBackground(doc,pw,ph); y = marginTop; x = marginX+3; }
+            try { doc.addImage(im.dataUrl, 'JPEG', x, y, imgW, imgH); } catch(e) {}
+            x += imgW + gap;
+            if ((i+1) % perRow === 0) { x = marginX+3; y += imgH + gap; }
+          });
+          if (item.images.length % perRow !== 0) y += imgH + gap;
+          y += 2;
+        }
+        y += 2;
+      });
+    });
+
+    // Conclusion
+    var conclusion = safe(document.getElementById('conclusion').value);
+    if (conclusion) {
+      checkPage(14);
+      doc.setFillColor(232,245,233);
+      doc.rect(marginX, y, contentW, 8, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(26,107,58);
+      doc.text('Kesimpulan & Saran', marginX+3, y+5.5); y += 11;
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+      var cLines = doc.splitTextToSize(conclusion, contentW-6);
+      cLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y += 4; });
+    }
+
+    // Footer kosong — mengandalkan background template
+    var nPages = doc.internal.getNumberOfPages();
+    for (var i=1; i<=nPages; i++) {
+      doc.setPage(i);
+      // No text in reserved 30mm header/footer area
+    }
+
+    // Filename
+    var wo = safe(document.getElementById('wo').value) || 'WO';
+    var date = safe(document.getElementById('workDate').value) || 'date';
+    var atag = safe(document.getElementById('assetTag').value) || 'asset';
+    var adsc = safe(document.getElementById('assetDesc').value)|| 'desc';
+    var fn = [wo, date.replace(/-/g,''), atag, adsc].join('_').replace(/\s+/g,'_').replace(/[\\/:*?"<>|]+/g,'').toLowerCase()+'.pdf';
+    doc.save(fn);
+  } catch(err) {
+    alert('PDF Error: '+err.message);
+    console.error(err);
+  }
+  });
+}
+
+// ── LOAD FROM HISTORY (URL ?id=xxx&print=1) ────────────────────────────────
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  var doPrint = params.get('print') === '1';
+  if (!id) return;
+
+  // Tunggu shared.js (dbLoad) tersedia
+  function waitAndLoad() {
+    if (typeof dbLoad !== 'function') {
+      setTimeout(waitAndLoad, 100);
+      return;
+    }
+    dbLoad(id, function(rec) {
+      if (!rec) {
+        alert('Data tidak ditemukan di database.');
+        return;
+      }
+      var data = rec.data || {};
+
+      // Isi field header
+      var rtEl = document.getElementById('reportType');
+      if (rtEl && rec.report_type) rtEl.value = rec.report_type;
+
+      var woEl = document.getElementById('wo');
+      if (woEl && rec.work_order) woEl.value = rec.work_order;
+
+      var wdEl = document.getElementById('workDate');
+      if (wdEl && rec.tanggal) {
+        // Konversi ke format YYYY-MM-DD jika perlu
+        var tRaw = rec.tanggal || '';
+        if (tRaw.length === 10 && tRaw.indexOf('-') === 4) {
+          wdEl.value = tRaw;
+        }
+      }
+
+      var atEl = document.getElementById('assetTag');
+      if (atEl && data.assetTag) atEl.value = data.assetTag;
+
+      var adEl = document.getElementById('assetDesc');
+      if (adEl && data.assetDesc) adEl.value = data.assetDesc;
+
+      var fdEl = document.getElementById('failureDesc');
+      if (fdEl && data.failureDesc) fdEl.value = data.failureDesc;
+
+      var picEl = document.getElementById('pic');
+      if (picEl && rec.pic) picEl.value = rec.pic;
+
+      var matEl = document.getElementById('material');
+      if (matEl && data.material) matEl.value = data.material;
+
+      var conEl = document.getElementById('conclusion');
+      if (conEl && data.conclusion) conEl.value = data.conclusion;
+
+      // Restore sections (findings / actions / restore)
+      ['findings','actions','restore'].forEach(function(type) {
+        if (data[type] && Array.isArray(data[type]) && data[type].length > 0) {
+          sections[type] = data[type].map(function(item) {
+            return {
+              title: item.title || '',
+              desc: item.desc || '',
+              images: Array.isArray(item.images) ? item.images : []
+            };
+          });
+        }
+      });
+
+      renderAll();
+
+      if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
+
+      // Auto export PDF jika ?print=1
+      if (doPrint) {
+        setTimeout(function() { exportPdf(); }, 600);
+      }
+    });
+  }
+
+  waitAndLoad();
+})();
+
+// ── dbCollectData untuk simpan ke database ─────────────────────────────────
+function dbCollectData(modul) {
+  if (modul !== 'maintenance_report') return null;
+  syncSectionsFromDom();
+  return {
+    modul: 'MAINTENANCE_REPORT',
+    tanggal: document.getElementById('workDate').value || '',
+    shift: '',
+    pic: document.getElementById('pic').value || '',
+    work_order: document.getElementById('wo').value || '',
+    unit: 'Unit 7',
+    report_type: document.getElementById('reportType').value || '',
+    data: {
+      assetTag:    document.getElementById('assetTag').value || '',
+      assetDesc:   document.getElementById('assetDesc').value || '',
+      failureDesc: document.getElementById('failureDesc').value || '',
+      material:    document.getElementById('material').value || '',
+      conclusion:  document.getElementById('conclusion').value || '',
+      findings:    sections.findings,
+      actions:     sections.actions,
+      restore:     sections.restore
+    }
+  };
+}
+</script>
+</body>
+</html>
