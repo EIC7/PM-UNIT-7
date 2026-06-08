@@ -235,12 +235,12 @@
                 html += '<input type="text" value="'+esc(item.title)+'" oninput="sections.'+type+'['+idx+'].title=this.value"></div>';
                 html += '<div class="form-group"><label>Deskripsi</label>';
                 html += '<textarea oninput="sections.'+type+'['+idx+'].desc=this.value">'+esc(item.desc)+'</textarea></div>';
-                html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">';
+                html += '<div style="position:relative;margin-bottom:8px">';
                 html += '<button class="btn btn-gray" type="button" onclick="toggleSourceChoices(\''+type+'\','+idx+')">📤 Upload</button>';
+                html += '<div id="sourceChoices-'+type+'-'+idx+'" style="display:none;position:absolute;top:100%;left:0;transform:translateY(10px);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">';
+                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'camera\')" style="min-width:100px">📷 Kamera</button>';
+                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'storage\')" style="min-width:100px">🗂️ Penyimpanan</button>';
                 html += '</div>';
-                html += '<div id="sourceChoices-'+type+'-'+idx+'" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:8px">';
-                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'camera\')">📷 Kamera</button>';
-                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'storage\')">🗂️ Penyimpanan</button>';
                 html += '</div>';
 
                 if (item.images.length > 0) {
