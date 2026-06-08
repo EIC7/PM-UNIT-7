@@ -236,8 +236,11 @@
                 html += '<div class="form-group"><label>Deskripsi</label>';
                 html += '<textarea oninput="sections.'+type+'['+idx+'].desc=this.value">'+esc(item.desc)+'</textarea></div>';
                 html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">';
-                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'storage\')">🗂️ Penyimpanan</button>';
+                html += '<button class="btn btn-gray" type="button" onclick="toggleSourceChoices(\''+type+'\','+idx+')">📤 Upload</button>';
+                html += '</div>';
+                html += '<div id="sourceChoices-'+type+'-'+idx+'" style="display:none;gap:10px;flex-wrap:wrap;margin-bottom:8px">';
                 html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'camera\')">📷 Kamera</button>';
+                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'storage\')">🗂️ Penyimpanan</button>';
                 html += '</div>';
 
                 if (item.images.length > 0) {
@@ -279,9 +282,17 @@
             renderSection(type, type+'Box');
         }
 
+        function toggleSourceChoices(type, idx) {
+            var el = document.getElementById('sourceChoices-'+type+'-'+idx);
+            if (!el) return;
+            el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
+        }
+
         // ── IMAGE UPLOAD FLOW ────────────────────────────────────────────────────────
         function triggerUpload(type, idx, replaceIdx, source) {
             cropModal._pending = {type:type, idx:idx, replaceIdx:replaceIdx};
+            var choiceEl = document.getElementById('sourceChoices-'+type+'-'+idx);
+            if (choiceEl) choiceEl.style.display = 'none';
             openFileInputSource('fileInput', source || 'storage');
         }
 
