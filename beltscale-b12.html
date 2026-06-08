@@ -441,6 +441,7 @@ function bsHandleFiles(files, side) {
   });
 }
 function bsRenderPreviews(side) {
+  bsSyncImageCaptions();
   var container = document.getElementById('bsImgPreview'+side); if(!container) return;
   container.innerHTML = '';
   bsImages[side].forEach(function(f, idx){
@@ -470,7 +471,7 @@ function bsEscapeHtml(value) {
 function bsAttr(value) { return bsEscapeHtml(value); }
 
 function bsSyncImageCaptions() {
-  ['1','2'].forEach(function(side){
+  Object.keys(bsImages).forEach(function(side){
     (bsImages[side]||[]).forEach(function(img, idx){
       var input = document.getElementById('bsImgCaption_'+side+'_'+idx);
       if (input) img.caption = input.value || '';
