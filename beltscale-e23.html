@@ -575,9 +575,19 @@ function bsDownloadPdf() {
       doc.text('Kondisi '+safe(label)+':',14,y); y += 5;
       if (note) { doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(20,30,25); var ls=doc.splitTextToSize(safe(note),pw-28); doc.text(ls,14,y); y+=ls.length*5+3; }
       if (imgs.length) {
-        var imgW=55,imgH=42,gap=5,perRow=3,x=14;
-        imgs.forEach(function(img,i){ if(y+imgH>ph-18){doc.addPage();y=20;x=14;} try{doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH);}catch(e){} x+=imgW+gap; if((i+1)%perRow===0){x=14;y+=imgH+gap;} });
-        if (imgs.length%perRow!==0) y += imgH+gap; y += 4;
+        var imgW=55,imgH=42,gap=5,capH=10,perRow=3,x=14,rowH=imgH+capH+gap;
+        imgs.forEach(function(img,i){
+          if(y+rowH>ph-18){doc.addPage();y=20;x=14;}
+          try{doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH);}catch(e){}
+          var caption = safe(img.caption||'');
+          if (caption) {
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(60,80,65);
+            doc.text(doc.splitTextToSize(caption,imgW),x,y+imgH+4);
+          }
+          x+=imgW+gap;
+          if((i+1)%perRow===0){x=14;y+=rowH;}
+        });
+        if (imgs.length%perRow!==0) y += rowH; y += 4;
       }
     });
 
@@ -612,7 +622,7 @@ function dbCollectData(modul) {
     threeMonthlyValues['bs3mB_'+i] = bEl ? bEl.value || '' : '';
     threeMonthlyChecks['bs3mCheck_'+i] = cEl ? !!cEl.checked : false;
   }
-  var keepImage = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg'}; };
+  var keepImage = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''}; };
   var images = {
     '1': bsImages['1'].map(keepImage),
     '2': bsImages['2'].map(keepImage)
@@ -660,8 +670,8 @@ function dbCollectData(modul) {
           bs3mRefreshAll();
         }
         if (data.images) {
-          bsImages['1'] = (data.images['1']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});
-          bsImages['2'] = (data.images['2']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});
+          bsImages['1'] = (data.images['1']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
+          bsImages['2'] = (data.images['2']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
           bsRenderPreviews('1'); bsRenderPreviews('2');
         }
         dbShowToast('Data dimuat dari riwayat ✓');

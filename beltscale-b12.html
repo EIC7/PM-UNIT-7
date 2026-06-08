@@ -459,7 +459,7 @@ function bsRenderPreviews(side) {
     wrap.innerHTML = thumb + cropBtn +
       '<button onclick="bsRemoveFile('+side+','+idx+')" style="position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:17px;text-align:center;padding:0">×</button>'+ 
       '<div style="font-size:9px;color:var(--text3);max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">'+safeName+'</div>'+ 
-      '<input type="text" placeholder="Keterangan" value="'+caption+'" oninput="bsImages['+JSON.stringify(side)+']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+      '<input type="text" id="bsImgCaption_'+side+'_'+idx+'" placeholder="Keterangan" value="'+caption+'" oninput="bsImages['+JSON.stringify(side)+']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
   updateSizeIndicator('bs', side);
@@ -468,6 +468,16 @@ function bsEscapeHtml(value) {
   return String(value||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});
 }
 function bsAttr(value) { return bsEscapeHtml(value); }
+
+function bsSyncImageCaptions() {
+  ['1','2'].forEach(function(side){
+    (bsImages[side]||[]).forEach(function(img, idx){
+      var input = document.getElementById('bsImgCaption_'+side+'_'+idx);
+      if (input) img.caption = input.value || '';
+    });
+  });
+}
+
 function bsReEdit(side, idx) {
   var img = bsImages[side][idx];
   if (!img) return;
@@ -477,6 +487,7 @@ function bsRemoveFile(side, idx) { bsImages[side].splice(idx,1); bsRenderPreview
 
 function bsDownloadPdf() {
   try {
+    bsSyncImageCaptions();
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     var pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
@@ -589,9 +600,19 @@ function bsDownloadPdf() {
       doc.text('Kondisi '+safe(label)+':',14,y); y += 5;
       if (note) { doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(20,30,25); var ls=doc.splitTextToSize(safe(note),pw-28); doc.text(ls,14,y); y+=ls.length*5+3; }
       if (imgs.length) {
-        var imgW=55,imgH=42,gap=5,perRow=3,x=14;
-        imgs.forEach(function(img,i){ if(y+imgH>ph-18){doc.addPage();y=20;x=14;} try{doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH);}catch(e){} x+=imgW+gap; if((i+1)%perRow===0){x=14;y+=imgH+gap;} });
-        if (imgs.length%perRow!==0) y += imgH+gap; y += 4;
+        var imgW=55,imgH=42,gap=5,capH=10,perRow=3,x=14,rowH=imgH+capH+gap;
+        imgs.forEach(function(img,i){
+          if(y+rowH>ph-18){doc.addPage();y=20;x=14;}
+          try{doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH);}catch(e){}
+          var caption = safe(img.caption||'');
+          if (caption) {
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(60,80,65);
+            doc.text(doc.splitTextToSize(caption,imgW),x,y+imgH+4);
+          }
+          x+=imgW+gap;
+          if((i+1)%perRow===0){x=14;y+=rowH;}
+        });
+        if (imgs.length%perRow!==0) y += rowH; y += 4;
       }
     });
 
@@ -609,6 +630,7 @@ function bsDownloadPdf() {
 
 function dbCollectData(modul) {
   if (modul !== 'beltscale') return null;
+  bsSyncImageCaptions();
   var gv4 = function(id){var e=document.getElementById(id);return e?e.value:'';};
   var checks = {};
   var checksOk = {};
@@ -629,7 +651,7 @@ function dbCollectData(modul) {
     threeMonthlyValues['bs3mB_'+i] = bEl ? bEl.value || '' : '';
     threeMonthlyChecks['bs3mCheck_'+i] = cEl ? !!cEl.checked : false;
   }
-  var keepImage = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg'}; };
+  var keepImage = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''}; };
   var images = {
     '1': bsImages['1'].map(keepImage),
     '2': bsImages['2'].map(keepImage)
@@ -688,8 +710,8 @@ function dbCollectData(modul) {
           bs3mRefreshAll();
         }
         if (data.images) {
-          bsImages['1'] = (data.images['1']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});
-          bsImages['2'] = (data.images['2']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});
+          bsImages['1'] = (data.images['1']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
+          bsImages['2'] = (data.images['2']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
           bsRenderPreviews('1'); bsRenderPreviews('2');
         }
         dbShowToast('Data dimuat dari riwayat ✓');
