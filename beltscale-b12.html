@@ -79,6 +79,7 @@
             <th style="width:36px">No.</th>
             <th>Calibration Process</th>
             <th>Criteria</th>
+            <th style="width:44px;text-align:center">✓</th>
             <th id="bs3mTh1" style="min-width:130px;text-align:center">CCH-SCAL-100A<br><span style="font-weight:400;font-size:10px">(CONVEYOR 100A)</span></th>
             <th id="bs3mTh2" style="min-width:130px;text-align:center">CCH-SCAL-100B<br><span style="font-weight:400;font-size:10px">(CONVEYOR 100B)</span></th>
           </tr>
@@ -86,81 +87,92 @@
         <tbody>
           <tr style="background:#e8f5ee;border-left:4px solid #27ae60;">
             <td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#27ae60;font-weight:600">✓ Centang Semua 3 Monthly</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mAllA" onchange="bs3mCheckAllSide('a',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mAllB" onchange="bs3mCheckAllSide('b',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mAllCheck" onchange="bs3mCheckAll(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>
+            <td></td>
+            <td></td>
           </tr>
-          <tr style="background:#f2f9ff;font-weight:700"><td colspan="5">Check If OK</td></tr>
+          <tr style="background:#f2f9ff;font-weight:700"><td colspan="6">Check If OK</td></tr>
           <tr>
             <td>1</td>
             <td>Check Diagnostic Load (Span) dA1</td>
-            <td>Load Reading</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_1" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_1" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">Load Reading</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_1" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_1" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">PPM</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_1" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">PPM</span></div></td>
           </tr>
           <tr>
             <td></td>
             <td>Count Belt Pulses mH6</td>
-            <td>Pass 1</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_2" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_2" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">Pass 1</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_2" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_2" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">Meter</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_2" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">Meter</span></div></td>
           </tr>
           <tr>
             <td></td>
             <td>Stop at 49.7 second</td>
-            <td>Pass 2</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_3" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_3" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">Pass 2</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_3" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_3" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">Meter</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_3" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">Meter</span></div></td>
           </tr>
           <tr>
             <td></td>
             <td>Length Travel Diameter (198M)</td>
-            <td>Pass 3</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_4" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_4" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">Pass 3</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_4" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_4" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">Meter</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_4" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">Meter</span></div></td>
           </tr>
           <tr>
             <td></td>
             <td></td>
-            <td>Pulse / M</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_5" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_5" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">Pulse / M</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_5" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_5" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">PPM</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_5" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">PPM</span></div></td>
           </tr>
-          <tr style="background:#f2f9ff;font-weight:700"><td colspan="5">Initial Calibration Zero &amp; Span mA8</td></tr>
+          <tr style="background:#f2f9ff;font-weight:700"><td colspan="6">Initial Calibration Zero &amp; Span mA8</td></tr>
           <tr>
             <td>2</td>
             <td></td>
-            <td>Zero Check (Unloaded)</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_6" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_6" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">Zero Check (Unloaded)</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_6" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_6" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">PPM</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_6" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">PPM</span></div></td>
           </tr>
           <tr>
             <td></td>
             <td></td>
-            <td>Test Load Check</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_7" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_7" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">Test Load Check</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_7" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_7" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">PPM</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_7" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">PPM</span></div></td>
           </tr>
-          <tr style="background:#f2f9ff;font-weight:700"><td colspan="5">Normal Calibration</td></tr>
+          <tr style="background:#f2f9ff;font-weight:700"><td colspan="6">Normal Calibration</td></tr>
           <tr>
             <td>3</td>
-            <td></td>
-            <td>Zero Error (%)</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_8" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_8" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td>Calibration Zero and Span</td>
+            <td style="font-size:11px;color:var(--text3)">Zero Error (%)</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_8" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_8" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">%</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_8" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">%</span></div></td>
           </tr>
           <tr>
             <td></td>
             <td></td>
-            <td>Span Error (%)</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_9" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_9" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">Span Error (%)</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_9" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_9" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">%</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_9" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">%</span></div></td>
           </tr>
           <tr>
             <td>4</td>
             <td>Load Reading After Calibration</td>
-            <td>R</td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mA_10" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
-            <td style="text-align:center"><input type="checkbox" id="bs3mB_10" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="font-size:11px;color:var(--text3)">R</td>
+            <td style="text-align:center"><input type="checkbox" id="bs3mCheck_10" onchange="bs3mRefreshAll()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mA_10" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">%</span></div></td>
+            <td style="text-align:center"><div style="display:inline-flex;align-items:center;gap:6px;justify-content:center"><input type="text" id="bs3mB_10" placeholder="Isi" style="width:55px;min-width:55px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"><span style="font-size:11px;color:var(--text3);white-space:nowrap">%</span></div></td>
           </tr>
         </tbody>
       </table>
@@ -316,8 +328,8 @@ function bsBuildTable() {
   var trAll = document.createElement('tr');
   trAll.style.cssText = 'background:#e8f5ee;border-left:4px solid #27ae60;';
   trAll.innerHTML =
-    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#27ae60;font-weight:600">✓ Centang Semua</td>'+
-    '<td style="text-align:center"><input type="checkbox" id="bsAllA" title="'+BS_CFG.a.name+'" onchange="bsCheckAllSide(\'a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>'+
+    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#27ae60;font-weight:600">✓ Centang Semua</td>'+ 
+    '<td style="text-align:center"><input type="checkbox" id="bsAllA" title="'+BS_CFG.a.name+'" onchange="bsCheckAllSide(\'a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>'+ 
     '<td style="text-align:center"><input type="checkbox" id="bsAllB" title="'+BS_CFG.b.name+'" onchange="bsCheckAllSide(\'b\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>';
   tbody.appendChild(trAll);
   BS_CHECKS.forEach(function(item, idx) {
@@ -332,15 +344,16 @@ function bsBuildTable() {
         '<td style="text-align:center;font-size:12px;color:var(--text3)">'+(item.no||'')+'</td>'+
         '<td style="font-size:12px;padding:6px 10px;padding-left:24px">'+item.label+'</td>'+
         '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
+
         '<td style="text-align:center"><input type="text" id="bsA_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>'+
         '<td style="text-align:center"><input type="text" id="bsB_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>';
     } else {
       tr.innerHTML =
         '<td style="text-align:center;font-size:12px;color:var(--text3)">'+(item.no||'')+'</td>'+
         '<td style="font-size:12px;padding:6px 10px">'+item.label+'</td>'+
-        '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
-        '<td style="text-align:center"><input type="checkbox" id="bsA_'+idx+'" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>'+
-        '<td style="text-align:center"><input type="checkbox" id="bsB_'+idx+'" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>';
+        '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+ 
+        '<td style="text-align:center"><input type="checkbox" id="bsA_'+idx+'" onchange="bsRefreshAllChecks()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>'+ 
+        '<td style="text-align:center"><input type="checkbox" id="bsB_'+idx+'" onchange="bsRefreshAllChecks()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>';
     }
     tbody.appendChild(tr);
   });
@@ -348,48 +361,63 @@ function bsBuildTable() {
 
 function bsCheckAll(checked) {
   BS_CHECKS.forEach(function(item, idx) {
-    if (item.type === 'header') return;
-    if (item.type === 'check') {
-      ['bsA_','bsB_'].forEach(function(p){var e=document.getElementById(p+idx);if(e&&e.type==='checkbox')e.checked=checked;});
-    }
-  });
-  var a=document.getElementById('bsAllA'); if(a) a.checked=checked;
-  var b=document.getElementById('bsAllB'); if(b) b.checked=checked;
-}
-function bsCheckAllSide(side, checked) {
-  var prefix = side==='a' ? 'bsA_' : 'bsB_';
-  BS_CHECKS.forEach(function(item, idx) {
     if (item.type !== 'check') return;
-    var e = document.getElementById(prefix+idx); if(e&&e.type==='checkbox') e.checked=checked;
-  });
-}
-function bs3mCheckAllSide(side, checked) {
-  var prefix = side==='a' ? 'bs3mA_' : 'bs3mB_';
-  document.querySelectorAll('#bs3mTable input[type=checkbox]').forEach(function(e){
-    if (e.id && e.id.indexOf(prefix) === 0) e.checked = checked;
-  });
-}
-function bsRefreshAllChecks() {
-  var allA = true, allB = true, hasCheck = false;
-  BS_CHECKS.forEach(function(item, idx) {
-    if (item.type !== 'check') return;
-    hasCheck = true;
     var a = document.getElementById('bsA_'+idx);
     var b = document.getElementById('bsB_'+idx);
-    if (!(a && a.checked)) allA = false;
-    if (!(b && b.checked)) allB = false;
+    if (a && a.type === 'checkbox') a.checked = checked;
+    if (b && b.type === 'checkbox') b.checked = checked;
   });
-  var aAll = document.getElementById('bsAllA');
-  var bAll = document.getElementById('bsAllB');
-  if (aAll) aAll.checked = hasCheck && allA;
-  if (bAll) bAll.checked = hasCheck && allB;
+}
+function bsCheckAllSide(side, checked) {
+  BS_CHECKS.forEach(function(item, idx) {
+    if (item.type !== 'check') return;
+    var id = 'bs' + side.toUpperCase() + '_' + idx;
+    var e = document.getElementById(id);
+    if (e && e.type === 'checkbox') e.checked = checked;
+  });
+  bsRefreshAllChecks();
+}
+function bs3mCheckAll(checked) {
+  for (var i = 1; i <= 10; i++) {
+    var e = document.getElementById('bs3mCheck_'+i);
+    if (e && e.type === 'checkbox') e.checked = checked;
+  }
+}
+function bs3mRefreshAll() {
+  var all = true, hasCheck = false;
+  for (var i = 1; i <= 10; i++) {
+    var e = document.getElementById('bs3mCheck_'+i);
+    if (!e) continue;
+    hasCheck = true;
+    if (!e.checked) all = false;
+  }
+  var master = document.getElementById('bs3mAllCheck'); if (master) master.checked = hasCheck && all;
+}
+function bsRefreshAllChecks() {
+  var allA = true, allB = true, hasA = false, hasB = false;
+  BS_CHECKS.forEach(function(item, idx) {
+    if (item.type !== 'check') return;
+    var a = document.getElementById('bsA_'+idx);
+    var b = document.getElementById('bsB_'+idx);
+    if (a && a.type === 'checkbox') {
+      hasA = true;
+      if (!a.checked) allA = false;
+    }
+    if (b && b.type === 'checkbox') {
+      hasB = true;
+      if (!b.checked) allB = false;
+    }
+  });
+  var masterA = document.getElementById('bsAllA'); if (masterA) masterA.checked = hasA && allA;
+  var masterB = document.getElementById('bsAllB'); if (masterB) masterB.checked = hasB && allB;
 }
 
 function bsReset() {
   bsImages = {'1':[], '2':[]};
   ['bsDate','bsPIC','bsWO','bsNote1','bsNote2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  ['bsU78','bsCCH','bsAllA','bsAllB','bs3mAllA','bs3mAllB'].forEach(function(id){var e=document.getElementById(id);if(e&&e.type==='checkbox')e.checked=false;});
+  ['bsU78','bsCCH','bsAllA','bsAllB','bs3mAllCheck'].forEach(function(id){var e=document.getElementById(id);if(e&&e.type==='checkbox')e.checked=false;});
   document.querySelectorAll('#bs3mTable input[type=checkbox]').forEach(function(e){if(e.type==='checkbox') e.checked = false;});
+  document.querySelectorAll('#bs3mTable input[type=text]').forEach(function(e){e.value='';});
   ['bsImgPreview1','bsImgPreview2'].forEach(function(id){var e=document.getElementById(id);if(e)e.innerHTML='';});
   ['bsImgInput1','bsImgInput2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   updateSizeIndicator('bs',1); updateSizeIndicator('bs',2);
@@ -497,16 +525,24 @@ function bsDownloadPdf() {
     BS_CHECKS.forEach(function(item, idx){
       if (item.type==='header') { rows.push([{content:item.label,colSpan:5,styles:{fontStyle:'bold',fillColor:[230,245,235]}}]); return; }
       var aEl = document.getElementById('bsA_'+idx), bEl = document.getElementById('bsB_'+idx);
-      var aVal = item.type==='input' ? (aEl?aEl.value:'') : (aEl&&aEl.checked?'[v]':'[ ]');
-      var bVal = item.type==='input' ? (bEl?bEl.value:'') : (bEl&&bEl.checked?'[v]':'[ ]');
-      rows.push([String(item.no||''),safe(item.label),safe((item.criteria||'').replace(/\n/g,' / ')),safe(aVal),safe(bVal)]);
+      var aVal = '';
+      var bVal = '';
+      if (item.type === 'check') {
+        aVal = aEl && aEl.checked ? '[v]' : '[ ]';
+        bVal = bEl && bEl.checked ? '[v]' : '[ ]';
+      } else {
+        aVal = aEl ? aEl.value : '';
+        bVal = bEl ? bEl.value : '';
+      }
+      var criteriaText = item.criteria || '';
+      rows.push([String(item.no||''),safe(item.label),safe(criteriaText.replace(/\n/g,' / ')),safe(aVal),safe(bVal)]);
     });
     doc.autoTable({
       startY:y, head:[['No','Step of Work','Criteria',safe(BS_CFG.a.name),safe(BS_CFG.b.name)]],
       body:rows, theme:'grid', margin:{left:14,right:14},
       headStyles:{fillColor:[44,62,48],textColor:[210,230,215],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},
       bodyStyles:{fontSize:8,textColor:[20,30,25],font:'helvetica'},
-      columnStyles:{'0':{cellWidth:10,halign:'center'},1:{cellWidth:72},2:{cellWidth:44},3:{cellWidth:28,halign:'center'},4:{cellWidth:28,halign:'center'}},
+      columnStyles:{'0':{cellWidth:10,halign:'center'},1:{cellWidth:58},2:{cellWidth:40},3:{cellWidth:28,halign:'center'},4:{cellWidth:28,halign:'center'}},
       alternateRowStyles:{fillColor:[246,249,247]}
     });
     y = doc.lastAutoTable.finalY + 8;
@@ -516,18 +552,18 @@ function bsDownloadPdf() {
     var chk = function(id){ var e = document.getElementById(id); return e&&e.checked ? '[v]' : '[ ]'; };
     var rows3m = [
       [{content:'Check If OK',colSpan:5,styles:{fontStyle:'bold',fillColor:[242,249,255]}}],
-      ['1','Check Diagnostic Load (Span) dA1','Load Reading',chk('bs3mA_1'),chk('bs3mB_1')],
-      ['','Count Belt Pulses mH6','Pass 1',chk('bs3mA_2'),chk('bs3mB_2')],
-      ['','Stop at 49.7 second','Pass 2',chk('bs3mA_3'),chk('bs3mB_3')],
-      ['','Length Travel Diameter (198M)','Pass 3',chk('bs3mA_4'),chk('bs3mB_4')],
-      ['','','Pulse / M',chk('bs3mA_5'),chk('bs3mB_5')],
+      ['1','Check Diagnostic Load (Span) dA1',chk('bs3mCheck_1')+' Load Reading',safe(document.getElementById('bs3mA_1')?document.getElementById('bs3mA_1').value:'') || '',safe(document.getElementById('bs3mB_1')?document.getElementById('bs3mB_1').value:'') || ''],
+      ['','Count Belt Pulses mH6',chk('bs3mCheck_2')+' Pass 1',safe(document.getElementById('bs3mA_2')?document.getElementById('bs3mA_2').value:'') || '',safe(document.getElementById('bs3mB_2')?document.getElementById('bs3mB_2').value:'') || ''],
+      ['','Stop at 49.7 second',chk('bs3mCheck_3')+' Pass 2',safe(document.getElementById('bs3mA_3')?document.getElementById('bs3mA_3').value:'') || '',safe(document.getElementById('bs3mB_3')?document.getElementById('bs3mB_3').value:'') || ''],
+      ['','Length Travel Diameter (198M)',chk('bs3mCheck_4')+' Pass 3',safe(document.getElementById('bs3mA_4')?document.getElementById('bs3mA_4').value:'') || '',safe(document.getElementById('bs3mB_4')?document.getElementById('bs3mB_4').value:'') || ''],
+      ['','',''+chk('bs3mCheck_5')+' Pulse / M',safe(document.getElementById('bs3mA_5')?document.getElementById('bs3mA_5').value:'') || '',safe(document.getElementById('bs3mB_5')?document.getElementById('bs3mB_5').value:'') || ''],
       [{content:'Initial Calibration Zero & Span mA8',colSpan:5,styles:{fontStyle:'bold',fillColor:[242,249,255]}}],
-      ['2','','Zero Check (Unloaded)',chk('bs3mA_6'),chk('bs3mB_6')],
-      ['','','Test Load Check',chk('bs3mA_7'),chk('bs3mB_7')],
+      ['2','',''+chk('bs3mCheck_6')+' Zero Check (Unloaded)',safe(document.getElementById('bs3mA_6')?document.getElementById('bs3mA_6').value:'') || '',safe(document.getElementById('bs3mB_6')?document.getElementById('bs3mB_6').value:'') || ''],
+      ['','',''+chk('bs3mCheck_7')+' Test Load Check',safe(document.getElementById('bs3mA_7')?document.getElementById('bs3mA_7').value:'') || '',safe(document.getElementById('bs3mB_7')?document.getElementById('bs3mB_7').value:'') || ''],
       [{content:'Normal Calibration',colSpan:5,styles:{fontStyle:'bold',fillColor:[242,249,255]}}],
-      ['3','','Zero Error (%)',chk('bs3mA_8'),chk('bs3mB_8')],
-      ['','','Span Error (%)',chk('bs3mA_9'),chk('bs3mB_9')],
-      ['4','Load Reading After Calibration','R',chk('bs3mA_10'),chk('bs3mB_10')]
+      ['3','',''+chk('bs3mCheck_8')+' Zero Error (%)',safe(document.getElementById('bs3mA_8')?document.getElementById('bs3mA_8').value:'') || '',safe(document.getElementById('bs3mB_8')?document.getElementById('bs3mB_8').value:'') || ''],
+      ['','',''+chk('bs3mCheck_9')+' Span Error (%)',safe(document.getElementById('bs3mA_9')?document.getElementById('bs3mA_9').value:'') || '',safe(document.getElementById('bs3mB_9')?document.getElementById('bs3mB_9').value:'') || ''],
+      ['4','Load Reading After Calibration',''+chk('bs3mCheck_10')+' R',safe(document.getElementById('bs3mA_10')?document.getElementById('bs3mA_10').value:'') || '',safe(document.getElementById('bs3mB_10')?document.getElementById('bs3mB_10').value:'') || '']
     ];
     doc.autoTable({
       startY:y, head:[['No','Calibration Process','Criteria',safe(BS_CFG.a.name),safe(BS_CFG.b.name)]],
@@ -575,24 +611,30 @@ function dbCollectData(modul) {
   if (modul !== 'beltscale') return null;
   var gv4 = function(id){var e=document.getElementById(id);return e?e.value:'';};
   var checks = {};
+  var checksOk = {};
   BS_CHECKS.forEach(function(item, idx){
     if (item.type==='header') return;
     var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
-    checks[idx] = {a:aEl?(aEl.type==='checkbox'?aEl.checked:aEl.value):'', b:bEl?(bEl.type==='checkbox'?bEl.checked:bEl.value):''};
+    var aVal = aEl ? (aEl.type==='checkbox' ? aEl.checked : aEl.value || '') : '';
+    var bVal = bEl ? (bEl.type==='checkbox' ? bEl.checked : bEl.value || '') : '';
+    checks[idx] = {a:aVal, b:bVal};
   });
   var threeMonthlyChecks = {};
+  var threeMonthlyValues = {};
   for (var i = 1; i <= 10; i++) {
     var aEl = document.getElementById('bs3mA_'+i);
     var bEl = document.getElementById('bs3mB_'+i);
-    threeMonthlyChecks['bs3mA_'+i] = aEl ? !!aEl.checked : false;
-    threeMonthlyChecks['bs3mB_'+i] = bEl ? !!bEl.checked : false;
+    var cEl = document.getElementById('bs3mCheck_'+i);
+    threeMonthlyValues['bs3mA_'+i] = aEl ? aEl.value || '' : '';
+    threeMonthlyValues['bs3mB_'+i] = bEl ? bEl.value || '' : '';
+    threeMonthlyChecks['bs3mCheck_'+i] = cEl ? !!cEl.checked : false;
   }
   var keepImage = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg'}; };
   var images = {
     '1': bsImages['1'].map(keepImage),
     '2': bsImages['2'].map(keepImage)
   };
-  return {modul:'BELT CONVEYOR B1-B2', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},threeMonthlyChecks:threeMonthlyChecks,images:images}};
+  return {modul:'BELT CONVEYOR B1-B2', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,checksOk:checksOk,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},threeMonthlyChecks:threeMonthlyChecks,threeMonthlyValues:threeMonthlyValues,images:images}};
 }
 
 /* ── INIT ── */
@@ -612,18 +654,38 @@ function dbCollectData(modul) {
         if (data.notes) { gv('bsNote1',data.notes.note1||''); gv('bsNote2',data.notes.note2||''); }
         if (data.checks) {
           Object.keys(data.checks).forEach(function(i){
-            var c=data.checks[i];
-            var aEl=document.getElementById('bsA_'+i), bEl=document.getElementById('bsB_'+i);
-            if(aEl){if(aEl.type==='checkbox')aEl.checked=!!c.a;else aEl.value=c.a||'';}
-            if(bEl){if(bEl.type==='checkbox')bEl.checked=!!c.b;else bEl.value=c.b||'';}
+            var c = data.checks[i] || {};
+            var aEl = document.getElementById('bsA_'+i), bEl = document.getElementById('bsB_'+i);
+            if (aEl) {
+              if (aEl.type==='checkbox') aEl.checked = !!c.a;
+              else aEl.value = (typeof c.a === 'boolean' ? '' : c.a) || '';
+            }
+            if (bEl) {
+              if (bEl.type==='checkbox') bEl.checked = !!c.b;
+              else bEl.value = (typeof c.b === 'boolean' ? '' : c.b) || '';
+            }
           });
+          if (data.checksOk) {
+            Object.keys(data.checksOk).forEach(function(id){
+              var e = document.getElementById(id);
+              if (e && e.type==='checkbox') e.checked = !!data.checksOk[id];
+            });
+          }
           bsRefreshAllChecks();
         }
+        if (data.threeMonthlyValues) {
+          for (var i = 1; i <= 10; i++) {
+            var aEl = document.getElementById('bs3mA_'+i), bEl = document.getElementById('bs3mB_'+i);
+            if (aEl) aEl.value = data.threeMonthlyValues['bs3mA_'+i] || '';
+            if (bEl) bEl.value = data.threeMonthlyValues['bs3mB_'+i] || '';
+          }
+        }
         if (data.threeMonthlyChecks) {
-          ['bs3mA_1','bs3mB_1','bs3mA_2','bs3mB_2','bs3mA_3','bs3mB_3','bs3mA_4','bs3mB_4','bs3mA_5','bs3mB_5','bs3mA_6','bs3mB_6','bs3mA_7','bs3mB_7','bs3mA_8','bs3mB_8','bs3mA_9','bs3mB_9','bs3mA_10','bs3mB_10'].forEach(function(id){
-            var e=document.getElementById(id);
-            if (e && e.type==='checkbox') e.checked = !!data.threeMonthlyChecks[id];
-          });
+          for (var i = 1; i <= 10; i++) {
+            var e = document.getElementById('bs3mCheck_'+i);
+            if (e && e.type==='checkbox') e.checked = !!data.threeMonthlyChecks['bs3mCheck_'+i];
+          }
+          bs3mRefreshAll();
         }
         if (data.images) {
           bsImages['1'] = (data.images['1']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});
