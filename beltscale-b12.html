@@ -81,14 +81,14 @@
         <div id="bsNote1Label" style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:8px">&#128247; Panel 100A</div>
         <textarea id="bsNote1" rows="2" placeholder="Catatan kondisi panel..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
         <div id="bsImgDrop1" style="border:2px dashed var(--border);border-radius:4px;padding:14px;text-align:center;cursor:pointer;background:var(--bg2,#dde3de);transition:border-color .2s"
-          onclick="openFileInputSource('bsImgInput1','storage')"
+          onclick="toggleSourceChoices('bsSource1')"
           ondragover="event.preventDefault();this.style.borderColor='var(--ok)'"
           ondragleave="this.style.borderColor='var(--border)'"
           ondrop="bsHandleDrop(event,1)">
           <input type="file" id="bsImgInput1" accept="image/*,.heic,.heif" multiple style="display:none" onchange="bsHandleFiles(this.files,1)">
           <div style="font-size:22px;margin-bottom:4px">&#128247;</div>
-          <div style="font-size:12px;color:var(--text3)">Klik atau drag file untuk upload</div>
-          <div style="display:flex;justify-content:center;gap:8px;margin-top:10px">
+          <div style="font-size:12px;color:var(--text3)">Klik untuk pilih sumber atau drag file untuk upload</div>
+          <div id="bsSource1" style="display:none;justify-content:center;gap:8px;margin-top:10px">
             <button type="button" onclick="event.stopPropagation();openFileInputSource('bsImgInput1','storage')" style="padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:4px;background:#fff;color:#111;font-size:12px;cursor:pointer">Penyimpanan</button>
             <button type="button" onclick="event.stopPropagation();openFileInputSource('bsImgInput1','camera')" style="padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:4px;background:#fff;color:#111;font-size:12px;cursor:pointer">Kamera</button>
           </div>
@@ -107,7 +107,7 @@
           <input type="file" id="bsImgInput2" accept="image/*,.heic,.heif" multiple style="display:none" onchange="bsHandleFiles(this.files,2)">
           <div style="font-size:22px;margin-bottom:4px">&#128247;</div>
           <div style="font-size:12px;color:var(--text3)">Klik atau drag file untuk upload</div>
-          <div style="display:flex;justify-content:center;gap:8px;margin-top:10px">
+          <div id="bsSource2" style="display:none;justify-content:center;gap:8px;margin-top:10px">
             <button type="button" onclick="event.stopPropagation();openFileInputSource('bsImgInput2','storage')" style="padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:4px;background:#fff;color:#111;font-size:12px;cursor:pointer">Penyimpanan</button>
             <button type="button" onclick="event.stopPropagation();openFileInputSource('bsImgInput2','camera')" style="padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:4px;background:#fff;color:#111;font-size:12px;cursor:pointer">Kamera</button>
           </div>

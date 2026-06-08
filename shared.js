@@ -206,12 +206,17 @@ function openFileInputSource(inputId, source) {
   var input = document.getElementById(inputId);
   if (!input) return;
   input.value = '';
+  input.removeAttribute('capture');
   if (source === 'camera') {
-    input.setAttribute('capture', 'environment');
-  } else {
-    input.removeAttribute('capture');
+    input.setAttribute('capture', 'camera');
   }
   input.click();
+}
+
+function toggleSourceChoices(elementId) {
+  var el = document.getElementById(elementId);
+  if (!el) return;
+  el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
 }
 
 /* ── IMAGE LOADING OVERLAY ── */
