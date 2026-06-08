@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opacity Monitor — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">OPACITY</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; 1 Monthly Inspect Opacity Monitor</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clockOpacity">--:--:--</div>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <!-- INFO PANEL -->
+  <div class="panel">
+    <div class="section-label">Informasi Pekerjaan</div>
+    <div class="meta-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
+      <div class="meta-field"><label>Asset 7A</label><input type="text" id="opAsset7A" value="7BG-AIT-813A"></div>
+      <div class="meta-field"><label>Asset 7B</label><input type="text" id="opAsset7B" value="7BG-AIT-813B"></div>
+      <div class="meta-field"><label>Date / Time</label><input type="date" id="opDate"></div>
+      <div class="meta-field"><label>PIC</label><input type="text" id="opPIC" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="opWO" placeholder="Work Order..."></div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST TABLE -->
+  <div class="panel">
+    <div class="section-label">Step of Work — Opacity ID Fan Inlet 7A &amp; 7B</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="opCheckTable">
+        <thead>
+          <tr>
+            <th style="width:36px">No.</th>
+            <th>Step of Work</th>
+            <th style="width:120px">Criteria</th>
+            <th style="width:46px;text-align:center">✓</th>
+            <th style="width:120px;text-align:center">7BG-AIT-813A<br><span style="font-weight:400;font-size:10px">(Opacity Inlet 7A)</span></th>
+            <th style="width:120px;text-align:center">7BG-AIT-813B<br><span style="font-weight:400;font-size:10px">(Opacity Inlet 7B)</span></th>
+            <th>Result / Remark</th>
+          </tr>
+        </thead>
+        <tbody id="opCheckBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EVIDENCE / NOTES -->
+  <div class="panel">
+    <div class="section-label">Catatan &amp; Evidence Photo</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+
+      <!-- 7A -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">📷 7A — 7BG-AIT-813A</div>
+        <textarea id="opNote7A" rows="2" placeholder="Catatan untuk 7A..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
+        <div id="opImgDrop7A" style="border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;position:relative;transition:border-color .2s;background:var(--bg2,#dde3de)"
+          onclick="openFileInputSource('opImgInput7A','storage')"
+          ondragover="event.preventDefault();this.style.borderColor='var(--ok)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="opHandleDrop(event,'7A')">
+          <input type="file" id="opImgInput7A" accept="image/*,.heic,.heif" multiple style="display:none" onchange="opHandleFiles(this.files,'7A')">
+          <div style="font-size:24px;margin-bottom:6px">🖼️</div>
+          <div style="font-size:12px;color:var(--text3)">Klik atau drag file untuk upload</div>
+          <div style="display:flex;justify-content:center;gap:8px;margin-top:10px">
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('opImgInput7A','storage')" style="padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:4px;background:#fff;color:#111;font-size:12px;cursor:pointer">Penyimpanan</button>
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('opImgInput7A','camera')" style="padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:4px;background:#fff;color:#111;font-size:12px;cursor:pointer">Kamera</button>
+          </div>
+        </div>
+        <div id="opImgPreview7A" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+        <div id="opSizeInfo7A" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
+      </div>
+
+      <!-- 7B -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">📷 7B — 7BG-AIT-813B</div>
+        <textarea id="opNote7B" rows="2" placeholder="Catatan untuk 7B..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
+        <div id="opImgDrop7B" style="border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;position:relative;transition:border-color .2s;background:var(--bg2,#dde3de)"
+          onclick="openFileInputSource('opImgInput7B','storage')"
+          ondragover="event.preventDefault();this.style.borderColor='var(--ok)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="opHandleDrop(event,'7B')">
+          <input type="file" id="opImgInput7B" accept="image/*,.heic,.heif" multiple style="display:none" onchange="opHandleFiles(this.files,'7B')">
+          <div style="font-size:24px;margin-bottom:6px">🖼️</div>
+          <div style="font-size:12px;color:var(--text3)">Klik atau drag file untuk upload</div>
+          <div style="display:flex;justify-content:center;gap:8px;margin-top:10px">
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('opImgInput7B','storage')" style="padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:4px;background:#fff;color:#111;font-size:12px;cursor:pointer">Penyimpanan</button>
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('opImgInput7B','camera')" style="padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:4px;background:#fff;color:#111;font-size:12px;cursor:pointer">Kamera</button>
+          </div>
+        </div>
+        <div id="opImgPreview7B" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+        <div id="opSizeInfo7B" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="btn-row" style="margin-top:20px">
+    <button class="btn btn-pdf" onclick="opDownloadPdf()">⬇ Download PDF Report</button>
+    <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="dbSave('opacity')">💾 Simpan ke Database</button>
+    <button class="btn btn-danger" onclick="opReset()">✕ Reset</button>
+  </div>
+
+</div>
+
+<!-- CROP MODAL -->
+<div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#1a221e;border:1px solid #243228;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="background:#243228;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:14px;color:#e8f0eb;letter-spacing:1px">✂️ Crop Gambar</div>
+      <div style="font-size:11px;color:#4a6656">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
+    </div>
+    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none">
+      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
+      <div id="cropBox" style="position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
+        <div style="position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px;top:-6px;left:-6px;cursor:nw-resize"></div>
+        <div style="position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px;top:-6px;right:-6px;cursor:ne-resize"></div>
+        <div style="position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px;bottom:-6px;left:-6px;cursor:sw-resize"></div>
+        <div style="position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px;bottom:-6px;right:-6px;cursor:se-resize"></div>
+        <div style="position:absolute;width:10px;height:10px;background:#2ecc71;border-radius:2px;top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize"></div>
+        <div style="position:absolute;width:10px;height:10px;background:#2ecc71;border-radius:2px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize"></div>
+        <div style="position:absolute;width:10px;height:10px;background:#2ecc71;border-radius:2px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize"></div>
+        <div style="position:absolute;width:10px;height:10px;background:#2ecc71;border-radius:2px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize"></div>
+      </div>
+    </div>
+    <div style="padding:10px 16px;background:#1a221e;border-top:1px solid #2a3a30">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:#4a6656">Output:</span>
+        <input type="number" id="cropOutW" placeholder="W" min="10" max="4000" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #243228;border-radius:4px;background:#243228;color:#fff;text-align:center" oninput="cropLinkSize('w')">
+        <span style="color:#4a6656;font-size:12px">×</span>
+        <input type="number" id="cropOutH" placeholder="H" min="10" max="4000" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #243228;border-radius:4px;background:#243228;color:#fff;text-align:center" oninput="cropLinkSize('h')">
+        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:#4a6656;cursor:pointer"><input type="checkbox" id="cropLock" checked style="accent-color:#2ecc71"> Kunci rasio</label>
+        <span id="cropNatSize" style="font-size:10px;color:#4a6656;margin-left:4px"></span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243228;border-radius:6px;background:transparent;color:#8aab96;cursor:pointer;font-size:12px">↺ Reset</button>
+        <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243228;border-radius:6px;background:transparent;color:#8aab96;cursor:pointer;font-size:12px">Lewati</button>
+        <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#27ae60;color:#fff;cursor:pointer;font-size:13px;font-weight:700">✓ Simpan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var OP_CHECKS = [
+  {no:1,  label:'Make sure PTW already issue.',          criteria:'',                                                                 hasCheck:true, both:true},
+  {no:2,  label:'Prepare tool & material required.',    criteria:'',                                                                 hasCheck:true, both:true},
+  {no:3,  label:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', criteria:'Cleanliness', hasCheck:true, both:true},
+  {no:4,  label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress). * replace if required', criteria:'No dust / No water ingress / No broken', hasCheck:true, both:true},
+  {no:5,  label:'Check connection was tightened and no looses.', criteria:'Tight Connection', hasCheck:true, both:true},
+  {no:'6a',label:'OPACITY ANALYZER INSPECTION — Record / Note the faulty or alarm active', criteria:'Opacity Monitor', hasCheck:true, both:true},
+  {no:'6b',label:'Cleaning Mirror/lens, chamber opacity, record if any abnormality found.', criteria:'', hasCheck:true, both:true},
+  {no:'6c',label:'Air Regulator Flushing / Cleaning.', criteria:'', hasCheck:true, both:true},
+  {no:'6d',label:'Seal Air Filter and Air Filter Replacement (*inspection and cleaning if Spare not Available)', criteria:'', hasCheck:true, both:true},
+  {no:9,  label:'Raise new WO & repair if any defect found.', criteria:'', hasCheck:true, both:false},
+  {no:10, label:'Leave the location within safe condition.', criteria:'', hasCheck:true, both:true},
+];
+
+var opImages = {'7A':[], '7B':[]};
+var opTableBuilt = false;
+
+function opBuildTable() {
+  if (opTableBuilt) return; opTableBuilt = true;
+  var tbody = document.getElementById('opCheckBody');
+  var trAll = document.createElement('tr');
+  trAll.style.cssText = 'background:#e8f5ee;border-left:4px solid #27ae60;';
+  trAll.innerHTML =
+    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#27ae60;font-weight:600">✓ Centang Semua</td>'+
+    '<td style="text-align:center"><input type="checkbox" id="opAllCheck" onchange="opCheckAll(\'check\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>'+
+    '<td style="text-align:center"><input type="checkbox" id="opAll7A" onchange="opCheckAll(\'7a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>'+
+    '<td style="text-align:center"><input type="checkbox" id="opAll7B" onchange="opCheckAll(\'7b\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>'+
+    '<td style="font-size:11px;color:#27ae60;font-style:italic;padding-left:8px">semua OK</td>';
+  tbody.appendChild(trAll);
+  OP_CHECKS.forEach(function(item, idx) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td style="text-align:center;font-size:12px;color:var(--text3);white-space:nowrap">'+(item.no||'')+'</td>'+
+      '<td style="font-size:13px;padding:8px 12px">'+item.label+'</td>'+
+      '<td style="font-size:12px;color:var(--text3);font-style:italic">'+item.criteria+'</td>'+
+      '<td style="text-align:center"><input type="checkbox" id="opChk_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>'+
+      '<td style="text-align:center"><input type="checkbox" id="op7A_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>'+
+      '<td style="text-align:center">'+(item.both?'<input type="checkbox" id="op7B_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)">':'<span style="color:var(--text3);font-size:12px">—</span>')+'</td>'+
+      '<td id="opRec_'+idx+'" style="font-size:12px;font-family:\'Courier New\',monospace;color:var(--ok);font-weight:600;padding-left:8px"></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function opChk(idx) {
+  var chk=document.getElementById('opChk_'+idx);
+  var a=document.getElementById('op7A_'+idx);
+  var b=document.getElementById('op7B_'+idx);
+  var rec=document.getElementById('opRec_'+idx);
+  if(!rec) return;
+  var any=(chk&&chk.checked)||(a&&a.checked)||(b&&b.checked);
+  rec.textContent=any?'ok':'';
+}
+
+function opCheckAll(which, checked) {
+  OP_CHECKS.forEach(function(item, idx) {
+    var id=which==='check'?'opChk_'+idx:which==='7a'?'op7A_'+idx:'op7B_'+idx;
+    var el=document.getElementById(id);
+    if(el&&(which!=='7b'||item.both))el.checked=checked;
+    opChk(idx);
+  });
+}
+
+function opRefreshAllChecks() {
+  var allCheck=true, all7A=true, all7B=true, has7B=false;
+  OP_CHECKS.forEach(function(item, idx) {
+    var chk=document.getElementById('opChk_'+idx);
+    var a=document.getElementById('op7A_'+idx);
+    var b=document.getElementById('op7B_'+idx);
+    if(!(chk&&chk.checked)) allCheck=false;
+    if(!(a&&a.checked)) all7A=false;
+    if(item.both){has7B=true;if(!(b&&b.checked)) all7B=false;}
+  });
+  var el=document.getElementById('opAllCheck'); if(el) el.checked=allCheck;
+  el=document.getElementById('opAll7A'); if(el) el.checked=all7A;
+  el=document.getElementById('opAll7B'); if(el) el.checked=has7B&&all7B;
+}
+
+function opHandleDrop(e, side) {
+  e.preventDefault();
+  document.getElementById('opImgDrop'+side).style.borderColor='var(--border)';
+  opHandleFiles(e.dataTransfer.files, side);
+}
+
+function opHandleFiles(files, side) {
+  Array.from(files).forEach(function(file) {
+    if(!isImageFile(file)){
+      var reader=new FileReader();
+      reader.onload=function(ev){opImages[side].push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''});opRenderPreviews(side);};
+      reader.readAsDataURL(file); return;
+    }
+    fileToJpegDataUrl(file, function(dataUrl){
+      if(!dataUrl) return;
+      var name=file.name.replace(/\.[^.]+$/,'.jpg');
+      imgOpenCropper(dataUrl, name, 'image/jpeg', opImages[side], side, 'op', -1);
+    });
+  });
+}
+
+function opRenderPreviews(side) {
+  var container=document.getElementById('opImgPreview'+side); if(!container) return;
+  container.innerHTML='';
+  opImages[side].forEach(function(img,idx){
+    if(!img||!img.name) return;
+    var wrap=document.createElement('div');
+    wrap.style.cssText='position:relative;display:inline-block;text-align:center;width:112px';
+    var isImg=IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
+    var safeName=opEscapeHtml(img.name);
+    var dataUrl=img.dataUrl||'';
+    var fallback='<span style=&quot;font-size:10px;color:#c0392b;padding:6px;text-align:center;line-height:1.35&quot;>Preview gagal<br>upload ulang</span>';
+    var thumbStyle='width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);display:block;background:#eef3ef;background-image:linear-gradient(45deg,#d9e3dc 25%,transparent 25%),linear-gradient(-45deg,#d9e3dc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d9e3dc 75%),linear-gradient(-45deg,transparent 75%,#d9e3dc 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0';
+    var thumb=isImg
+      ? '<div style="'+thumbStyle+';overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+opAttr(dataUrl)+'" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="imgReEditOp(\''+side+'\','+idx+')" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\''+fallback+'\'" title="Klik untuk crop ulang"></div>'
+      : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
+    var cropBtn=isImg?'<button onclick="imgReEditOp(\''+side+'\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">✂ Crop</button>':'';
+    var caption = opEscapeHtml(img.caption||'');
+    wrap.innerHTML=thumb+cropBtn+'<button onclick="opRemoveImg(\''+side+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">×</button><div style="font-size:9px;color:var(--text3);text-align:center;margin-top:2px;max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safeName+'</div>'+
+      '<input type="text" placeholder="Keterangan" value="'+caption+'" oninput="opImages['+JSON.stringify(side)+']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+    container.appendChild(wrap);
+  });
+  updateSizeIndicator('op', side);
+}
+
+function opEscapeHtml(value) {
+  return String(value||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});
+}
+
+function opAttr(value) {
+  return opEscapeHtml(value);
+}
+
+function imgReEditOp(side, idx) {
+  var img=opImages[side][idx];
+  imgOpenCropper(img.dataUrl, img.name, img.type, opImages[side], side, 'op', idx);
+}
+function opRemoveImg(side, idx) { opImages[side].splice(idx,1); opRenderPreviews(side); }
+
+function opReset() {
+  OP_CHECKS.forEach(function(item,idx){
+    ['opChk_','op7A_','op7B_'].forEach(function(p){var e=document.getElementById(p+idx);if(e)e.checked=false;});
+    var r=document.getElementById('opRec_'+idx);if(r)r.textContent='';
+  });
+  ['opAllCheck','opAll7A','opAll7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=false;});
+  ['opDate','opPIC','opWO','opNote7A','opNote7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('opAsset7A').value='7BG-AIT-813A';
+  document.getElementById('opAsset7B').value='7BG-AIT-813B';
+  opImages={'7A':[],'7B':[]};
+  ['opImgPreview7A','opImgPreview7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.innerHTML='';});
+  ['opImgInput7A','opImgInput7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  updateSizeIndicator('op','7A'); updateSizeIndicator('op','7B');
+}
+
+function opDownloadPdf() {
+  try{
+    var jsPDF=window.jspdf.jsPDF;
+    var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight();
+    var now=new Date();
+    var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    var dd=String(now.getDate()).padStart(2,'0'),yy=now.getFullYear();
+    var hh=String(now.getHours()).padStart(2,'0'),mn=String(now.getMinutes()).padStart(2,'0');
+    var nowStr=dd+' '+BULAN[now.getMonth()]+' '+yy+'  '+hh+':'+mn;
+    function safe(s){return String(s||'').replace(/[^\x00-\xFF]/g,'?');}
+    function gv(id){var e=document.getElementById(id);return e?e.value:'';}
+    doc.setFillColor(44,62,48);doc.rect(0,0,pw,26,'F');doc.setFillColor(192,57,43);doc.rect(0,26,pw,2,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(210,230,215);
+    doc.text('1 MONTHLY INSPECT OPACITY MONITOR',pw/2,11,{align:'center'});
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(140,185,155);
+    doc.text('PT POMI - PLTU Paiton Unit 7 - CEMS Opacity ID Fan Inlet 7A & 7B',pw/2,18,{align:'center'});
+    doc.text(safe(gv('opAsset7A'))+' (7A)  |  '+safe(gv('opAsset7B'))+' (7B)',pw/2,23,{align:'center'});
+    var y=34;
+    doc.setDrawColor(200,215,205);doc.setLineWidth(0.3);doc.rect(12,y,pw-24,18,'S');
+    var infoL=[['Date/Time',gv('opDate')],['PIC',gv('opPIC')]];
+    var infoR=[['Work Order',gv('opWO')],['Dicetak',nowStr]];
+    [[infoL,14],[infoR,108]].forEach(function(pair){pair[0].forEach(function(it,i){doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(74,94,82);doc.text(it[0]+':',pair[1],y+7+i*7);doc.setFont('helvetica','normal');doc.setTextColor(20,30,25);doc.text(safe(it[1]),pair[1]+28,y+7+i*7);});});
+    y+=22;
+    doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(44,62,48);doc.text('STEP OF WORK',14,y);doc.setDrawColor(160,185,170);doc.setLineWidth(0.4);doc.line(14,y+2,pw-14,y+2);y+=7;
+    var tableRows=OP_CHECKS.map(function(item,idx){
+      var chk=document.getElementById('opChk_'+idx),a7=document.getElementById('op7A_'+idx),b7=document.getElementById('op7B_'+idx),rec=document.getElementById('opRec_'+idx);
+      return [String(item.no),safe(item.label),safe(item.criteria),(chk&&chk.checked)?'[v]':'[ ]',(a7&&a7.checked)?'[v]':'[ ]',(b7&&b7.checked)?'[v]':(item.both?'[ ]':'-'),rec?safe(rec.textContent):''];
+    });
+    doc.autoTable({startY:y,head:[['No','Step of Work','Criteria','✓','7A','7B','Result']],body:tableRows,theme:'grid',margin:{left:14,right:14},headStyles:{fillColor:[44,62,48],textColor:[210,230,215],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica'},columnStyles:{'0':{cellWidth:10,halign:'center'},1:{cellWidth:72},2:{cellWidth:34},3:{cellWidth:10,halign:'center'},4:{cellWidth:12,halign:'center'},5:{cellWidth:12,halign:'center'},6:{cellWidth:22,halign:'center'}},alternateRowStyles:{fillColor:[246,249,247]}});
+    y=doc.lastAutoTable.finalY+8;
+    var n7a=safe(gv('opNote7A')),n7b=safe(gv('opNote7B'));
+    if(n7a||n7b||opImages['7A'].length||opImages['7B'].length){
+      if(y>ph-40){doc.addPage();y=20;}
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(44,62,48);doc.text('CATATAN & EVIDENCE PHOTO',14,y);doc.setLineWidth(0.4);doc.line(14,y+2,pw-14,y+2);y+=7;
+      function addSide(label,note,imgs){
+        if(!note&&!imgs.length) return;
+        doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(44,62,48);doc.text(label,14,y);y+=5;
+        if(note){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(20,30,25);var ls=doc.splitTextToSize(note,pw-28);doc.text(ls,14,y);y+=ls.length*5+3;}
+        if(imgs.length){var imgW=55,imgH=42,gap=5,perRow=3,x=14;imgs.forEach(function(img,i){if(y+imgH>ph-18){doc.addPage();y=20;x=14;}try{doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH);}catch(e){}x+=imgW+gap;if((i+1)%perRow===0){x=14;y+=imgH+gap;}});if(imgs.length%perRow!==0)y+=imgH+gap;}
+        y+=4;
+      }
+      addSide('Note 7A ('+safe(gv('opAsset7A'))+'):',n7a,opImages['7A']);
+      addSide('Note 7B ('+safe(gv('opAsset7B'))+'):',n7b,opImages['7B']);
+    }
+    var tp=doc.internal.getNumberOfPages();
+    for(var i=1;i<=tp;i++){doc.setPage(i);doc.setDrawColor(160,185,170);doc.setLineWidth(0.3);doc.line(14,ph-12,pw-14,ph-12);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(100,130,110);doc.text('Opacity Monitor PM - PLTU Paiton Unit 7 - PT POMI',14,ph-7);doc.text('Hal '+i+' / '+tp,pw-14,ph-7,{align:'right'});doc.text('Dicetak: '+nowStr,pw/2,ph-7,{align:'center'});}
+    doc.save('Opacity_PM_Report_'+yy+String(now.getMonth()+1).padStart(2,'0')+dd+'.pdf');
+  }catch(err){alert('PDF Error: '+err.message);console.error(err);}
+}
+
+/* ── dbCollectData untuk modul Opacity ── */
+function dbCollectData(modul) {
+  if (modul !== 'opacity') return null;
+  var checks={};
+  var gv3=function(id){var e=document.getElementById(id);return e?e.value:'';};
+  OP_CHECKS.forEach(function(item,idx){
+    checks[idx]={chk:!!(document.getElementById('opChk_'+idx)&&document.getElementById('opChk_'+idx).checked),a7:!!(document.getElementById('op7A_'+idx)&&document.getElementById('op7A_'+idx).checked),b7:!!(document.getElementById('op7B_'+idx)&&document.getElementById('op7B_'+idx).checked)};
+  });
+  var keepImage=function(img){return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg'};};
+  var images={'7A':opImages['7A'].map(keepImage),
+              '7B':opImages['7B'].map(keepImage)};
+  return {modul:'Opacity Monitor', tanggal:gv3('opDate'), pic:gv3('opPIC'), work_order:gv3('opWO'), unit:'Unit 7', data:{checks:checks,notes:{note7A:gv3('opNote7A'),note7B:gv3('opNote7B')},images:images}};
+}
+
+/* ── INIT ── */
+setInterval(function(){var el=document.getElementById('clockOpacity');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
+opBuildTable();
+(function(){var today=new Date();var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');var el=document.getElementById('opDate');if(el&&!el.value)el.value=todayStr;})();
+
+/* ── LOAD FROM HISTORY ── */
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var id=params.get('id');
+  var doPrint=params.get('print')==='1';
+  if(!id) return;
+  dbLoad(id, function(rec){
+    var data=rec.data||{};
+    window._editingId=id;
+    var gv=function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
+    setTimeout(function(){
+      gv('opDate',rec.tanggal); gv('opPIC',rec.pic); gv('opWO',rec.work_order);
+      if(data.notes){gv('opNote7A',data.notes.note7A||'');gv('opNote7B',data.notes.note7B||'');}
+      if(data.images){
+        opImages['7A']=(data.images['7A']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});
+        opImages['7B']=(data.images['7B']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});
+        opRenderPreviews('7A'); opRenderPreviews('7B');
+      }
+      if(data.checks){Object.keys(data.checks).forEach(function(i){var c=data.checks[i];var set=function(id2,val){var e=document.getElementById(id2);if(e&&e.type==='checkbox')e.checked=val;};set('opChk_'+i,c.chk);set('op7A_'+i,c.a7);set('op7B_'+i,c.b7);opChk(i);});opRefreshAllChecks();}
+      dbShowToast('Data dimuat dari riwayat ✓');
+      if(doPrint)setTimeout(opDownloadPdf,500);
+    },800);
+  });
+})();
+</script>
+</body>
+</html>
