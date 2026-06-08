@@ -100,7 +100,7 @@
         <div id="bsNote2Label" style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:8px">&#128247; Panel 100B</div>
         <textarea id="bsNote2" rows="2" placeholder="Catatan kondisi panel..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
         <div id="bsImgDrop2" style="border:2px dashed var(--border);border-radius:4px;padding:14px;text-align:center;cursor:pointer;background:var(--bg2,#dde3de);transition:border-color .2s"
-          onclick="openFileInputSource('bsImgInput2','storage')"
+          onclick="toggleSourceChoices('bsSource2')"
           ondragover="event.preventDefault();this.style.borderColor='var(--ok)'"
           ondragleave="this.style.borderColor='var(--border)'"
           ondrop="bsHandleDrop(event,2)">
