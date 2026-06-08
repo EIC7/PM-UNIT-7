@@ -435,6 +435,7 @@ function bsHandleFiles(files, side) {
   });
 }
 function bsRenderPreviews(side) {
+  bsSyncImageCaptions();
   var container = document.getElementById('bsImgPreview'+side); if(!container) return;
   container.innerHTML = '';
   bsImages[side].forEach(function(f, idx){
@@ -453,7 +454,7 @@ function bsRenderPreviews(side) {
     wrap.innerHTML = thumb + cropBtn +
       '<button onclick="bsRemoveFile('+side+','+idx+')" style="position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:17px;text-align:center;padding:0">×</button>'+ 
       '<div style="font-size:9px;color:var(--text3);max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">'+safeName+'</div>'+ 
-      '<input type="text" placeholder="Keterangan" value="'+caption+'" oninput="bsImages['+JSON.stringify(side)+']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+      '<input id="bsImgCaption_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+caption+'" oninput="bsImages['+JSON.stringify(side)+']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
   updateSizeIndicator('bs', side);
@@ -462,6 +463,14 @@ function bsEscapeHtml(value) {
   return String(value||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});
 }
 function bsAttr(value) { return bsEscapeHtml(value); }
+function bsSyncImageCaptions() {
+  Object.keys(bsImages).forEach(function(side){
+    (bsImages[side]||[]).forEach(function(img, idx){
+      var input = document.getElementById('bsImgCaption_'+side+'_'+idx);
+      if (input) img.caption = input.value || '';
+    });
+  });
+}
 function bsReEdit(side, idx) {
   var img = bsImages[side][idx];
   if (!img) return;
@@ -471,6 +480,7 @@ function bsRemoveFile(side, idx) { bsImages[side].splice(idx,1); bsRenderPreview
 
 function bsDownloadPdf() {
   try {
+    bsSyncImageCaptions();
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
     var pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
@@ -605,6 +615,7 @@ function bsDownloadPdf() {
 
 function dbCollectData(modul) {
   if (modul !== 'beltscale') return null;
+  bsSyncImageCaptions();
   var gv4 = function(id){var e=document.getElementById(id);return e?e.value:'';};
   var checks = {};
   BS_CHECKS.forEach(function(item, idx){

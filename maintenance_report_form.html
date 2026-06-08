@@ -249,6 +249,7 @@
                         html += '<div class="img-thumb">';
                         html += '<img src="'+escAttr(img.dataUrl)+'" onclick="triggerUpload(\''+type+'\','+idx+','+imgIdx+',\'storage\')">';
                         html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
+                        html += '<input type="text" placeholder="Keterangan" value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:#111;box-sizing:border-box">';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -427,6 +428,7 @@
             canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
             var imgArr = sections[p.type][p.idx].images;
+            var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
             var MAX = 1 * 1024 * 1024;
             var dataUrl;
 
@@ -446,7 +448,9 @@
                 }
             }
 
-            var entry = {dataUrl: dataUrl};
+            var entry = {dataUrl: dataUrl, caption: existing && existing.caption ? existing.caption : ''};
+            if (existing && existing.name) { entry.name = existing.name; }
+            if (existing && existing.type) { entry.type = existing.type; }
             if (p.replaceIdx >= 0) {
                 imgArr[p.replaceIdx] = entry;
             } else {
