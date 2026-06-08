@@ -8,6 +8,39 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="shared.js"></script>
 <link rel="stylesheet" href="shared.css">
+<style>
+:root{
+  --bg:#eef5fb;
+  --bg2:#dceaf6;
+  --panel:rgba(255,255,255,0.78);
+  --panel-border:rgba(150,180,210,0.65);
+  --steel:#294c6f;
+  --steel-light:#3f6f9f;
+  --ok:#1d74c7;
+  --text:#152638;
+  --text2:#2c4660;
+  --text3:#6f879c;
+  --border:rgba(150,180,210,0.65);
+  --shadow:0 4px 24px rgba(35,75,120,0.10);
+  --shadow2:0 2px 8px rgba(35,75,120,0.08);
+}
+body{
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgba(170,205,235,0.45) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 80%, rgba(135,185,225,0.30) 0%, transparent 50%),
+    linear-gradient(180deg, #f8fbfe 0%, var(--bg) 100%);
+}
+.topbar{
+  background:linear-gradient(90deg,#1c3550 0%,#294c6f 60%,#1c3550 100%);
+  border-bottom-color:#1d74c744;
+}
+.topbar-logo{color:#b7d8f5}
+.topbar-sep{background:#3f668a}
+.topbar-sub,.topbar-back,.topbar-time{color:#8fb7dc}
+.topbar-back{border-color:#315d86;background:rgba(29,116,199,0.06)}
+.topbar-back:hover{color:#b7d8f5;border-color:#1d74c7;background:rgba(29,116,199,0.12)}
+.badge{background:#1d74c722;color:var(--ok);border-color:#1d74c744}
+</style>
 </head>
 <body>
 
@@ -68,7 +101,7 @@
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">📷 7A — 7BG-AIT-813A</div>
         <textarea id="opNote7A" rows="2" placeholder="Catatan untuk 7A..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
-        <div id="opImgDrop7A" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg2,#dde3de)"
+        <div id="opImgDrop7A" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg2,#dceaf6)"
           onclick="toggleSourceChoices('opSource7A')"
           ondragover="event.preventDefault();this.style.borderColor='var(--ok)'"
           ondragleave="this.style.borderColor='var(--border)'"
@@ -89,7 +122,7 @@
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">📷 7B — 7BG-AIT-813B</div>
         <textarea id="opNote7B" rows="2" placeholder="Catatan untuk 7B..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
-        <div id="opImgDrop7B" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg2,#dde3de)"
+        <div id="opImgDrop7B" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--bg2,#dceaf6)"
           onclick="toggleSourceChoices('opSource7B')"
           ondragover="event.preventDefault();this.style.borderColor='var(--ok)'"
           ondragleave="this.style.borderColor='var(--border)'"
@@ -112,7 +145,7 @@
   <!-- BUTTONS -->
   <div class="btn-row" style="margin-top:20px">
     <button class="btn btn-pdf" onclick="opDownloadPdf()">⬇ Download PDF Report</button>
-    <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="dbSave('opacity')">💾 Simpan ke Database</button>
+    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('opacity')">💾 Simpan ke Database</button>
     <button class="btn btn-danger" onclick="opReset()">✕ Reset</button>
   </div>
 
@@ -120,37 +153,37 @@
 
 <!-- CROP MODAL -->
 <div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
-  <div style="background:#1a221e;border:1px solid #243228;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
-    <div style="background:#243228;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-weight:700;font-size:14px;color:#e8f0eb;letter-spacing:1px">✂️ Crop Gambar</div>
-      <div style="font-size:11px;color:#4a6656">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
+  <div style="background:#172536;border:1px solid #243b55;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="background:#243b55;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:14px;color:#e8f2ff;letter-spacing:1px">✂️ Crop Gambar</div>
+      <div style="font-size:11px;color:#8fb7dc">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
     </div>
     <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none">
       <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
-      <div id="cropBox" style="position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
-        <div style="position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px;top:-6px;left:-6px;cursor:nw-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px;top:-6px;right:-6px;cursor:ne-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px;bottom:-6px;left:-6px;cursor:sw-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px;bottom:-6px;right:-6px;cursor:se-resize"></div>
-        <div style="position:absolute;width:10px;height:10px;background:#2ecc71;border-radius:2px;top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize"></div>
-        <div style="position:absolute;width:10px;height:10px;background:#2ecc71;border-radius:2px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize"></div>
-        <div style="position:absolute;width:10px;height:10px;background:#2ecc71;border-radius:2px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize"></div>
-        <div style="position:absolute;width:10px;height:10px;background:#2ecc71;border-radius:2px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize"></div>
+      <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
+        <div style="position:absolute;width:12px;height:12px;background:#3498db;border-radius:2px;top:-6px;left:-6px;cursor:nw-resize"></div>
+        <div style="position:absolute;width:12px;height:12px;background:#3498db;border-radius:2px;top:-6px;right:-6px;cursor:ne-resize"></div>
+        <div style="position:absolute;width:12px;height:12px;background:#3498db;border-radius:2px;bottom:-6px;left:-6px;cursor:sw-resize"></div>
+        <div style="position:absolute;width:12px;height:12px;background:#3498db;border-radius:2px;bottom:-6px;right:-6px;cursor:se-resize"></div>
+        <div style="position:absolute;width:10px;height:10px;background:#3498db;border-radius:2px;top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize"></div>
+        <div style="position:absolute;width:10px;height:10px;background:#3498db;border-radius:2px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize"></div>
+        <div style="position:absolute;width:10px;height:10px;background:#3498db;border-radius:2px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize"></div>
+        <div style="position:absolute;width:10px;height:10px;background:#3498db;border-radius:2px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize"></div>
       </div>
     </div>
-    <div style="padding:10px 16px;background:#1a221e;border-top:1px solid #2a3a30">
+    <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <span style="font-size:11px;color:#4a6656">Output:</span>
-        <input type="number" id="cropOutW" placeholder="W" min="10" max="4000" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #243228;border-radius:4px;background:#243228;color:#fff;text-align:center" oninput="cropLinkSize('w')">
-        <span style="color:#4a6656;font-size:12px">×</span>
-        <input type="number" id="cropOutH" placeholder="H" min="10" max="4000" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #243228;border-radius:4px;background:#243228;color:#fff;text-align:center" oninput="cropLinkSize('h')">
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:#4a6656;cursor:pointer"><input type="checkbox" id="cropLock" checked style="accent-color:#2ecc71"> Kunci rasio</label>
-        <span id="cropNatSize" style="font-size:10px;color:#4a6656;margin-left:4px"></span>
+        <span style="font-size:11px;color:#8fb7dc">Output:</span>
+        <input type="number" id="cropOutW" placeholder="W" min="10" max="4000" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #243b55;border-radius:4px;background:#243b55;color:#fff;text-align:center" oninput="cropLinkSize('w')">
+        <span style="color:#8fb7dc;font-size:12px">×</span>
+        <input type="number" id="cropOutH" placeholder="H" min="10" max="4000" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #243b55;border-radius:4px;background:#243b55;color:#fff;text-align:center" oninput="cropLinkSize('h')">
+        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:#8fb7dc;cursor:pointer"><input type="checkbox" id="cropLock" checked style="accent-color:#3498db"> Kunci rasio</label>
+        <span id="cropNatSize" style="font-size:10px;color:#8fb7dc;margin-left:4px"></span>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243228;border-radius:6px;background:transparent;color:#8aab96;cursor:pointer;font-size:12px">↺ Reset</button>
-        <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243228;border-radius:6px;background:transparent;color:#8aab96;cursor:pointer;font-size:12px">Lewati</button>
-        <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#27ae60;color:#fff;cursor:pointer;font-size:13px;font-weight:700">✓ Simpan</button>
+        <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">↺ Reset</button>
+        <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Lewati</button>
+        <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">✓ Simpan</button>
       </div>
     </div>
   </div>
@@ -178,13 +211,13 @@ function opBuildTable() {
   if (opTableBuilt) return; opTableBuilt = true;
   var tbody = document.getElementById('opCheckBody');
   var trAll = document.createElement('tr');
-  trAll.style.cssText = 'background:#e8f5ee;border-left:4px solid #27ae60;';
+  trAll.style.cssText = 'background:#e8f2ff;border-left:4px solid #1d74c7;';
   trAll.innerHTML =
-    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#27ae60;font-weight:600">✓ Centang Semua</td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAllCheck" onchange="opCheckAll(\'check\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAll7A" onchange="opCheckAll(\'7a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAll7B" onchange="opCheckAll(\'7b\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#27ae60"></td>'+
-    '<td style="font-size:11px;color:#27ae60;font-style:italic;padding-left:8px">semua OK</td>';
+    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#1d74c7;font-weight:600">✓ Centang Semua</td>'+
+    '<td style="text-align:center"><input type="checkbox" id="opAllCheck" onchange="opCheckAll(\'check\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
+    '<td style="text-align:center"><input type="checkbox" id="opAll7A" onchange="opCheckAll(\'7a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
+    '<td style="text-align:center"><input type="checkbox" id="opAll7B" onchange="opCheckAll(\'7b\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
+    '<td style="font-size:11px;color:#1d74c7;font-style:italic;padding-left:8px">semua OK</td>';
   tbody.appendChild(trAll);
   OP_CHECKS.forEach(function(item, idx) {
     var tr = document.createElement('tr');
@@ -266,7 +299,7 @@ function opRenderPreviews(side) {
     var safeName=opEscapeHtml(img.name);
     var dataUrl=img.dataUrl||'';
     var fallback='<span style=&quot;font-size:10px;color:#c0392b;padding:6px;text-align:center;line-height:1.35&quot;>Preview gagal<br>upload ulang</span>';
-    var thumbStyle='width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);display:block;background:#eef3ef;background-image:linear-gradient(45deg,#d9e3dc 25%,transparent 25%),linear-gradient(-45deg,#d9e3dc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d9e3dc 75%),linear-gradient(-45deg,transparent 75%,#d9e3dc 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0';
+    var thumbStyle='width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);display:block;background:#eef5fb;background-image:linear-gradient(45deg,#d7e7f6 25%,transparent 25%),linear-gradient(-45deg,#d7e7f6 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d7e7f6 75%),linear-gradient(-45deg,transparent 75%,#d7e7f6 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0';
     var thumb=isImg
       ? '<div style="'+thumbStyle+';overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+opAttr(dataUrl)+'" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="imgReEditOp(\''+side+'\','+idx+')" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\''+fallback+'\'" title="Klik untuk crop ulang"></div>'
       : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
