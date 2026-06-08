@@ -52,7 +52,7 @@
 
   <!-- CHECKLIST TABLE -->
   <div class="panel">
-    <div class="section-label" id="bsCheckLabel">Step of Work — BELT CONVEYOR B1-B2</div>
+    <div class="section-label" id="bsCheckLabel">Monthly — BELT CONVEYOR B1-B2</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="manual-table" id="bsCheckTable">
         <thead>
@@ -65,6 +65,88 @@
           </tr>
         </thead>
         <tbody id="bsCheckBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 3 MONTHLY TABLE -->
+  <div class="panel">
+    <div class="section-label">3 Monthly — BELT CONVEYOR B1-B2</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="bs3mTable">
+        <thead>
+          <tr>
+            <th style="width:36px">No.</th>
+            <th>Calibration Process</th>
+            <th>Criteria</th>
+            <th style="min-width:160px">Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#f2f9ff;font-weight:700"><td colspan="4">Check If OK</td></tr>
+          <tr>
+            <td>1</td>
+            <td>Check Diagnostic Load (Span) dA1</td>
+            <td>Load Reading</td>
+            <td><input type="text" id="bs3m_1" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>Count Belt Pulses mH6</td>
+            <td>Pass 1</td>
+            <td><input type="text" id="bs3m_2" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>Stop at 49.7 second</td>
+            <td>Pass 2</td>
+            <td><input type="text" id="bs3m_3" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td>Length Travel Diameter (198M)</td>
+            <td>Pass 3</td>
+            <td><input type="text" id="bs3m_4" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td>Pulse / M</td>
+            <td><input type="text" id="bs3m_5" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr style="background:#f2f9ff;font-weight:700"><td colspan="4">Initial Calibration Zero &amp; Span mA8</td></tr>
+          <tr>
+            <td>2</td>
+            <td></td>
+            <td>Zero Check (Unloaded)</td>
+            <td><input type="text" id="bs3m_6" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td>Test Load Check</td>
+            <td><input type="text" id="bs3m_7" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr style="background:#f2f9ff;font-weight:700"><td colspan="4">Normal Calibration</td></tr>
+          <tr>
+            <td>3</td>
+            <td></td>
+            <td>Zero Error (%)</td>
+            <td><input type="text" id="bs3m_8" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td></td>
+            <td>Span Error (%)</td>
+            <td><input type="text" id="bs3m_9" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Load Reading After Calibration</td>
+            <td>R</td>
+            <td><input type="text" id="bs3m_10" placeholder="Result" style="width:100%;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111"></td>
+          </tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -196,7 +278,7 @@ function initPage() {
   document.getElementById('bsTopbarSub').textContent   = BS_CFG.subtitle;
   document.getElementById('bsDocCode').textContent     = BS_CFG.doc;
   document.getElementById('bsPageTitle').textContent   = BS_CFG.title;
-  document.getElementById('bsCheckLabel').textContent  = 'Step of Work — ' + BS_CFG.label;
+  document.getElementById('bsCheckLabel').textContent  = 'Monthly — ' + BS_CFG.label;
   document.getElementById('bsTh1').innerHTML = BS_CFG.a.code + '<br><span style="font-weight:400;font-size:10px">('+BS_CFG.a.name+')</span>';
   document.getElementById('bsTh2').innerHTML = BS_CFG.b.code + '<br><span style="font-weight:400;font-size:10px">('+BS_CFG.b.name+')</span>';
   document.getElementById('bsNote1Label').textContent  = '📷 ' + BS_CFG.a.note;
@@ -283,7 +365,7 @@ function bsRefreshAllChecks() {
 
 function bsReset() {
   bsImages = {'1':[], '2':[]};
-  ['bsDate','bsPIC','bsWO','bsNote1','bsNote2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  ['bsDate','bsPIC','bsWO','bsNote1','bsNote2','bs3m_1','bs3m_2','bs3m_3','bs3m_4','bs3m_5','bs3m_6','bs3m_7','bs3m_8','bs3m_9','bs3m_10'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   ['bsU78','bsCCH','bsAllA','bsAllB'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=false;});
   ['bsImgPreview1','bsImgPreview2'].forEach(function(id){var e=document.getElementById(id);if(e)e.innerHTML='';});
   ['bsImgInput1','bsImgInput2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
@@ -406,6 +488,30 @@ function bsDownloadPdf() {
     });
     y = doc.lastAutoTable.finalY + 8;
 
+    doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(44,62,48);
+    doc.text('3 MONTHLY',14,y); doc.setLineWidth(0.4); doc.line(14,y+2,pw-14,y+2); y += 7;
+    var rows3m = [
+      ['1','Check Diagnostic Load (Span) dA1','Load Reading',gv('bs3m_1')],
+      ['','Count Belt Pulses mH6','Pass 1',gv('bs3m_2')],
+      ['','Stop at 49.7 second','Pass 2',gv('bs3m_3')],
+      ['','Length Travel Diameter (198M)','Pass 3',gv('bs3m_4')],
+      ['','','Pulse / M',gv('bs3m_5')],
+      ['2','Initial Calibration Zero & Span mA8','Zero Check (Unloaded)',gv('bs3m_6')],
+      ['','','Test Load Check',gv('bs3m_7')],
+      ['3','Normal Calibration','Zero Error (%)',gv('bs3m_8')],
+      ['','','Span Error (%)',gv('bs3m_9')],
+      ['4','Load Reading After Calibration','R',gv('bs3m_10')]
+    ];
+    doc.autoTable({
+      startY:y, head:[['No','Calibration Process','Criteria','Result']],
+      body:rows3m, theme:'grid', margin:{left:14,right:14},
+      headStyles:{fillColor:[44,62,48],textColor:[210,230,215],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},
+      bodyStyles:{fontSize:8,textColor:[20,30,25],font:'helvetica'},
+      columnStyles:{'0':{cellWidth:10,halign:'center'},1:{cellWidth:80},2:{cellWidth:45},3:{cellWidth:40,halign:'center'}},
+      alternateRowStyles:{fillColor:[246,249,247]}
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
     doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(44,62,48); doc.text('Note:',14,y); y += 5;
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(60,80,65);
     doc.text('- Entry PM Result into maximo work order.',14,y); y += 4;
@@ -447,12 +553,17 @@ function dbCollectData(modul) {
     var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
     checks[idx] = {a:aEl?(aEl.type==='checkbox'?aEl.checked:aEl.value):'', b:bEl?(bEl.type==='checkbox'?bEl.checked:bEl.value):''};
   });
+  var threeMonthly = {
+    'bs3m_1': gv4('bs3m_1'), 'bs3m_2': gv4('bs3m_2'), 'bs3m_3': gv4('bs3m_3'), 'bs3m_4': gv4('bs3m_4'),
+    'bs3m_5': gv4('bs3m_5'), 'bs3m_6': gv4('bs3m_6'), 'bs3m_7': gv4('bs3m_7'), 'bs3m_8': gv4('bs3m_8'),
+    'bs3m_9': gv4('bs3m_9'), 'bs3m_10': gv4('bs3m_10')
+  };
   var keepImage = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg'}; };
   var images = {
     '1': bsImages['1'].map(keepImage),
     '2': bsImages['2'].map(keepImage)
   };
-  return {modul:'BELT CONVEYOR B1-B2', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},images:images}};
+  return {modul:'BELT CONVEYOR B1-B2', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},threeMonthly:threeMonthly,images:images}};
 }
 
 /* ── INIT ── */
@@ -478,6 +589,12 @@ function dbCollectData(modul) {
             if(bEl){if(bEl.type==='checkbox')bEl.checked=!!c.b;else bEl.value=c.b||'';}
           });
           bsRefreshAllChecks();
+        }
+        if (data.threeMonthly) {
+          ['bs3m_1','bs3m_2','bs3m_3','bs3m_4','bs3m_5','bs3m_6','bs3m_7','bs3m_8','bs3m_9','bs3m_10'].forEach(function(id){
+            var e=document.getElementById(id);
+            if (e) e.value = data.threeMonthly[id] || '';
+          });
         }
         if (data.images) {
           bsImages['1'] = (data.images['1']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});
