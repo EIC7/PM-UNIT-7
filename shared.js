@@ -208,7 +208,7 @@ function openFileInputSource(inputId, source) {
   input.value = '';
   input.removeAttribute('capture');
   if (source === 'camera') {
-    input.setAttribute('capture', 'camera');
+    input.setAttribute('capture', 'environment');
   }
   input.click();
 }
