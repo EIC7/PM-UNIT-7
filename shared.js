@@ -83,6 +83,8 @@ function dbShowToast(msg) {
     t = document.createElement('div');
     t.id = 'dbToast';
     t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#16a085;color:#fff;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.3s;white-space:nowrap;max-width:90vw;text-align:center';
+    // Hide toast during print (pages define @media print .no-print{display:none})
+    try { t.classList.add('no-print'); } catch(e){}
     document.body.appendChild(t);
   }
   t.textContent = msg;
