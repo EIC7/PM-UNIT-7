@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FEGT & Leak Detection — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">FEGT</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Sensor Diagnostic System</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Furnace Exit Gas Temperature</div>
+      <div class="page-header-title">Sensor <span>Fail</span> Diagnostic</div>
+    </div>
+    <div style="margin-bottom:8px">
+      <span class="badge">21 ACTIVE PATHS</span>
+      &nbsp;
+      <span class="badge" style="background:#4a5e5222;color:var(--steel);border-color:#4a5e5244">8 SENSORS · 3-2-3</span>
+    </div>
+  </div>
+
+  <!-- INPUT PANEL (TABBED) -->
+  <div class="panel">
+    <div class="section-label">Input Data</div>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabBtnUpload" onclick="switchTab('upload')">📂 Upload Excel</button>
+      <button class="tab-btn" id="tabBtnManual" onclick="switchTab('manual')">✏ Input Manual</button>
+    </div>
+
+    <!-- TAB: UPLOAD EXCEL -->
+    <div class="tab-content active" id="tabUpload">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+        <div class="upload-icon">📂</div>
+        <div class="upload-title">Upload File Excel FEGT</div>
+        <div class="upload-sub">Drag & drop atau klik untuk pilih file · Format: .xlsx / .xls</div>
+        <div class="upload-sub" style="margin-top:6px;font-size:12px;color:#aaa">Bisa menggunakan template <strong>FEGT_Template.xlsx</strong> atau file Excel sendiri</div>
+      </div>
+      <div id="noticeBox" class="notice" style="display:none"></div>
+      <div class="col-map" id="colMap">
+        <div class="col-map-title">⚠ Kolom tidak terdeteksi otomatis — pilih kolom yang sesuai:</div>
+        <div class="col-map-grid">
+          <div class="col-map-item"><label>Kolom Reading Temp / Suhu</label><select id="mapTemp"><option value="">— pilih kolom —</option></select></div>
+          <div class="col-map-item"><label>Kolom Status</label><select id="mapStatus"><option value="">— pilih kolom —</option></select></div>
+          <div class="col-map-item"><label>Kolom Tanggal <span style="color:#aaa;font-size:11px">(opsional)</span></label><select id="mapTanggal"><option value="">— pilih kolom —</option></select></div>
+          <div class="col-map-item"><label>Kolom Shift <span style="color:#aaa;font-size:11px">(opsional)</span></label><select id="mapShift"><option value="">— pilih kolom —</option></select></div>
+        </div>
+        <div class="btn-row" style="margin-top:14px"><button class="btn btn-outline" onclick="applyMapping()">✓ Terapkan Mapping</button></div>
+      </div>
+      <div class="file-info" id="fileInfo">
+        <div style="font-size:24px">✅</div>
+        <div><div class="file-info-name" id="fileName">—</div><div class="file-info-meta" id="fileMeta">—</div></div>
+      </div>
+    </div>
+
+    <!-- TAB: INPUT MANUAL -->
+    <div class="tab-content" id="tabManual">
+      <div class="manual-meta">
+        <div class="meta-field"><label>Tanggal</label><input type="date" id="manTanggal"></div>
+        <div class="meta-field"><label>Shift</label>
+          <select id="manShift">
+            <option value="">— pilih —</option>
+            <option value="Pagi">Pagi</option>
+            <option value="Sore">Sore</option>
+            <option value="Malam">Malam</option>
+          </select>
+        </div>
+        <div class="meta-field"><label>Nama Operator</label><input type="text" id="manOperator" placeholder="Nama operator..."></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="manual-table">
+          <thead><tr><th>Path</th><th>Tx → Rx</th><th>Reading Temp (°C)</th><th>Status</th></tr></thead>
+          <tbody id="manualTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BUTTONS -->
+    <div class="btn-row" style="margin-top:20px">
+      <button class="btn btn-primary" id="btnRun" onclick="runDiagnosis()" disabled>▶ Run Diagnosis</button>
+      <button class="btn btn-pdf"     id="btnPdf" onclick="downloadPdf()" disabled>⬇ Download PDF Report</button>
+      <button class="btn" id="btnSave" style="background:#16a085;color:#fff;border-color:#16a085" onclick="dbSave('fegt')" disabled>💾 Simpan ke Database</button>
+      <button class="btn btn-danger"  onclick="resetAll()">✕ Reset</button>
+    </div>
+  </div>
+
+  <!-- SENSOR MAP -->
+  <div class="panel">
+    <div class="section-label">Furnace Path Topology</div>
+    <div class="sensor-map-wrap">
+      <div class="furnace-outer">
+        <div class="furnace-box">
+          <div class="furnace-label north">North</div>
+          <div class="furnace-label south">South</div>
+          <div class="furnace-label west">West</div>
+          <div class="furnace-label east">East</div>
+          <svg class="path-svg" id="pathSvg" viewBox="0 0 580 320" preserveAspectRatio="none"></svg>
+          <div class="sensor-node unknown" id="snode-1" style="left:0%;top:75%">1<div class="s-tip" id="stip-1">Sensor 1</div></div>
+          <div class="sensor-node unknown" id="snode-2" style="left:37.9%;top:100%">2<div class="s-tip" id="stip-2">Sensor 2</div></div>
+          <div class="sensor-node unknown" id="snode-3" style="left:0%;top:50%">3<div class="s-tip" id="stip-3">Sensor 3</div></div>
+          <div class="sensor-node unknown" id="snode-4" style="left:62.1%;top:100%">4<div class="s-tip" id="stip-4">Sensor 4</div></div>
+          <div class="sensor-node unknown" id="snode-5" style="left:0%;top:25%">5<div class="s-tip" id="stip-5">Sensor 5</div></div>
+          <div class="sensor-node unknown" id="snode-6" style="left:100%;top:75%">6<div class="s-tip" id="stip-6">Sensor 6</div></div>
+          <div class="sensor-node unknown" id="snode-7" style="left:100%;top:50%">7<div class="s-tip" id="stip-7">Sensor 7</div></div>
+          <div class="sensor-node unknown" id="snode-8" style="left:100%;top:25%">8<div class="s-tip" id="stip-8">Sensor 8</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="map-legend">
+      <div class="leg-item"><div class="leg-line" style="background:var(--ok);opacity:.7"></div>OK / Valid</div>
+      <div class="leg-item"><div class="leg-line" style="background:var(--fail);opacity:.7"></div>Data Fail</div>
+      <div class="leg-item"><div class="leg-line" style="background:var(--hard);opacity:.7"></div>Hard Fail</div>
+      <div class="leg-item"><div class="leg-line" style="background:var(--steel-light);opacity:.4"></div>No Data</div>
+    </div>
+  </div>
+
+  <!-- DATA PREVIEW -->
+  <div class="panel" id="previewPanel" style="display:none">
+    <div class="section-label">Preview Data Path</div>
+    <div class="meta-bar" id="metaBar">
+      <div><span class="meta-key">Tanggal: </span><span class="meta-val" id="mTanggal">—</span></div>
+      <div><span class="meta-key">Shift: </span><span class="meta-val" id="mShift">—</span></div>
+      <div><span class="meta-key">Operator: </span><span class="meta-val" id="mOperator">—</span></div>
+      <div><span class="meta-key">Unit: </span><span class="meta-val">Unit 7 — PLTU Paiton</span></div>
+    </div>
+    <div class="preview-wrap">
+      <table class="path-table">
+        <thead><tr><th>Path</th><th>Tx → Rx</th><th>Reading Temp</th><th>Status</th></tr></thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DIAGNOSIS -->
+  <div class="panel" id="diagPanel" style="display:none">
+    <div class="section-label">Sensor Diagnosis Result</div>
+    <div class="stat-row">
+      <div class="stat-chip total">Total Paths <span id="statTotal">21</span></div>
+      <div class="stat-chip ok">Valid <span id="statOk">—</span></div>
+      <div class="stat-chip fail">Data Fail <span id="statFail">—</span></div>
+      <div class="stat-chip hard">Hard Fail <span id="statHard">—</span></div>
+    </div>
+    <div class="diag-grid" id="diagGrid"></div>
+    <div class="conclusion-box waiting" id="conclusionBox">
+      <div class="conc-title">Menunggu Data</div>
+      <div id="conclusionText" style="color:var(--text3);font-size:13px">Upload file Excel atau isi data manual, lalu klik Run Diagnosis.</div>
+    </div>
+  </div>
+
+  <!-- LEAK DETECTION -->
+  <div class="panel" id="leakPanel">
+    <div class="section-label">Leak Detection — 9 Paths</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table">
+        <thead><tr><th>Path</th><th>Description</th><th>Reading (°C)</th><th>Status</th></tr></thead>
+        <tbody id="leakTableBody"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-primary" onclick="runLeakDiagnosis()">▶ Run Leak Diagnosis</button>
+      <button class="btn btn-danger"  onclick="resetLeak()">✕ Reset Leak</button>
+    </div>
+    <div id="leakResult" style="margin-top:16px;display:none"></div>
+  </div>
+
+  <!-- PORT REFERENCE TABLE -->
+  <div class="panel" id="notePanel">
+    <div class="section-label">Note — Port Reference</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="path-table" style="font-size:13px">
+        <thead><tr><th style="width:80px">Port</th><th>Number Port (Software)</th><th>Position Port in Location</th></tr></thead>
+        <tbody>
+          <tr><td colspan="3" style="background:var(--bg2,#dde3de);font-family:'Arial Narrow',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--steel);text-align:center;padding:8px 14px">FEGT</td></tr>
+          <tr><td class="path-label">Port 1</td><td style="font-family:'Courier New',monospace">7BG-CAB-133</td><td>Lt. 9 FEGT Sisi Barat</td></tr>
+          <tr><td class="path-label">Port 2</td><td style="font-family:'Courier New',monospace">7BG-CAB-134</td><td>Lt. 9 FEGT Sisi Barat</td></tr>
+          <tr><td class="path-label">Port 3</td><td style="font-family:'Courier New',monospace">7BG-CAB-135</td><td>Lt. 9 FEGT Sisi Barat</td></tr>
+          <tr><td class="path-label">Port 4</td><td style="font-family:'Courier New',monospace">7BG-CAB-136</td><td>Lt. 9 FEGT Sisi Selatan</td></tr>
+          <tr><td class="path-label">Port 5</td><td style="font-family:'Courier New',monospace">7BG-CAB-137</td><td>Lt. 9 FEGT Sisi Selatan</td></tr>
+          <tr><td class="path-label">Port 6</td><td style="font-family:'Courier New',monospace">7BG-CAB-138</td><td>Lt. 9 FEGT Sisi Timur</td></tr>
+          <tr><td class="path-label">Port 7</td><td style="font-family:'Courier New',monospace">7BG-CAB-139</td><td>Lt. 9 FEGT Sisi Timur</td></tr>
+          <tr><td class="path-label">Port 8</td><td style="font-family:'Courier New',monospace">7BG-CAB-140</td><td>Lt. 9 FEGT Sisi Timur</td></tr>
+          <tr><td colspan="3" style="background:var(--bg2,#dde3de);font-family:'Arial Narrow',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;color:var(--steel);text-align:center;padding:8px 14px">Leak Detection (LD)</td></tr>
+          <tr><td class="path-label">Port 1</td><td style="font-family:'Courier New',monospace">7BG-CAB-141 (SH1)</td><td>Lt. 12 Superheater 1 Sisi Timur</td></tr>
+          <tr><td class="path-label">Port 2</td><td style="font-family:'Courier New',monospace">7BG-CAB-142 (SH2)</td><td>Lt. 12 Superheater 2 Sisi Selatan</td></tr>
+          <tr><td class="path-label">Port 3</td><td style="font-family:'Courier New',monospace">7BG-CAB-143 (SH3)</td><td>Lt. 12 Superheater 3 Sisi Barat</td></tr>
+          <tr><td class="path-label">Port 4</td><td style="font-family:'Courier New',monospace">7BG-CAB-144 (FRH1)</td><td>Lt. 12 Reheater 1 Sisi Timur</td></tr>
+          <tr><td class="path-label">Port 5</td><td style="font-family:'Courier New',monospace">7BG-CAB-145 (FRH2)</td><td>Lt. 12 Reheater 2 Sisi Barat</td></tr>
+          <tr><td class="path-label">Port 6</td><td style="font-family:'Courier New',monospace">7BG-CAB-149 (ECON 6)</td><td>Lt. 10.5 Economizer Sisi Timur</td></tr>
+          <tr><td class="path-label">Port 7</td><td style="font-family:'Courier New',monospace">7BG-CAB-131 (ECON 7)</td><td>Lt. 10.5 Economizer Sisi Utara</td></tr>
+          <tr><td class="path-label">Port 8</td><td style="font-family:'Courier New',monospace">7BG-CAB-132 (ECON 8)</td><td>Lt. 10.5 Economizer Sisi Barat</td></tr>
+          <tr><td class="path-label">Port 9</td><td style="font-family:'Courier New',monospace">7BG-CAB-150 (BS 09)</td><td>Lt. 2 Bottom Slope Sisi Barat</td></tr>
+          <tr><td class="path-label">Port 10</td><td style="font-family:'Courier New',monospace">7BG-CAB-151 (BS 10)</td><td>Lt. 2 Bottom Slope Sisi Timur</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ─── FEGT DATA ─── */
+var PATHS = [
+  {id:1,tx:6,rx:1},{id:2,tx:7,rx:3},{id:3,tx:8,rx:5},
+  {id:4,tx:5,rx:2},{id:5,tx:8,rx:4},{id:6,tx:3,rx:6},
+  {id:7,tx:5,rx:7},{id:8,tx:3,rx:8},{id:9,tx:7,rx:5},
+  {id:10,tx:4,rx:3},{id:11,tx:6,rx:5},{id:12,tx:8,rx:2},
+  {id:13,tx:7,rx:4},{id:14,tx:2,rx:6},{id:15,tx:2,rx:7},
+  {id:16,tx:1,rx:8},{id:17,tx:1,rx:2},{id:18,tx:4,rx:5},
+  {id:19,tx:1,rx:4},{id:20,tx:4,rx:6},{id:21,tx:3,rx:2},
+];
+var SENSOR_POS = {'1':{x:0,y:240},'2':{x:220,y:320},'3':{x:0,y:160},'4':{x:360,y:320},'5':{x:0,y:80},'6':{x:580,y:240},'7':{x:580,y:160},'8':{x:580,y:80}};
+var LEAK_PATHS = [
+  {id:1, desc:'SH1 — Lt.12 Superheater 1 Sisi Timur'},
+  {id:2, desc:'SH2 — Lt.12 Superheater 2 Sisi Selatan'},
+  {id:3, desc:'SH3 — Lt.12 Superheater 3 Sisi Barat', defaultNA:true},
+  {id:4, desc:'FRH1 — Lt.12 Reheater 1 Sisi Timur',  defaultNA:true},
+  {id:5, desc:'FRH2 — Lt.12 Reheater 2 Sisi Barat'},
+  {id:6, desc:'ECON 6 — Lt.10.5 Economizer Sisi Timur'},
+  {id:7, desc:'ECON 7 — Lt.10.5 Economizer Sisi Utara'},
+  {id:8, desc:'ECON 8 — Lt.10.5 Economizer Sisi Barat'},
+  {id:9, desc:'BS 09 — Lt.2 Bottom Slope Sisi Barat'},
+];
+
+var pathData = [], metaInfo = {tanggal:'—',shift:'—',operator:'—'}, diagResults = {};
+var rawHeaders = [], rawRows = [], wsData = null, activeTab = 'upload';
+
+function autoSetStatus(selectId, tempVal) {
+  var sel = document.getElementById(selectId);
+  if (!sel || sel.disabled) return;
+  var val = parseFloat(tempVal);
+  if (tempVal === '' || tempVal === null) return;
+  sel.value = (!isNaN(val) && val > 0) ? 'ok' : 'data fail';
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tabBtnUpload').classList.toggle('active', tab==='upload');
+  document.getElementById('tabBtnManual').classList.toggle('active', tab==='manual');
+  document.getElementById('tabUpload').classList.toggle('active', tab==='upload');
+  document.getElementById('tabManual').classList.toggle('active', tab==='manual');
+  if (tab === 'manual') {
+    buildManualTable();
+    document.getElementById('btnRun').disabled = false;
+    document.getElementById('btnSave').disabled = false;
+  } else {
+    document.getElementById('btnRun').disabled = pathData.length === 0;
+    document.getElementById('btnSave').disabled = true;
+  }
+  document.getElementById('previewPanel').style.display='none';
+  document.getElementById('diagPanel').style.display='none';
+  document.getElementById('btnPdf').disabled=true;
+  pathData=[]; diagResults={};
+  for(var s=1;s<=8;s++){var n=document.getElementById('snode-'+s);if(n)n.className='sensor-node unknown';}
+  updateSvg();
+}
+
+function buildManualTable() {
+  var tbody = document.getElementById('manualTableBody');
+  if (tbody.children.length > 0) return;
+  PATHS.forEach(function(p) {
+    var pid = p.id;
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><span class="path-label">Path-'+pid+'</span></td>'+
+      '<td><div class="sensor-pair"><span class="sensor-chip">'+p.tx+'</span>'+
+        '<span style="color:var(--text3);font-size:12px">→</span>'+
+        '<span class="sensor-chip">'+p.rx+'</span></div></td>'+
+      '<td><input type="number" id="mtemp-'+pid+'" placeholder="0" min="0" max="9999"'+
+        ' oninput="autoSetStatus(\'mstatus-'+pid+'\',this.value);onManualChange();"'+
+        ' style="width:100px"></td>'+
+      '<td><select id="mstatus-'+pid+'" onchange="onManualChange()">'+
+        '<option value="ok" selected>OK / Valid</option>'+
+        '<option value="data fail">Data Fail</option>'+
+        '<option value="hard fail - low transmit">Hard Fail - Low Transmit</option>'+
+      '</select></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function buildLeakTable() {
+  var tbody = document.getElementById('leakTableBody');
+  if (tbody.children.length > 0) return;
+  LEAK_PATHS.forEach(function(p) {
+    var pid = p.id, isNA = !!p.defaultNA;
+    var tr = document.createElement('tr');
+    var inputAttrs = isNA ? 'disabled style="width:100px;background:#f0f0f0;color:#aaa"' : 'oninput="autoSetStatus(\'lkstatus-'+pid+'\',this.value);" style="width:100px"';
+    var selectAttrs = isNA ? 'disabled style="background:#f0f0f0;color:#aaa"' : '';
+    var options = isNA ? '<option value="na" selected>N/A</option>' :
+      '<option value="ok" selected>OK / Valid</option><option value="data fail">Data Fail</option><option value="hard fail">Hard Fail</option><option value="na">N/A</option>';
+    tr.innerHTML =
+      '<td><span class="path-label">Path-'+pid+'</span></td>'+
+      '<td style="font-size:13px;color:var(--text2)">'+p.desc+'</td>'+
+      '<td><input type="number" id="lktemp-'+pid+'" placeholder="'+(isNA?'N/A':'0')+'" min="0" max="9999" '+inputAttrs+'></td>'+
+      '<td><select id="lkstatus-'+pid+'" '+selectAttrs+'>'+options+'</select></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function onManualChange() { collectManualData(); updateSvg(); }
+
+function collectManualData() {
+  var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  var rawDate = document.getElementById('manTanggal').value;
+  var tanggalStr = '—';
+  if (rawDate) { var parts=rawDate.split('-'); tanggalStr=parts[2]+' '+BULAN[parseInt(parts[1])-1]+' '+parts[0]; }
+  metaInfo = {
+    tanggal: tanggalStr,
+    shift:    document.getElementById('manShift').value    || '—',
+    operator: document.getElementById('manOperator').value || '—'
+  };
+  pathData = PATHS.map(function(p) {
+    return Object.assign({}, p, {temp:parseFloat(document.getElementById('mtemp-'+p.id).value)||0, statusRaw:document.getElementById('mstatus-'+p.id).value||'ok'});
+  });
+}
+
+var TEMP_KEYS=['reading temp','reading','temp','suhu','temperature','°c','deg'];
+var STATUS_KEYS=['status'], DATE_KEYS=['tanggal','date','tgl'], SHIFT_KEYS=['shift'], PATH_KEYS=['path'];
+
+function matchHeader(h, keys) { var lower=h.toString().toLowerCase().trim(); return keys.some(function(k){return lower.includes(k);}); }
+
+var zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', function(e){e.preventDefault();zone.classList.add('dragover');});
+zone.addEventListener('dragleave', function(){zone.classList.remove('dragover');});
+zone.addEventListener('drop', function(e){e.preventDefault();zone.classList.remove('dragover');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+
+function showNotice(msg,type){var el=document.getElementById('noticeBox');el.className='notice '+(type||'info');el.innerHTML=msg;el.style.display='block';}
+function hideNotice(){document.getElementById('noticeBox').style.display='none';}
+
+function getCellSafe(ws,addr){
+  var cell=ws[addr]; if(!cell) return '';
+  var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  if((cell.t==='d'||cell.t==='n')&&cell.w){var pts=cell.w.split('/');if(pts.length===3){return String(parseInt(pts[1])).padStart(2,'0')+' '+BULAN[parseInt(pts[0])-1]+' '+parseInt(pts[2]);}}
+  if(cell.t==='n'&&cell.v>40000&&cell.v<60000){var d=new Date(Math.round((cell.v-25569+0.5)*86400*1000));return String(d.getUTCDate()).padStart(2,'0')+' '+BULAN[d.getUTCMonth()]+' '+d.getUTCFullYear();}
+  return cell.v!=null?String(cell.v):'';
+}
+
+function handleFile(file){
+  if(!file) return;
+  hideNotice(); document.getElementById('colMap').classList.remove('visible');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true,dateNF:'DD/MM/YYYY'});
+      var sheetName=wb.SheetNames.includes('FEGT Path Data')?'FEGT Path Data':wb.SheetNames[0];
+      var ws=wb.Sheets[sheetName]; wsData=ws;
+      var aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(aoa.length<2){showNotice('File Excel kosong atau tidak bisa dibaca.','err');return;}
+      var headerRowIdx=-1;
+      for(var i=0;i<Math.min(aoa.length,10);i++){
+        var row=aoa[i];
+        var hits=row.filter(function(c){var s=c.toString().toLowerCase();return TEMP_KEYS.concat(STATUS_KEYS).concat(PATH_KEYS).some(function(k){return s.includes(k);});}).length;
+        if(hits>=2){headerRowIdx=i;break;}
+      }
+      if(headerRowIdx===-1) headerRowIdx=4;
+      rawHeaders=aoa[headerRowIdx].map(function(h){return h.toString();});
+      rawRows=aoa.slice(headerRowIdx+1).filter(function(r){return r.some(function(c){return c!=='';});});
+      var idxTemp=rawHeaders.findIndex(function(h){return matchHeader(h,TEMP_KEYS);});
+      var idxStatus=rawHeaders.findIndex(function(h){return matchHeader(h,STATUS_KEYS);});
+      document.getElementById('fileName').textContent=file.name;
+      if(idxTemp===-1||idxStatus===-1){
+        showNotice('&#9888; Kolom tidak ditemukan otomatis. Header: <em>'+rawHeaders.filter(function(h){return h;}).join(', ')+'</em>. Pilih kolom manual.','warn');
+        populateMapDropdowns(); document.getElementById('colMap').classList.add('visible');
+        document.getElementById('fileInfo').classList.add('visible');
+        document.getElementById('fileMeta').textContent=rawRows.length+' baris  '+(file.size/1024).toFixed(1)+' KB';
+        return;
+      }
+      buildPathData(idxTemp,idxStatus);
+      applyMeta(getCellSafe(ws,'B3')||'—',getCellSafe(ws,'D3')||'—',getCellSafe(ws,'F3')||'—');
+      document.getElementById('fileInfo').classList.add('visible');
+      document.getElementById('fileMeta').textContent=pathData.length+' path  '+(file.size/1024).toFixed(1)+' KB';
+      document.getElementById('btnRun').disabled=false;
+      buildPreview();
+      document.getElementById('previewPanel').style.display='block';
+      document.getElementById('diagPanel').style.display='block';
+      showNotice('&#10003; File berhasil dibaca.','ok');
+      updateSvg();
+    }catch(err){showNotice('Gagal membaca file.<br><small>'+err.message+'</small>','err');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function populateMapDropdowns(){
+  ['mapTemp','mapStatus','mapTanggal','mapShift'].forEach(function(id){
+    var sel=document.getElementById(id); sel.innerHTML='<option value="">— pilih kolom —</option>';
+    rawHeaders.forEach(function(h,i){if(h)sel.innerHTML+='<option value="'+i+'">'+h+'</option>';});
+  });
+  autoSelectCol('mapTemp',TEMP_KEYS); autoSelectCol('mapStatus',STATUS_KEYS);
+  autoSelectCol('mapTanggal',DATE_KEYS); autoSelectCol('mapShift',SHIFT_KEYS);
+}
+function autoSelectCol(selId,keys){var sel=document.getElementById(selId);var idx=rawHeaders.findIndex(function(h){return matchHeader(h,keys);});if(idx!==-1)sel.value=idx;}
+function applyMapping(){
+  var idxTemp=parseInt(document.getElementById('mapTemp').value);
+  var idxStatus=parseInt(document.getElementById('mapStatus').value);
+  if(isNaN(idxTemp)||isNaN(idxStatus)){showNotice('Pilih kolom Reading Temp dan Status.','err');return;}
+  buildPathData(idxTemp,idxStatus);
+  var idxDate=parseInt(document.getElementById('mapTanggal').value);
+  var idxShift=parseInt(document.getElementById('mapShift').value);
+  applyMeta(!isNaN(idxDate)&&rawRows[0]?String(rawRows[0][idxDate]||'—'):'—',!isNaN(idxShift)&&rawRows[0]?String(rawRows[0][idxShift]||'—'):'—','—');
+  document.getElementById('colMap').classList.remove('visible');
+  document.getElementById('btnRun').disabled=false;
+  buildPreview(); document.getElementById('previewPanel').style.display='block'; document.getElementById('diagPanel').style.display='block';
+  showNotice('&#10003; Mapping diterapkan. '+pathData.length+' path berhasil dibaca.','ok'); updateSvg();
+}
+function buildPathData(idxTemp,idxStatus){
+  pathData=PATHS.map(function(p,i){var row=rawRows[i]||[];return Object.assign({},p,{temp:parseFloat(row[idxTemp])||0,statusRaw:String(row[idxStatus]||'').trim()});});
+}
+function applyMeta(t,s,o){
+  metaInfo={tanggal:t||'—',shift:s||'—',operator:o||'—'};
+  document.getElementById('mTanggal').textContent=metaInfo.tanggal;
+  document.getElementById('mShift').textContent=metaInfo.shift;
+  document.getElementById('mOperator').textContent=metaInfo.operator;
+  document.getElementById('metaBar').classList.add('visible');
+}
+
+function effectiveStatus(p){
+  var s=String(p.statusRaw||'').toLowerCase();
+  if(s.includes('hard')) return 'hard';
+  if(s.includes('data fail')||s==='fail') return 'fail';
+  if(s==='ok'||p.temp>0) return 'ok';
+  return '';
+}
+
+function buildPreview(){
+  var tbody=document.getElementById('previewBody'); tbody.innerHTML='';
+  pathData.forEach(function(p){
+    var eff=effectiveStatus(p);
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td><span class="path-label">Path-'+p.id+'</span></td>'+
+      '<td><div class="sensor-pair"><span class="sensor-chip">'+p.tx+'</span><span style="color:var(--text3);font-size:12px">→</span><span class="sensor-chip">'+p.rx+'</span></div></td>'+
+      '<td><span class="temp-val '+(p.temp>0?'ok':'zero')+'">'+(p.temp>0?p.temp+' °C':'0 / No Read')+'</span></td>'+
+      '<td>'+statusBadge(eff)+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+function statusBadge(eff){
+  if(eff==='ok') return '<span class="status-badge ok">OK / Valid</span>';
+  if(eff==='fail') return '<span class="status-badge fail">Data Fail</span>';
+  if(eff==='hard') return '<span class="status-badge hard">Hard Fail</span>';
+  return '<span class="status-badge none">No Data</span>';
+}
+
+function updateSvg(){
+  var svg=document.getElementById('pathSvg'); svg.innerHTML='';
+  var data=pathData.length?pathData:PATHS.map(function(p){return Object.assign({},p,{temp:0,statusRaw:'ok'});});
+  data.forEach(function(p){
+    var eff=effectiveStatus(p);
+    var cls=eff==='ok'?'ok':eff==='fail'?'fail':eff==='hard'?'hard':'none';
+    var a=SENSOR_POS[p.tx],b=SENSOR_POS[p.rx]; if(!a||!b) return;
+    var line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);
+    line.setAttribute('class','path-line '+cls); svg.appendChild(line);
+  });
+}
+
+function runDiagnosis(){
+  if(activeTab==='manual'){
+    collectManualData();
+    document.getElementById('mTanggal').textContent=metaInfo.tanggal;
+    document.getElementById('mShift').textContent=metaInfo.shift;
+    document.getElementById('mOperator').textContent=metaInfo.operator;
+    document.getElementById('metaBar').classList.add('visible');
+    buildPreview(); document.getElementById('previewPanel').style.display='block';
+  }
+  if(!pathData.length) return;
+  document.getElementById('diagPanel').style.display='block';
+  var cOk=0,cFail=0,cHard=0;
+  pathData.forEach(function(p){var e=effectiveStatus(p);if(e==='ok')cOk++;else if(e==='fail')cFail++;else if(e==='hard')cHard++;});
+  document.getElementById('statOk').textContent=cOk;
+  document.getElementById('statFail').textContent=cFail;
+  document.getElementById('statHard').textContent=cHard;
+  var sensors={};
+  for(var s=1;s<=8;s++) sensors[s]={asTx:[],asRx:[]};
+  pathData.forEach(function(p){var eff=effectiveStatus(p);sensors[p.tx].asTx.push({path:p.id,partner:p.rx,status:eff});sensors[p.rx].asRx.push({path:p.id,partner:p.tx,status:eff});});
+  diagResults={};
+  for(var s=1;s<=8;s++){
+    var txP=sensors[s].asTx,rxP=sensors[s].asRx,all=txP.concat(rxP);
+    var hasInput=all.some(function(p){return p.status!=='';});
+    if(!hasInput){diagResults[s]={verdict:'unknown',reason:'Tidak ada data path'};continue;}
+    var anyOk=all.some(function(p){return p.status==='ok';});
+    if(anyOk){diagResults[s]={verdict:'ok',reason:all.filter(function(p){return p.status==='ok';}).length+' path berfungsi normal'};continue;}
+    var hardAsTx=txP.filter(function(p){return p.status==='hard';});
+    var failAsTx=txP.filter(function(p){return p.status==='fail';});
+    var hardAsRx=rxP.filter(function(p){return p.status==='hard';});
+    var failAsRx=rxP.filter(function(p){return p.status==='fail';});
+    var partnerHasOk=function(list){return list.some(function(p){return sensors[p.partner].asTx.concat(sensors[p.partner].asRx).some(function(pp){return pp.status==='ok'&&pp.partner!==s;});});};
+    if(hardAsTx.length>0&&partnerHasOk(txP)){
+      diagResults[s]={verdict:'error',reason:'Hard Fail pada '+hardAsTx.length+' path sebagai Tx. Sensor Rx pasangan masih berfungsi - Sensor '+s+' kemungkinan besar bermasalah'};
+    } else if(failAsTx.length>0&&partnerHasOk(txP)&&hardAsTx.length===0&&failAsRx.length===0&&hardAsRx.length===0){
+      diagResults[s]={verdict:'error',reason:'Data Fail pada '+failAsTx.length+' path sebagai Tx. Sensor '+s+' kemungkinan bermasalah pada sisi transmit'};
+    } else if((hardAsTx.length+failAsTx.length)>0&&(hardAsRx.length+failAsRx.length)>0){
+      diagResults[s]={verdict:'warning',reason:'Gagal sebagai Tx dan Rx - perlu cross-check lebih lanjut'};
+    } else if((hardAsRx.length+failAsRx.length)>0&&txP.every(function(p){return p.status==='ok'||p.status===''})){
+      diagResults[s]={verdict:'warning',reason:'Kegagalan hanya saat sebagai Rx - kemungkinan masalah ada di Tx pasangan'};
+    } else {
+      diagResults[s]={verdict:'warning',reason:'Semua path gagal namun status sensor pasangan belum terkonfirmasi'};
+    }
+  }
+  var grid=document.getElementById('diagGrid'); grid.innerHTML='';
+  for(var s=1;s<=8;s++){
+    var r=diagResults[s];
+    var all2=sensors[s].asTx.concat(sensors[s].asRx);
+    var okC=all2.filter(function(p){return p.status==='ok';}).length;
+    var fC=all2.filter(function(p){return p.status==='fail';}).length;
+    var hC=all2.filter(function(p){return p.status==='hard';}).length;
+    var stTxt=r.verdict==='ok'?'OPERATIONAL':r.verdict==='warning'?'PERLU CEK':r.verdict==='error'?'BERMASALAH':'NO DATA';
+    var stIcon=r.verdict==='ok'?'&#10003;':r.verdict==='warning'?'&#9888;':r.verdict==='error'?'&#10005;':'—';
+    grid.innerHTML+='<div class="sensor-card '+r.verdict+'"><div class="sc-num">'+s+'</div><div class="sc-label">Sensor '+s+'</div><div class="sc-status">'+stIcon+' '+stTxt+'</div><div class="sc-detail">OK: '+okC+' | DataFail: '+fC+' | HardFail: '+hC+'<br><span style="font-size:11px">'+r.reason+'</span></div></div>';
+    var node=document.getElementById('snode-'+s);
+    if(node){node.className='sensor-node '+(r.verdict==='error'?'error':r.verdict==='warning'?'warning':r.verdict==='ok'?'ok':'unknown');var tip=document.getElementById('stip-'+s);if(tip)tip.textContent='S'+s+': '+stTxt;}
+  }
+  var faulty=Object.entries(diagResults).filter(function(e){return e[1].verdict==='error';}).map(function(e){return e[0];});
+  var suspect=Object.entries(diagResults).filter(function(e){return e[1].verdict==='warning';}).map(function(e){return e[0];});
+  var box=document.getElementById('conclusionBox');
+  var title=box.querySelector('.conc-title');
+  var text=document.getElementById('conclusionText');
+  if(faulty.length===0&&suspect.length===0){
+    box.className='conclusion-box all-ok';title.textContent='Semua Sensor Operasional';
+    text.innerHTML='Tidak ditemukan indikasi kerusakan sensor. Sistem FEGT berfungsi normal.';
+  } else {
+    box.className='conclusion-box has-issue';title.textContent='Terdeteksi Indikasi Kerusakan Sensor';
+    var html='';
+    if(faulty.length>0) html+='<strong>Sensor kemungkinan bermasalah:</strong> '+faulty.map(function(s){return '<strong>Sensor '+s+'</strong>';}).join(', ')+'<br>';
+    if(suspect.length>0) html+='<strong>Sensor perlu pengecekan:</strong> '+suspect.map(function(s){return 'Sensor '+s;}).join(', ');
+    text.innerHTML=html;
+  }
+  updateSvg();
+  document.getElementById('btnPdf').disabled=false;
+  document.getElementById('btnSave').disabled=false;
+}
+
+// ─────── BACKGROUND IMAGE (metode dari opacity.html) ───────
+var fegtBgImg = null;
+var fegtBgReady = false;
+var fegtBgCallbacks = [];
+
+function initFegtBackground() {
+  if (fegtBgImg) return;
+  fegtBgImg = new Image();
+  fegtBgImg.onload = function() {
+    fegtBgReady = true;
+    var cbs = fegtBgCallbacks.splice(0);
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  fegtBgImg.onerror = function() {
+    fegtBgReady = false;
+    var cbs = fegtBgCallbacks.splice(0);
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  fegtBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+
+function ensureFegtBackground(callback) {
+  if (!fegtBgImg) { fegtBgCallbacks.push(callback); initFegtBackground(); return; }
+  if (fegtBgReady) { callback(); return; }
+  if (fegtBgImg.complete && fegtBgImg.naturalWidth > 0) { fegtBgReady = true; callback(); return; }
+  fegtBgCallbacks.push(callback);
+}
+
+function downloadPdf(){
+  ensureFegtBackground(function() {
+    try {
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+      var pw = doc.internal.pageSize.getWidth();   // 210mm
+      var ph = doc.internal.pageSize.getHeight();  // 297mm
+
+      // ─────── MARGIN sama dengan opacity: 20mm ───────
+      var marginX      = 20;
+      var marginTop    = 20;
+      var marginBottom = 20;
+      var contentW     = pw - (marginX * 2);  // 170mm
+
+      var now   = new Date();
+      var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      var dd    = String(now.getDate()).padStart(2,'0');
+      var yy    = now.getFullYear();
+      var nowStr= dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+      function safe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
+
+      var y = marginTop;
+
+      // ─────── drawBg: gunakan background image seperti opacity ───────
+      function drawBg(doc, pw, ph) {
+        if (!fegtBgImg || !fegtBgImg.naturalWidth) return;
+        try { doc.addImage(fegtBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+      }
+
+      // ─────── HELPER FUNCTIONS ───────
+      function checkPage(h) {
+        if (y + h > ph - marginBottom) {
+          doc.addPage();
+          drawBg(doc, pw, ph);
+          y = marginTop;
+        }
+        return y;
+      }
+
+      function secHeader(title) {
+        checkPage(16);
+        doc.setFillColor(44, 62, 48);
+        doc.rect(marginX, y, contentW, 8, 'F');
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(9);
+        doc.setTextColor(210, 230, 215);
+        doc.text(title, pw/2, y+5.5, {align:'center'});
+        y += 11;
+      }
+
+      function statBox(stats) {
+        checkPage(24);
+        var bh  = 18;
+        var cols = stats.length;
+        var cw   = contentW / cols;
+        for (var i = 0; i < cols; i++) {
+          var c = stats[i];
+          var x = marginX + (i * cw);
+          doc.setFillColor(245, 250, 246);
+          doc.rect(x, y, cw, bh, 'F');
+          doc.setDrawColor(180, 210, 185);
+          doc.setLineWidth(0.4);
+          doc.rect(x, y, cw, bh, 'S');
+          doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(100,130,110);
+          doc.text(c.label, x+cw/2, y+5, {align:'center'});
+          doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(30,60,35);
+          doc.text(c.val, x+cw/2, y+13, {align:'center'});
+        }
+        y += bh + 6;
+      }
+
+      function conclusionBox(lines, isOk) {
+        var boxH = 12 + (lines.length - 1) * 6;
+        checkPage(boxH + 5);
+        doc.setFillColor(isOk ? 232:255, isOk ? 246:235, isOk ? 234:230);
+        doc.rect(marginX, y, contentW, boxH, 'F');
+        doc.setDrawColor(isOk ? 39:192, isOk ? 174:57, isOk ? 96:43);
+        doc.setLineWidth(3);
+        doc.line(marginX, y, marginX, y+boxH);
+        doc.setLineWidth(0.4);
+        doc.rect(marginX, y, contentW, boxH, 'S');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9);
+        doc.setTextColor(isOk ? 22:150, isOk ? 120:40, isOk ? 50:30);
+        doc.text(lines[0], marginX+6, y+8);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8);
+        doc.setTextColor(40,60,45);
+        lines.slice(1).forEach(function(l,i){ if(l) doc.text(safe(l), marginX+6, y+14+i*6); });
+        y += boxH + 8;
+      }
+
+      // ─────── HALAMAN 1: DRAW BACKGROUND ───────
+      drawBg(doc, pw, ph);
+
+      // INFO BOX
+      doc.setDrawColor(180, 210, 185);
+      doc.setLineWidth(0.3);
+      doc.rect(marginX, y, contentW, 22, 'S');
+      var pairs = [
+        [marginX+3, [['Tanggal', safe(metaInfo.tanggal||'—')], ['Shift', safe(metaInfo.shift||'—')]]],
+        [marginX+contentW/2+5, [['Operator', safe(metaInfo.operator||'—')], ['Dicetak', safe(nowStr)]]]
+      ];
+      pairs.forEach(function(pair){
+        pair[1].forEach(function(it,i){
+          var iy = y+7+i*7;
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(74,94,82);
+          doc.text(it[0]+':', pair[0], iy);
+          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+          doc.text(it[1].substring(0,45), pair[0]+26, iy);
+        });
+      });
+      y += 26;
+
+      // ─────── FEGT SECTION ───────
+      secHeader('BAGIAN 1 — DATA PEMBACAAN FURNACE EXIT GAS TEMP (21 PATH)');
+
+      var fegStats = [
+        {label:'Total',     val:'21'},
+        {label:'OK',        val:String(pathData.filter(function(p){return effectiveStatus(p)==='ok';}).length)},
+        {label:'Data Fail', val:String(pathData.filter(function(p){return effectiveStatus(p)==='fail';}).length)},
+        {label:'Hard Fail', val:String(pathData.filter(function(p){return effectiveStatus(p)==='hard';}).length)}
+      ];
+      statBox(fegStats);
+
+      doc.autoTable({
+        startY: y,
+        head: [['Path','Tx→Rx','Temp','Status','Keterangan']],
+        body: pathData.map(function(p){
+          var eff=effectiveStatus(p);
+          return ['Path-'+p.id, p.tx+'>'+p.rx, p.temp>0?p.temp+' C':'No Read', safe(p.statusRaw)||'-', eff==='ok'?'VALID':eff==='fail'?'DATA FAIL':eff==='hard'?'HARD FAIL':'-'];
+        }),
+        theme: 'grid',
+        margin: {left:marginX, right:marginX},
+        headStyles: {fillColor:[44,62,48], textColor:[210,230,215], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
+        bodyStyles: {fontSize:8, textColor:[20,30,25], halign:'center', font:'helvetica'},
+        columnStyles: {'0':{cellWidth:18},'1':{cellWidth:18},'2':{cellWidth:26},'3':{cellWidth:72},'4':{cellWidth:36}},
+        alternateRowStyles: {fillColor:[246,249,247]},
+        willDrawPage: function(data){
+          if (data.pageNumber > 1) { drawBg(doc, pw, ph); }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      secHeader('HASIL DIAGNOSIS SENSOR FEGT');
+
+      var sensorRows = [];
+      for (var s=1; s<=8; s++){
+        var r = diagResults[s] || {verdict:'unknown', reason:'-'};
+        sensorRows.push(['Sensor '+s, r.verdict==='ok'?'OPERASIONAL':r.verdict==='warning'?'PERLU CEK':r.verdict==='error'?'BERMASALAH':'NO DATA', safe(r.reason)]);
+      }
+      doc.autoTable({
+        startY: y,
+        head: [['Sensor','Status','Keterangan']],
+        body: sensorRows,
+        theme: 'grid',
+        margin: {left:marginX, right:marginX},
+        headStyles: {fillColor:[44,62,48], textColor:[210,230,215], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
+        bodyStyles: {fontSize:8, textColor:[20,30,25], font:'helvetica'},
+        columnStyles: {'0':{cellWidth:22,halign:'center'},'1':{cellWidth:32,halign:'center'},'2':{cellWidth:116}},
+        alternateRowStyles: {fillColor:[246,249,247]},
+        willDrawPage: function(data){
+          if (data.pageNumber > 1) { drawBg(doc, pw, ph); }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      var faulty = Object.entries(diagResults).filter(function(e){return e[1].verdict==='error';}).map(function(e){return 'Sensor '+e[0];});
+      var suspect= Object.entries(diagResults).filter(function(e){return e[1].verdict==='warning';}).map(function(e){return 'Sensor '+e[0];});
+      var fEgtOk  = faulty.length===0 && suspect.length===0;
+      var fEgtLines= fEgtOk ? ['KESIMPULAN FEGT: Semua Sensor Operasional','Tidak ditemukan indikasi kerusakan sensor.'] : ['KESIMPULAN FEGT: Terdeteksi Indikasi Kerusakan'];
+      if(!fEgtOk){ if(faulty.length) fEgtLines.push('Sensor bermasalah: '+faulty.join(', ')); if(suspect.length) fEgtLines.push('Sensor perlu cek: '+suspect.join(', ')); }
+      conclusionBox(fEgtLines, fEgtOk);
+
+      // ─────── LEAK DETECTION SECTION ───────
+      checkPage(20);
+      secHeader('BAGIAN 2 — LEAK DETECTION (LD)');
+
+      var leakResults = LEAK_PATHS.map(function(p){
+        return Object.assign({},p,{temp:parseFloat(document.getElementById('lktemp-'+p.id).value)||0, status:document.getElementById('lkstatus-'+p.id).value||(p.defaultNA?'na':'ok')});
+      });
+      var lkOk=0,lkFail=0,lkNa=0;
+      leakResults.forEach(function(r){ if(r.status==='na')lkNa++; else if(r.status==='ok')lkOk++; else lkFail++; });
+
+      secHeader('DATA PEMBACAAN LEAK DETECTION (9 PATH)');
+      statBox([{label:'Total',val:'9'},{label:'OK',val:String(lkOk)},{label:'Fail',val:String(lkFail)},{label:'N/A',val:String(lkNa)}]);
+
+      doc.autoTable({
+        startY: y,
+        head: [['Path','Lokasi','Temp','Status','Ket']],
+        body: leakResults.map(function(r){
+          var tStr=r.status==='na'?'N/A':(r.temp>0?r.temp+' C':'No Read');
+          var sLabel=r.status==='na'?'N/A':r.status==='ok'?'OK':safe(r.status);
+          return ['Path-'+r.id, safe(r.desc), tStr, sLabel, r.status==='na'?'N/A':r.status==='ok'?'NORMAL':'FAIL'];
+        }),
+        theme: 'grid',
+        margin: {left:marginX, right:marginX},
+        headStyles: {fillColor:[44,62,48], textColor:[210,230,215], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
+        bodyStyles: {fontSize:8, textColor:[20,30,25], halign:'center', font:'helvetica'},
+        columnStyles: {'0':{cellWidth:16},'1':{cellWidth:76},'2':{cellWidth:22},'3':{cellWidth:30},'4':{cellWidth:26}},
+        alternateRowStyles: {fillColor:[246,249,247]},
+        willDrawPage: function(data){
+          if (data.pageNumber > 1) { drawBg(doc, pw, ph); }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      var lkIssues = leakResults.filter(function(r){return r.status!=='ok'&&r.status!=='na';});
+      var ldLines  = lkIssues.length===0 ? ['KESIMPULAN LD: Tidak Ada Indikasi Kebocoran','Semua path aktif terbaca normal.'] : ['KESIMPULAN LD: Terdeteksi Indikasi Kebocoran','Path bermasalah: '+lkIssues.map(function(r){return 'Path-'+r.id;}).join(', ')];
+      conclusionBox(ldLines, lkIssues.length===0);
+
+      // Footer area dibiarkan kosong — mengandalkan background template (sama seperti opacity)
+      var nPages = doc.internal.getNumberOfPages();
+      for (var i=1; i<=nPages; i++) { doc.setPage(i); }
+
+      doc.save('FEGT_LD_Report_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
+
+    } catch(err) {
+      alert('PDF Error: '+err.message);
+      console.error(err);
+    }
+  });
+}
+
+function resetAll(){
+  pathData=[];diagResults={};metaInfo={tanggal:'—',shift:'—',operator:'—'};rawHeaders=[];rawRows=[];
+  document.getElementById('fileInput').value='';
+  document.getElementById('fileInfo').classList.remove('visible');
+  document.getElementById('colMap').classList.remove('visible');
+  document.getElementById('metaBar').classList.remove('visible');
+  document.getElementById('fileName').textContent='—';
+  document.getElementById('fileMeta').textContent='—';
+  hideNotice();
+  document.getElementById('manTanggal').value='';
+  document.getElementById('manShift').value='';
+  document.getElementById('manOperator').value='';
+  PATHS.forEach(function(p){var t=document.getElementById('mtemp-'+p.id);var s=document.getElementById('mstatus-'+p.id);if(t)t.value='';if(s)s.value='ok';});
+  document.getElementById('btnRun').disabled=activeTab==='manual'?false:true;
+  document.getElementById('btnPdf').disabled=true;
+  document.getElementById('btnSave').disabled=true;
+  document.getElementById('previewPanel').style.display='none';
+  document.getElementById('diagPanel').style.display='none';
+  document.getElementById('diagGrid').innerHTML='';
+  for(var s=1;s<=8;s++){var n=document.getElementById('snode-'+s);if(n)n.className='sensor-node unknown';}
+  updateSvg();
+}
+
+function runLeakDiagnosis(){
+  var results=LEAK_PATHS.map(function(p){return Object.assign({},p,{temp:parseFloat(document.getElementById('lktemp-'+p.id).value)||0,status:document.getElementById('lkstatus-'+p.id).value||(p.defaultNA?'na':'ok')});});
+  var okC=0,failC=0,naC=0;
+  results.forEach(function(r){if(r.status==='na')naC++;else if(r.status==='ok')okC++;else failC++;});
+  var issues=results.filter(function(r){return r.status!=='ok'&&r.status!=='na';});
+  var div=document.getElementById('leakResult'); div.style.display='block';
+  var html='<div class="stat-row" style="margin-bottom:16px"><div class="stat-chip total">Total <span>'+results.length+'</span></div><div class="stat-chip ok">OK <span>'+okC+'</span></div><div class="stat-chip fail">Fail <span>'+failC+'</span></div><div class="stat-chip" style="background:#f5f5f5;border-color:#ccc;color:#888">N/A <span>'+naC+'</span></div></div>';
+  if(issues.length===0){html+='<div class="conclusion-box all-ok"><div class="conc-title">&#10003; No Issues</div><div style="font-size:13px;color:var(--text2)">Semua path aktif terbaca normal.</div></div>';}
+  else{html+='<div class="conclusion-box has-issue"><div class="conc-title">&#10005; Leak Detected</div><div style="font-size:13px">Path bermasalah: <strong>'+issues.map(function(r){return 'Path-'+r.id;}).join(', ')+'</strong></div></div>';}
+  div.innerHTML=html;
+}
+function resetLeak(){
+  LEAK_PATHS.forEach(function(p){var t=document.getElementById('lktemp-'+p.id);var s=document.getElementById('lkstatus-'+p.id);if(t&&!t.disabled)t.value='';if(s&&!s.disabled)s.value='ok';});
+  document.getElementById('leakResult').style.display='none';
+}
+
+/* ── dbCollectData untuk modul FEGT ── */
+function dbCollectData(modul) {
+  if (modul !== 'fegt') return null;
+  collectManualData();
+  return {modul:'FEGT & Leak Detection', tanggal:metaInfo.tanggal, shift:metaInfo.shift, pic:metaInfo.operator, work_order:'', unit:'Unit 7',
+    data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), diagResults:diagResults, meta:metaInfo}};
+}
+
+/* ── INIT ── */
+setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
+buildManualTable(); buildLeakTable(); updateSvg(); switchTab('manual');
+initFegtBackground();
+(function(){
+  var today=new Date();
+  var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var el=document.getElementById('manTanggal'); if(el&&!el.value)el.value=todayStr;
+})();
+
+/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var id=params.get('id');
+  var doPrint=params.get('print')==='1';
+  if(!id) return;
+  dbLoad(id, function(rec){
+    var data=rec.data||{};
+    var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    function fmtDate(str){if(!str)return '';var d=new Date(str);if(isNaN(d.getTime()))return str;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+    window._editingId=id;
+    switchTab('manual');
+    setTimeout(function(){
+      var tRaw=rec.tanggal||'';
+      if(tRaw&&tRaw.length===10){var el=document.getElementById('manTanggal');if(el)el.value=tRaw;}
+      var shEl=document.getElementById('manShift');if(shEl&&(rec.shift||data.shift))shEl.value=rec.shift||data.shift;
+      var opEl=document.getElementById('manOperator');if(opEl&&rec.pic)opEl.value=rec.pic;
+      if(data.paths){data.paths.forEach(function(p){var t=document.getElementById('mtemp-'+p.id);var s=document.getElementById('mstatus-'+p.id);if(t)t.value=p.temp||0;if(s)s.value=p.status||p.statusRaw||'ok';});}
+      collectManualData(); updateSvg();
+      document.getElementById('btnRun').disabled=false;
+      document.getElementById('btnSave').disabled=false;
+      dbShowToast('Data dimuat dari riwayat ✓');
+      if(doPrint)setTimeout(function(){runDiagnosis();setTimeout(downloadPdf,500);},500);
+    },400);
+  });
+})();
+</script>
+</body>
+</html>
