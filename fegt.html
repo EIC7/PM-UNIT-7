@@ -846,8 +846,13 @@ function resetLeak(){
 function dbCollectData(modul) {
   if (modul !== 'fegt') return null;
   collectManualData();
+  var leakPaths = LEAK_PATHS.map(function(p) {
+    var t = document.getElementById('lktemp-'+p.id);
+    var s = document.getElementById('lkstatus-'+p.id);
+    return {id: p.id, temp: t ? (parseFloat(t.value)||0) : 0, status: s ? s.value : (p.defaultNA?'na':'ok')};
+  });
   return {modul:'FEGT & Leak Detection', tanggal:metaInfo.tanggal, shift:metaInfo.shift, pic:metaInfo.operator, work_order:'', unit:'Unit 7',
-    data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), diagResults:diagResults, meta:metaInfo}};
+    data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), leakPaths:leakPaths, diagResults:diagResults, meta:metaInfo}};
 }
 
 /* ── INIT ── */
@@ -878,6 +883,7 @@ initFegtBackground();
       var shEl=document.getElementById('manShift');if(shEl&&(rec.shift||data.shift))shEl.value=rec.shift||data.shift;
       var opEl=document.getElementById('manOperator');if(opEl&&rec.pic)opEl.value=rec.pic;
       if(data.paths){data.paths.forEach(function(p){var t=document.getElementById('mtemp-'+p.id);var s=document.getElementById('mstatus-'+p.id);if(t)t.value=p.temp||0;if(s)s.value=p.status||p.statusRaw||'ok';});}
+      if(data.leakPaths){data.leakPaths.forEach(function(p){var t=document.getElementById('lktemp-'+p.id);var s=document.getElementById('lkstatus-'+p.id);if(t&&!t.disabled)t.value=p.temp||0;if(s&&!s.disabled)s.value=p.status||'ok';});}
       collectManualData(); updateSvg();
       document.getElementById('btnRun').disabled=false;
       document.getElementById('btnSave').disabled=false;
