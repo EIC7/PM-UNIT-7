@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SO2 Scrubber Inlet — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">SO2</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Scrubber Inlet SO2 Analyzer</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clockSo2">--:--:--</div>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Continues Emission System Monitoring</div>
+      <div class="page-header-title">SO2 Scrubber <span>Inlet</span></div>
+    </div>
+    <div style="margin-bottom:8px">
+      <span class="badge">7FC-CAB-100</span>
+      &nbsp;
+      <span class="badge" style="background:#2d4a6a22;color:var(--steel);border-color:#2d4a6a44">HORIBA ENDA-5000</span>
+    </div>
+  </div>
+
+  <!-- INFO PANEL -->
+  <div class="panel">
+    <div class="section-label">Informasi Pekerjaan</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px">
+      <div class="meta-field"><label>Asset Number</label><input type="text" id="s2AssetNum" value="7FC-CAB-100"></div>
+      <div class="meta-field"><label>Date / Time</label><input type="date" id="s2Date"></div>
+      <div class="meta-field"><label>Manufacturer</label><input type="text" id="s2Mnf" value="HORIBA ENDA-5000"></div>
+      <div class="meta-field"><label>Location</label><input type="text" id="s2Location" value="CEMS Building U7"></div>
+      <div class="meta-field"><label>Serial Number</label><input type="text" id="s2SN" value="18944251"></div>
+      <div class="meta-field"><label>PIC</label><input type="text" id="s2PIC" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="s2WO" placeholder="Work Order..."></div>
+    </div>
+  </div>
+
+  <!-- ANALYZER READING TABLE -->
+  <div class="panel">
+    <div class="section-label">Analyzer Reading — SO2</div>
+    <div style="overflow-x:auto">
+      <table class="path-table" id="so2AnalyzerTable">
+        <thead>
+          <tr>
+            <th>No</th><th>Asset Reference</th>
+            <th style="text-align:center">DCS</th><th style="text-align:center">Local</th>
+            <th>Zero / Span</th><th>Before</th><th>After</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="path-label">a.</td>
+            <td style="font-size:13px">Scrubber A Inlet SO₂<br><span style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3)">(7FC-AT-7A)</span></td>
+            <td style="text-align:center"><input type="number" id="s2aDCS" placeholder="0" style="width:70px;text-align:center"></td>
+            <td style="text-align:center"><input type="number" id="s2aLocal" placeholder="0" style="width:70px;text-align:center"></td>
+            <td>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="color:var(--text3);width:36px">Zero:</span><input type="number" id="s2aZero" value="0" style="width:60px;text-align:center"></div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="color:var(--text3);width:36px">Span:</span><input type="number" id="s2aSpan" value="461" style="width:60px;text-align:center"></div>
+              </div>
+            </td>
+            <td style="text-align:center"><input type="number" id="s2aBefore" placeholder="0" style="width:70px;text-align:center"></td>
+            <td style="text-align:center"><input type="number" id="s2aAfter" placeholder="0" style="width:70px;text-align:center"></td>
+          </tr>
+          <tr>
+            <td class="path-label">b.</td>
+            <td style="font-size:13px">Scrubber B Inlet SO₂<br><span style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3)">(7FC-AT-7B)</span></td>
+            <td style="text-align:center"><input type="number" id="s2cDCS" placeholder="0" style="width:70px;text-align:center"></td>
+            <td style="text-align:center"><input type="number" id="s2cLocal" placeholder="0" style="width:70px;text-align:center"></td>
+            <td>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="color:var(--text3);width:36px">Zero:</span><input type="number" id="s2cZero" value="0" style="width:60px;text-align:center"></div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="color:var(--text3);width:36px">Span:</span><input type="number" id="s2cSpan" value="461" style="width:60px;text-align:center"></div>
+              </div>
+            </td>
+            <td style="text-align:center"><input type="number" id="s2cBefore" placeholder="0" style="width:70px;text-align:center"></td>
+            <td style="text-align:center"><input type="number" id="s2cAfter" placeholder="0" style="width:70px;text-align:center"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- JOB PLAN CHECKLIST -->
+  <div class="panel">
+    <div class="section-label">Job Plan Maintenance Checklist</div>
+    <div style="overflow-x:auto">
+      <table class="path-table" id="so2CheckTable" style="font-size:13px">
+        <thead>
+          <tr>
+            <th style="width:32px">No</th>
+            <th>Job Plan Maintenance</th>
+            <th style="text-align:center;width:48px">7A<br><span style="font-size:10px;font-weight:400">Y</span></th>
+            <th style="text-align:center;width:48px">7A<br><span style="font-size:10px;font-weight:400">N</span></th>
+            <th style="text-align:center;width:48px">7B<br><span style="font-size:10px;font-weight:400">Y</span></th>
+            <th style="text-align:center;width:48px">7B<br><span style="font-size:10px;font-weight:400">N</span></th>
+            <th style="width:140px">Record</th>
+          </tr>
+        </thead>
+        <tbody id="so2CheckBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- NOTES -->
+  <div class="panel">
+    <div class="section-label">Catatan Kondisi Panel</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:8px">📷 Scrubber A Inlet SO₂</div>
+        <textarea id="s2Note7A" rows="2" placeholder="Catatan kondisi panel 7A..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical"></textarea>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:8px">📷 Scrubber B Inlet SO₂</div>
+        <textarea id="s2Note7B" rows="2" placeholder="Catatan kondisi panel 7B..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="so2DownloadPdf()">⬇ Download PDF Report</button>
+    <button class="btn" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('so2')">💾 Simpan ke Database</button>
+    <button class="btn btn-danger" onclick="so2Reset()">✕ Reset</button>
+  </div>
+
+</div>
+
+<script>
+var SO2_CHECKS = [
+  {cat:'weekly',   header:true,  label:'Weekly — Unit 7 FGD Inlet SO2 Analyzer Maintenance'},
+  {cat:'weekly',   no:'1',  sub:true,  label:'Sample Gas Flow'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Check sample gas flow (0.6±0.1 L/min)'},
+  {cat:'weekly',   no:'2',  sub:true,  label:'Existence of alarm'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Confirm that the alarm is not generated.'},
+  {cat:'weekly',   no:'3',  sub:true,  label:'Secondary filter 1, 2'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Check for dirt on surface. If dirty, replace it. (st021491)', defRec:'ok'},
+  {cat:'weekly',   no:'4',  sub:true,  label:'Electronic cooler'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Check that the temperature of electric cooler is 5°C', defRec:'ok'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Check fan rotation', defRec:'ok'},
+  {cat:'weekly',   no:'5',  sub:true,  label:'Drain trap inspection'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Replace primary filter element if the water causes bubbling.', defRec:'ok'},
+  {cat:'weekly',   no:'',   sub:false, label:'- If the water level is low, perform watering until the water starts', defRec:'ok'},
+  {cat:'weekly',   no:'',   sub:false, label:'- being discharged from the drain trap 2.', defRec:'ok'},
+  {cat:'weekly',   no:'6',  sub:true,  label:'Mist Catcher'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Check for dirt. If dirty, replace it. (ST036509)', defRec:'ok'},
+  {cat:'weekly',   no:'7',  sub:true,  label:'Calibration Gas'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Check if residual pressure is below ~1 MPa, replace the gas.', defRec:'gas_input', gasInput:true},
+  {cat:'weekly',   no:'',   sub:false, label:'- Perform Calibration AIC', defRec:'manual cal'},
+  {cat:'weekly',   no:'',   sub:false, label:'- Check Calibration History', defRec:'ok'},
+  {cat:'2weekly',  header:true,  label:'2 Weekly — Unit 7 FGD Inlet SO2 Analyzer Maintenance'},
+  {cat:'2weekly',  no:'8',  sub:false, label:'Following Weekly - Unit 7 FGD Inlet SO2 Analyzer Inspection & Maintenance'},
+  {cat:'2weekly',  no:'9',  sub:false, label:'Drain in the drain tank'},
+  {cat:'monthly',  header:true,  label:'Monthly — Unit 7 FGD Inlet SO2 Analyzer Maintenance'},
+  {cat:'monthly',  no:'10', sub:false, label:'Following 2 Weekly - Unit 7 FGD Inlet SO2 Analyzer Inspection & Maintenance'},
+  {cat:'monthly',  no:'11', sub:true,  label:'Filter replacement (Primary and secondary)'},
+  {cat:'monthly',  no:'',   sub:false, label:'- Turn ON Maintenance button'},
+  {cat:'monthly',  no:'',   sub:false, label:'- Measure Ambient air or zero gas supply'},
+  {cat:'monthly',  no:'',   sub:false, label:'- Turn OFF Pump 1, 2 before replace any part'},
+  {cat:'monthly',  no:'',   sub:false, label:'- Turn ON Pump 1, 2 after replace all part'},
+  {cat:'monthly',  no:'',   sub:false, label:'- Replace primary filter element'},
+  {cat:'monthly',  no:'',   sub:false, label:'- Replace secondary filter 1,2 (st021491)'},
+  {cat:'2monthly', header:true,  label:'2 Monthly — UNIT 7 CEMS Inspection & Maintenance'},
+  {cat:'2monthly', no:'12', sub:false, label:'Following Monthly - Unit 7 FGD Inlet SO2 Analyzer Inspection & Maintenance'},
+  {cat:'2monthly', no:'13', sub:true,  label:'Mist Catcher'},
+  {cat:'2monthly', no:'',   sub:false, label:'- Replace Mist Catcher (ST036509)'},
+  {cat:'3monthly', header:true,  label:'3 Monthly — UNIT 7 CEMS Inspection & Maintenance'},
+  {cat:'3monthly', no:'14', sub:false, label:'Following 2 Monthly - Unit 7 FGD Inlet SO2 Analyzer Inspection & Maintenance'},
+  {cat:'3monthly', no:'15', sub:true,  label:'Primary filter holder cap'},
+  {cat:'3monthly', no:'',   sub:false, label:'- Replace'},
+  {cat:'3monthly', no:'16', sub:true,  label:'Heated tube (piping)'},
+  {cat:'3monthly', no:'',   sub:false, label:'- If clogging is found, clean it by instrument air (ensure to clean with inlet tube disconnected)'},
+  {cat:'3monthly', no:'17', sub:true,  label:'Probe'},
+  {cat:'3monthly', no:'',   sub:false, label:'- Clean if dirty, replace if deteriorated'},
+  {cat:'3monthly', no:'',   sub:false, label:'- Clean the clogging and dirt'},
+  {cat:'3monthly', no:'18', sub:true,  label:'Ventilator filter'},
+  {cat:'3monthly', no:'',   sub:false, label:'- Clean if dirty, replace if deteriorated'},
+  {cat:'6monthly', header:true,  label:'6 Monthly — UNIT 7 CEMS Inspection & Maintenance'},
+  {cat:'6monthly', no:'19', sub:true,  label:'Replace Diaphragm Pump 1 (ST021494)'},
+  {cat:'6monthly', no:'20', sub:true,  label:'Replace Diaphragm Pump 2 (ST021494)'},
+  {cat:'6monthly', no:'21', sub:true,  label:'Check the Demin Water after replacing pumps 1 & 2, add if reduced'},
+];
+
+var so2TableBuilt = false;
+function so2BuildTable() {
+  if (so2TableBuilt) return; so2TableBuilt = true;
+  var tbody = document.getElementById('so2CheckBody');
+  var catBg = {weekly:'#e8f0fb','2weekly':'#e8f0fb',monthly:'#fef9e7','2monthly':'#fdecea','3monthly':'#f3e8fd','6monthly':'#e8f4fd'};
+  var catBd = {weekly:'#2563eb','2weekly':'#2980b9',monthly:'#f39c12','2monthly':'#c0392b','3monthly':'#8e44ad','6monthly':'#0891b2'};
+  var catLabel = {weekly:'Weekly','2weekly':'2 Weekly',monthly:'Monthly','2monthly':'2 Monthly','3monthly':'3 Monthly','6monthly':'6 Monthly'};
+  SO2_CHECKS.forEach(function(item,idx){
+    var tr = document.createElement('tr');
+    if (item.header) {
+      tr.innerHTML = '<td colspan="7" style="background:'+catBg[item.cat]+';border-left:4px solid '+catBd[item.cat]+';padding:9px 14px;font-weight:700;font-size:13px">'+item.label+'</td>';
+      tbody.appendChild(tr);
+      var trAll = document.createElement('tr');
+      trAll.setAttribute('data-checkall', item.cat);
+      trAll.style.cssText = 'background:'+catBg[item.cat]+'cc;border-left:4px solid '+catBd[item.cat]+';';
+      trAll.innerHTML =
+        '<td colspan="2" style="padding:6px 14px 6px 24px;font-size:11px;font-style:italic;color:'+catBd[item.cat]+';font-weight:600">✓ Centang Semua '+catLabel[item.cat]+'</td>'+
+        '<td style="text-align:center;width:46px"><input type="checkbox" id="allY7a_'+item.cat+'" onchange="so2CheckAll(\''+item.cat+'\',\'7aY\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:'+catBd[item.cat]+'"></td>'+
+        '<td style="text-align:center;width:46px"></td>'+
+        '<td style="text-align:center;width:46px"><input type="checkbox" id="allY7b_'+item.cat+'" onchange="so2CheckAll(\''+item.cat+'\',\'7bY\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:'+catBd[item.cat]+'"></td>'+
+        '<td style="text-align:center;width:46px"></td>'+
+        '<td style="font-size:11px;color:'+catBd[item.cat]+';padding-left:8px;font-style:italic">semua OK</td>';
+      tbody.appendChild(trAll);
+      return;
+    }
+    var lblStyle = item.sub ? 'font-weight:600;font-size:13px;padding-left:14px' : 'font-size:12px;color:var(--text2);padding-left:28px';
+    tr.setAttribute('data-cat', item.cat);
+    tr.setAttribute('data-itemidx', idx);
+    var recCell;
+    if (item.gasInput) {
+      recCell = '<td style="padding:4px 6px"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:11px;color:var(--text3)">Gas 1:</span><input type="number" id="gas1_'+idx+'" placeholder="bar" min="0" max="200" style="width:54px;text-align:center;font-size:12px"><span style="font-size:11px;color:var(--text3)">Gas 2:</span><input type="number" id="gas2_'+idx+'" placeholder="bar" min="0" max="200" style="width:54px;text-align:center;font-size:12px"></div></td>';
+    } else {
+      recCell = '<td id="rec_'+idx+'" style="font-size:12px;font-family:\'Courier New\',monospace;color:var(--ok);font-weight:600;padding-left:8px"></td>';
+    }
+    tr.innerHTML =
+      '<td style="font-size:12px;color:var(--text3);text-align:center;width:30px">'+(item.no||'')+'</td>'+
+      '<td style="'+lblStyle+'">'+item.label+'</td>'+
+      '<td style="text-align:center;width:46px"><input type="checkbox" id="c7aY_'+idx+'" onchange="so2Chk('+idx+',\'7aY\')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>'+
+      '<td style="text-align:center;width:46px"><input type="checkbox" id="c7aN_'+idx+'" onchange="so2Chk('+idx+',\'7aN\')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--fail)"></td>'+
+      '<td style="text-align:center;width:46px"><input type="checkbox" id="c7bY_'+idx+'" onchange="so2Chk('+idx+',\'7bY\')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>'+
+      '<td style="text-align:center;width:46px"><input type="checkbox" id="c7bN_'+idx+'" onchange="so2Chk('+idx+',\'7bN\')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--fail)"></td>'+
+      recCell;
+    tbody.appendChild(tr);
+  });
+}
+
+function so2CheckAll(cat, which, checked) {
+  SO2_CHECKS.forEach(function(item, idx) {
+    if (item.header || item.cat !== cat) return;
+    var yId = which==='7aY'?'c7aY_'+idx:'c7bY_'+idx;
+    var nId = which==='7aY'?'c7aN_'+idx:'c7bN_'+idx;
+    var yEl=document.getElementById(yId),nEl=document.getElementById(nId);
+    if(!yEl) return;
+    if(checked){yEl.checked=true;nEl.checked=false;}else{yEl.checked=false;}
+    var aY=document.getElementById('c7aY_'+idx).checked,bY=document.getElementById('c7bY_'+idx).checked;
+    var rec=document.getElementById('rec_'+idx);
+    if(rec) rec.textContent=(aY||bY)?(item.defRec||'ok'):'';
+  });
+  so2RefreshAllChecks();
+}
+
+function so2Chk(idx, which) {
+  var item=SO2_CHECKS[idx]; if(!item||item.header) return;
+  if(which==='7aY')document.getElementById('c7aN_'+idx).checked=false;
+  if(which==='7aN')document.getElementById('c7aY_'+idx).checked=false;
+  if(which==='7bY')document.getElementById('c7bN_'+idx).checked=false;
+  if(which==='7bN')document.getElementById('c7bY_'+idx).checked=false;
+  var aY=document.getElementById('c7aY_'+idx).checked,bY=document.getElementById('c7bY_'+idx).checked;
+  var rec=document.getElementById('rec_'+idx);
+  if(rec) rec.textContent=(aY||bY)?(item.defRec||'ok'):'';
+  so2RefreshAllChecks();
+}
+
+function so2RefreshAllChecks() {
+  ['weekly','2weekly','monthly','2monthly','3monthly','6monthly'].forEach(function(cat){
+    var allA = true, allB = true, hasCheck = false;
+    SO2_CHECKS.forEach(function(item, idx) {
+      if (item.header || item.cat !== cat) return;
+      hasCheck = true;
+      var a = document.getElementById('c7aY_'+idx);
+      var b = document.getElementById('c7bY_'+idx);
+      if (!(a && a.checked)) allA = false;
+      if (!(b && b.checked)) allB = false;
+    });
+    var aAll = document.getElementById('allY7a_'+cat);
+    var bAll = document.getElementById('allY7b_'+cat);
+    if (aAll) aAll.checked = hasCheck && allA;
+    if (bAll) bAll.checked = hasCheck && allB;
+  });
+}
+
+function so2Reset() {
+  SO2_CHECKS.forEach(function(item,idx){
+    if(item.header) return;
+    ['c7aY_','c7aN_','c7bY_','c7bN_'].forEach(function(p){var e=document.getElementById(p+idx);if(e)e.checked=false;});
+    if(item.gasInput){var g1=document.getElementById('gas1_'+idx);var g2=document.getElementById('gas2_'+idx);if(g1)g1.value='';if(g2)g2.value='';}
+    var r=document.getElementById('rec_'+idx);if(r)r.textContent='';
+  });
+  ['weekly','2weekly','monthly','2monthly','3monthly','6monthly'].forEach(function(cat){
+    var a=document.getElementById('allY7a_'+cat);if(a)a.checked=false;
+    var b=document.getElementById('allY7b_'+cat);if(b)b.checked=false;
+  });
+  ['s2Note7A','s2Note7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+}
+
+// ── BACKGROUND — sama persis dengan opacity ───────────────────────────────────
+var so2ReportBgImg = null;
+var so2ReportBgReady = false;
+var so2ReportBgCallbacks = [];
+
+function so2InitReportBackground() {
+  if (so2ReportBgImg) return;
+  so2ReportBgImg = new Image();
+  so2ReportBgImg.onload = function() {
+    so2ReportBgReady = true;
+    var cbs = so2ReportBgCallbacks.splice(0);
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  so2ReportBgImg.onerror = function() {
+    so2ReportBgReady = false;
+    var cbs = so2ReportBgCallbacks.splice(0);
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  so2ReportBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+
+function so2EnsureReportBackground(callback) {
+  if (!so2ReportBgImg) { so2ReportBgCallbacks.push(callback); so2InitReportBackground(); return; }
+  if (so2ReportBgReady) { callback(); return; }
+  if (so2ReportBgImg.complete && so2ReportBgImg.naturalWidth > 0) { so2ReportBgReady = true; callback(); return; }
+  so2ReportBgCallbacks.push(callback);
+}
+
+function so2DrawBg(doc, pw, ph) {
+  if (!so2ReportBgImg || !so2ReportBgImg.naturalWidth) return;
+  try { doc.addImage(so2ReportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+
+function so2DownloadPdf() {
+  so2EnsureReportBackground(function() {
+  try {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+    var pw = doc.internal.pageSize.getWidth();
+    var ph = doc.internal.pageSize.getHeight();
+
+    var marginX = 20, marginTop = 20, marginBottom = 20;
+    var contentW = pw - marginX * 2;  // 170mm
+
+    var now = new Date();
+    var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    var dd = String(now.getDate()).padStart(2,'0');
+    var yy = now.getFullYear();
+    var nowStr = dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+    function safe(v){ return String(v||'').replace(/[^\x00-\xFF]/g,'?'); }
+    function gv(id){ var el=document.getElementById(id); return el?(el.value||el.textContent||''):''; }
+    function pad(n){ return String(n).padStart(2,'0'); }
+
+    var y = marginTop;
+
+    function checkPage(need) {
+      if (y + need > ph - marginBottom) {
+        doc.addPage();
+        so2DrawBg(doc, pw, ph);
+        y = marginTop;
+      }
+    }
+
+    // Halaman pertama — draw background
+    so2DrawBg(doc, pw, ph);
+
+    // ── INFO BOX (format opacity) ──
+    doc.setDrawColor(180, 210, 220);
+    doc.setLineWidth(0.3);
+    doc.rect(marginX, y, contentW, 36, 'S');
+
+    var info = [
+      ['Asset Number', gv('s2AssetNum')], ['Date/Time', gv('s2Date')],   ['Manufacturer', gv('s2Mnf')],
+      ['Location',     gv('s2Location')], ['Serial Number', gv('s2SN')], ['PIC', gv('s2PIC')]
+    ];
+    var cw2 = contentW / 3;
+    info.slice(0,3).forEach(function(it, i) {
+      var ix = marginX + 3 + i * cw2, iy = y + 8;
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+      doc.text(it[0]+':', ix, iy);
+      doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+      doc.text(safe(it[1]).substring(0,28), ix+28, iy);
+    });
+    info.slice(3,6).forEach(function(it, i) {
+      var ix = marginX + 3 + i * cw2, iy = y + 18;
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+      doc.text(it[0]+':', ix, iy);
+      doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+      doc.text(safe(it[1]).substring(0,28), ix+28, iy);
+    });
+    // Work Order + Dicetak pada baris ke-3
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+    doc.text('Work Order:', marginX+3, y+28);
+    doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+    doc.text(safe(gv('s2WO')).substring(0,35), marginX+31, y+28);
+    doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
+    doc.text('Dicetak:', marginX+3+cw2, y+28);
+    doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+    doc.text(safe(nowStr), marginX+3+cw2+22, y+28);
+    y += 40;
+
+    // ── Section header (format opacity) ──
+    function secHeader(title) {
+      checkPage(12);
+      doc.setFillColor(232, 245, 233);
+      doc.rect(marginX, y, contentW, 8, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(30,64,175);
+      doc.text(title, marginX+3, y+5.5);
+      y += 11;
+    }
+
+    // ── ANALYZER READING ──
+    secHeader('ANALYZER READING — SO2 Scrubber Inlet Unit 7');
+
+    var analyzerRows = [
+      ['a.','Scrubber A Inlet SO2 (7FC-AT-7A)',safe(gv('s2aDCS')),safe(gv('s2aLocal')),safe(gv('s2aZero')),safe(gv('s2aSpan')),safe(gv('s2aBefore')),safe(gv('s2aAfter'))],
+      ['b.','Scrubber B Inlet SO2 (7FC-AT-7B)',safe(gv('s2cDCS')),safe(gv('s2cLocal')),safe(gv('s2cZero')),safe(gv('s2cSpan')),safe(gv('s2cBefore')),safe(gv('s2cAfter'))]
+    ];
+    // Kolom total = 170mm: 8+52+18+18+16+16+21+21 = 170
+    doc.autoTable({
+      startY: y,
+      head: [['No','Asset Reference','DCS','Local','Zero','Span','Before','After']],
+      body: analyzerRows,
+      theme: 'grid',
+      margin: {left: marginX, right: marginX, top: 20},
+      headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
+      bodyStyles: {fontSize:7.5, textColor:[20,30,25], font:'helvetica', halign:'center', cellPadding:2},
+      columnStyles: {
+        0:{cellWidth:8,  halign:'center'},
+        1:{cellWidth:52, halign:'left'},
+        2:{cellWidth:18},
+        3:{cellWidth:18},
+        4:{cellWidth:16},
+        5:{cellWidth:16},
+        6:{cellWidth:21},
+        7:{cellWidth:21}
+      },
+      alternateRowStyles: {fillColor:[246,249,247]},
+      willDrawPage: function(data) { if (data.pageNumber > 1) { so2DrawBg(doc, pw, ph); } }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── JOB PLAN CHECKLIST ──
+    // Deteksi otomatis: kategori mana yang ada centangannya (Y)
+    var CAT_ORDER = ['weekly','2weekly','monthly','2monthly','3monthly','6monthly'];
+    var CAT_LABEL = {
+      'weekly':'Weekly', '2weekly':'2 Weekly', 'monthly':'Monthly',
+      '2monthly':'2 Monthly', '3monthly':'3 Monthly', '6monthly':'6 Monthly'
+    };
+
+    // Cari kategori tertinggi yang ada centangannya
+    var highestCatIdx = -1;
+    SO2_CHECKS.forEach(function(item, idx) {
+      if (item.header) return;
+      var aY = document.getElementById('c7aY_'+idx);
+      var bY = document.getElementById('c7bY_'+idx);
+      if ((aY && aY.checked) || (bY && bY.checked)) {
+        var ci = CAT_ORDER.indexOf(item.cat);
+        if (ci > highestCatIdx) highestCatIdx = ci;
+      }
+    });
+
+    // Judul PM berdasarkan kategori tertinggi
+    var pmTitle = highestCatIdx >= 0
+      ? 'Preventive Maintenance ' + CAT_LABEL[CAT_ORDER[highestCatIdx]]
+      : 'Preventive Maintenance';
+
+    // Section header checklist
+    secHeader('JOB PLAN MAINTENANCE CHECKLIST — SO2 Scrubber Inlet Unit 7');
+
+    // Judul tebal sebelum tabel
+    checkPage(10);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(20,30,25);
+    doc.text(pmTitle, marginX + contentW/2, y, {align:'center'});
+    y += 8;
+
+    // Filter: hanya cetak dari weekly s/d kategori tertinggi (inklusif)
+    var allowedCats = highestCatIdx >= 0 ? CAT_ORDER.slice(0, highestCatIdx + 1) : CAT_ORDER;
+
+    var checkRows = [];
+    SO2_CHECKS.forEach(function(item, idx) {
+      if (item.header) {
+        if (allowedCats.indexOf(item.cat) === -1) return;
+        checkRows.push([{content:safe(item.label), colSpan:7, styles:{fontStyle:'bold', fillColor:[230,240,253], textColor:[30,64,175]}}]);
+        return;
+      }
+      if (allowedCats.indexOf(item.cat) === -1) return;
+      var get = function(id){ var e=document.getElementById(id); return e&&e.checked?'[v]':'[ ]'; };
+      var recEl = document.getElementById('rec_'+idx);
+      var recVal = item.gasInput
+        ? ('Gas1:'+safe(gv('gas1_'+idx))+' Gas2:'+safe(gv('gas2_'+idx)))
+        : (recEl ? safe(recEl.textContent) : '');
+      checkRows.push([item.no||'', safe(item.label), get('c7aY_'+idx), get('c7aN_'+idx), get('c7bY_'+idx), get('c7bN_'+idx), recVal]);
+    });
+    // Kolom total = 170mm: 10+80+12+12+12+12+32 = 170
+    doc.autoTable({
+      startY: y,
+      head: [['No','Job Plan','7A Y','7A N','7B Y','7B N','Record']],
+      body: checkRows,
+      theme: 'grid',
+      margin: {left: marginX, right: marginX, top: 20},
+      headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
+      bodyStyles: {fontSize:7.5, textColor:[20,30,25], font:'helvetica', cellPadding:2},
+      columnStyles: {
+        0:{cellWidth:10, halign:'center'},
+        1:{cellWidth:80},
+        2:{cellWidth:12, halign:'center'},
+        3:{cellWidth:12, halign:'center'},
+        4:{cellWidth:12, halign:'center'},
+        5:{cellWidth:12, halign:'center'},
+        6:{cellWidth:32}
+      },
+      alternateRowStyles: {fillColor:[246,249,247]},
+      willDrawPage: function(data) { if (data.pageNumber > 1) { so2DrawBg(doc, pw, ph); } }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── NOTE ──
+    secHeader('NOTE');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(30,30,30);
+    checkPage(5); doc.text('- Entry PM Result into maximo work order.', marginX+3, y); y+=4.5;
+    checkPage(5); doc.text('- Inform to immediate superior if any defect found.', marginX+3, y); y+=6;
+
+    // ── CATATAN KONDISI PANEL ──
+    var note7A = safe(gv('s2Note7A')), note7B = safe(gv('s2Note7B'));
+    if (note7A || note7B) {
+      secHeader('CATATAN KONDISI PANEL');
+      function addNote(label, note) {
+        if (!note) return;
+        checkPage(14);
+        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,64,175);
+        doc.text(label, marginX+3, y); y += 6;
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+        var ls = doc.splitTextToSize(note, contentW-6);
+        ls.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y+=4.5; });
+        y += 3;
+      }
+      addNote('Scrubber A Inlet SO2 (7FC-AT-7A):', note7A);
+      addNote('Scrubber B Inlet SO2 (7FC-AT-7B):', note7B);
+    }
+
+    var dateStr = (gv('s2Date')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
+    doc.save('SO2_PM_Report_'+dateStr+'.pdf');
+  } catch(err) { alert('PDF Error: '+err.message); console.error(err); }
+  }); // end so2EnsureReportBackground
+}
+
+/* ── dbCollectData untuk modul SO2 ── */
+function dbCollectData(modul) {
+  if (modul !== 'so2') return null;
+  var checks={};
+  var gv2=function(id){var e=document.getElementById(id);return e?e.value:'';};
+  SO2_CHECKS.forEach(function(item,idx){
+    if(item.header) return;
+    checks[idx]={
+      aY:!!(document.getElementById('c7aY_'+idx)&&document.getElementById('c7aY_'+idx).checked),
+      aN:!!(document.getElementById('c7aN_'+idx)&&document.getElementById('c7aN_'+idx).checked),
+      bY:!!(document.getElementById('c7bY_'+idx)&&document.getElementById('c7bY_'+idx).checked),
+      bN:!!(document.getElementById('c7bN_'+idx)&&document.getElementById('c7bN_'+idx).checked),
+      gas1:gv2('gas1_'+idx), gas2:gv2('gas2_'+idx)
+    };
+  });
+  var analyzer={aDCS:gv2('s2aDCS'),aLocal:gv2('s2aLocal'),aZero:gv2('s2aZero'),aSpan:gv2('s2aSpan'),aBefore:gv2('s2aBefore'),aAfter:gv2('s2aAfter'),cDCS:gv2('s2cDCS'),cLocal:gv2('s2cLocal'),cZero:gv2('s2cZero'),cSpan:gv2('s2cSpan'),cBefore:gv2('s2cBefore'),cAfter:gv2('s2cAfter')};
+  return {modul:'SO2 Scrubber Inlet', tanggal:gv2('s2Date'), pic:gv2('s2PIC'), work_order:gv2('s2WO'), unit:'Unit 7', data:{checks:checks,analyzer:analyzer,notes:{note7A:gv2('s2Note7A'),note7B:gv2('s2Note7B')}}};
+}
+
+/* ── INIT ── */
+setInterval(function(){var el=document.getElementById('clockSo2');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
+so2BuildTable();
+so2InitReportBackground();
+(function(){
+  var today=new Date();
+  var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var el=document.getElementById('s2Date'); if(el&&!el.value)el.value=todayStr;
+})();
+
+/* ── LOAD FROM HISTORY ── */
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var id=params.get('id');
+  var doPrint=params.get('print')==='1';
+  if(!id) return;
+  dbLoad(id, function(rec){
+    var data=rec.data||{};
+    window._editingId=id;
+    var gv=function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
+    setTimeout(function(){
+      gv('s2Date',rec.tanggal); gv('s2PIC',rec.pic); gv('s2WO',rec.work_order);
+      if(data.analyzer){var a=data.analyzer;gv('s2aDCS',a.aDCS);gv('s2aLocal',a.aLocal);gv('s2aZero',a.aZero);gv('s2aSpan',a.aSpan);gv('s2aBefore',a.aBefore);gv('s2aAfter',a.aAfter);gv('s2cDCS',a.cDCS);gv('s2cLocal',a.cLocal);gv('s2cZero',a.cZero);gv('s2cSpan',a.cSpan);gv('s2cBefore',a.cBefore);gv('s2cAfter',a.cAfter);}
+      if(data.notes){gv('s2Note7A',data.notes.note7A||'');gv('s2Note7B',data.notes.note7B||'');}
+      if(data.checks){Object.keys(data.checks).forEach(function(i){var c=data.checks[i];var set=function(id2,val){var e=document.getElementById(id2);if(e&&e.type==='checkbox')e.checked=val;};set('c7aY_'+i,c.aY);set('c7aN_'+i,c.aN);set('c7bY_'+i,c.bY);set('c7bN_'+i,c.bN);gv('gas1_'+i,c.gas1||'');gv('gas2_'+i,c.gas2||'');var aY=c.aY,bY=c.bY,rec2=document.getElementById('rec_'+i);var item=SO2_CHECKS[i];if(rec2&&item&&!item.gasInput)rec2.textContent=(aY||bY)?(item.defRec||'ok'):'';});so2RefreshAllChecks();}
+      dbShowToast('Data dimuat dari riwayat ✓');
+      if(doPrint) so2EnsureReportBackground(function(){ setTimeout(so2DownloadPdf, 300); });
+    },800);
+  });
+})();
+</script>
+</body>
+</html>
