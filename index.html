@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Diagnostic System — Unit 7 PLTU Paiton</title>
+    <script src="shared.js"></script>
+    <style>
+        /* ═══════════════ MODERN LIGHT THEME DASHBOARD ═══════════════ */
+        :root {
+            --bg: #f8fafb;
+            --bg2: #ffffff;
+            --bg3: #f3f4f6;
+            --border: #e5e7eb;
+            --border-light: #f3f4f6;
+            --primary-green: #2563eb;
+            --primary-pink: #ec4899;
+            --primary-yellow: #f59e0b;
+            --primary-blue: #3b82f6;
+            --primary-purple: #8b5cf6;
+            --primary-red: #ef4444;
+            --primary-cyan: #06b6d4;
+            --text-dark: #1f2937;
+            --text-mid: #4b5563;
+            --text-light: #9ca3af;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-dark);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ═══════════════ HEADER ═══════════════ */
+        header {
+            position: relative;
+            z-index: 10;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg2);
+            box-shadow: var(--shadow-sm);
+            sticky: top 0;
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 16px clamp(16px, 4vw, 40px);
+        }
+
+        .logo-block {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-cyan));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .logo-text .company {
+            font-size: 12px;
+            color: var(--text-light);
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .logo-text .system {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+            letter-spacing: -0.5px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: clamp(12px, 2vw, 20px);
+        }
+
+        .unit-badge {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--primary-green);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary-green);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .btn-history {
+            padding: 8px 16px;
+            border: 1.5px solid var(--primary-blue);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--primary-blue);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-history:hover {
+            background: var(--primary-blue);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .clock-box {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: var(--text-mid);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* ═══════════════ HERO SECTION ═══════════════ */
+        .hero {
+            position: relative;
+            z-index: 5;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px clamp(16px, 4vw, 40px);
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .hero-left {
+            flex: 1;
+            min-width: min(280px, 100%);
+        }
+
+        .hero-tag {
+            font-size: 12px;
+            color: var(--primary-blue);
+            letter-spacing: 1.5px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .hero-tag::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 2px;
+            background: var(--primary-blue);
+            border-radius: 1px;
+        }
+
+        .hero-title {
+            font-size: clamp(32px, 6vw, 56px);
+            font-weight: 800;
+            line-height: 1;
+            color: var(--text-dark);
+            letter-spacing: -1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        .hero-title span {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            margin-top: 12px;
+            font-size: 15px;
+            color: var(--text-mid);
+            line-height: 1.6;
+            max-width: 480px;
+        }
+
+        .hero-stats {
+            flex-shrink: 0;
+        }
+
+        .stats-card {
+            padding: 24px 32px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stats-card .name {
+            font-family: 'Arial Black', sans-serif;
+            font-weight: 900;
+            font-size: 36px;
+            color: var(--text-dark);
+            letter-spacing: 1px;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stats-card .desc {
+            font-size: 10px;
+            color: var(--text-light);
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        /* ═══════════════ SECTION WRAPPER ═══════════════ */
+        .section-wrap {
+            position: relative;
+            z-index: 5;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 clamp(16px, 4vw, 40px) 60px;
+        }
+
+        .section-label {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .section-label .line {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .section-label .txt {
+            font-size: 12px;
+            color: var(--text-light);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* ═══════════════ CARDS GRID ═══════════════ */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+            gap: 20px;
+        }
+
+        .pm-card {
+            position: relative;
+            background: var(--bg2);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .pm-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--card-color, var(--primary-green));
+            border-radius: 12px 12px 0 0;
+            transition: height 0.3s;
+        }
+
+        .pm-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.02), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 12px;
+            pointer-events: none;
+        }
+
+        .pm-card:hover {
+            border-color: var(--card-color, var(--primary-green));
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-4px);
+        }
+
+        .pm-card:hover::before {
+            height: 6px;
+        }
+
+        .pm-card:hover::after {
+            opacity: 1;
+        }
+
+        .card-index {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: var(--text-light);
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            margin-bottom: 16px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--card-bg-light, rgba(37, 99, 235, 0.15)), var(--card-bg-dark, rgba(37, 99, 235, 0.05)));
+            font-size: 28px;
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s;
+        }
+
+        .pm-card:hover .card-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1.2;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+            transition: color 0.3s;
+        }
+
+        .pm-card:hover .card-title {
+            color: var(--card-color, var(--primary-green));
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: var(--text-mid);
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+            margin-bottom: 14px;
+            flex: 1;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+            margin-bottom: 12px;
+        }
+
+        .tag {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: var(--tag-bg, rgba(37, 99, 235, 0.1));
+            color: var(--card-color, var(--primary-green));
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            transition: all 0.2s;
+        }
+
+        .pm-card:hover .tag {
+            background: var(--tag-bg, rgba(37, 99, 235, 0.15));
+            border-color: var(--card-color, var(--primary-green));
+        }
+
+        .card-arrow {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            font-size: 20px;
+            color: var(--card-color, var(--primary-green));
+            transition: all 0.3s;
+            z-index: 1;
+            opacity: 0.6;
+        }
+
+        .pm-card:hover .card-arrow {
+            opacity: 1;
+            transform: translate(4px, -4px);
+        }
+
+        /* Color variations for each MOD - All Blue */
+        .pm-card:nth-child(1) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        .pm-card:nth-child(2) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        .pm-card:nth-child(3) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        .pm-card:nth-child(4) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        .pm-card:nth-child(5) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        .pm-card:nth-child(6) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        .pm-card:nth-child(7) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        .pm-card:nth-child(8) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        .pm-card:nth-child(9) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+
+        /* Animation */
+        .pm-card {
+            animation: cardSlideIn 0.5s ease both;
+        }
+
+        @keyframes cardSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pm-card:nth-child(1) { animation-delay: 0.05s; }
+        .pm-card:nth-child(2) { animation-delay: 0.1s; }
+        .pm-card:nth-child(3) { animation-delay: 0.15s; }
+        .pm-card:nth-child(4) { animation-delay: 0.2s; }
+        .pm-card:nth-child(5) { animation-delay: 0.25s; }
+        .pm-card:nth-child(6) { animation-delay: 0.3s; }
+        .pm-card:nth-child(7) { animation-delay: 0.35s; }
+        .pm-card:nth-child(8) { animation-delay: 0.4s; }
+        .pm-card:nth-child(9) { animation-delay: 0.45s; }
+
+        /* ═══════════════ RIWAYAT SECTION ═══════════════ */
+        .riwayat-section {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 clamp(16px, 4vw, 40px) 60px;
+        }
+
+        #riwayatList {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .riwayat-item {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .riwayat-item:hover {
+            border-color: var(--primary-blue);
+            box-shadow: var(--shadow-md);
+        }
+
+        .riwayat-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .riwayat-item-modul {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .riwayat-item-meta {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .btn-view-riwayat {
+            padding: 6px 14px;
+            border: 1.5px solid var(--primary-blue);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--primary-blue);
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-view-riwayat:hover {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-view-all {
+            padding: 10px 24px;
+            border: 2px solid var(--primary-blue);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--primary-blue);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s;
+        }
+
+        .btn-view-all:hover {
+            background: var(--primary-blue);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        /* ═══════════════ FOOTER ═══════════════ */
+        footer {
+            position: relative;
+            z-index: 5;
+            border-top: 1px solid var(--border);
+            background: var(--bg2);
+            padding: 24px clamp(16px, 4vw, 40px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-light);
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        footer .fl {
+            flex: 1;
+            min-width: auto;
+        }
+
+        /* ═══════════════ RESPONSIVE ═══════════════ */
+        @media (max-width: 768px) {
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero {
+                flex-direction: column;
+                gap: 32px;
+            }
+
+            .hero-stats {
+                width: 100%;
+            }
+
+            .header-right {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            footer {
+                justify-content: center;
+                text-align: center;
+            }
+
+            footer .fl {
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-title {
+                font-size: 28px;
+            }
+
+            .cards-grid {
+                gap: 14px;
+            }
+
+            .pm-card {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header>
+        <div class="header-inner">
+            <div class="logo-block">
+                <div class="logo-icon">⚙️</div>
+                <div class="logo-text">
+                    <div class="company">PT POMI · PLTU PAITON</div>
+                    <div class="system">Preventive Maintenance</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="unit-badge">
+                    <span class="status-dot"></span>
+                    UNIT 7 — ONLINE
+                </div>
+                <button class="btn-history" onclick="window.location.href='history.html'">📋 RIWAYAT</button>
+                <div class="clock-box" id="clock">--:--:--</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="hero-left">
+            <div class="hero-tag">SISTEM MONITORING TERPADU</div>
+            <div class="hero-title">PM<br><span>Diagnostic</span><br>System</div>
+            <div class="hero-sub">Pilih modul diagnostik untuk memulai pemeriksaan dan pelaporan preventive maintenance unit.</div>
+        </div>
+        <div class="hero-stats">
+            <div class="stats-card">
+                <div class="name">POMI</div>
+                <div class="desc">PAITON OPERATION & MAINTENANCE</div>
+                <div class="desc">INDONESIA</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MODULE SELECTION SECTION -->
+    <div class="section-wrap">
+        <div class="section-label">
+            <div class="line"></div>
+            <div class="txt">— Pilih Modul PM —</div>
+            <div class="line"></div>
+        </div>
+
+        <div class="cards-grid">
+            <!-- MOD-09 Maintenance Report Form (PINDAH KE ATAS) -->
+            <div class="pm-card" onclick="window.location.href='maintenance_report_form.html'">
+                <div class="card-index">MOD-09</div>
+                <div class="card-icon">📝</div>
+                <div class="card-title">Maintenance<br>Report Form</div>
+                <div class="card-desc">Form untuk pengisian laporan maintenance dan dokumentasi kegiatan preventive maintenance unit secara terstruktur dan lengkap.</div>
+                <div class="card-tags">
+                    <span class="tag">REPORT</span>
+                    <span class="tag">FORM</span>
+                    <span class="tag">DOKUMENTASI</span>
+                    <span class="tag">PDF EXPORT</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- MOD-01 PM O2 Inlet & Outlet -->
+            <div class="pm-card" onclick="window.open('https://ahpm.figma.site/','_blank')">
+                <div class="card-index">MOD-01</div>
+                <div class="card-icon">🫧</div>
+                <div class="card-title">PM O2<br>Inlet & Outlet</div>
+                <div class="card-desc">Pemeriksaan dan maintenance sensor O₂ pada sisi inlet dan outlet. Verifikasi pembacaan, kalibrasi, dan kondisi instrumen.</div>
+                <div class="card-tags">
+                    <span class="tag">O₂ SENSOR</span>
+                    <span class="tag">INLET</span>
+                    <span class="tag">OUTLET</span>
+                    <span class="tag">CEMS</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- MOD-02 CEMS Calibration -->
+            <div class="pm-card" onclick="window.open('https://www.figma.com/make/TVmb9eYccWTlG1sm8kysn7/CEMS-Calibration-Documentation-App?code-node-id=0-9&p=f&fullscreen=1','_blank')">
+                <div class="card-index">MOD-02</div>
+                <div class="card-icon">📡</div>
+                <div class="card-title">CEMS<br>Calibration</div>
+                <div class="card-desc">Kalibrasi sistem Continuous Emission Monitoring (CEMS). Zero/span check, calibration gas verification dan dokumentasi hasil.</div>
+                <div class="card-tags">
+                    <span class="tag">CALIBRATION</span>
+                    <span class="tag">ZERO/SPAN</span>
+                    <span class="tag">CEMS</span>
+                    <span class="tag">PDF REPORT</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- MOD-03 FEGT & LD -->
+            <div class="pm-card" onclick="window.location.href='fegt.html'">
+                <div class="card-index">MOD-03</div>
+                <div class="card-icon">🌡️</div>
+                <div class="card-title">FEGT &<br>Leak Detection</div>
+                <div class="card-desc">Furnace Exit Gas Temperature — 8 sensor, 21 path aktif. Leak Detection — 9 path superheater, reheater, economizer & bottom slope.</div>
+                <div class="card-tags">
+                    <span class="tag">8 SENSOR</span>
+                    <span class="tag">21 PATH</span>
+                    <span class="tag">LD 9 PATH</span>
+                    <span class="tag">PDF REPORT</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- MOD-04 SO2 Scrubber -->
+            <div class="pm-card" onclick="window.location.href='so2.html'">
+                <div class="card-index">MOD-04</div>
+                <div class="card-icon">💨</div>
+                <div class="card-title">SO2 Scrubber<br>Inlet</div>
+                <div class="card-desc">Monitoring dan diagnostik sensor SO₂ pada inlet scrubber. Pemeriksaan kualitas pembacaan dan status instrumen.</div>
+                <div class="card-tags">
+                    <span class="tag">SO₂ SENSOR</span>
+                    <span class="tag">INLET</span>
+                    <span class="tag">SCRUBBER</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- MOD-05 Opacity -->
+            <div class="pm-card" onclick="window.location.href='opacity.html'">
+                <div class="card-index">MOD-05</div>
+                <div class="card-icon">👁️</div>
+                <div class="card-title">Opacity<br>Monitor</div>
+                <div class="card-desc">Pemeriksaan sensor opacity pada stack emisi. Validasi pembacaan transmittance dan kalibrasi instrumen.</div>
+                <div class="card-tags">
+                    <span class="tag">OPACITY</span>
+                    <span class="tag">STACK</span>
+                    <span class="tag">EMISI</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- MOD-06 Belt Scale E4 & E5 -->
+            <div class="pm-card" onclick="window.location.href='beltscale-e45.html'">
+                <div class="card-index">MOD-06</div>
+                <div class="card-icon">⚖️</div>
+                <div class="card-title">Belt Scale<br>Conveyor E4 & E5</div>
+                <div class="card-desc">Diagnostic timbangan belt conveyor E4 dan E5. Pemeriksaan load cell, zero check dan span kalibrasi.</div>
+                <div class="card-tags">
+                    <span class="tag">BELT SCALE</span>
+                    <span class="tag">E4</span>
+                    <span class="tag">E5</span>
+                    <span class="tag">LOAD CELL</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- MOD-07 Belt Scale E2 & E3 -->
+            <div class="pm-card" onclick="window.location.href='beltscale-e23.html'">
+                <div class="card-index">MOD-07</div>
+                <div class="card-icon">⚖️</div>
+                <div class="card-title">Belt Scale<br>Conveyor E2 & E3</div>
+                <div class="card-desc">Diagnostic timbangan belt conveyor E2 dan E3. Pemeriksaan load cell, zero check dan span kalibrasi.</div>
+                <div class="card-tags">
+                    <span class="tag">BELT SCALE</span>
+                    <span class="tag">E2</span>
+                    <span class="tag">E3</span>
+                    <span class="tag">LOAD CELL</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- MOD-08 Belt Scale B1 & B2 -->
+            <div class="pm-card" onclick="window.location.href='beltscale-b12.html'">
+                <div class="card-index">MOD-08</div>
+                <div class="card-icon">⚖️</div>
+                <div class="card-title">Belt Scale<br>Conveyor B1 & B2</div>
+                <div class="card-desc">Diagnostic timbangan belt conveyor B1 dan B2. Pemeriksaan load cell, zero check dan span kalibrasi.</div>
+                <div class="card-tags">
+                    <span class="tag">BELT SCALE</span>
+                    <span class="tag">B1</span>
+                    <span class="tag">B2</span>
+                    <span class="tag">LOAD CELL</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- RIWAYAT PM SECTION -->
+    <div class="riwayat-section">
+        <div class="section-label">
+            <div class="line"></div>
+            <div class="txt">— Riwayat PM Terkini —</div>
+            <div class="line"></div>
+        </div>
+
+        <div id="riwayatList">
+            <div style="text-align: center; padding: 24px; color: var(--text-light); font-size: 13px; font-family: 'Courier New', monospace;">
+                Memuat riwayat...
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 12px;">
+            <button class="btn-view-all" onclick="window.location.href='history.html'">Lihat Semua Riwayat →</button>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="fl">PT POMI · PLTU PAITON UNIT 7 · PREVENTIVE MAINTENANCE SYSTEM v2.1</div>
+        <div class="fl" id="footerDate">—</div>
+    </footer>
+
+    <script>
+        // Clock function
+        function tick() {
+            var now = new Date();
+            var h = String(now.getHours()).padStart(2, '0');
+            var m = String(now.getMinutes()).padStart(2, '0');
+            var s = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = h + ':' + m + ':' + s;
+
+            var BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            var d = String(now.getDate()).padStart(2, '0');
+            document.getElementById('footerDate').textContent = d + ' ' + BULAN[now.getMonth()] + ' ' + now.getFullYear();
+        }
+
+        tick();
+        setInterval(tick, 1000);
+
+        // Load riwayat
+        function dbLoadRiwayat() {
+            var container = document.getElementById('riwayatList');
+            if (!container) return;
+
+            container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-light);font-size:12px;font-family:\'Courier New\',monospace">Memuat...</div>';
+
+            supaFetch('GET', SUPA_TABLE + '?select=*&order=created_at.desc&limit=5')
+                .then(function(rows) {
+                    if (!rows || rows.length === 0) {
+                        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:12px;font-family:\'Courier New\',monospace">Belum ada data tersimpan</div>';
+                        return;
+                    }
+
+                    container.innerHTML = '';
+                    rows.forEach(function(rec) {
+                        var dt = rec.tanggal || (rec.created_at ? rec.created_at.substring(0, 10) : '-');
+                        var item = document.createElement('div');
+                        item.className = 'riwayat-item';
+                        item.innerHTML =
+                            '<div class="riwayat-item-info">' +
+                            '<div class="riwayat-item-modul">' + rec.modul + '</div>' +
+                            '<div class="riwayat-item-meta">' +
+                            dt + (rec.pic ? ' · ' + rec.pic : '') + (rec.work_order ? ' · WO:' + rec.work_order : '') +
+                            '</div>' +
+                            '</div>' +
+                            '<button class="btn-view-riwayat" onclick="window.location.href=\'history.html\'">Lihat Detail</button>';
+
+                        container.appendChild(item);
+                    });
+                })
+                .catch(function() {
+                    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:12px">Gagal memuat riwayat</div>';
+                });
+        }
+
+        setTimeout(dbLoadRiwayat, 500);
+    </script>
+</body>
+</html>
