@@ -712,13 +712,13 @@ function downloadPdf(){
           return ['Path-'+p.id, p.tx+'>'+p.rx, p.temp>0?p.temp+' C':'No Read', safe(p.statusRaw)||'-', eff==='ok'?'VALID':eff==='fail'?'DATA FAIL':eff==='hard'?'HARD FAIL':'-'];
         }),
         theme: 'grid',
-        margin: {left:marginX, right:marginX},
+        margin: {left:marginX, right:marginX, top:marginTop2},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:8, textColor:[20,30,25], halign:'center', font:'helvetica'},
         columnStyles: {'0':{cellWidth:18},'1':{cellWidth:18},'2':{cellWidth:26},'3':{cellWidth:72},'4':{cellWidth:36}},
         alternateRowStyles: {fillColor:[246,249,247]},
         willDrawPage: function(data){
-          if (data.pageNumber > 1) { drawBg(doc, pw, ph); data.settings.startY = marginTop2; }
+          if (data.pageNumber > 1) { drawBg(doc, pw, ph); }
         }
       });
       y = doc.lastAutoTable.finalY + 8;
@@ -735,13 +735,13 @@ function downloadPdf(){
         head: [['Sensor','Status','Keterangan']],
         body: sensorRows,
         theme: 'grid',
-        margin: {left:marginX, right:marginX},
+        margin: {left:marginX, right:marginX, top:marginTop2},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:8, textColor:[20,30,25], font:'helvetica'},
         columnStyles: {'0':{cellWidth:22,halign:'center'},'1':{cellWidth:32,halign:'center'},'2':{cellWidth:116}},
         alternateRowStyles: {fillColor:[246,249,247]},
         willDrawPage: function(data){
-          if (data.pageNumber > 1) { drawBg(doc, pw, ph); data.settings.startY = marginTop2; }
+          if (data.pageNumber > 1) { drawBg(doc, pw, ph); }
         }
       });
       y = doc.lastAutoTable.finalY + 8;
@@ -775,13 +775,13 @@ function downloadPdf(){
           return ['Path-'+r.id, safe(r.desc), tStr, sLabel, r.status==='na'?'N/A':r.status==='ok'?'NORMAL':'FAIL'];
         }),
         theme: 'grid',
-        margin: {left:marginX, right:marginX},
+        margin: {left:marginX, right:marginX, top:marginTop2},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:8, textColor:[20,30,25], halign:'center', font:'helvetica'},
         columnStyles: {'0':{cellWidth:16},'1':{cellWidth:76},'2':{cellWidth:22},'3':{cellWidth:30},'4':{cellWidth:26}},
         alternateRowStyles: {fillColor:[246,249,247]},
         willDrawPage: function(data){
-          if (data.pageNumber > 1) { drawBg(doc, pw, ph); data.settings.startY = marginTop2; }
+          if (data.pageNumber > 1) { drawBg(doc, pw, ph); }
         }
       });
       y = doc.lastAutoTable.finalY + 8;
@@ -889,10 +889,27 @@ initFegtBackground();
     window._editingId=id;
     switchTab('manual');
     setTimeout(function(){
-      var tRaw=rec.tanggal||'';
-      if(tRaw&&tRaw.length===10){var el=document.getElementById('manTanggal');if(el)el.value=tRaw;}
-      var shEl=document.getElementById('manShift');if(shEl&&(rec.shift||data.shift))shEl.value=rec.shift||data.shift;
-      var opEl=document.getElementById('manOperator');if(opEl&&rec.pic)opEl.value=rec.pic;
+      // Restore tanggal — support format "DD Bulan YYYY" maupun "YYYY-MM-DD"
+      var tRaw = rec.tanggal || (data.meta && data.meta.tanggal) || '';
+      var BULAN2 = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      if (tRaw && tRaw.length === 10 && tRaw.indexOf('-') > 0) {
+        // format YYYY-MM-DD langsung set ke input date
+        var el = document.getElementById('manTanggal'); if (el) el.value = tRaw;
+      } else if (tRaw && tRaw !== '—') {
+        // format "DD Bulan YYYY" → konversi ke YYYY-MM-DD
+        var parts = tRaw.split(' ');
+        if (parts.length === 3) {
+          var dd = parts[0].padStart(2,'0');
+          var mm = String(BULAN2.indexOf(parts[1]) + 1).padStart(2,'0');
+          var yyyy = parts[2];
+          var el2 = document.getElementById('manTanggal'); if (el2) el2.value = yyyy+'-'+mm+'-'+dd;
+        }
+      }
+      // Restore shift & operator — coba root record dulu, fallback ke data.meta
+      var shVal = rec.shift || (data.meta && data.meta.shift) || '';
+      var shEl = document.getElementById('manShift'); if (shEl && shVal && shVal !== '—') shEl.value = shVal;
+      var opVal = rec.pic || (data.meta && data.meta.operator) || '';
+      var opEl = document.getElementById('manOperator'); if (opEl && opVal && opVal !== '—') opEl.value = opVal;
       // Restore FEGT paths — isi field manual DAN update pathData langsung
       if(data.paths){
         data.paths.forEach(function(p){
