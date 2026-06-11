@@ -103,7 +103,7 @@
             <div class="form-group"><label>Asset Tag</label><input type="text" id="assetTag" placeholder="7BG-ZT-905A"></div>
             <div class="form-group"><label>Asset Description</label><input type="text" id="assetDesc" placeholder="ID FAN 7A..."></div>
         </div>
-        <div class="form-group"><label>Failure Description</label><textarea id="failureDesc"></textarea></div>
+        <div class="form-group"><label>Work To be Done / Failure Description</label><textarea id="failureDesc"></textarea></div>
         <div class="row">
             <div class="form-group"><label>PIC</label><input type="text" id="pic" placeholder="Nama teknisi"></div>
             <div class="form-group"><label>Material Replacement</label><input type="text" id="material" placeholder="Material..."></div>
@@ -678,7 +678,7 @@
                         var fdLines=doc.splitTextToSize(failureDesc, contentW-6);
                         doc.rect(marginX,y,contentW,5+fdLines.length*4,'F');
                         doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,107,58);
-                        doc.text('Failure Description:', marginX+3, y+4); y+=7;
+                        doc.text('Work To be Done / Failure Description:', marginX+3, y+4); y+=7;
                         doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
                         fdLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y+=4; });
                         y+=3;
