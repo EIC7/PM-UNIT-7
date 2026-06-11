@@ -221,9 +221,21 @@
                 document.getElementById('material').value   = data.material    || '';
                 document.getElementById('conclusion').value = data.conclusion  || '';
 
-                sections.findings = (Array.isArray(data.findings) && data.findings.length) ? data.findings : [{title:'',desc:'',images:[]}];
-                sections.actions  = (Array.isArray(data.actions)  && data.actions.length)  ? data.actions  : [{title:'',desc:'',images:[]}];
-                sections.restore  = (Array.isArray(data.restore)  && data.restore.length)  ? data.restore  : [{title:'',desc:'',images:[]}];
+                function normalizeItems(arr) {
+                    if (!Array.isArray(arr) || !arr.length) return [{title:'',desc:'',images:[]}];
+                    return arr.map(function(it) {
+                        return {
+                            title:  it.title  || '',
+                            desc:   it.desc   || '',
+                            images: Array.isArray(it.images) ? it.images.map(function(im) {
+                                return { dataUrl: im.dataUrl||'', caption: im.caption||'', name: im.name||'', type: im.type||'' };
+                            }) : []
+                        };
+                    });
+                }
+                sections.findings = normalizeItems(data.findings);
+                sections.actions  = normalizeItems(data.actions);
+                sections.restore  = normalizeItems(data.restore);
 
                 renderAll();
                 window._editingId = id;
@@ -299,7 +311,7 @@
                 // Tombol Upload dengan pilihan Kamera / Penyimpanan
                 html += '<div style="position:relative;margin-bottom:8px">';
                 html += '<button class="btn btn-gray" type="button" onclick="toggleSourceChoices(\''+type+'\','+idx+')">📤 Upload Gambar</button>';
-                html += '<div id="sourceChoices-'+type+'-'+idx+'" style="display:none;position:absolute;top:100%;left:0;margin-top:6px;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px;display:none;gap:8px;z-index:100">';
+                html += '<div id="sourceChoices-'+type+'-'+idx+'" style="display:none;position:absolute;top:100%;left:0;margin-top:6px;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px;gap:8px;z-index:100;flex-wrap:wrap">';
                 html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'camera\')" style="min-width:110px">📷 Kamera</button>';
                 html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'storage\')" style="min-width:110px">🗂️ Penyimpanan</button>';
                 html += '</div></div>';
@@ -550,10 +562,19 @@
                 if (!box) return;
                 box.querySelectorAll('.section-box').forEach(function(card, idx) {
                     if (!sections[type][idx]) return;
-                    var titleEl = card.querySelector('input[type="text"]');
-                    var descEl  = card.querySelector('textarea');
-                    if (titleEl) sections[type][idx].title = titleEl.value;
-                    if (descEl)  sections[type][idx].desc  = descEl.value;
+                    // Sync judul — input[type=text] pertama adalah judul item
+                    var inputs = card.querySelectorAll('input[type="text"]');
+                    if (inputs[0]) sections[type][idx].title = inputs[0].value;
+                    // Sync deskripsi — textarea pertama adalah deskripsi item
+                    var textareas = card.querySelectorAll('textarea');
+                    if (textareas[0]) sections[type][idx].desc = textareas[0].value;
+                    // Sync caption setiap gambar — input[type=text] index 1,2,3,...
+                    if (sections[type][idx].images && sections[type][idx].images.length) {
+                        sections[type][idx].images.forEach(function(im, imgIdx) {
+                            var capInput = inputs[imgIdx + 1]; // +1 karena inputs[0] = judul
+                            if (capInput) im.caption = capInput.value;
+                        });
+                    }
                 });
             });
         }
