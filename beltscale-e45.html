@@ -460,8 +460,8 @@ function bsDownloadPdf() {
         return;
       }
       var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
-      var aVal=item.type==='input'?safe(aEl?aEl.value:''):(aEl&&aEl.checked?'[v]':'[ ]');
-      var bVal=item.type==='input'?safe(bEl?bEl.value:''):(bEl&&bEl.checked?'[v]':'[ ]');
+      var aVal=item.type==='input'?safe(aEl?aEl.value:''):(aEl&&aEl.checked?'__CHK__':'__BOX__');
+      var bVal=item.type==='input'?safe(bEl?bEl.value:''):(bEl&&bEl.checked?'__CHK__':'__BOX__');
       tableRows.push([String(item.no||''),safe(item.label),safe((item.criteria||'').replace(/\n/g,' / ')),aVal,bVal]);
     });
 
@@ -473,7 +473,37 @@ function bsDownloadPdf() {
       headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},
       bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
       columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:77},2:{cellWidth:43},3:{cellWidth:20,halign:'center'},4:{cellWidth:20,halign:'center'}},
-      alternateRowStyles:{fillColor:[246,249,247]}
+
+    // ── Helper: gambar checkbox manual ──
+    function drawCheckbox(doc, x, y, w, h, state) {
+      var size = 3.5;
+      var cx = x + w/2, cy = y + h/2;
+      if (state === 'dash') {
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120,120,120);
+        doc.text('-', cx, cy+1.2, {align:'center'}); return;
+      }
+      doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+      doc.rect(cx-size/2, cy-size/2, size, size, 'S');
+      if (state === 'checked') {
+        doc.setDrawColor(26,107,58); doc.setLineWidth(0.5);
+        doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.5);
+        doc.line(cx-size/2+size*0.38, cy+size/2-0.5, cx+size/2-0.3, cy-size/2+0.5);
+      }
+    }
+
+    var CHK_COLS_BS = {3:true, 4:true};
+      alternateRowStyles:{fillColor:[246,249,247]},
+      willDrawPage:function(data){if(data.pageNumber>1){bsDrawBg(doc,pw,ph);}},
+            didDrawCell: function(data) {
+        if (data.section !== 'body') return;
+        if (!CHK_COLS_BS[data.column.index]) return;
+        var val = data.cell.raw;
+        if (val !== '__CHK__' && val !== '__BOX__') return;
+        var x=data.cell.x, cy=data.cell.y, w=data.cell.width, h=data.cell.height;
+        var bg=(data.row.index%2===0)?[255,255,255]:[246,249,247];
+        doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(x+0.2,cy+0.2,w-0.4,h-0.4,'F');
+        drawCheckbox(doc,x,cy,w,h,val==='__CHK__'?'checked':'unchecked');
+      }
     });
     y = doc.lastAutoTable.finalY + 8;
 

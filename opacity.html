@@ -360,9 +360,9 @@ function opDownloadPdf() {
           String(item.no),
           safe(item.label),
           safe(item.criteria),
-          (chk&&chk.checked)?'[v]':'[ ]',
-          (a7&&a7.checked)?'[v]':'[ ]',
-          (b7&&b7.checked)?'[v]':(item.both?'[ ]':'-'),
+          (chk&&chk.checked)?'__CHK__':'__BOX__',
+          (a7&&a7.checked)?'__CHK__':'__BOX__',
+          (b7&&b7.checked)?'__CHK__':(item.both?'__BOX__':'__DSH__'),
           rec?safe(rec.textContent):''
         ];
       });
@@ -385,11 +385,40 @@ function opDownloadPdf() {
           5:{cellWidth:11, halign:'center'},
           6:{cellWidth:23, halign:'center'}
         },
+
+    // ── Helper: gambar checkbox manual ──
+    function drawCheckbox(doc, x, y, w, h, state) {
+      var size = 3.5;
+      var cx = x + w/2, cy = y + h/2;
+      if (state === 'dash') {
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(120,120,120);
+        doc.text('-', cx, cy+1.2, {align:'center'}); return;
+      }
+      doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+      doc.rect(cx-size/2, cy-size/2, size, size, 'S');
+      if (state === 'checked') {
+        doc.setDrawColor(26,107,58); doc.setLineWidth(0.5);
+        doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.5);
+        doc.line(cx-size/2+size*0.38, cy+size/2-0.5, cx+size/2-0.3, cy-size/2+0.5);
+      }
+    }
+
+      var CHK_COLS_OP = {3:true, 4:true, 5:true};
         alternateRowStyles: {fillColor:[246,249,247]},
         willDrawPage: function(data) {
           if (data.pageNumber > 1) {
             drawBg(doc, pw, ph);
           }
+        },
+        didDrawCell: function(data) {
+          if (data.section !== 'body') return;
+          if (!CHK_COLS_OP[data.column.index]) return;
+          var val = data.cell.raw;
+          if (val !== '__CHK__' && val !== '__BOX__' && val !== '__DSH__') return;
+          var x=data.cell.x, cy=data.cell.y, w=data.cell.width, h=data.cell.height;
+          var bg=(data.row.index%2===0)?[255,255,255]:[246,249,247];
+          doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(x+0.2,cy+0.2,w-0.4,h-0.4,'F');
+          drawCheckbox(doc,x,cy,w,h,val==='__CHK__'?'checked':val==='__DSH__'?'dash':'unchecked');
         }
       });
 
