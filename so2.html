@@ -491,13 +491,36 @@ function so2DownloadPdf() {
         return;
       }
       if (allowedCats.indexOf(item.cat) === -1) return;
-      var get = function(id){ var e=document.getElementById(id); return e&&e.checked?'[v]':'[ ]'; };
+      var get = function(id){ var e=document.getElementById(id); return e&&e.checked?'__CHK__':'__BOX__'; };
       var recEl = document.getElementById('rec_'+idx);
       var recVal = item.gasInput
         ? ('Gas1:'+safe(gv('gas1_'+idx))+' Gas2:'+safe(gv('gas2_'+idx)))
         : (recEl ? safe(recEl.textContent) : '');
       checkRows.push([item.no||'', safe(item.label), get('c7aY_'+idx), get('c7aN_'+idx), get('c7bY_'+idx), get('c7bN_'+idx), recVal]);
     });
+    // ── Helper: gambar checkbox manual ──
+    function drawCheckbox(doc, x, y, w, h, checked) {
+      var size = 3.5;
+      var cx = x + w/2;
+      var cy = y + h/2;
+      // Kotak
+      doc.setDrawColor(80, 80, 80);
+      doc.setLineWidth(0.3);
+      doc.rect(cx - size/2, cy - size/2, size, size, 'S');
+      // Centang jika checked
+      if (checked) {
+        doc.setDrawColor(26, 107, 58);
+        doc.setLineWidth(0.5);
+        // Garis 1: kiri-bawah ke tengah
+        doc.line(cx - size/2 + 0.4, cy, cx - size/2 + size*0.38, cy + size/2 - 0.5);
+        // Garis 2: tengah ke kanan-atas
+        doc.line(cx - size/2 + size*0.38, cy + size/2 - 0.5, cx + size/2 - 0.3, cy - size/2 + 0.5);
+      }
+    }
+
+    // Kolom checkbox di tabel checklist: 2,3,4,5 (7A Y, 7A N, 7B Y, 7B N)
+    var CHK_COLS = {2:true, 3:true, 4:true, 5:true};
+
     // Kolom total = 170mm: 10+80+12+12+12+12+32 = 170
     doc.autoTable({
       startY: y,
@@ -517,7 +540,21 @@ function so2DownloadPdf() {
         6:{cellWidth:32}
       },
       alternateRowStyles: {fillColor:[246,249,247]},
-      willDrawPage: function(data) { if (data.pageNumber > 1) { so2DrawBg(doc, pw, ph); } }
+      willDrawPage: function(data) { if (data.pageNumber > 1) { so2DrawBg(doc, pw, ph); } },
+      didDrawCell: function(data) {
+        if (data.section !== 'body') return;
+        if (!CHK_COLS[data.column.index]) return;
+        var val = data.cell.raw;
+        if (val !== '__CHK__' && val !== '__BOX__') return;
+        // Hapus teks default (sudah digambar autoTable) — tidak perlu, kita cover dengan warna bg
+        var x = data.cell.x, y = data.cell.y, w = data.cell.width, h = data.cell.height;
+        // Cover teks lama dengan bg warna sel
+        var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,249,247];
+        doc.setFillColor(bg[0], bg[1], bg[2]);
+        doc.rect(x+0.2, y+0.2, w-0.4, h-0.4, 'F');
+        // Gambar checkbox baru
+        drawCheckbox(doc, x, y, w, h, val === '__CHK__');
+      }
     });
     y = doc.lastAutoTable.finalY + 8;
 
