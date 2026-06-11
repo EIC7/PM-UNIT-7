@@ -68,9 +68,21 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 </head>
 <body>
 <div class="container">
-  <div class="no-print header">
-    <h1>📋 Maintenance Report Form</h1>
-    <p>PM · CM · EM · DR · Other</p>
+  <div class="no-print header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div>
+      <h1>📋 Maintenance Report Form</h1>
+      <p>PM · CM · EM · DR · Other</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn" onclick="window.location.href='index.html'"
+        style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:7px 13px;font-size:0.82em">
+        🏠 Dashboard
+      </button>
+      <button class="btn" onclick="window.location.href='history.html'"
+        style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:7px 13px;font-size:0.82em">
+        📜 Riwayat
+      </button>
+    </div>
   </div>
   <div class="no-print form-group">
     <label>Tipe Laporan</label>
@@ -131,6 +143,9 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
   <div class="section-title">📝 Kesimpulan & Saran</div>
   <div class="form-group"><textarea id="conclusion"></textarea></div>
   <div class="no-print" style="margin-top:20px">
+    <button class="btn btn-blue btn-full" onclick="dbSave('maintenance_report')" style="padding:13px;font-size:1em">
+💾 Simpan ke Database
+    </button>
     <button class="btn btn-green btn-full" onclick="exportPdf()" style="padding:13px;font-size:1em">
 ⬇ Export ke PDF
     </button>
