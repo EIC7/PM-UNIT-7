@@ -33,8 +33,8 @@
         .btn-gray{background:#e0e0e0;color:#333}
         .btn-full{width:100%;justify-content:center;margin-bottom:10px}
         /* Image gallery */
-        .img-gallery{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-        .img-thumb{position:relative}
+        .img-gallery{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+        .img-thumb{position:relative;cursor:pointer}
         .img-thumb img{width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block}
         .img-thumb .del{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0;font-weight:700}
         /* CROP MODAL */
@@ -69,8 +69,7 @@
 </head>
 <body>
     <div class="container">
-
-        <!-- HEADER dengan tombol navigasi -->
+        <!-- HEADER dengan tombol Kembali -->
         <div class="no-print header">
             <div class="header-content">
                 <h1>📋 Maintenance Report Form</h1>
@@ -78,7 +77,7 @@
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
-                <button class="btn-back" onclick="window.location.href='history.html'">📜 Riwayat</button>
+                <button class="btn-back" onclick="window.location.href='history.html'">RIWAYAT</button>
             </div>
         </div>
 
@@ -99,54 +98,36 @@
             <div class="form-group"><label>WO No.</label><input type="text" id="wo" placeholder="Nomor Work Order"></div>
             <div class="form-group"><label>Tanggal</label><input type="date" id="workDate"></div>
         </div>
+
         <div class="row">
             <div class="form-group"><label>Asset Tag</label><input type="text" id="assetTag" placeholder="7BG-ZT-905A"></div>
             <div class="form-group"><label>Asset Description</label><input type="text" id="assetDesc" placeholder="ID FAN 7A..."></div>
         </div>
+
         <div class="form-group"><label>Work To be Done / Failure Description</label><textarea id="failureDesc"></textarea></div>
+
         <div class="row">
             <div class="form-group"><label>PIC</label><input type="text" id="pic" placeholder="Nama teknisi"></div>
             <div class="form-group"><label>Material Replacement</label><input type="text" id="material" placeholder="Material..."></div>
         </div>
 
-        <!-- FINDING — checkbox toggle -->
-        <div class="section-title" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleSection('findings')">
-            <input type="checkbox" id="chkFindings" style="width:16px;height:16px;accent-color:#2ecc71;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();toggleSection('findings')" onchange="toggleSection('findings')">
-            <span>🔍 Finding / Problem</span>
-            <span id="badgeFindings" style="display:none;font-size:11px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:600"></span>
-        </div>
-        <div id="sectionFindings" style="display:none">
-            <div id="findingsBox"></div>
-            <button class="btn btn-blue btn-full no-print" onclick="addItem('findings')">+ Tambah Finding</button>
-        </div>
+        <div class="section-title">🔍 Finding / Problem</div>
+        <div id="findingsBox"></div>
+        <button class="btn btn-blue btn-full no-print" onclick="addItem('findings')">+ Tambah Finding</button>
 
-        <!-- ACTION — checkbox toggle -->
-        <div class="section-title" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleSection('actions')">
-            <input type="checkbox" id="chkActions" style="width:16px;height:16px;accent-color:#2ecc71;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();toggleSection('actions')" onchange="toggleSection('actions')">
-            <span>🔧 Action</span>
-            <span id="badgeActions" style="display:none;font-size:11px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:600"></span>
-        </div>
-        <div id="sectionActions" style="display:none">
-            <div id="actionsBox"></div>
-            <button class="btn btn-blue btn-full no-print" onclick="addItem('actions')">+ Tambah Action</button>
-        </div>
+        <div class="section-title">🔧 Action</div>
+        <div id="actionsBox"></div>
+        <button class="btn btn-blue btn-full no-print" onclick="addItem('actions')">+ Tambah Action</button>
 
-        <!-- RESTORE — checkbox toggle -->
-        <div class="section-title" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleSection('restore')">
-            <input type="checkbox" id="chkRestore" style="width:16px;height:16px;accent-color:#2ecc71;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();toggleSection('restore')" onchange="toggleSection('restore')">
-            <span>✅ Restore</span>
-            <span id="badgeRestore" style="display:none;font-size:11px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:600"></span>
-        </div>
-        <div id="sectionRestore" style="display:none">
-            <div id="restoreBox"></div>
-            <button class="btn btn-blue btn-full no-print" onclick="addItem('restore')">+ Tambah Restore</button>
-        </div>
+        <div class="section-title">✅ Restore</div>
+        <div id="restoreBox"></div>
+        <button class="btn btn-blue btn-full no-print" onclick="addItem('restore')">+ Tambah Restore</button>
 
         <div class="section-title">📝 Kesimpulan & Saran</div>
         <div class="form-group"><textarea id="conclusion"></textarea></div>
 
         <div class="no-print" style="margin-top:20px">
-            <button class="btn btn-blue btn-full" onclick="dbSave('Maintenance Report')" style="padding:13px;font-size:1em">💾 Simpan ke Database</button>
+            <button class="btn btn-green btn-full" onclick="dbSave('Maintenance Report')" style="padding:13px;font-size:1em">💾 Simpan ke Database</button>
             <button class="btn btn-green btn-full" onclick="exportPdf()" style="padding:13px;font-size:1em">⬇ Export ke PDF</button>
             <button class="btn btn-gray btn-full" onclick="printReport()" style="padding:13px;font-size:1em">🖨 Print Preview</button>
         </div>
@@ -183,15 +164,14 @@
         </div>
     </div>
 
-    <!-- File input tanpa capture — sumber dipilih via dropdown -->
     <input type="file" id="fileInput" accept="image/*" style="display:none">
 
     <script>
         // ── STATE ──────────────────────────────────────────────────────────────────
         var sections = {
             findings: [{title:'',desc:'',images:[]}],
-            actions:  [{title:'',desc:'',images:[]}],
-            restore:  [{title:'',desc:'',images:[]}]
+            actions: [{title:'',desc:'',images:[]}],
+            restore: [{title:'',desc:'',images:[]}]
         };
 
         var cropModal = document.getElementById('cropModal');
@@ -205,22 +185,19 @@
             initReportBackground();
         });
 
-        // ── LOAD FROM URL ?id=xxx&print=1 ─────────────────────────────────────────
         function loadMaintenanceRecord(id, doPrint) {
             if (!id) return;
             dbLoad(id, function(rec) {
                 if (!rec) return;
-                var data = rec.data || {};
-                document.getElementById('reportType').value = data.reportType || rec.report_type || 'EM';
-                document.getElementById('wo').value         = rec.work_order || '';
-                document.getElementById('workDate').value   = rec.tanggal || new Date().toISOString().split('T')[0];
-                document.getElementById('assetTag').value   = data.assetTag    || '';
-                document.getElementById('assetDesc').value  = data.assetDesc   || '';
-                document.getElementById('failureDesc').value= data.failureDesc || '';
-                document.getElementById('pic').value        = rec.pic          || '';
-                document.getElementById('material').value   = data.material    || '';
-                document.getElementById('conclusion').value = data.conclusion  || '';
-
+                document.getElementById('reportType').value = (rec.data && rec.data.reportType) || 'EM';
+                document.getElementById('wo').value = rec.work_order || '';
+                document.getElementById('workDate').value = rec.tanggal || new Date().toISOString().split('T')[0];
+                document.getElementById('assetTag').value = (rec.data && rec.data.assetTag) || '';
+                document.getElementById('assetDesc').value = (rec.data && rec.data.assetDesc) || '';
+                document.getElementById('failureDesc').value = (rec.data && rec.data.failureDesc) || '';
+                document.getElementById('pic').value = rec.pic || '';
+                document.getElementById('material').value = (rec.data && rec.data.material) || '';
+                document.getElementById('conclusion').value = (rec.data && rec.data.conclusion) || '';
                 function normalizeItems(arr) {
                     if (!Array.isArray(arr) || !arr.length) return [{title:'',desc:'',images:[]}];
                     return arr.map(function(it) {
@@ -233,26 +210,15 @@
                         };
                     });
                 }
-                sections.findings = normalizeItems(data.findings);
-                sections.actions  = normalizeItems(data.actions);
-                sections.restore  = normalizeItems(data.restore);
-
+                sections.findings = normalizeItems(rec.data && rec.data.findings);
+                sections.actions  = normalizeItems(rec.data && rec.data.actions);
+                sections.restore  = normalizeItems(rec.data && rec.data.restore);
                 renderAll();
                 window._editingId = id;
-
-                // Buka checkbox section yang punya data
-                ['findings','actions','restore'].forEach(function(type) {
-                    var chkMap = {findings:'chkFindings', actions:'chkActions', restore:'chkRestore'};
-                    var secMap = {findings:'sectionFindings', actions:'sectionActions', restore:'sectionRestore'};
-                    var hasData = sections[type].some(function(it){ return it.title || it.desc || (it.images && it.images.length); });
-                    var chk = document.getElementById(chkMap[type]);
-                    var sec = document.getElementById(secMap[type]);
-                    if (chk && sec && hasData) { chk.checked = true; sec.style.display = 'block'; }
-                });
-                updateBadges();
-
                 dbShowToast('Data dimuat dari riwayat ✓');
-                if (doPrint) setTimeout(exportPdf, 500);
+                if (doPrint) {
+                    setTimeout(printReport, 250);
+                }
             });
         }
 
@@ -265,33 +231,9 @@
 
         // ── RENDER ─────────────────────────────────────────────────────────────────
         function renderAll() {
-            renderSection('findings', 'findingsBox');
-            renderSection('actions',  'actionsBox');
-            renderSection('restore',  'restoreBox');
-            updateBadges();
-        }
-
-        // Toggle section visibility via checkbox
-        function toggleSection(type) {
-            var chkMap = {findings:'chkFindings', actions:'chkActions', restore:'chkRestore'};
-            var secMap = {findings:'sectionFindings', actions:'sectionActions', restore:'sectionRestore'};
-            var chk = document.getElementById(chkMap[type]);
-            var sec = document.getElementById(secMap[type]);
-            if (!chk || !sec) return;
-            sec.style.display = chk.checked ? 'block' : 'none';
-            updateBadges();
-        }
-
-        // Badge jumlah item per section
-        function updateBadges() {
-            var badgeMap = {findings:'badgeFindings', actions:'badgeActions', restore:'badgeRestore'};
-            ['findings','actions','restore'].forEach(function(type) {
-                var badge = document.getElementById(badgeMap[type]);
-                if (!badge) return;
-                var count = sections[type].filter(function(it){ return it.title || it.desc || (it.images && it.images.length); }).length;
-                badge.textContent = count + ' item';
-                badge.style.display = count > 0 ? 'inline-block' : 'none';
-            });
+            renderSection('findings','findingsBox');
+            renderSection('actions','actionsBox');
+            renderSection('restore','restoreBox');
         }
 
         function renderSection(type, boxId) {
@@ -301,42 +243,38 @@
                 var div = document.createElement('div');
                 div.className = 'section-box';
                 var html = '';
-
-                // Judul & Deskripsi
                 html += '<div class="form-group"><label>Judul '+(idx+1)+'</label>';
                 html += '<input type="text" value="'+esc(item.title)+'" oninput="sections.'+type+'['+idx+'].title=this.value"></div>';
                 html += '<div class="form-group"><label>Deskripsi</label>';
                 html += '<textarea oninput="sections.'+type+'['+idx+'].desc=this.value">'+esc(item.desc)+'</textarea></div>';
-
-                // Tombol Upload dengan pilihan Kamera / Penyimpanan
                 html += '<div style="position:relative;margin-bottom:8px">';
-                html += '<button class="btn btn-gray" type="button" onclick="toggleSourceChoices(\''+type+'\','+idx+')">📤 Upload Gambar</button>';
-                html += '<div id="sourceChoices-'+type+'-'+idx+'" style="display:none;position:absolute;top:100%;left:0;margin-top:6px;background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px;gap:8px;z-index:100;flex-wrap:wrap">';
-                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'camera\')" style="min-width:110px">📷 Kamera</button>';
-                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'storage\')" style="min-width:110px">🗂️ Penyimpanan</button>';
-                html += '</div></div>';
+                html += '<button class="btn btn-gray" type="button" onclick="toggleSourceChoices(\''+type+'\','+idx+')">📤 Upload</button>';
+                html += '<div id="sourceChoices-'+type+'-'+idx+'" style="display:none;position:absolute;top:100%;left:0;transform:translateY(10px);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">';
+                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'camera\')" style="min-width:100px">📷 Kamera</button>';
+                html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'storage\')" style="min-width:100px">🗂️ Penyimpanan</button>';
+                html += '</div>';
+                html += '</div>';
 
-                // Galeri gambar + keterangan
+
                 if (item.images.length > 0) {
-                    html += '<div class="img-gallery">';
+                    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
                     item.images.forEach(function(img, imgIdx) {
-                        html += '<div class="img-thumb" style="display:flex;align-items:flex-start;gap:10px;background:#f5f5f5;border-radius:8px;padding:8px">';
+                        html += '<div style="display:flex;align-items:flex-start;gap:10px;background:#f5f5f5;border-radius:8px;padding:8px">';
                         html += '<div style="position:relative;flex-shrink:0">';
-                        html += '<img src="'+escAttr(img.dataUrl)+'" onclick="triggerUpload(\''+type+'\','+idx+','+imgIdx+',\'storage\')" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block;cursor:pointer">';
-                        html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
+                        html += '<img src="'+escAttr(img.dataUrl)+'" onclick="triggerUpload(''+type+'','+idx+','+imgIdx+','storage')" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block;cursor:pointer">';
+                        html += '<button class="del" onclick="deleteImg(''+type+'','+idx+','+imgIdx+')">×</button>';
                         html += '</div>';
                         html += '<div style="flex:1;min-width:0">';
                         html += '<label style="font-size:0.78em;color:#666;font-weight:600;display:block;margin-bottom:4px">Keterangan Gambar '+(imgIdx+1)+'</label>';
-                        html += '<input type="text" placeholder="Tulis keterangan..." value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="font-size:0.88em;padding:7px 10px">';
+                        html += '<input type="text" placeholder="Tulis keterangan..." value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="font-size:0.88em;padding:7px 10px;width:100%;border:1px solid #ddd;border-radius:6px;background:#fff;box-sizing:border-box">';
                         html += '</div>';
                         html += '</div>';
                     });
                     html += '</div>';
                 }
 
-                // Tombol Hapus item (kecuali item pertama)
                 if (idx > 0) {
-                    html += '<button class="btn btn-red btn-full" style="margin-top:10px" onclick="deleteItem(\''+type+'\','+idx+')">🗑 Hapus</button>';
+                    html += '<button class="btn btn-red btn-full" style="margin-top:10px;width:100%" onclick="deleteItem(\''+type+'\','+idx+')">🗑 Hapus</button>';
                 }
 
                 div.innerHTML = html;
@@ -344,20 +282,18 @@
             });
         }
 
-        function esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
         function escAttr(s) { return esc(s).replace(/'/g,'&#39;'); }
 
         // ── SECTION ACTIONS ────────────────────────────────────────────────────────
         function addItem(type) {
             sections[type].push({title:'',desc:'',images:[]});
             renderSection(type, type+'Box');
-            updateBadges();
         }
 
         function deleteItem(type, idx) {
             sections[type].splice(idx, 1);
             renderSection(type, type+'Box');
-            updateBadges();
         }
 
         function deleteImg(type, idx, imgIdx) {
@@ -365,14 +301,13 @@
             renderSection(type, type+'Box');
         }
 
-        // Toggle dropdown pilihan sumber upload
         function toggleSourceChoices(type, idx) {
             var el = document.getElementById('sourceChoices-'+type+'-'+idx);
             if (!el) return;
-            el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+            el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
         }
 
-        // ── IMAGE UPLOAD FLOW ──────────────────────────────────────────────────────
+        // ── IMAGE UPLOAD FLOW ────────────────────────────────────────────────────────
         function triggerUpload(type, idx, replaceIdx, source) {
             cropModal._pending = {type:type, idx:idx, replaceIdx:replaceIdx};
             var choiceEl = document.getElementById('sourceChoices-'+type+'-'+idx);
@@ -390,8 +325,13 @@
         });
 
         function fileToDataUrl(file, callback) {
-            var looksLikeImage = file && (/^image\//i.test(file.type||'') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name||''));
-            if (!looksLikeImage) { alert('File harus berupa gambar.'); callback(null); return; }
+            var looksLikeImage = file && (/^image\//i.test(file.type || '') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name || ''));
+            if (!looksLikeImage) {
+                alert('File harus berupa gambar.');
+                callback(null);
+                return;
+            }
+
             var reader = new FileReader();
             reader.onload = function(ev) {
                 var img = new Image();
@@ -399,14 +339,19 @@
                     try {
                         var c = document.createElement('canvas');
                         var maxSide = 1800;
-                        var scale = Math.min(maxSide/(img.naturalWidth||maxSide), maxSide/(img.naturalHeight||maxSide), 1);
-                        c.width  = Math.max(1, Math.round((img.naturalWidth||800)*scale));
-                        c.height = Math.max(1, Math.round((img.naturalHeight||600)*scale));
+                        var scale = Math.min(maxSide / (img.naturalWidth || maxSide), maxSide / (img.naturalHeight || maxSide), 1);
+                        c.width = Math.max(1, Math.round((img.naturalWidth || 800) * scale));
+                        c.height = Math.max(1, Math.round((img.naturalHeight || 600) * scale));
                         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
                         callback(c.toDataURL('image/jpeg', 0.92));
-                    } catch(e) { callback(ev.target.result); }
+                    } catch(e) {
+                        callback(ev.target.result);
+                    }
                 };
-                img.onerror = function() { alert('Format gambar tidak bisa diproses. Gunakan JPG atau PNG.'); callback(null); };
+                img.onerror = function() {
+                    alert('Format gambar tidak bisa diproses. Gunakan JPG atau PNG.');
+                    callback(null);
+                };
                 img.src = ev.target.result;
             };
             reader.onerror = function() { alert('Gagal membaca file'); callback(null); };
@@ -416,7 +361,7 @@
         // ── CROP MODAL ─────────────────────────────────────────────────────────────
         function openCropModal(dataUrl) {
             var img = document.getElementById('cropImg');
-            var token = Date.now()+'_'+Math.random();
+            var token = Date.now() + '_' + Math.random();
             img._loadToken = token;
             img.onload = function() {
                 if (img._loadToken !== token) return;
@@ -429,26 +374,38 @@
                 closeCropModal();
             };
             img.src = dataUrl;
-            if (img.complete && img.naturalWidth) { cropModal.classList.add('show'); setTimeout(cropReset, 80); }
+            if (img.complete && img.naturalWidth) {
+                cropModal.classList.add('show');
+                setTimeout(cropReset, 80);
+            }
         }
 
         function cropReset() {
-            var img  = document.getElementById('cropImg');
-            var box  = document.getElementById('cropBox');
+            var img = document.getElementById('cropImg');
+            var box = document.getElementById('cropBox');
             var wrap = document.getElementById('cropWrap');
-            var ww = wrap.clientWidth||320, wh = wrap.clientHeight||260;
-            var iw = img.naturalWidth||800, ih = img.naturalHeight||600;
+            var ww = wrap.clientWidth || 320;
+            var wh = wrap.clientHeight || 260;
+            var iw = img.naturalWidth || 800;
+            var ih = img.naturalHeight || 600;
             var scale = Math.min(ww/iw, wh/ih, 1);
-            var dw = iw*scale, dh = ih*scale;
-            img.style.width  = dw+'px'; img.style.height = dh+'px';
-            img.style.left   = ((ww-dw)/2)+'px'; img.style.top = ((wh-dh)/2)+'px';
-            box.style.left   = img.style.left; box.style.top  = img.style.top;
-            box.style.width  = dw+'px'; box.style.height = dh+'px';
+            var dw = iw * scale;
+            var dh = ih * scale;
+            img.style.width = dw + 'px';
+            img.style.height = dh + 'px';
+            img.style.left = ((ww - dw) / 2) + 'px';
+            img.style.top = ((wh - dh) / 2) + 'px';
+            box.style.left = img.style.left;
+            box.style.top = img.style.top;
+            box.style.width = dw + 'px';
+            box.style.height = dh + 'px';
         }
 
         function closeCropModal() {
             var img = document.getElementById('cropImg');
-            img._loadToken = ''; img.onload = null; img.onerror = null;
+            img._loadToken = '';
+            img.onload = null;
+            img.onerror = null;
             cropModal.classList.remove('show');
             img.removeAttribute('src');
             document.getElementById('fileInput').value = '';
@@ -457,121 +414,151 @@
         function cropAndSave() {
             var img = document.getElementById('cropImg');
             var box = document.getElementById('cropBox');
-            var p   = cropModal._pending;
+            var p = cropModal._pending;
             if (!p || !sections[p.type] || !sections[p.type][p.idx]) {
                 alert('Target upload tidak ditemukan. Coba upload ulang.');
-                closeCropModal(); return;
+                closeCropModal();
+                return;
             }
-            var iW = img.offsetWidth, iH = img.offsetHeight;
+
+            var iLeft = parseInt(img.style.left) || 0;
+            var iTop = parseInt(img.style.top) || 0;
+            var iW = img.offsetWidth;
+            var iH = img.offsetHeight;
             if (!img.naturalWidth || !img.naturalHeight || !iW || !iH) {
-                alert('Gambar belum siap diproses. Coba tunggu sebentar lalu simpan lagi.'); return;
+                alert('Gambar belum siap diproses. Coba tunggu sebentar lalu simpan lagi.');
+                return;
             }
-            var iLeft = parseInt(img.style.left)||0, iTop = parseInt(img.style.top)||0;
-            var bLeft = parseInt(box.style.left)||0, bTop = parseInt(box.style.top)||0;
-            var bW = box.offsetWidth, bH = box.offsetHeight;
+
+            var bLeft = parseInt(box.style.left) || 0;
+            var bTop = parseInt(box.style.top) || 0;
+            var bW = box.offsetWidth;
+            var bH = box.offsetHeight;
             var scale = img.naturalWidth / iW;
-            var sx = Math.max(0, (bLeft-iLeft)*scale);
-            var sy = Math.max(0, (bTop-iTop)*scale);
-            var sw = Math.min(img.naturalWidth-sx, bW*scale);
-            var sh = Math.min(img.naturalHeight-sy, bH*scale);
+            var sx = Math.max(0, (bLeft - iLeft) * scale);
+            var sy = Math.max(0, (bTop - iTop) * scale);
+            var sw = Math.min(img.naturalWidth - sx, bW * scale);
+            var sh = Math.min(img.naturalHeight - sy, bH * scale);
+
             var canvas = document.createElement('canvas');
-            canvas.width  = Math.max(1, Math.round(sw));
+            canvas.width = Math.max(1, Math.round(sw));
             canvas.height = Math.max(1, Math.round(sh));
             canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
-            var imgArr   = sections[p.type][p.idx].images;
+            var imgArr = sections[p.type][p.idx].images;
             var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
-            var MAX = 1*1024*1024, dataUrl;
+            var MAX = 1 * 1024 * 1024;
+            var dataUrl;
+
             for (var q = 0.85; q >= 0.25; q -= 0.1) {
                 dataUrl = canvas.toDataURL('image/jpeg', q);
-                var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
-                if (currentTotal + dataUrl.length*0.75 <= MAX) break;
+                var currentTotal = imgArr.reduce(function(a,im){ return a + (im.dataUrl ? im.dataUrl.length * 0.75 : 0); }, 0);
+                var newSize = dataUrl.length * 0.75;
+                if (currentTotal + newSize <= MAX) break;
                 if (q <= 0.25) {
-                    var factor = Math.sqrt(MAX/(currentTotal+dataUrl.length*0.75));
+                    var factor = Math.sqrt(MAX / (currentTotal + newSize));
                     var c2 = document.createElement('canvas');
-                    c2.width  = Math.max(50, Math.floor(canvas.width*factor));
-                    c2.height = Math.max(50, Math.floor(canvas.height*factor));
+                    c2.width = Math.max(50, Math.floor(canvas.width * factor));
+                    c2.height = Math.max(50, Math.floor(canvas.height * factor));
                     c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
-                    dataUrl = c2.toDataURL('image/jpeg', 0.7); break;
+                    dataUrl = c2.toDataURL('image/jpeg', 0.7);
+                    break;
                 }
             }
-            var entry = {dataUrl: dataUrl, caption: existing ? (existing.caption||'') : ''};
-            if (p.replaceIdx >= 0) imgArr[p.replaceIdx] = entry;
-            else imgArr.push(entry);
+
+            var entry = {dataUrl: dataUrl, caption: existing && existing.caption ? existing.caption : ''};
+            if (existing && existing.name) { entry.name = existing.name; }
+            if (existing && existing.type) { entry.type = existing.type; }
+            if (p.replaceIdx >= 0) {
+                imgArr[p.replaceIdx] = entry;
+            } else {
+                imgArr.push(entry);
+            }
 
             closeCropModal();
-            renderSection(p.type, p.type+'Box');
+            renderSection(p.type, p.type + 'Box');
         }
 
-        // ── DRAG & RESIZE CROP ─────────────────────────────────────────────────────
+        // ── DRAG & RESIZE ───────────────────────────────────────────────────────────
         function initCropDrag() {
-            var box  = document.getElementById('cropBox');
+            var box = document.getElementById('cropBox');
             var wrap = document.getElementById('cropWrap');
             box.addEventListener('mousedown', onStart, false);
-            box.addEventListener('touchstart', onStart, {passive:false});
+            box.addEventListener('touchstart', onStart, {passive: false});
+
             function onStart(e) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
                 var t = e.touches ? e.touches[0] : e;
-                var startX=t.clientX, startY=t.clientY;
-                var startL=parseInt(box.style.left)||0, startT=parseInt(box.style.top)||0;
-                var startW=box.offsetWidth, startH=box.offsetHeight;
-                var rect=box.getBoundingClientRect();
-                var rx=t.clientX-rect.left, ry=t.clientY-rect.top, edge=22;
-                var edgeX = rx<edge?'l':rx>startW-edge?'r':'';
-                var edgeY = ry<edge?'t':ry>startH-edge?'b':'';
-                var mode  = (edgeX||edgeY) ? edgeX+edgeY : 'move';
+                var startX = t.clientX, startY = t.clientY;
+                var startL = parseInt(box.style.left) || 0;
+                var startT = parseInt(box.style.top) || 0;
+                var startW = box.offsetWidth;
+                var startH = box.offsetHeight;
+                var rect = box.getBoundingClientRect();
+                var rx = t.clientX - rect.left;
+                var ry = t.clientY - rect.top;
+                var edge = 22;
+                var edgeX = rx < edge ? 'l' : rx > startW - edge ? 'r' : '';
+                var edgeY = ry < edge ? 't' : ry > startH - edge ? 'b' : '';
+                var mode = (edgeX || edgeY) ? edgeX + edgeY : 'move';
+
                 function onMove(ev) {
                     ev.preventDefault();
-                    var mv=ev.touches?ev.touches[0]:ev;
-                    var dx=mv.clientX-startX, dy=mv.clientY-startY;
-                    var img=document.getElementById('cropImg');
-                    var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
-                    var iW=img.offsetWidth, iH=img.offsetHeight;
-                    if (mode==='move') {
-                        box.style.left = clamp(startL+dx, iL, iL+iW-startW)+'px';
-                        box.style.top  = clamp(startT+dy, iT, iT+iH-startH)+'px';
+                    var mv = ev.touches ? ev.touches[0] : ev;
+                    var dx = mv.clientX - startX;
+                    var dy = mv.clientY - startY;
+                    var img = document.getElementById('cropImg');
+                    var iL = parseInt(img.style.left) || 0;
+                    var iT = parseInt(img.style.top) || 0;
+                    var iW = img.offsetWidth;
+                    var iH = img.offsetHeight;
+
+                    if (mode === 'move') {
+                        box.style.left = clamp(startL + dx, iL, iL + iW - startW) + 'px';
+                        box.style.top = clamp(startT + dy, iT, iT + iH - startH) + 'px';
                     } else {
-                        var nl=startL,nt=startT,nw=startW,nh=startH;
-                        if(mode.includes('r')) nw=clamp(startW+dx, 40, iL+iW-nl);
-                        if(mode.includes('b')) nh=clamp(startH+dy, 40, iT+iH-nt);
-                        if(mode.includes('l')){ nl=clamp(startL+dx,iL,startL+startW-40); nw=startL+startW-nl; }
-                        if(mode.includes('t')){ nt=clamp(startT+dy,iT,startT+startH-40); nh=startT+startH-nt; }
-                        box.style.left=nl+'px'; box.style.top=nt+'px';
-                        box.style.width=nw+'px'; box.style.height=nh+'px';
+                        var nl = startL, nt = startT, nw = startW, nh = startH;
+                        if (mode.includes('r')) nw = clamp(startW + dx, 40, iL + iW - nl);
+                        if (mode.includes('b')) nh = clamp(startH + dy, 40, iT + iH - nt);
+                        if (mode.includes('l')) { nl = clamp(startL + dx, iL, startL + startW - 40); nw = startL + startW - nl; }
+                        if (mode.includes('t')) { nt = clamp(startT + dy, iT, startT + startH - 40); nh = startT + startH - nt; }
+                        box.style.left = nl + 'px';
+                        box.style.top = nt + 'px';
+                        box.style.width = nw + 'px';
+                        box.style.height = nh + 'px';
                     }
                 }
+
                 function onEnd() {
-                    document.removeEventListener('mousemove',onMove);
-                    document.removeEventListener('touchmove',onMove);
-                    document.removeEventListener('mouseup',onEnd);
-                    document.removeEventListener('touchend',onEnd);
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('touchmove', onMove);
+                    document.removeEventListener('mouseup', onEnd);
+                    document.removeEventListener('touchend', onEnd);
                 }
-                document.addEventListener('mousemove',onMove,{passive:false});
-                document.addEventListener('touchmove',onMove,{passive:false});
-                document.addEventListener('mouseup',onEnd);
-                document.addEventListener('touchend',onEnd);
+
+                document.addEventListener('mousemove', onMove, {passive: false});
+                document.addEventListener('touchmove', onMove, {passive: false});
+                document.addEventListener('mouseup', onEnd);
+                document.addEventListener('touchend', onEnd);
             }
         }
 
-        function clamp(val,min,max){ return Math.max(min,Math.min(max,val)); }
+        function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
 
-        // ── SYNC DOM → STATE ───────────────────────────────────────────────────────
         function syncSectionsFromDom() {
             ['findings','actions','restore'].forEach(function(type) {
                 var box = document.getElementById(type+'Box');
                 if (!box) return;
                 box.querySelectorAll('.section-box').forEach(function(card, idx) {
                     if (!sections[type][idx]) return;
-                    // Sync judul — input[type=text] pertama adalah judul item
                     var inputs = card.querySelectorAll('input[type="text"]');
-                    if (inputs[0]) sections[type][idx].title = inputs[0].value;
-                    // Sync deskripsi — textarea pertama adalah deskripsi item
                     var textareas = card.querySelectorAll('textarea');
+                    if (inputs[0]) sections[type][idx].title = inputs[0].value;
                     if (textareas[0]) sections[type][idx].desc = textareas[0].value;
-                    // Sync caption setiap gambar — input[type=text] index 1,2,3,...
-                    if (sections[type][idx].images && sections[type][idx].images.length) {
+                    if (sections[type][idx].images) {
                         sections[type][idx].images.forEach(function(im, imgIdx) {
-                            var capInput = inputs[imgIdx + 1]; // +1 karena inputs[0] = judul
+                            var capInput = inputs[imgIdx + 1];
                             if (capInput) im.caption = capInput.value;
                         });
                     }
@@ -579,178 +566,243 @@
             });
         }
 
-        // ── DB COLLECT ─────────────────────────────────────────────────────────────
         function dbCollectData(modul) {
             if (!modul || modul.toUpperCase().indexOf('MAINTENANCE') === -1) return null;
             syncSectionsFromDom();
             return {
-                modul:      'Maintenance Report',
-                tanggal:    document.getElementById('workDate').value   || null,
-                pic:        document.getElementById('pic').value        || null,
-                work_order: document.getElementById('wo').value         || null,
-                unit:       'Unit 7',
+                modul: 'Maintenance Report',
+                tanggal: document.getElementById('workDate').value || null,
+                pic: document.getElementById('pic').value || null,
+                work_order: document.getElementById('wo').value || null,
                 data: {
-                    reportType:  document.getElementById('reportType').value  || 'EM',
-                    assetTag:    document.getElementById('assetTag').value    || '',
-                    assetDesc:   document.getElementById('assetDesc').value   || '',
+                    reportType: document.getElementById('reportType').value || 'EM',
+                    assetTag: document.getElementById('assetTag').value || '',
+                    assetDesc: document.getElementById('assetDesc').value || '',
                     failureDesc: document.getElementById('failureDesc').value || '',
-                    material:    document.getElementById('material').value    || '',
-                    conclusion:  document.getElementById('conclusion').value  || '',
-                    findings:    sections.findings,
-                    actions:     sections.actions,
-                    restore:     sections.restore
+                    material: document.getElementById('material').value || '',
+                    conclusion: document.getElementById('conclusion').value || '',
+                    findings: sections.findings,
+                    actions: sections.actions,
+                    restore: sections.restore
                 }
             };
         }
 
-        function printReport() { syncSectionsFromDom(); window.print(); }
+        function printReport() {
+            syncSectionsFromDom();
+            window.print();
+        }
 
-        // ── BACKGROUND PDF ─────────────────────────────────────────────────────────
-        var reportBgImg=null, reportBgReady=false, reportBgCallbacks=[];
+        var reportBgImg = null;
+        var reportBgReady = false;
+        var reportBgCallbacks = [];
+
         function initReportBackground() {
             if (reportBgImg) return;
             reportBgImg = new Image();
-            reportBgImg.onload  = function(){ reportBgReady=true;  reportBgCallbacks.splice(0).forEach(function(cb){cb();}); };
-            reportBgImg.onerror = function(){ reportBgReady=false; reportBgCallbacks.splice(0).forEach(function(cb){cb();}); };
+            reportBgImg.onload = function() {
+                reportBgReady = true;
+                reportBgCallbacks.splice(0).forEach(function(cb){ cb(); });
+            };
+            reportBgImg.onerror = function() {
+                reportBgReady = false;
+                reportBgCallbacks.splice(0).forEach(function(cb){ cb(); });
+            };
             reportBgImg.src = 'DRAFT PM KOSONG.jpg';
         }
+
         function ensureReportBackground(callback) {
             initReportBackground();
-            if (reportBgReady||(reportBgImg&&reportBgImg.complete&&reportBgImg.naturalWidth)){ reportBgReady=true; callback(); return; }
+            if (reportBgReady || (reportBgImg && reportBgImg.complete && reportBgImg.naturalWidth)) {
+                reportBgReady = true;
+                callback();
+                return;
+            }
             reportBgCallbacks.push(callback);
         }
-        function drawPdfBackground(doc,pw,ph) {
-            if (!reportBgImg||!reportBgReady) return;
-            try { doc.addImage(reportBgImg,'JPEG',0,0,pw,ph); } catch(e){}
-        }
-        function getReportTypeLabel() {
-            var v = document.getElementById('reportType').value;
-            return {PM:'PM (Preventive Maintenance)',CM:'CM (Correction Maintenance)',EM:'EM (Emergency Report)',DR:'DR (Defect Report)',Other:'Other'}[v]||v;
+
+        function drawPdfBackground(doc, pw, ph) {
+            if (!reportBgImg || !reportBgReady) return;
+            try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
         }
 
-        // ── PDF EXPORT ─────────────────────────────────────────────────────────────
+        function getReportTypeLabel() {
+            var value = document.getElementById('reportType').value;
+            var labels = {
+                PM: 'PM (Preventive Maintenance)',
+                CM: 'CM (Correction Maintenance)',
+                EM: 'EM (Emergency Report)',
+                DR: 'DR (Defect Report)',
+                Other: 'Other'
+            };
+            return labels[value] || value;
+        }
+
+        // ── PDF EXPORT (jsPDF) ─────────────────────────────────────────────────────
         function exportPdf() {
             syncSectionsFromDom();
             var jsPDF = window.jspdf ? window.jspdf.jsPDF : null;
-            if (!jsPDF) { alert('PDF library belum siap.'); printReport(); return; }
+            if (!jsPDF) {
+                alert('PDF library belum siap. Print preview akan dibuka sebagai fallback.');
+                printReport();
+                return;
+            }
+
             ensureReportBackground(function() {
                 try {
-                    var doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-                    var pw=doc.internal.pageSize.getWidth(), ph=doc.internal.pageSize.getHeight();
-                    var marginX=15, marginTop=20, marginBottom=30, contentW=pw-(marginX*2), y=marginTop;
+                    var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+                    var pw = doc.internal.pageSize.getWidth();
+                    var ph = doc.internal.pageSize.getHeight();
+                    var now = new Date();
+                    var ts = pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear();
+                    var marginX = 15;
+                    var marginTop = 20;
+                    var marginBottom = 30;
+                    var contentW = pw - (marginX * 2);
+                    var y = marginTop;
+
                     function pad(n){ return String(n).padStart(2,'0'); }
-                    function checkPage(need){ if(y+need>ph-marginBottom){doc.addPage();drawPdfBackground(doc,pw,ph);y=marginTop;} }
-                    function safe(v){ return (v||'').toString().trim(); }
+                    function checkPage(need) { if (y + need > ph - marginBottom) { doc.addPage(); drawPdfBackground(doc,pw,ph); y = marginTop; } }
+                    function safe(v) { return (v||'').toString().trim(); }
 
                     drawPdfBackground(doc,pw,ph);
 
                     // INFO BOX
-                    doc.setDrawColor(180,220,190); doc.setLineWidth(0.4);
+                    doc.setDrawColor(180, 220, 190);
+                    doc.setLineWidth(0.4);
                     doc.rect(marginX, y, contentW, 32, 'S');
-                    var infoRows=[
-                        ['Tipe',getReportTypeLabel(),'WO No',safe(document.getElementById('wo').value)],
-                        ['Tanggal',safe(document.getElementById('workDate').value),'Asset',safe(document.getElementById('assetTag').value)],
-                        ['PIC',safe(document.getElementById('pic').value),'Material',safe(document.getElementById('material').value)]
+
+                    var infoRows = [
+                        ['Tipe', getReportTypeLabel(), 'WO No', safe(document.getElementById('wo').value)],
+                        ['Tanggal',safe(document.getElementById('workDate').value), 'Asset', safe(document.getElementById('assetTag').value)],
+                        ['PIC', safe(document.getElementById('pic').value), 'Material',safe(document.getElementById('material').value)]
                     ];
-                    var iy=y+7;
-                    infoRows.forEach(function(row){
-                        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,107,58);
+
+                    var iy = y + 7;
+                    infoRows.forEach(function(row) {
+                        doc.setFont('helvetica','bold');
+                        doc.setFontSize(8);
+                        doc.setTextColor(26,107,58);
                         doc.text(row[0]+':', marginX+3, iy);
-                        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+                        doc.setFont('helvetica','normal');
+                        doc.setTextColor(30,30,30);
                         doc.text(row[1].substring(0,40), marginX+22, iy);
-                        doc.setFont('helvetica','bold'); doc.setTextColor(26,107,58);
+                        doc.setFont('helvetica','bold');
+                        doc.setTextColor(26,107,58);
                         doc.text(row[2]+':', marginX+(contentW/2)+5, iy);
-                        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+                        doc.setFont('helvetica','normal');
+                        doc.setTextColor(30,30,30);
                         doc.text(row[3].substring(0,40), marginX+(contentW/2)+22, iy);
-                        iy+=9;
+                        iy += 9;
                     });
-                    y+=36;
+
+                    y += 36;
 
                     // Asset Desc
-                    var assetDesc=safe(document.getElementById('assetDesc').value);
-                    if(assetDesc){ checkPage(8); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,50,50); doc.text('Asset Desc: '+assetDesc, marginX+3, y); y+=6; }
-
-                    // Failure Desc
-                    var failureDesc=safe(document.getElementById('failureDesc').value);
-                    if(failureDesc){
-                        checkPage(14); doc.setFillColor(255,243,205);
-                        var fdLines=doc.splitTextToSize(failureDesc, contentW-6);
-                        doc.rect(marginX,y,contentW,5+fdLines.length*4,'F');
-                        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,107,58);
-                        doc.text('Work To be Done / Failure Description:', marginX+3, y+4); y+=7;
-                        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
-                        fdLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y+=4; });
-                        y+=3;
+                    var assetDesc = safe(document.getElementById('assetDesc').value);
+                    if (assetDesc) {
+                        checkPage(8);
+                        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,50,50);
+                        doc.text('Asset Desc: '+assetDesc, marginX+3, y); y += 6;
                     }
 
-                    // Sections: Finding / Action / Restore
-                    [['findings','Finding / Problem'],['actions','Action'],['restore','Restore']].forEach(function(pair){
-                        var type=pair[0], label=pair[1];
-                        var items=sections[type];
-                        var hasContent=items.some(function(it){ return it.title||it.desc||it.images.length; });
-                        if(!hasContent) return;
+                    // Failure Desc
+                    var failureDesc = safe(document.getElementById('failureDesc').value);
+                    if (failureDesc) {
+                        checkPage(14);
+                        doc.setFillColor(255,243,205);
+                        var fdLines = doc.splitTextToSize(failureDesc, contentW-6);
+                        doc.rect(marginX, y, contentW, 5 + fdLines.length*4, 'F');
+                        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,107,58);
+                        doc.text('Work To be Done / Failure Description:', marginX+3, y+4); y += 7;
+                        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+                        fdLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y += 4; });
+                        y += 3;
+                    }
+
+                    // Sections
+                    [['findings','Finding / Problem'],['actions','Action'],['restore','Restore']].forEach(function(pair) {
+                        var type = pair[0];
+                        var label = pair[1];
+                        var items = sections[type];
+                        var hasContent = items.some(function(it){ return it.title||it.desc||it.images.length; });
+                        if (!hasContent) return;
+
                         checkPage(12);
-                        doc.setFillColor(232,245,233); doc.rect(marginX,y,contentW,8,'F');
+                        doc.setFillColor(232,245,233);
+                        doc.rect(marginX, y, contentW, 8, 'F');
                         doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(26,107,58);
-                        doc.text(label, marginX+3, y+5.5); y+=11;
-                        items.forEach(function(item,idx){
-                            if(!item.title&&!item.desc&&!item.images.length) return;
+                        doc.text(label, marginX+3, y+5.5); y += 11;
+
+                        items.forEach(function(item, idx) {
+                            if (!item.title && !item.desc && !item.images.length) return;
+
                             checkPage(10);
-                            if(item.title){
+                            if (item.title) {
                                 doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(30,30,30);
-                                doc.text((idx+1)+'. '+item.title, marginX+3, y); y+=5;
+                                doc.text((idx+1)+'. '+item.title, marginX+3, y); y += 5;
                             }
-                            if(item.desc){
+
+                            if (item.desc) {
                                 doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,50,50);
-                                var dLines=doc.splitTextToSize(item.desc, contentW-6);
-                                dLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+6, y); y+=4; });
+                                var dLines = doc.splitTextToSize(item.desc, contentW-6);
+                                dLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+6, y); y += 4; });
                             }
-                            // Gambar + caption
-                            if(item.images.length>0){
+
+                            if (item.images.length > 0) {
                                 var imgW=52, imgH=40, gap=4, perRow=3, x=marginX+3;
-                                y+=2;
-                                item.images.forEach(function(im,i){
+                                y += 2;
+                                item.images.forEach(function(im, i) {
                                     var capH = im.caption ? 8 : 0;
-                                    checkPage(imgH+capH+5);
-                                    if(y+imgH>ph-marginBottom){ doc.addPage(); drawPdfBackground(doc,pw,ph); y=marginTop; x=marginX+3; }
-                                    try{ doc.addImage(im.dataUrl,'JPEG',x,y,imgW,imgH); }catch(e){}
-                                    if(im.caption){
+                                    checkPage(imgH + capH + 5);
+                                    if (y + imgH > ph - marginBottom) { doc.addPage(); drawPdfBackground(doc,pw,ph); y = marginTop; x = marginX+3; }
+                                    try { doc.addImage(im.dataUrl, 'JPEG', x, y, imgW, imgH); } catch(e) {}
+                                    if (im.caption) {
                                         doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(80,80,80);
-                                        var capLines=doc.splitTextToSize(im.caption, imgW);
-                                        capLines.forEach(function(cl,ci){ doc.text(cl, x, y+imgH+3+ci*3.5); });
+                                        var capLines = doc.splitTextToSize(im.caption, imgW);
+                                        capLines.forEach(function(cl, ci) { doc.text(cl, x, y+imgH+3+ci*3.5); });
                                     }
-                                    x+=imgW+gap;
-                                    if((i+1)%perRow===0){ x=marginX+3; y+=imgH+gap+capH; }
+                                    x += imgW + gap;
+                                    if ((i+1) % perRow === 0) { x = marginX+3; y += imgH + gap + capH; }
                                 });
-                                if(item.images.length%perRow!==0) y+=imgH+gap+8;
-                                y+=2;
+                                if (item.images.length % perRow !== 0) y += imgH + gap + 8;
+                                y += 2;
                             }
-                            y+=2;
+
+                            y += 2;
                         });
                     });
 
-                    // Kesimpulan
-                    var conclusion=safe(document.getElementById('conclusion').value);
-                    if(conclusion){
-                        checkPage(14); doc.setFillColor(232,245,233);
-                        doc.rect(marginX,y,contentW,8,'F');
+                    // Conclusion
+                    var conclusion = safe(document.getElementById('conclusion').value);
+                    if (conclusion) {
+                        checkPage(14);
+                        doc.setFillColor(232,245,233);
+                        doc.rect(marginX, y, contentW, 8, 'F');
                         doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(26,107,58);
-                        doc.text('Kesimpulan & Saran', marginX+3, y+5.5); y+=11;
+                        doc.text('Kesimpulan & Saran', marginX+3, y+5.5); y += 11;
                         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
-                        var cLines=doc.splitTextToSize(conclusion, contentW-6);
-                        cLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y+=4; });
+                        var cLines = doc.splitTextToSize(conclusion, contentW-6);
+                        cLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y += 4; });
                     }
 
-                    // Filename
-                    var fn=[
-                        safe(document.getElementById('wo').value)||'WO',
-                        (safe(document.getElementById('workDate').value)||'date').replace(/-/g,''),
-                        safe(document.getElementById('assetTag').value)||'asset',
-                        safe(document.getElementById('assetDesc').value)||'desc'
-                    ].join('_').replace(/\s+/g,'_').replace(/[\\/:*?"<>|]+/g,'').toLowerCase()+'.pdf';
+                    var nPages = doc.internal.getNumberOfPages();
+                    for (var i=1; i<=nPages; i++) {
+                        doc.setPage(i);
+                    }
+
+                    var wo = safe(document.getElementById('wo').value) || 'WO';
+                    var date = safe(document.getElementById('workDate').value) || 'date';
+                    var atag = safe(document.getElementById('assetTag').value) || 'asset';
+                    var adsc = safe(document.getElementById('assetDesc').value)|| 'desc';
+                    var fn = [wo, date.replace(/-/g,''), atag, adsc].join('_').replace(/\s+/g,'_').replace(/[\\/:*?"<>|]+/g,'').toLowerCase()+'.pdf';
+
                     doc.save(fn);
 
-                } catch(err){ alert('PDF Error: '+err.message); console.error(err); }
+                } catch(err) {
+                    alert('PDF Error: '+err.message);
+                    console.error(err);
+                }
             });
         }
     </script>
