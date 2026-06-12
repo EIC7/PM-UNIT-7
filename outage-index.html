@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outage Management — Unit 7 PLTU Paiton</title>
+<script src="shared.js"></script>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --bg2: #ffffff;
+    --border: #e2e8f0;
+    --steel: #1e3a5f;
+    --steel-light: #2d4a6a;
+    --accent: #0f766e;
+    --accent2: #0d9488;
+    --text-dark: #0f172a;
+    --text-mid: #475569;
+    --text-light: #94a3b8;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 10px 28px rgba(0,0,0,0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .header-inner {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 14px clamp(16px, 4vw, 40px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 12px rgba(15,118,110,0.25);
+    flex-shrink: 0;
+  }
+
+  .logo-text .company {
+    font-size: 11px;
+    color: var(--text-light);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .logo-text .system {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-dark);
+    letter-spacing: -0.3px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .btn-back-main {
+    padding: 8px 16px;
+    border: 1.5px solid var(--steel-light);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--steel-light);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-back-main:hover {
+    background: var(--steel-light);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(45,74,106,0.25);
+  }
+
+  .status-pill {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    border: 1px solid #86efac;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #15803d;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .status-pill::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: pulse-green 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .clock-display {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--text-mid);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 48px clamp(16px, 4vw, 40px) 36px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .hero-left {
+    flex: 1;
+    min-width: min(260px, 100%);
+  }
+
+  .hero-eyebrow {
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    width: 20px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+
+  .hero-title {
+    font-size: clamp(30px, 5.5vw, 52px);
+    font-weight: 800;
+    line-height: 1.05;
+    color: var(--text-dark);
+    letter-spacing: -1px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .hero-title span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-mid);
+    line-height: 1.6;
+    max-width: 460px;
+    margin-top: 8px;
+  }
+
+  .hero-card {
+    padding: 20px 28px;
+    background: var(--bg2);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .hero-card .label {
+    font-size: 10px;
+    color: var(--text-light);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .hero-card .value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+  }
+
+  /* ── DIVIDER LABEL ── */
+  .section-wrap {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 40px) 60px;
+  }
+
+  .divider-label {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .divider-label .line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .divider-label .txt {
+    font-size: 11px;
+    color: var(--text-light);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ── MODULE CARDS ── */
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+    gap: 20px;
+  }
+
+  .module-card {
+    background: var(--bg2);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 26px 24px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+    animation: slideUp 0.45s ease both;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .module-card:nth-child(1) { animation-delay: 0.05s; }
+  .module-card:nth-child(2) { animation-delay: 0.12s; }
+  .module-card:nth-child(3) { animation-delay: 0.19s; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .module-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--card-accent, var(--accent));
+    border-radius: 14px 14px 0 0;
+    transition: height 0.25s;
+  }
+
+  .module-card:hover {
+    border-color: var(--card-accent, var(--accent));
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-5px);
+  }
+
+  .module-card:hover::before {
+    height: 6px;
+  }
+
+  /* Card variants */
+  .card-input   { --card-accent: #0f766e; }
+  .card-check   { --card-accent: #1d4ed8; }
+  .card-history { --card-accent: #7c3aed; }
+
+  .card-num {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-light);
+    letter-spacing: 2px;
+    margin-bottom: 18px;
+    text-transform: uppercase;
+  }
+
+  .card-icon-wrap {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin-bottom: 18px;
+    background: var(--card-icon-bg, rgba(15,118,110,0.1));
+    transition: transform 0.25s;
+    position: relative;
+    z-index: 1;
+  }
+
+  .module-card:hover .card-icon-wrap {
+    transform: scale(1.08) rotate(4deg);
+  }
+
+  .card-input   .card-icon-wrap { --card-icon-bg: rgba(15,118,110,0.1); }
+  .card-check   .card-icon-wrap { --card-icon-bg: rgba(29,78,216,0.1); }
+  .card-history .card-icon-wrap { --card-icon-bg: rgba(124,58,237,0.1); }
+
+  .card-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 10px;
+    line-height: 1.2;
+    transition: color 0.2s;
+    position: relative;
+    z-index: 1;
+  }
+
+  .module-card:hover .card-title {
+    color: var(--card-accent, var(--accent));
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--text-mid);
+    line-height: 1.55;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 16px;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ctag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--tag-bg, rgba(15,118,110,0.08));
+    color: var(--card-accent, var(--accent));
+    border: 1px solid rgba(15,118,110,0.15);
+    font-family: 'Courier New', monospace;
+    transition: all 0.2s;
+  }
+
+  .module-card:hover .ctag {
+    background: var(--tag-bg-hover, rgba(15,118,110,0.14));
+    border-color: var(--card-accent, var(--accent));
+  }
+
+  .card-input   .ctag { --tag-bg: rgba(15,118,110,0.08);  --tag-bg-hover: rgba(15,118,110,0.14); }
+  .card-check   .ctag { --tag-bg: rgba(29,78,216,0.08);   --tag-bg-hover: rgba(29,78,216,0.14); }
+  .card-history .ctag { --tag-bg: rgba(124,58,237,0.08);  --tag-bg-hover: rgba(124,58,237,0.14); }
+
+  .card-arrow {
+    position: absolute;
+    bottom: 18px;
+    right: 18px;
+    font-size: 18px;
+    color: var(--border);
+    transition: all 0.25s;
+    z-index: 1;
+  }
+
+  .module-card:hover .card-arrow {
+    color: var(--card-accent, var(--accent));
+    transform: translate(3px, -3px);
+  }
+
+  /* ── RECENT SECTION ── */
+  .recent-section {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 40px) 60px;
+  }
+
+  .recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .recent-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .recent-item:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+
+  .recent-modul {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+
+  .recent-meta {
+    font-size: 11px;
+    color: var(--text-light);
+    font-family: 'Courier New', monospace;
+    margin-top: 3px;
+  }
+
+  .btn-view {
+    padding: 5px 14px;
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .btn-view:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-all-history {
+    margin-top: 16px;
+    padding: 10px 24px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+    display: block;
+    width: fit-content;
+  }
+
+  .btn-all-history:hover {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(15,118,110,0.3);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 20px clamp(16px, 4vw, 40px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  footer span {
+    font-size: 11px;
+    color: var(--text-light);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .module-grid { grid-template-columns: 1fr; }
+    .hero { flex-direction: column; gap: 24px; }
+    .hero-card { width: 100%; }
+    footer { justify-content: center; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="logo-icon">🔧</div>
+      <div class="logo-text">
+        <div class="company">PT POMI · PLTU PAITON</div>
+        <div class="system">Outage Management</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-back-main" onclick="window.location.href='index.html'">
+        ← PM Dashboard
+      </button>
+      <div class="status-pill">UNIT 7 — ONLINE</div>
+      <div class="clock-display" id="clockMain">--:--:--</div>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">SISTEM MANAJEMEN OUTAGE</div>
+    <div class="hero-title">Outage<br><span>Data</span><br>System</div>
+    <div class="hero-sub">
+      Input data asset, pengisian checksheet, dan riwayat data outage unit secara terpusat dan terstruktur.
+    </div>
+  </div>
+  <div class="hero-card">
+    <div class="label">UNIT</div>
+    <div class="value">U-7</div>
+    <div style="font-size:10px;color:var(--text-light);margin-top:4px;letter-spacing:1px">PAITON · JAWA TIMUR</div>
+  </div>
+</section>
+
+<!-- MODULE CARDS -->
+<div class="section-wrap">
+  <div class="divider-label">
+    <div class="line"></div>
+    <div class="txt">— Pilih Modul —</div>
+    <div class="line"></div>
+  </div>
+
+  <div class="module-grid">
+
+    <!-- 1. Input Data -->
+    <a class="module-card card-input" href="outage-input.html">
+      <div class="card-num">MOD — 01</div>
+      <div class="card-icon-wrap">📋</div>
+      <div class="card-title">Input Data<br>Asset</div>
+      <div class="card-desc">
+        Tabel input data asset dengan kolom dinamis. Tambah, edit, atau hapus kolom sesuai kebutuhan. Data tersimpan otomatis ke database.
+      </div>
+      <div class="card-tags">
+        <span class="ctag">DINAMIS</span>
+        <span class="ctag">MULTI-KOLOM</span>
+        <span class="ctag">DATABASE</span>
+      </div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+    <!-- 2. Checksheet -->
+    <a class="module-card card-check" href="outage-checksheet.html">
+      <div class="card-num">MOD — 02</div>
+      <div class="card-icon-wrap">✅</div>
+      <div class="card-title">Kumpulan<br>Checksheet</div>
+      <div class="card-desc">
+        Pengisian checksheet per asset. Data otomatis terisi dari Input Data. Mendukung export PDF dan penyimpanan riwayat.
+      </div>
+      <div class="card-tags">
+        <span class="ctag">PER ASSET</span>
+        <span class="ctag">AUTO-FILL</span>
+        <span class="ctag">PDF EXPORT</span>
+      </div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+    <!-- 3. History Outage -->
+    <a class="module-card card-history" href="outage-history.html">
+      <div class="card-num">MOD — 03</div>
+      <div class="card-icon-wrap">🗂️</div>
+      <div class="card-title">History<br>Outage</div>
+      <div class="card-desc">
+        Riwayat seluruh data outage yang tersimpan. Filter berdasarkan asset, tanggal, atau jenis pekerjaan. Buka dan cetak ulang laporan.
+      </div>
+      <div class="card-tags">
+        <span class="ctag">RIWAYAT</span>
+        <span class="ctag">FILTER</span>
+        <span class="ctag">PRINT</span>
+      </div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+  </div>
+</div>
+
+<!-- RECENT DATA -->
+<div class="recent-section">
+  <div class="divider-label">
+    <div class="line"></div>
+    <div class="txt">— Data Outage Terkini —</div>
+    <div class="line"></div>
+  </div>
+
+  <div class="recent-list" id="recentList">
+    <div style="text-align:center;padding:24px;color:var(--text-light);font-size:13px;font-family:'Courier New',monospace">
+      Memuat data...
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:12px">
+    <button class="btn-all-history" onclick="window.location.href='outage-history.html'">
+      Lihat Semua History Outage →
+    </button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span>PT POMI · PLTU PAITON UNIT 7 · OUTAGE MANAGEMENT SYSTEM v1.0</span>
+  <span id="footerDate">—</span>
+</footer>
+
+<script>
+/* ── SUPABASE CONFIG (sama dengan index utama) ── */
+var SUPA_URL   = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var OUTAGE_TABLE = 'outage_records';
+
+function supaFetch(method, path, body) {
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(SUPA_URL + '/rest/v1/' + path, opts)
+    .then(function(res) {
+      if (!res.ok) return res.text().then(function(t){ throw new Error(t); });
+      return res.text().then(function(t){ return t ? JSON.parse(t) : []; });
+    });
+}
+
+/* ── CLOCK ── */
+function tick() {
+  var now = new Date();
+  var h = String(now.getHours()).padStart(2,'0');
+  var m = String(now.getMinutes()).padStart(2,'0');
+  var s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clockMain').textContent = h+':'+m+':'+s;
+
+  var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli',
+               'Agustus','September','Oktober','November','Desember'];
+  var d = String(now.getDate()).padStart(2,'0');
+  document.getElementById('footerDate').textContent =
+    d + ' ' + BULAN[now.getMonth()] + ' ' + now.getFullYear();
+}
+tick();
+setInterval(tick, 1000);
+
+/* ── LOAD RECENT DATA ── */
+function loadRecent() {
+  var container = document.getElementById('recentList');
+
+  supaFetch('GET', OUTAGE_TABLE + '?select=id,modul,tanggal,asset_tag,pic,created_at&order=created_at.desc&limit=5')
+    .then(function(rows) {
+      if (!rows || rows.length === 0) {
+        container.innerHTML =
+          '<div style="text-align:center;padding:28px;color:var(--text-light);font-size:13px;font-family:\'Courier New\',monospace">' +
+          'Belum ada data outage tersimpan.</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      rows.forEach(function(r) {
+        var dt = r.tanggal || (r.created_at ? r.created_at.substring(0,10) : '-');
+        var item = document.createElement('div');
+        item.className = 'recent-item';
+        item.innerHTML =
+          '<div style="flex:1;min-width:0">' +
+            '<div class="recent-modul">' + (r.modul || '-') + '</div>' +
+            '<div class="recent-meta">' +
+              dt +
+              (r.asset_tag ? ' · ' + r.asset_tag : '') +
+              (r.pic ? ' · PIC: ' + r.pic : '') +
+            '</div>' +
+          '</div>' +
+          '<button class="btn-view" onclick="window.location.href=\'outage-history.html\'">Lihat Detail</button>';
+        container.appendChild(item);
+      });
+    })
+    .catch(function() {
+      container.innerHTML =
+        '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:12px">' +
+        'Gagal memuat data — tabel outage_records belum tersedia atau koneksi bermasalah.</div>';
+    });
+}
+
+setTimeout(loadRecent, 400);
+</script>
+</body>
+</html>

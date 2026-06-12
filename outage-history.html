@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>History Outage — Unit 7 PLTU Paiton</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --bg2: #ffffff;
+    --border: #e2e8f0;
+    --steel: #1e3a5f;
+    --steel-light: #2d4a6a;
+    --accent: #7c3aed;
+    --accent2: #6d28d9;
+    --ok: #16a34a;
+    --fail: #dc2626;
+    --warn: #d97706;
+    --teal: #0f766e;
+    --text-dark: #0f172a;
+    --text-mid: #475569;
+    --text-light: #94a3b8;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 10px 28px rgba(0,0,0,0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6a 60%, #1e3a5f 100%);
+    padding: 0 clamp(10px,3vw,32px);
+    display: flex;
+    align-items: center;
+    gap: clamp(6px,1.2vw,20px);
+    min-height: clamp(44px,5vh,54px);
+    border-bottom: 2px solid #7c3aed44;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-back {
+    padding: clamp(4px,0.5vh,6px) clamp(8px,1vw,14px);
+    border: 1px solid #2a4a7a;
+    border-radius: 4px;
+    background: rgba(124,58,237,0.06);
+    color: #b8a8f0;
+    font-size: clamp(9px,1vw,11px);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .topbar-back:hover { color: #d4c8ff; border-color: #7c3aed; background: rgba(124,58,237,0.12); }
+
+  .topbar-sep { width: 1px; height: 26px; background: #2a4a7a; flex-shrink: 0; }
+
+  .topbar-logo {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(12px,1.8vw,18px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #c4b5fd;
+    flex-shrink: 0;
+  }
+
+  .topbar-sub {
+    font-size: clamp(10px,1.2vw,13px);
+    color: #b8a8f0;
+    letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #7c3aed;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .topbar-time {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(9px,1.1vw,12px);
+    color: #b8a8f0;
+  }
+
+  /* ── WRAPPER ── */
+  .wrapper {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: clamp(14px,2vh,28px) clamp(12px,2.5vw,28px) 56px;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: clamp(16px,2.5vh,32px);
+    flex-wrap: wrap;
+  }
+
+  .page-header-sub {
+    font-size: clamp(9px,1vw,12px);
+    color: var(--text-light);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .page-header-title {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(22px,4vw,40px);
+    font-weight: 700;
+    color: var(--steel);
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+
+  .page-header-title span { color: var(--accent); }
+
+  /* ── PANEL ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: clamp(14px,2vw,24px) clamp(14px,2.5vw,28px);
+    margin-bottom: clamp(12px,1.8vh,22px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .section-label {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(10px,1.1vw,12px);
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: clamp(12px,1.8vh,20px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: min(150px, 100%);
+  }
+
+  .filter-group label {
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .filter-input, .filter-select {
+    padding: 7px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: var(--bg2);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  .filter-input:focus, .filter-select:focus { border-color: var(--accent); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: clamp(6px,0.8vh,9px) clamp(10px,1.5vw,18px);
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: clamp(11px,1.2vw,13px);
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .btn-primary   { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  .btn-teal      { background: var(--teal); color: #fff; }
+  .btn-teal:hover { background: #0d9488; transform: translateY(-1px); }
+
+  .btn-steel     { background: var(--steel); color: #fff; }
+  .btn-steel:hover { background: var(--steel-light); transform: translateY(-1px); }
+
+  .btn-danger    { background: transparent; color: var(--fail); border: 1.5px solid #fecaca; }
+  .btn-danger:hover { background: #fef2f2; border-color: var(--fail); }
+
+  .btn-outline   { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn-outline:hover { background: var(--accent); color: #fff; }
+
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .stat-chip {
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat-chip.total   { background: #f0f4f8; border-color: var(--border); color: var(--steel); }
+  .stat-chip.asset   { background: #f5f3ff; border-color: #ddd6fe; color: #6d28d9; }
+  .stat-chip.check   { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+
+  /* ── TABLE ── */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .hist-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(11px,1.2vw,13px);
+    min-width: 700px;
+  }
+
+  .hist-table thead tr {
+    background: linear-gradient(90deg, #1e3a5f, #3b1fa8);
+  }
+
+  .hist-table thead th {
+    padding: clamp(8px,1vh,12px) clamp(8px,1vw,14px);
+    text-align: left;
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(9px,1vw,11px);
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #c4b5fd;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .hist-table thead th:last-child { border-right: none; }
+
+  .hist-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .hist-table tbody tr:last-child { border-bottom: none; }
+  .hist-table tbody tr:hover { background: #faf5ff; }
+
+  .hist-table tbody td {
+    padding: clamp(8px,1vh,12px) clamp(8px,1vw,14px);
+    vertical-align: middle;
+    border-right: 1px solid #f1f5f9;
+    color: var(--text-dark);
+  }
+
+  .hist-table tbody td:last-child { border-right: none; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .badge-asset   { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+  .badge-check   { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .badge-default { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-light);
+  }
+
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state .msg  { font-size: 13px; font-family: 'Courier New', monospace; margin-top: 6px; }
+
+  /* ── DETAIL MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.55);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .modal-overlay.show { display: flex; }
+
+  .modal-box {
+    background: var(--bg2);
+    border-radius: 12px;
+    width: min(640px, 96vw);
+    max-height: 88vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: linear-gradient(90deg, #1e3a5f, #2d4a6a);
+  }
+
+  .modal-header-title {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #e0e7ff;
+    letter-spacing: 1px;
+  }
+
+  .modal-close {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #c4b5fd;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .modal-close:hover { background: rgba(255,255,255,0.2); }
+
+  .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .detail-item { display: flex; flex-direction: column; gap: 3px; }
+
+  .detail-label {
+    font-size: 10px;
+    color: var(--text-light);
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .detail-value {
+    font-size: 14px;
+    color: var(--text-dark);
+    font-weight: 500;
+  }
+
+  .modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .pagination-info {
+    font-size: 12px;
+    color: var(--text-light);
+    font-family: 'Courier New', monospace;
+  }
+
+  .pagination-btns { display: flex; gap: 6px; }
+
+  .pag-btn {
+    padding: 5px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg2);
+    color: var(--text-mid);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .pag-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .pag-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .pag-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: #1e3a5f;
+    color: #fff;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+    max-width: 90vw;
+    text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    .filter-bar { flex-direction: column; }
+    .filter-group { min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='outage-index.html'">← Outage</button>
+  <button class="topbar-back" onclick="window.location.href='index.html'" style="margin-left:2px">⌂ PM Dashboard</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">HISTORY</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">Outage Unit 7 · Riwayat Data Outage</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clockHist">--:--:--</div>
+  </div>
+</div>
+
+<!-- WRAPPER -->
+<div class="wrapper">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Outage Management · MOD-03</div>
+      <div class="page-header-title">History <span>Outage</span></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-teal" onclick="loadData()">↺ Refresh</button>
+      <button class="btn btn-steel" onclick="exportPdf()">⬇ Export PDF</button>
+    </div>
+  </div>
+
+  <!-- FILTER PANEL -->
+  <div class="panel">
+    <div class="section-label">Filter & Pencarian</div>
+
+    <div class="filter-bar">
+      <div class="filter-group" style="flex:2;min-width:200px">
+        <label>Cari</label>
+        <input type="text" class="filter-input" id="filterSearch"
+          placeholder="Asset tag, deskripsi, PIC..."
+          oninput="applyFilter()">
+      </div>
+      <div class="filter-group">
+        <label>Modul</label>
+        <select class="filter-select" id="filterModul" onchange="applyFilter()">
+          <option value="">Semua Modul</option>
+          <option value="asset">Input Data Asset</option>
+          <option value="checksheet">Checksheet</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Dari Tanggal</label>
+        <input type="date" class="filter-input" id="filterFrom" onchange="applyFilter()">
+      </div>
+      <div class="filter-group">
+        <label>Sampai Tanggal</label>
+        <input type="date" class="filter-input" id="filterTo" onchange="applyFilter()">
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn btn-outline" onclick="clearFilter()">✕ Reset</button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-chip total">Total: <span id="statTotal">0</span></div>
+      <div class="stat-chip asset">Asset: <span id="statAsset">0</span></div>
+      <div class="stat-chip check">Checksheet: <span id="statCheck">0</span></div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-scroll">
+      <table class="hist-table">
+        <thead>
+          <tr>
+            <th style="width:42px">No.</th>
+            <th>Modul / Jenis</th>
+            <th>Asset Tag</th>
+            <th>Deskripsi</th>
+            <th>PIC</th>
+            <th>Tanggal</th>
+            <th>Disimpan</th>
+            <th style="width:130px;text-align:center">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="histTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- PAGINATION -->
+    <div class="pagination" id="paginationWrap">
+      <div class="pagination-info" id="paginationInfo">—</div>
+      <div class="pagination-btns" id="paginationBtns"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-header-title" id="modalTitle">Detail Record</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid" id="detailGrid"></div>
+      <div id="detailExtra"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="btnDelRecord" onclick="deleteRecord()">🗑 Hapus</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal()">Tutup</button>
+      <button class="btn btn-primary btn-sm" onclick="openRecord()">✏ Buka & Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   SUPABASE CONFIG
+══════════════════════════════════════════════ */
+var SUPA_URL      = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY      = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var ASSET_TABLE   = 'outage_assets';
+var OUTAGE_TABLE  = 'outage_records';
+
+function supaFetch(method, path, body) {
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(SUPA_URL + '/rest/v1/' + path, opts)
+    .then(function(r) {
+      if (!r.ok) return r.text().then(function(t){ throw new Error(t); });
+      return r.text().then(function(t){ return t ? JSON.parse(t) : []; });
+    });
+}
+
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+var allData     = [];   /* gabungan asset + outage records */
+var filtered    = [];
+var currentPage = 1;
+var pageSize    = 20;
+var activeRecord = null;
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+(function init() {
+  setInterval(function(){
+    var el = document.getElementById('clockHist');
+    if(el) el.textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }, 1000);
+
+  /* Default tanggal filter: 3 bulan terakhir */
+  var to   = new Date();
+  var from = new Date(); from.setMonth(from.getMonth() - 3);
+  document.getElementById('filterTo').value   = to.toISOString().substring(0,10);
+  document.getElementById('filterFrom').value = from.toISOString().substring(0,10);
+
+  loadData();
+})();
+
+/* ══════════════════════════════════════════════
+   LOAD DATA
+══════════════════════════════════════════════ */
+function loadData() {
+  showToast('Memuat data...');
+  allData = [];
+
+  var p1 = supaFetch('GET', ASSET_TABLE   + '?select=*&order=created_at.desc&limit=500')
+    .then(function(rows){ return (rows||[]).map(function(r){ return Object.assign({_source:'asset'}, r); }); })
+    .catch(function(){ return []; });
+
+  var p2 = supaFetch('GET', OUTAGE_TABLE  + '?select=*&order=created_at.desc&limit=500')
+    .then(function(rows){ return (rows||[]).map(function(r){ return Object.assign({_source:'checksheet'}, r); }); })
+    .catch(function(){ return []; });
+
+  Promise.all([p1, p2]).then(function(results) {
+    allData = results[0].concat(results[1]);
+    /* Sort by created_at desc */
+    allData.sort(function(a,b){
+      return new Date(b.created_at||0) - new Date(a.created_at||0);
+    });
+    applyFilter();
+    showToast('Data dimuat: ' + allData.length + ' record ✓');
+  });
+}
+
+/* ══════════════════════════════════════════════
+   FILTER
+══════════════════════════════════════════════ */
+function applyFilter() {
+  var search = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+  var modul  = document.getElementById('filterModul').value;
+  var from   = document.getElementById('filterFrom').value;
+  var to     = document.getElementById('filterTo').value;
+
+  filtered = allData.filter(function(r) {
+    /* Filter modul */
+    if (modul && r._source !== modul) return false;
+
+    /* Filter tanggal */
+    var dt = r.tanggal || (r.created_at ? r.created_at.substring(0,10) : '');
+    if (from && dt && dt < from) return false;
+    if (to   && dt && dt > to)   return false;
+
+    /* Filter search */
+    if (search) {
+      var hay = [
+        r.asset_tag   || '',
+        r.asset_desc  || '',
+        r.pic         || '',
+        r.modul       || '',
+        r.lokasi      || '',
+        r.work_order  || ''
+      ].join(' ').toLowerCase();
+      if (hay.indexOf(search) === -1) return false;
+    }
+
+    return true;
+  });
+
+  currentPage = 1;
+  updateStats();
+  renderTable();
+}
+
+function clearFilter() {
+  document.getElementById('filterSearch').value = '';
+  document.getElementById('filterModul').value  = '';
+  document.getElementById('filterFrom').value   = '';
+  document.getElementById('filterTo').value     = '';
+  applyFilter();
+}
+
+/* ══════════════════════════════════════════════
+   STATS
+══════════════════════════════════════════════ */
+function updateStats() {
+  var asset = filtered.filter(function(r){ return r._source === 'asset'; }).length;
+  var check = filtered.filter(function(r){ return r._source === 'checksheet'; }).length;
+  document.getElementById('statTotal').textContent = filtered.length;
+  document.getElementById('statAsset').textContent = asset;
+  document.getElementById('statCheck').textContent = check;
+}
+
+/* ══════════════════════════════════════════════
+   RENDER TABLE
+══════════════════════════════════════════════ */
+function renderTable() {
+  var tbody = document.getElementById('histTableBody');
+  tbody.innerHTML = '';
+
+  if (filtered.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="8">' +
+        '<div class="empty-state">' +
+          '<div class="icon">🗂️</div>' +
+          '<div>Tidak ada data ditemukan.</div>' +
+          '<div class="msg">Coba ubah filter atau tambah data baru.</div>' +
+        '</div>' +
+      '</td></tr>';
+    renderPagination();
+    return;
+  }
+
+  var start = (currentPage - 1) * pageSize;
+  var end   = Math.min(start + pageSize, filtered.length);
+  var page  = filtered.slice(start, end);
+
+  page.forEach(function(r, i) {
+    var no   = start + i + 1;
+    var dt   = r.tanggal || (r.created_at ? r.created_at.substring(0,10) : '-');
+    var saved= r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : (r.created_at ? r.created_at.substring(0,16).replace('T',' ') : '-');
+
+    var badgeClass = r._source === 'asset' ? 'badge-asset' : 'badge-check';
+    var badgeLabel = r._source === 'asset' ? 'DATA ASSET' : (r.modul || 'CHECKSHEET');
+
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td style="text-align:center;font-family:\'Courier New\',monospace;font-size:11px;color:var(--text-light)">' + no + '</td>' +
+      '<td><span class="badge ' + badgeClass + '">' + escHtml(badgeLabel) + '</span></td>' +
+      '<td style="font-family:\'Courier New\',monospace;font-size:12px;font-weight:600">' + escHtml(r.asset_tag || r.work_order || '—') + '</td>' +
+      '<td style="font-size:12px;color:var(--text-mid)">' + escHtml(r.asset_desc || r.modul || '—') + '</td>' +
+      '<td style="font-size:12px">' + escHtml(r.pic || '—') + '</td>' +
+      '<td style="font-family:\'Courier New\',monospace;font-size:11px">' + escHtml(dt) + '</td>' +
+      '<td style="font-family:\'Courier New\',monospace;font-size:10px;color:var(--text-light)">' + escHtml(saved) + '</td>' +
+      '<td style="text-align:center">' +
+        '<div style="display:flex;gap:5px;justify-content:center">' +
+          '<button class="btn btn-outline btn-sm" onclick="openDetail(' + (start+i) + ')">👁 Detail</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="quickDelete(' + (start+i) + ', event)">🗑</button>' +
+        '</div>' +
+      '</td>';
+    tbody.appendChild(tr);
+  });
+
+  renderPagination();
+}
+
+/* ══════════════════════════════════════════════
+   PAGINATION
+══════════════════════════════════════════════ */
+function renderPagination() {
+  var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  var start = (currentPage - 1) * pageSize + 1;
+  var end   = Math.min(currentPage * pageSize, filtered.length);
+
+  document.getElementById('paginationInfo').textContent =
+    filtered.length === 0 ? 'Tidak ada data' : (start + ' – ' + end + ' dari ' + filtered.length + ' record');
+
+  var btns = document.getElementById('paginationBtns');
+  btns.innerHTML = '';
+
+  /* Prev */
+  var prev = document.createElement('button');
+  prev.className = 'pag-btn';
+  prev.textContent = '← Prev';
+  prev.disabled = currentPage === 1;
+  prev.onclick = function(){ currentPage--; renderTable(); };
+  btns.appendChild(prev);
+
+  /* Page numbers */
+  var start2 = Math.max(1, currentPage - 2);
+  var end2   = Math.min(totalPages, start2 + 4);
+  for (var p = start2; p <= end2; p++) {
+    (function(pg){
+      var btn = document.createElement('button');
+      btn.className = 'pag-btn' + (pg === currentPage ? ' active' : '');
+      btn.textContent = pg;
+      btn.onclick = function(){ currentPage = pg; renderTable(); };
+      btns.appendChild(btn);
+    })(p);
+  }
+
+  /* Next */
+  var next = document.createElement('button');
+  next.className = 'pag-btn';
+  next.textContent = 'Next →';
+  next.disabled = currentPage === totalPages;
+  next.onclick = function(){ currentPage++; renderTable(); };
+  btns.appendChild(next);
+}
+
+/* ══════════════════════════════════════════════
+   DETAIL MODAL
+══════════════════════════════════════════════ */
+function openDetail(idx) {
+  activeRecord = filtered[idx];
+  var r = activeRecord;
+
+  document.getElementById('modalTitle').textContent =
+    (r._source === 'asset' ? '📋 DATA ASSET' : '✅ CHECKSHEET') + ' — ' + (r.asset_tag || r.id);
+
+  /* Detail grid */
+  var fields = [
+    {label:'ID',          val: r.id},
+    {label:'Asset Tag',   val: r.asset_tag || r.work_order || '—'},
+    {label:'Deskripsi',   val: r.asset_desc || r.modul || '—'},
+    {label:'Lokasi',      val: r.lokasi || '—'},
+    {label:'PIC',         val: r.pic || '—'},
+    {label:'Tanggal',     val: r.tanggal || '—'},
+    {label:'Dibuat',      val: r.created_at ? r.created_at.substring(0,16).replace('T',' ') : '—'},
+    {label:'Diperbarui',  val: r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : '—'},
+  ];
+
+  var grid = document.getElementById('detailGrid');
+  grid.innerHTML = '';
+  fields.forEach(function(f) {
+    grid.innerHTML +=
+      '<div class="detail-item">' +
+        '<div class="detail-label">' + escHtml(f.label) + '</div>' +
+        '<div class="detail-value">' + escHtml(String(f.val||'—')) + '</div>' +
+      '</div>';
+  });
+
+  /* Extra data */
+  var extra = r.extra_data;
+  var extraHtml = '';
+  if (extra && typeof extra === 'object' && Object.keys(extra).length > 0) {
+    extraHtml = '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">';
+    extraHtml += '<div style="font-size:11px;color:var(--text-light);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">Kolom Tambahan</div>';
+    extraHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">';
+    Object.keys(extra).forEach(function(k) {
+      extraHtml +=
+        '<div class="detail-item">' +
+          '<div class="detail-label">' + escHtml(k) + '</div>' +
+          '<div class="detail-value">' + escHtml(String(extra[k]||'—')) + '</div>' +
+        '</div>';
+    });
+    extraHtml += '</div></div>';
+  }
+
+  /* Jika checksheet punya data JSON */
+  if (r.data && typeof r.data === 'object') {
+    extraHtml += '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">';
+    extraHtml += '<div style="font-size:11px;color:var(--text-light);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Data Checksheet</div>';
+    extraHtml += '<pre style="font-size:11px;color:var(--text-mid);background:#f8fafc;border-radius:6px;padding:12px;overflow-x:auto;max-height:200px;font-family:\'Courier New\',monospace">' +
+      escHtml(JSON.stringify(r.data, null, 2)) + '</pre>';
+    extraHtml += '</div>';
+  }
+
+  document.getElementById('detailExtra').innerHTML = extraHtml;
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('detailModal').classList.remove('show');
+  activeRecord = null;
+}
+
+function openRecord() {
+  if (!activeRecord) return;
+  var url = activeRecord._source === 'asset'
+    ? 'outage-input.html'
+    : 'outage-checksheet.html?id=' + activeRecord.id;
+  window.location.href = url;
+}
+
+function deleteRecord() {
+  if (!activeRecord) return;
+  if (!confirm('Hapus record ini dari database?')) return;
+  var table = activeRecord._source === 'asset' ? ASSET_TABLE : OUTAGE_TABLE;
+  supaFetch('DELETE', table + '?id=eq.' + activeRecord.id)
+    .then(function() {
+      allData = allData.filter(function(r){ return r.id !== activeRecord.id; });
+      closeModal();
+      applyFilter();
+      showToast('Record dihapus ✓');
+    })
+    .catch(function(err){ showToast('Gagal hapus: ' + (err.message||err)); });
+}
+
+function quickDelete(idx, e) {
+  e.stopPropagation();
+  var r = filtered[idx];
+  if (!confirm('Hapus record ini?')) return;
+  var table = r._source === 'asset' ? ASSET_TABLE : OUTAGE_TABLE;
+  supaFetch('DELETE', table + '?id=eq.' + r.id)
+    .then(function() {
+      allData = allData.filter(function(x){ return x.id !== r.id; });
+      applyFilter();
+      showToast('Record dihapus ✓');
+    })
+    .catch(function(err){ showToast('Gagal hapus: ' + (err.message||err)); });
+}
+
+/* ══════════════════════════════════════════════
+   EXPORT PDF
+══════════════════════════════════════════════ */
+function exportPdf() {
+  try {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+    var pw = doc.internal.pageSize.getWidth();
+    var ph = doc.internal.pageSize.getHeight();
+    var now = new Date();
+    var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    var dd = String(now.getDate()).padStart(2,'0');
+    var nowStr = dd+' '+BULAN[now.getMonth()]+' '+now.getFullYear()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+    function safe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
+
+    /* Header */
+    doc.setFillColor(30,58,95); doc.rect(0,0,pw,18,'F');
+    doc.setFillColor(124,58,237); doc.rect(0,18,pw,2,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(196,181,253);
+    doc.text('HISTORY OUTAGE — UNIT 7 PLTU PAITON', pw/2, 12, {align:'center'});
+
+    var rows2 = filtered.map(function(r) {
+      var dt = r.tanggal || (r.created_at ? r.created_at.substring(0,10) : '-');
+      return [
+        r._source === 'asset' ? 'Data Asset' : safe(r.modul || 'Checksheet'),
+        safe(r.asset_tag || r.work_order || '—'),
+        safe(r.asset_desc || '—'),
+        safe(r.lokasi || '—'),
+        safe(r.pic || '—'),
+        safe(dt)
+      ];
+    });
+
+    doc.autoTable({
+      startY: 24,
+      head: [['Jenis','Asset Tag','Deskripsi','Lokasi','PIC','Tanggal']],
+      body: rows2,
+      theme: 'grid',
+      margin: {left:14, right:14},
+      headStyles: {fillColor:[30,58,95], textColor:[196,181,253], fontStyle:'bold', fontSize:8, font:'helvetica'},
+      bodyStyles: {fontSize:8, textColor:[15,23,42], font:'helvetica'},
+      alternateRowStyles: {fillColor:[248,245,255]},
+      columnStyles: {0:{cellWidth:30}, 1:{cellWidth:32}, 2:{cellWidth:60}, 3:{cellWidth:38}, 4:{cellWidth:28}, 5:{cellWidth:28}}
+    });
+
+    var tp = doc.internal.getNumberOfPages();
+    for (var i = 1; i <= tp; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(120,120,160);
+      doc.text('History Outage Unit 7 — PT POMI', 14, ph-6);
+      doc.text('Dicetak: '+nowStr, pw-14, ph-6, {align:'right'});
+      doc.text('Hal '+i+'/'+tp, pw/2, ph-6, {align:'center'});
+    }
+
+    doc.save('HistoryOutage_'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+dd+'.pdf');
+    showToast('PDF berhasil diexport ✓');
+  } catch(err) { showToast('PDF Error: ' + err.message); }
+}
+
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(function(){ t.style.opacity = '0'; }, 3000);
+}
+
+document.getElementById('detailModal').addEventListener('click', function(e){
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
