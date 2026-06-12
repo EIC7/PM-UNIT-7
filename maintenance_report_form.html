@@ -104,7 +104,7 @@
             <div class="form-group"><label>Asset Description</label><input type="text" id="assetDesc" placeholder="ID FAN 7A..."></div>
         </div>
 
-        <div class="form-group"><label>Work To be Done / Failure Description</label><textarea id="failureDesc"></textarea></div>
+        <div class="form-group"><label>Failure Description</label><textarea id="failureDesc"></textarea></div>
 
         <div class="row">
             <div class="form-group"><label>PIC</label><input type="text" id="pic" placeholder="Nama teknisi"></div>
@@ -198,21 +198,9 @@
                 document.getElementById('pic').value = rec.pic || '';
                 document.getElementById('material').value = (rec.data && rec.data.material) || '';
                 document.getElementById('conclusion').value = (rec.data && rec.data.conclusion) || '';
-                function normalizeItems(arr) {
-                    if (!Array.isArray(arr) || !arr.length) return [{title:'',desc:'',images:[]}];
-                    return arr.map(function(it) {
-                        return {
-                            title:  it.title  || '',
-                            desc:   it.desc   || '',
-                            images: Array.isArray(it.images) ? it.images.map(function(im) {
-                                return { dataUrl: im.dataUrl||'', caption: im.caption||'', name: im.name||'', type: im.type||'' };
-                            }) : []
-                        };
-                    });
-                }
-                sections.findings = normalizeItems(rec.data && rec.data.findings);
-                sections.actions  = normalizeItems(rec.data && rec.data.actions);
-                sections.restore  = normalizeItems(rec.data && rec.data.restore);
+                sections.findings = (rec.data && Array.isArray(rec.data.findings) && rec.data.findings.length) ? rec.data.findings : [{title:'',desc:'',images:[]}];
+                sections.actions = (rec.data && Array.isArray(rec.data.actions) && rec.data.actions.length) ? rec.data.actions : [{title:'',desc:'',images:[]}];
+                sections.restore = (rec.data && Array.isArray(rec.data.restore) && rec.data.restore.length) ? rec.data.restore : [{title:'',desc:'',images:[]}];
                 renderAll();
                 window._editingId = id;
                 dbShowToast('Data dimuat dari riwayat ✓');
@@ -255,19 +243,13 @@
                 html += '</div>';
                 html += '</div>';
 
-
                 if (item.images.length > 0) {
-                    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">';
+                    html += '<div class="img-gallery">';
                     item.images.forEach(function(img, imgIdx) {
-                        html += '<div style="display:flex;align-items:flex-start;gap:10px;background:#f5f5f5;border-radius:8px;padding:8px">';
-                        html += '<div style="position:relative;flex-shrink:0">';
-                        html += '<img src="'+escAttr(img.dataUrl)+'" onclick="triggerUpload(''+type+'','+idx+','+imgIdx+','storage')" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block;cursor:pointer">';
-                        html += '<button class="del" onclick="deleteImg(''+type+'','+idx+','+imgIdx+')">×</button>';
-                        html += '</div>';
-                        html += '<div style="flex:1;min-width:0">';
-                        html += '<label style="font-size:0.78em;color:#666;font-weight:600;display:block;margin-bottom:4px">Keterangan Gambar '+(imgIdx+1)+'</label>';
-                        html += '<input type="text" placeholder="Tulis keterangan..." value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="font-size:0.88em;padding:7px 10px;width:100%;border:1px solid #ddd;border-radius:6px;background:#fff;box-sizing:border-box">';
-                        html += '</div>';
+                        html += '<div class="img-thumb">';
+                        html += '<img src="'+escAttr(img.dataUrl)+'" onclick="triggerUpload(\''+type+'\','+idx+','+imgIdx+',\'storage\')">';
+                        html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
+                        html += '<input type="text" placeholder="Keterangan" value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:#111;box-sizing:border-box">';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -550,18 +532,13 @@
             ['findings','actions','restore'].forEach(function(type) {
                 var box = document.getElementById(type+'Box');
                 if (!box) return;
-                box.querySelectorAll('.section-box').forEach(function(card, idx) {
+                var cards = box.querySelectorAll('.section-box');
+                cards.forEach(function(card, idx) {
                     if (!sections[type][idx]) return;
-                    var inputs = card.querySelectorAll('input[type="text"]');
-                    var textareas = card.querySelectorAll('textarea');
-                    if (inputs[0]) sections[type][idx].title = inputs[0].value;
-                    if (textareas[0]) sections[type][idx].desc = textareas[0].value;
-                    if (sections[type][idx].images) {
-                        sections[type][idx].images.forEach(function(im, imgIdx) {
-                            var capInput = inputs[imgIdx + 1];
-                            if (capInput) im.caption = capInput.value;
-                        });
-                    }
+                    var title = card.querySelector('input[type="text"]');
+                    var desc = card.querySelector('textarea');
+                    if (title) sections[type][idx].title = title.value;
+                    if (desc) sections[type][idx].desc = desc.value;
                 });
             });
         }
@@ -574,6 +551,7 @@
                 tanggal: document.getElementById('workDate').value || null,
                 pic: document.getElementById('pic').value || null,
                 work_order: document.getElementById('wo').value || null,
+                unit: 'Unit 7',
                 data: {
                     reportType: document.getElementById('reportType').value || 'EM',
                     assetTag: document.getElementById('assetTag').value || '',
@@ -714,7 +692,7 @@
                         var fdLines = doc.splitTextToSize(failureDesc, contentW-6);
                         doc.rect(marginX, y, contentW, 5 + fdLines.length*4, 'F');
                         doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,107,58);
-                        doc.text('Work To be Done / Failure Description:', marginX+3, y+4); y += 7;
+                        doc.text('Failure Description:', marginX+3, y+4); y += 7;
                         doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
                         fdLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y += 4; });
                         y += 3;
@@ -753,19 +731,13 @@
                                 var imgW=52, imgH=40, gap=4, perRow=3, x=marginX+3;
                                 y += 2;
                                 item.images.forEach(function(im, i) {
-                                    var capH = im.caption ? 8 : 0;
-                                    checkPage(imgH + capH + 5);
+                                    checkPage(imgH + 5);
                                     if (y + imgH > ph - marginBottom) { doc.addPage(); drawPdfBackground(doc,pw,ph); y = marginTop; x = marginX+3; }
                                     try { doc.addImage(im.dataUrl, 'JPEG', x, y, imgW, imgH); } catch(e) {}
-                                    if (im.caption) {
-                                        doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(80,80,80);
-                                        var capLines = doc.splitTextToSize(im.caption, imgW);
-                                        capLines.forEach(function(cl, ci) { doc.text(cl, x, y+imgH+3+ci*3.5); });
-                                    }
                                     x += imgW + gap;
-                                    if ((i+1) % perRow === 0) { x = marginX+3; y += imgH + gap + capH; }
+                                    if ((i+1) % perRow === 0) { x = marginX+3; y += imgH + gap; }
                                 });
-                                if (item.images.length % perRow !== 0) y += imgH + gap + 8;
+                                if (item.images.length % perRow !== 0) y += imgH + gap;
                                 y += 2;
                             }
 
