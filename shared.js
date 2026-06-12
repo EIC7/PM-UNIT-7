@@ -184,6 +184,7 @@ function normalizeModul(name) {
     return 'BELT';
   }
   if (n.indexOf('MAINTENANCE')>=0 || n.indexOf('REPORT')>=0) return 'MAINTENANCE_REPORT';
+  if (n.indexOf('COAL')>=0 || n.indexOf('FEEDER')>=0) return 'COAL_FEEDER';
   return n;
 }
 
@@ -481,13 +482,21 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
   imgArr.push({name: name.replace(/\.[^.]+$/, '.jpg'), dataUrl: dataUrl, type: 'image/jpeg', caption: caption||''});
   if (modulePrefix === 'op') { opRenderPreviews(side); updateSizeIndicator('op', side); }
   else if (modulePrefix === 'bs') { bsRenderPreviews(side); updateSizeIndicator('bs', side); }
+  else if (modulePrefix === 'cf') { cfRenderPreviews(); updateSizeIndicator('cf', null); }
 }
 
 function updateSizeIndicator(prefix, side) {
-  var arr = prefix==='op' ? opImages[side] : bsImages[side];
+  var arr;
+  if (prefix === 'op') arr = opImages[side];
+  else if (prefix === 'bs') arr = bsImages[side];
+  else if (prefix === 'cf') arr = (typeof cfImages !== 'undefined') ? cfImages : [];
+  else arr = [];
+  if (!arr) arr = [];
   var total = arr.reduce(function(acc,im){return acc+(im.dataUrl?im.dataUrl.length*0.75:0);},0);
   var kb = (total/1024).toFixed(0);
   var color = total > 900*1024 ? '#e74c3c' : total > 700*1024 ? '#f39c12' : 'var(--text3)';
-  var el = document.getElementById(prefix+'SizeInfo'+side);
+  var el = prefix === 'cf'
+    ? document.getElementById('cfSizeInfo')
+    : document.getElementById(prefix+'SizeInfo'+side);
   if(el){ el.textContent = kb+' KB / 1024 KB'; el.style.color = color; }
 }

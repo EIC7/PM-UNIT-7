@@ -38,6 +38,7 @@
       <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR E4-E5')" style="font-size:12px;padding:6px 14px;flex:none">Belt E4/E5</button>
       <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR E2-E3')" style="font-size:12px;padding:6px 14px;flex:none">Belt E2/E3</button>
       <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR B1-B2')" style="font-size:12px;padding:6px 14px;flex:none">Belt B1/B2</button>
+      <button class="btn btn-outline" onclick="loadHistory('Coal Feeder Calibration')" style="font-size:12px;padding:6px 14px;flex:none">Coal Feeder</button>
     </div>
     <div id="historyList" style="overflow-x:auto">
       <div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Memuat...</div>
@@ -50,25 +51,27 @@
 /* Mapping modul ke URL page */
 function modulToUrl(modul, id) {
   var norm = normalizeModul(modul);
-  if (norm === 'FEGT')     return 'fegt.html?id=' + id;
-  if (norm === 'SO2')      return 'so2.html?id=' + id;
-  if (norm === 'OPACITY')  return 'opacity.html?id=' + id;
-  if (norm === 'BELT_E45') return 'beltscale-e45.html?id=' + id;
-  if (norm === 'BELT_E23') return 'beltscale-e23.html?id=' + id;
-  if (norm === 'BELT_B12') return 'beltscale-b12.html?id=' + id;
+  if (norm === 'FEGT')               return 'fegt.html?id=' + id;
+  if (norm === 'SO2')                return 'so2.html?id=' + id;
+  if (norm === 'OPACITY')            return 'opacity.html?id=' + id;
+  if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id;
+  if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id;
+  if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id;
   if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id;
+  if (norm === 'COAL_FEEDER')        return 'coal_feeder.html?id=' + id;
   return 'index.html';
 }
 
 function modulToPrintUrl(modul, id) {
   var norm = normalizeModul(modul);
-  if (norm === 'FEGT')     return 'fegt.html?id=' + id + '&print=1';
-  if (norm === 'SO2')      return 'so2.html?id=' + id + '&print=1';
-  if (norm === 'OPACITY')  return 'opacity.html?id=' + id + '&print=1';
-  if (norm === 'BELT_E45') return 'beltscale-e45.html?id=' + id + '&print=1';
-  if (norm === 'BELT_E23') return 'beltscale-e23.html?id=' + id + '&print=1';
-  if (norm === 'BELT_B12') return 'beltscale-b12.html?id=' + id + '&print=1';
+  if (norm === 'FEGT')               return 'fegt.html?id=' + id + '&print=1';
+  if (norm === 'SO2')                return 'so2.html?id=' + id + '&print=1';
+  if (norm === 'OPACITY')            return 'opacity.html?id=' + id + '&print=1';
+  if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id + '&print=1';
+  if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id + '&print=1';
+  if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id + '&print=1';
   if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id + '&print=1';
+  if (norm === 'COAL_FEEDER')        return 'coal_feeder.html?id=' + id + '&print=1';
   return 'index.html';
 }
 
