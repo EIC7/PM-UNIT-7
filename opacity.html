@@ -95,20 +95,32 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   </div>
 </div>
 
-<!-- CROP MODAL -->
+<!-- CROP MODAL — full version matching shared.js requirements -->
 <div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
   <div style="background:#172536;border:1px solid #243b55;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
     <div style="background:#243b55;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
       <div style="font-weight:700;font-size:14px;color:#e8f2ff;letter-spacing:1px">&#9986;&#65039; Crop Gambar</div>
-      <div style="font-size:11px;color:#8fb7dc">Drag pojok/sisi untuk resize</div>
+      <div id="cropNatSize" style="font-size:11px;color:#8fb7dc">— x — px</div>
     </div>
-    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none">
+    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none">
       <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
       <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
-        <div style="position:absolute;width:12px;height:12px;background:#3498db;border-radius:2px;top:-6px;left:-6px;cursor:nw-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#3498db;border-radius:2px;top:-6px;right:-6px;cursor:ne-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#3498db;border-radius:2px;bottom:-6px;left:-6px;cursor:sw-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#3498db;border-radius:2px;bottom:-6px;right:-6px;cursor:se-resize"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;left:-7px;cursor:nw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;right:-7px;cursor:ne-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;left:-7px;cursor:sw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;right:-7px;cursor:se-resize;touch-action:none"></div>
+      </div>
+    </div>
+    <div style="padding:8px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:11px;color:#8fb7dc;display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="cropLock" checked style="accent-color:#3498db"> Lock ratio
+      </label>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+        <span style="font-size:11px;color:#8fb7dc">W:</span>
+        <input type="number" id="cropOutW" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('w')">
+        <span style="font-size:11px;color:#8fb7dc">H:</span>
+        <input type="number" id="cropOutH" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('h')">
+        <span style="font-size:10px;color:#6a8faa">px</span>
       </div>
     </div>
     <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;justify-content:flex-end">

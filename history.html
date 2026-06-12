@@ -58,7 +58,7 @@ function modulToUrl(modul, id) {
   if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id;
   if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id;
   if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id;
-  if (norm === 'COAL_FEEDER')        return 'coal_feeder.html?id=' + id;
+  if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id;
   return 'index.html';
 }
 
@@ -71,7 +71,7 @@ function modulToPrintUrl(modul, id) {
   if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id + '&print=1';
   if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id + '&print=1';
   if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id + '&print=1';
-  if (norm === 'COAL_FEEDER')        return 'coal_feeder.html?id=' + id + '&print=1';
+  if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id + '&print=1';
   return 'index.html';
 }
 

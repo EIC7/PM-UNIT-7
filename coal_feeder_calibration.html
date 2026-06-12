@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coal Feeder Calibration — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root{--bg:#eef5fb;--bg2:#dceaf6;--panel:rgba(255,255,255,0.78);--panel-border:rgba(150,180,210,0.65);--steel:#294c6f;--steel-light:#3f6f9f;--ok:#1d74c7;--text:#152638;--text2:#2c4660;--text3:#6f879c;--border:rgba(150,180,210,0.65);--shadow:0 4px 24px rgba(35,75,120,0.10);--shadow2:0 2px 8px rgba(35,75,120,0.08);}
+body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 0%,transparent 55%),radial-gradient(ellipse at 85% 80%,rgba(135,185,225,0.30) 0%,transparent 50%),linear-gradient(180deg,#f8fbfe 0%,var(--bg) 100%);}
+.topbar{background:linear-gradient(90deg,#1c3550 0%,#294c6f 60%,#1c3550 100%);border-bottom-color:#1d74c744;}
+.topbar-logo{color:#b7d8f5}.topbar-sep{background:#3f668a}.topbar-sub,.topbar-back,.topbar-time{color:#8fb7dc}
+.topbar-back{border-color:#315d86;background:rgba(29,116,199,0.06)}.topbar-back:hover{color:#b7d8f5;border-color:#1d74c7;background:rgba(29,116,199,0.12)}
+.badge{background:#1d74c722;color:var(--ok);border-color:#1d74c744}
+
+/* ── input number centering in tables ── */
+.data-input{width:100%;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:3px 0 0 3px;background:#fff;color:#111;text-align:center;box-sizing:border-box;font-family:'Courier New',monospace;min-width:0;}
+.data-input:focus{outline:none;border-color:var(--ok);box-shadow:0 0 0 2px rgba(29,116,199,0.15);}
+.input-unit-wrap{display:flex;align-items:center;width:100%;}
+.unit-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 6px;font-size:10px;font-weight:600;color:var(--steel);background:var(--bg2);border:1px solid var(--border);border-left:none;border-radius:0 3px 3px 0;white-space:nowrap;min-width:28px;font-family:'Courier New',monospace;letter-spacing:0.2px;}
+.unit-badge.no-unit{color:var(--text3);font-weight:400;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">COAL FEEDER</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Feeder No-Load and Test Weight Calibration</div>
+  <div class="topbar-right"><div class="live-dot"></div><div class="topbar-time" id="clockFeeder">--:--:--</div></div>
+</div>
+
+<div class="wrapper">
+
+  <!-- ── INFORMASI PEKERJAAN ── -->
+  <div class="panel">
+    <div class="section-label">Informasi Pekerjaan</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
+      <div class="meta-field"><label>Feeder No.</label><input type="text" id="cfFeederNo" value="UNIT 7A" placeholder="Feeder No..."></div>
+      <div class="meta-field"><label>Reference</label><input type="text" id="cfRef" value="PI-10-01-175-F01"></div>
+      <div class="meta-field"><label>Date</label><input type="date" id="cfDate"></div>
+      <div class="meta-field"><label>Reported By</label><input type="text" id="cfPIC" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Work Order</label><input type="text" id="cfWO" placeholder="Work Order..."></div>
+    </div>
+  </div>
+
+  <!-- ── TABEL CAL 1 ── -->
+  <div class="panel">
+    <div class="section-label">FEEDER CALIBRATION DATA SHEET — 4 pieces of tape used</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+
+      <!-- CAL 1 -->
+      <div style="font-size:13px;font-weight:700;color:var(--steel);margin:8px 0 6px;letter-spacing:0.5px">CAL 1 — Zero Calibration</div>
+      <table class="manual-table" id="cal1Table">
+        <thead><tr>
+          <th style="width:80px">Self Test</th>
+          <th>Description</th>
+          <th style="width:110px;text-align:center">TEST #1</th>
+          <th style="width:110px;text-align:center">TEST #2</th>
+          <th style="width:110px;text-align:center">TEST #3</th>
+          <th style="width:100px;text-align:center">Acceptance Level</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="text-align:center;font-weight:700;font-size:12px;color:var(--steel)">CAL 1</td>
+            <td style="font-size:12px">Deviation</td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_dev1" placeholder="0.000" value=""><span class="unit-badge">%</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_dev2" placeholder="0.000" value=""><span class="unit-badge">%</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_dev3" placeholder="0.000" value=""><span class="unit-badge">%</span></div></td>
+            <td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">±0.25%</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;font-size:12px;color:var(--text3)">P10.02</td>
+            <td style="font-size:12px">Pulses per Length</td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_ppl1" placeholder="0000.0000" value=""><span class="unit-badge">l/m</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_ppl2" placeholder="0000.0000" value=""><span class="unit-badge">l/m</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_ppl3" placeholder="0000.0000" value=""><span class="unit-badge">l/m</span></div></td>
+            <td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">n/a</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;font-size:12px;color:var(--text3)">P10.11</td>
+            <td style="font-size:12px">Belt circuit no</td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_bcn1" placeholder="00000" value=""><span class="unit-badge">imp</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_bcn2" placeholder="00000" value=""><span class="unit-badge">imp</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_bcn3" placeholder="00000" value=""><span class="unit-badge">imp</span></div></td>
+            <td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">±0.25%</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;font-size:12px;color:var(--text3)">P10.10</td>
+            <td style="font-size:12px">Basic Tare</td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_bt1" placeholder="00.00000" value=""><span class="unit-badge">kg/m</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_bt2" placeholder="00.00000" value=""><span class="unit-badge">kg/m</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal1_bt3" placeholder="00.00000" value=""><span class="unit-badge">kg/m</span></div></td>
+            <td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">n/a</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- CAL 2 -->
+      <div style="font-size:13px;font-weight:700;color:var(--steel);margin:16px 0 6px;letter-spacing:0.5px">CAL 2 — Span Calibration</div>
+      <table class="manual-table" id="cal2Table">
+        <thead><tr>
+          <th style="width:80px">Self Test</th>
+          <th>Description</th>
+          <th style="width:110px;text-align:center">TEST #1</th>
+          <th style="width:110px;text-align:center">TEST #2</th>
+          <th style="width:110px;text-align:center">TEST #3</th>
+          <th style="width:100px;text-align:center">Acceptance Level</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="text-align:center;font-weight:700;font-size:12px;color:var(--steel)">CAL 2</td>
+            <td style="font-size:12px">Deviation</td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_dev1" placeholder="0.000" value=""><span class="unit-badge">%</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_dev2" placeholder="0.000" value=""><span class="unit-badge">%</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_dev3" placeholder="0.000" value=""><span class="unit-badge">%</span></div></td>
+            <td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">±0.25%</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;font-size:12px;color:var(--text3)">P10.02</td>
+            <td style="font-size:12px">Pulses per Length</td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_ppl1" placeholder="0000.0000" value=""><span class="unit-badge">l/m</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_ppl2" placeholder="0000.0000" value=""><span class="unit-badge">l/m</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_ppl3" placeholder="0000.0000" value=""><span class="unit-badge">l/m</span></div></td>
+            <td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">n/a</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;font-size:12px;color:var(--text3)">P10.11</td>
+            <td style="font-size:12px">Belt circuit no</td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_bcn1" placeholder="00000" value=""><span class="unit-badge">imp</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_bcn2" placeholder="00000" value=""><span class="unit-badge">imp</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_bcn3" placeholder="00000" value=""><span class="unit-badge">imp</span></div></td>
+            <td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">±0.25%</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;font-size:12px;color:var(--text3)">P10.03</td>
+            <td style="font-size:12px">Range Correction TW</td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_rctw1" placeholder="0.00000" value=""><span class="unit-badge no-unit">—</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_rctw2" placeholder="0.00000" value=""><span class="unit-badge no-unit">—</span></div></td>
+            <td><div class="input-unit-wrap"><input class="data-input" id="cal2_rctw3" placeholder="0.00000" value=""><span class="unit-badge no-unit">—</span></div></td>
+            <td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">n/a</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── CATATAN & EVIDENCE PHOTO ── -->
+  <div class="panel">
+    <div class="section-label">Catatan &amp; Evidence Photo</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#128247; Evidence Photo</div>
+        <textarea id="cfNote" rows="2" placeholder="Catatan..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
+        <div id="cfImgDrop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2,#dceaf6)" onclick="toggleSourceChoices('cfSource')" ondragover="event.preventDefault()" ondrop="cfHandleDrop(event)">
+          <input type="file" id="cfImgInput" accept="image/*,.heic,.heif" multiple style="display:none" onchange="cfHandleFiles(this.files)">
+          <div style="font-size:24px;margin-bottom:6px">&#128444;&#65039;</div>
+          <div style="font-size:12px;color:var(--text3)">Klik untuk pilih sumber atau drag file untuk upload</div>
+          <div id="cfSource" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('cfImgInput','storage')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Penyimpanan</button>
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('cfImgInput','camera')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Kamera</button>
+          </div>
+        </div>
+        <div id="cfImgPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+        <div id="cfSizeInfo" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ACTION BUTTONS ── -->
+  <div class="btn-row" style="margin-top:20px">
+    <button class="btn btn-pdf" onclick="cfDownloadPdf()">&#11015; Download PDF Report</button>
+    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('coal_feeder')">&#128190; Simpan ke Database</button>
+    <button class="btn btn-danger" onclick="cfReset()">&#10005; Reset</button>
+  </div>
+</div>
+
+<!-- CROP MODAL — full version matching shared.js requirements -->
+<div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#172536;border:1px solid #243b55;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="background:#243b55;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:14px;color:#e8f2ff;letter-spacing:1px">&#9986;&#65039; Crop Gambar</div>
+      <div id="cropNatSize" style="font-size:11px;color:#8fb7dc">— x — px</div>
+    </div>
+    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none">
+      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
+      <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;left:-7px;cursor:nw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;right:-7px;cursor:ne-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;left:-7px;cursor:sw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;right:-7px;cursor:se-resize;touch-action:none"></div>
+      </div>
+    </div>
+    <div style="padding:8px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:11px;color:#8fb7dc;display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="cropLock" checked style="accent-color:#3498db"> Lock ratio
+      </label>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+        <span style="font-size:11px;color:#8fb7dc">W:</span>
+        <input type="number" id="cropOutW" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('w')">
+        <span style="font-size:11px;color:#8fb7dc">H:</span>
+        <input type="number" id="cropOutH" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('h')">
+        <span style="font-size:10px;color:#6a8faa">px</span>
+      </div>
+    </div>
+    <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">&#8634; Reset</button>
+      <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Lewati</button>
+      <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">&#10003; Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── FIELD DEFINITIONS ─────────────────────────────────────────────────────────
+var CF_CAL1_ROWS = [
+  {id:'cal1_dev',  selfTest:'CAL 1',  desc:'Deviation',           unit:'%',     acceptance:'±0.25%'},
+  {id:'cal1_ppl',  selfTest:'P10.02', desc:'Pulses per Length',   unit:'l/m',   acceptance:'n/a'},
+  {id:'cal1_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'±0.25%'},
+  {id:'cal1_bt',   selfTest:'P10.10', desc:'Basic Tare',          unit:'kg/m',  acceptance:'n/a'}
+];
+var CF_CAL2_ROWS = [
+  {id:'cal2_dev',  selfTest:'CAL 2',  desc:'Deviation',           unit:'%',     acceptance:'±0.25%'},
+  {id:'cal2_ppl',  selfTest:'P10.02', desc:'Pulses per Length',   unit:'l/m',   acceptance:'n/a'},
+  {id:'cal2_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'±0.25%'},
+  {id:'cal2_rctw', selfTest:'P10.03', desc:'Range Correction TW', unit:'',      acceptance:'n/a'}
+];
+
+var cfImages = [];
+
+// ── BACKGROUND ───────────────────────────────────────────────────────────────
+var reportBgImg = null;
+var reportBgReady = false;
+var reportBgCallbacks = [];
+
+function initReportBackground() {
+  if (reportBgImg) return;
+  reportBgImg = new Image();
+  reportBgImg.onload = function() {
+    reportBgReady = true;
+    var cbs = reportBgCallbacks.splice(0);
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  reportBgImg.onerror = function() {
+    reportBgReady = false;
+    var cbs = reportBgCallbacks.splice(0);
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  reportBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+
+function ensureReportBackground(callback) {
+  if (!reportBgImg) { reportBgCallbacks.push(callback); initReportBackground(); return; }
+  if (reportBgReady) { callback(); return; }
+  if (reportBgImg.complete && reportBgImg.naturalWidth > 0) { reportBgReady = true; callback(); return; }
+  reportBgCallbacks.push(callback);
+}
+
+function drawBg(doc, pw, ph) {
+  if (!reportBgImg || !reportBgImg.naturalWidth) return;
+  try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+
+// ── IMAGES ───────────────────────────────────────────────────────────────────
+function cfHandleDrop(e) { e.preventDefault(); cfHandleFiles(e.dataTransfer.files); }
+
+function cfHandleFiles(files) {
+  Array.from(files).forEach(function(file) {
+    if (!isImageFile(file)) {
+      var r = new FileReader();
+      r.onload = function(ev) { cfImages.push({name:file.name, dataUrl:ev.target.result, type:file.type||'', caption:''}); cfRenderPreviews(); };
+      r.readAsDataURL(file); return;
+    }
+    fileToJpegDataUrl(file, function(dataUrl) {
+      if (!dataUrl) return;
+      imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', cfImages, null, 'cf', -1);
+    });
+  });
+}
+
+function cfRenderPreviews() {
+  cfSyncCaptions();
+  var container = document.getElementById('cfImgPreview');
+  if (!container) return;
+  container.innerHTML = '';
+  cfImages.forEach(function(img, idx) {
+    if (!img || !img.name) return;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px';
+    var isImg = IMG_EXTS.test(img.name) || (img.type && img.type.startsWith('image/'));
+    var safe = function(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+    var thumb = isImg
+      ? '<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+safe(img.dataUrl)+'" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="cfReEdit('+idx+')" title="Klik crop ulang"></div>'
+      : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
+    var cropBtn = isImg ? '<button onclick="cfReEdit('+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>' : '';
+    wrap.innerHTML = thumb + cropBtn +
+      '<button onclick="cfRemoveImg('+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'+
+      '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+
+      '<input id="cfCap_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="cfImages['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+    container.appendChild(wrap);
+  });
+  updateSizeIndicator('cf', null);
+}
+
+function cfSyncCaptions() {
+  cfImages.forEach(function(img, idx) {
+    var inp = document.getElementById('cfCap_'+idx);
+    if (inp) img.caption = inp.value || '';
+  });
+}
+
+function cfReEdit(idx) {
+  var img = cfImages[idx];
+  imgOpenCropper(img.dataUrl, img.name, img.type, cfImages, null, 'cf', idx);
+}
+
+function cfRemoveImg(idx) { cfImages.splice(idx, 1); cfRenderPreviews(); }
+
+// ── RESET ─────────────────────────────────────────────────────────────────────
+function cfReset() {
+  var allIds = [
+    'cal1_dev1','cal1_dev2','cal1_dev3',
+    'cal1_ppl1','cal1_ppl2','cal1_ppl3',
+    'cal1_bcn1','cal1_bcn2','cal1_bcn3',
+    'cal1_bt1','cal1_bt2','cal1_bt3',
+    'cal2_dev1','cal2_dev2','cal2_dev3',
+    'cal2_ppl1','cal2_ppl2','cal2_ppl3',
+    'cal2_bcn1','cal2_bcn2','cal2_bcn3',
+    'cal2_rctw1','cal2_rctw2','cal2_rctw3',
+    'cfDate','cfPIC','cfWO','cfNote'
+  ];
+  allIds.forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('cfFeederNo').value = 'UNIT 7A';
+  document.getElementById('cfRef').value = 'PI-10-01-175-F01';
+  cfImages = [];
+  var p = document.getElementById('cfImgPreview'); if(p) p.innerHTML='';
+  updateSizeIndicator('cf', null);
+}
+
+// ── COLLECT DATA (for dbSave) ─────────────────────────────────────────────────
+function dbCollectData(modul) {
+  if (modul !== 'coal_feeder') return null;
+  cfSyncCaptions();
+  var gv = function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  var ki = function(img){ return {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||''}; };
+  return {
+    modul: 'Coal Feeder Calibration',
+    tanggal: gv('cfDate'),
+    pic: gv('cfPIC'),
+    work_order: gv('cfWO'),
+    unit: 'Unit 7',
+    data: {
+      feeder_no: gv('cfFeederNo'),
+      reference: gv('cfRef'),
+      cal1: {
+        deviation:   [gv('cal1_dev1'),  gv('cal1_dev2'),  gv('cal1_dev3')],
+        pulses_per_length: [gv('cal1_ppl1'), gv('cal1_ppl2'), gv('cal1_ppl3')],
+        belt_circuit_no:   [gv('cal1_bcn1'), gv('cal1_bcn2'), gv('cal1_bcn3')],
+        basic_tare:        [gv('cal1_bt1'),  gv('cal1_bt2'),  gv('cal1_bt3')]
+      },
+      cal2: {
+        deviation:     [gv('cal2_dev1'),  gv('cal2_dev2'),  gv('cal2_dev3')],
+        pulses_per_length: [gv('cal2_ppl1'), gv('cal2_ppl2'), gv('cal2_ppl3')],
+        belt_circuit_no:   [gv('cal2_bcn1'), gv('cal2_bcn2'), gv('cal2_bcn3')],
+        range_correction_tw: [gv('cal2_rctw1'), gv('cal2_rctw2'), gv('cal2_rctw3')]
+      },
+      note: gv('cfNote'),
+      images: cfImages.map(ki)
+    }
+  };
+}
+
+// ── PDF ───────────────────────────────────────────────────────────────────────
+function cfDownloadPdf() {
+  ensureReportBackground(function() {
+    try {
+      cfSyncCaptions();
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+      var pw = doc.internal.pageSize.getWidth();
+      var ph = doc.internal.pageSize.getHeight();
+
+      var marginX      = 20;
+      var marginTop    = 20;
+      var marginBottom = 20;
+      var contentW     = pw - marginX * 2;
+
+      var now = new Date();
+      var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      var dd = String(now.getDate()).padStart(2,'0');
+      var yy = now.getFullYear();
+      var nowStr = dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+      function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
+      function safe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
+      function pad(n){ return String(n).padStart(2,'0'); }
+
+      var y = marginTop;
+
+      function checkPage(need) {
+        if (y + need > ph - marginBottom) {
+          doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+        }
+      }
+
+      // Halaman pertama — draw background
+      drawBg(doc, pw, ph);
+
+      // ── INFO BOX ──
+      doc.setDrawColor(180, 210, 220);
+      doc.setLineWidth(0.3);
+      doc.rect(marginX, y, contentW, 29, 'S');
+
+      var pairs = [
+        [marginX+3, [['Feeder No.', gv('cfFeederNo')], ['Date', gv('cfDate')], ['PIC', gv('cfPIC')]]],
+        [marginX+contentW/2+5, [['Reference', gv('cfRef')], ['Work Order', gv('cfWO')], ['Dicetak', nowStr]]]
+      ];
+      pairs.forEach(function(pair) {
+        pair[1].forEach(function(it, i) {
+          var iy = y + 7 + i*7;
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+          doc.text(it[0]+':', pair[0], iy);
+          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+          doc.text(safe(it[1]).substring(0,50), pair[0]+28, iy);
+        });
+      });
+      y += 33;
+
+      // ── SECTION HEADER ──
+      function secHeader(title) {
+        checkPage(12);
+        doc.setFillColor(232,240,253);
+        doc.rect(marginX, y, contentW, 8, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(30,64,175);
+        doc.text(title, marginX+3, y+5.5);
+        y += 11;
+      }
+
+      // ── SUB HEADER ──
+      function subHeader(title) {
+        checkPage(10);
+        doc.setFillColor(243, 248, 255);
+        doc.rect(marginX, y, contentW, 7, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(50,80,160);
+        doc.text(title, marginX+3, y+4.8);
+        y += 9;
+      }
+
+      // col widths: 20+55+30+30+30+15 = 180 (contentW 170 — tweak)
+      // contentW=170: 18+52+28+28+28+16 = 170
+      var COL_W = [18, 52, 28, 28, 28, 16];
+
+      function drawCalTable(calRows, calNumber) {
+        var HEAD_H = 8;
+        checkPage(HEAD_H + calRows.length * 8 + 4);
+
+        // header
+        var hx = marginX;
+        var headers = ['Self Test', 'Description', 'TEST #1', 'TEST #2', 'TEST #3', 'Accept.'];
+        doc.setFillColor(30,58,138); doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(210,225,255);
+        headers.forEach(function(h, i) {
+          doc.rect(hx, y, COL_W[i], HEAD_H, 'F');
+          doc.text(h, hx + COL_W[i]/2, y + 5.5, {align:'center'});
+          hx += COL_W[i];
+        });
+        y += HEAD_H;
+
+        // rows
+        calRows.forEach(function(row, ri) {
+          var rowH = 9;
+          checkPage(rowH + 2);
+          var bg = (ri % 2 === 0) ? [255,255,255] : [246,249,253];
+          var rx = marginX;
+          doc.setFillColor(bg[0],bg[1],bg[2]);
+          COL_W.forEach(function(w){ doc.rect(rx, y, w, rowH, 'FD'); rx += w; });
+          doc.setDrawColor(200,215,230); doc.setLineWidth(0.15);
+
+          // selfTest
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,138);
+          doc.text(safe(row.selfTest), marginX + COL_W[0]/2, y+5.8, {align:'center'});
+          // desc
+          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+          doc.text(safe(row.desc), marginX+COL_W[0]+2, y+5.8);
+          // test values
+          var t = [gv(row.id+'1'), gv(row.id+'2'), gv(row.id+'3')];
+          t.forEach(function(tv, ti) {
+            var tx = marginX + COL_W[0] + COL_W[1] + COL_W[2]*ti;
+            var displayVal = tv ? (safe(tv) + (row.unit ? ' '+safe(row.unit) : '')) : '—';
+            doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(20,20,60);
+            doc.text(displayVal, tx + COL_W[2]/2, y+5.8, {align:'center'});
+          });
+          // acceptance
+          doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(80,100,130);
+          doc.text(safe(row.acceptance), marginX+COL_W[0]+COL_W[1]+COL_W[2]*3+COL_W[5]/2, y+5.8, {align:'center'});
+          y += rowH;
+        });
+        y += 4;
+      }
+
+      secHeader('FEEDER NO-LOAD AND TEST WEIGHT CALIBRATION');
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,80,120);
+      doc.text('Feeder No: '+safe(gv('cfFeederNo'))+'   Reference: '+safe(gv('cfRef'))+'   — 4 pieces of tape used', marginX+3, y);
+      y += 8;
+
+      subHeader('CAL 1 — Zero Calibration');
+      drawCalTable(CF_CAL1_ROWS, 1);
+
+      checkPage(5);
+      subHeader('CAL 2 — Span Calibration');
+      drawCalTable(CF_CAL2_ROWS, 2);
+
+      // ── CATATAN & EVIDENCE ──
+      var note = safe(gv('cfNote'));
+      if (note || cfImages.length) {
+        secHeader('CATATAN & EVIDENCE PHOTO');
+        if (note) {
+          checkPage(10);
+          doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+          var lines = doc.splitTextToSize(note, contentW-6);
+          lines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y+=4.5; });
+          y += 3;
+        }
+        if (cfImages.length) {
+          var imgW=54, imgH=42, gap=4, perRow=3, ix=marginX+3;
+          cfImages.forEach(function(img, i) {
+            if (y+imgH+12 > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; ix=marginX+3; }
+            try { doc.addImage(img.dataUrl,'JPEG',ix,y,imgW,imgH); } catch(e) {}
+            var cap = safe(img.caption||'');
+            if (cap) { doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW), ix, y+imgH+3); }
+            ix += imgW+gap;
+            if ((i+1)%perRow===0) { ix=marginX+3; y+=imgH+12; }
+          });
+          if (cfImages.length%perRow!==0) y+=imgH+12;
+          y+=3;
+        }
+      }
+
+      var nPages = doc.internal.getNumberOfPages();
+      for (var i=1; i<=nPages; i++) { doc.setPage(i); }
+
+      var dateStr = (gv('cfDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
+      doc.save('CoalFeeder_Calibration_'+dateStr+'.pdf');
+
+    } catch(err) { alert('PDF Error: '+err.message); console.error(err); }
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+setInterval(function(){
+  var el=document.getElementById('clockFeeder');
+  if(el) el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+initReportBackground();
+
+(function(){
+  var today=new Date();
+  var el=document.getElementById('cfDate');
+  if(el&&!el.value) el.value=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+})();
+
+// ── LOAD FROM HISTORY (?id=xxx&print=1) ───────────────────────────────────────
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id'), doPrint = params.get('print')==='1';
+  if (!id) return;
+  dbLoad(id, function(rec) {
+    var data = rec.data || {};
+    window._editingId = id;
+    var sv = function(id2,val){ var e=document.getElementById(id2); if(e) e.value=val||''; };
+    setTimeout(function(){
+      sv('cfDate',rec.tanggal); sv('cfPIC',rec.pic); sv('cfWO',rec.work_order);
+      sv('cfFeederNo', data.feeder_no||''); sv('cfRef', data.reference||''); sv('cfNote', data.note||'');
+      if (data.cal1) {
+        var map1 = {deviation:'cal1_dev', pulses_per_length:'cal1_ppl', belt_circuit_no:'cal1_bcn', basic_tare:'cal1_bt'};
+        Object.keys(map1).forEach(function(k){
+          var arr=data.cal1[k]||[]; arr.forEach(function(v,i){ sv(map1[k]+(i+1),v); });
+        });
+      }
+      if (data.cal2) {
+        var map2 = {deviation:'cal2_dev', pulses_per_length:'cal2_ppl', belt_circuit_no:'cal2_bcn', range_correction_tw:'cal2_rctw'};
+        Object.keys(map2).forEach(function(k){
+          var arr=data.cal2[k]||[]; arr.forEach(function(v,i){ sv(map2[k]+(i+1),v); });
+        });
+      }
+      if (data.images) {
+        cfImages = data.images.map(function(img){ return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''}; });
+        cfRenderPreviews();
+      }
+      dbShowToast('Data dimuat dari riwayat \u2713');
+      if (doPrint) { ensureReportBackground(function(){ setTimeout(cfDownloadPdf,300); }); }
+    }, 800);
+  });
+})();
+</script>
+</body>
+</html>
