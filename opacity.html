@@ -353,6 +353,22 @@ function opDownloadPdf() {
 
       secHeader('STEP OF WORK — Opacity ID Fan Inlet 7A & 7B');
 
+      // ── Helper: gambar checkbox manual ──
+      function drawCheckbox(doc, x, y, w, h, checked) {
+        var size = 3.5;
+        var cx = x + w/2;
+        var cy = y + h/2;
+        doc.setDrawColor(80, 80, 80);
+        doc.setLineWidth(0.3);
+        doc.rect(cx - size/2, cy - size/2, size, size, 'S');
+        if (checked) {
+          doc.setDrawColor(26, 107, 58);
+          doc.setLineWidth(0.5);
+          doc.line(cx - size/2 + 0.4, cy, cx - size/2 + size*0.38, cy + size/2 - 0.5);
+          doc.line(cx - size/2 + size*0.38, cy + size/2 - 0.5, cx + size/2 - 0.3, cy - size/2 + 0.5);
+        }
+      }
+
       // Build table rows
       var tableRows = OP_CHECKS.map(function(item, idx) {
         var chk=document.getElementById('opChk_'+idx), a7=document.getElementById('op7A_'+idx), b7=document.getElementById('op7B_'+idx), rec=document.getElementById('opRec_'+idx);
@@ -362,10 +378,12 @@ function opDownloadPdf() {
           safe(item.criteria),
           (chk&&chk.checked)?'__CHK__':'__BOX__',
           (a7&&a7.checked)?'__CHK__':'__BOX__',
-          item.both ? ((b7&&b7.checked)?'__CHK__':'__BOX__') : '-',
+          (b7&&b7.checked)?'__CHK__':(item.both?'__BOX__':'__DASH__'),
           rec?safe(rec.textContent):''
         ];
       });
+
+      var CHK_COLS_OP = {3:true, 4:true, 5:true};
 
       // Kolom total = contentW 170mm: 9+79+28+9+11+11+23 = 170
       doc.autoTable({
@@ -386,27 +404,25 @@ function opDownloadPdf() {
           6:{cellWidth:23, halign:'center'}
         },
         alternateRowStyles: {fillColor:[246,249,247]},
+        didDrawCell: function(data) {
+          if (data.section !== 'body') return;
+          if (!CHK_COLS_OP[data.column.index]) return;
+          var val = data.cell.raw;
+          if (val !== '__CHK__' && val !== '__BOX__' && val !== '__DASH__') return;
+          var x = data.cell.x, y = data.cell.y, w = data.cell.width, h = data.cell.height;
+          var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,249,247];
+          doc.setFillColor(bg[0], bg[1], bg[2]);
+          doc.rect(x+0.2, y+0.2, w-0.4, h-0.4, 'F');
+          if (val === '__DASH__') {
+            doc.setDrawColor(150,150,150); doc.setLineWidth(0.3);
+            doc.line(x+w/2-2, y+h/2, x+w/2+2, y+h/2);
+          } else {
+            drawCheckbox(doc, x, y, w, h, val === '__CHK__');
+          }
+        },
         willDrawPage: function(data) {
           if (data.pageNumber > 1) {
             drawBg(doc, pw, ph);
-          }
-        },
-        didDrawCell: function(data) {
-          if (data.section !== 'body') return;
-          var ci = data.column.index;
-          if (ci !== 3 && ci !== 4 && ci !== 5) return;
-          var val = data.cell.raw;
-          if (val !== '__CHK__' && val !== '__BOX__') return;
-          var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,249,247];
-          doc.setFillColor(bg[0], bg[1], bg[2]);
-          doc.rect(data.cell.x+0.2, data.cell.y+0.2, data.cell.width-0.4, data.cell.height-0.4, 'F');
-          var size=3.5, cx=data.cell.x+data.cell.width/2, cy=data.cell.y+data.cell.height/2;
-          doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
-          doc.rect(cx-size/2, cy-size/2, size, size, 'S');
-          if (val === '__CHK__') {
-            doc.setDrawColor(26,107,58); doc.setLineWidth(0.5);
-            doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.5);
-            doc.line(cx-size/2+size*0.38, cy+size/2-0.5, cx+size/2-0.3, cy-size/2+0.5);
           }
         }
       });
