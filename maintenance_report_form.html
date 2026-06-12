@@ -104,24 +104,42 @@
             <div class="form-group"><label>Asset Description</label><input type="text" id="assetDesc" placeholder="ID FAN 7A..."></div>
         </div>
 
-        <div class="form-group"><label>Failure Description</label><textarea id="failureDesc"></textarea></div>
+        <div class="form-group"><label>Work To be Done / Failure Description</label><textarea id="failureDesc"></textarea></div>
 
         <div class="row">
             <div class="form-group"><label>PIC</label><input type="text" id="pic" placeholder="Nama teknisi"></div>
             <div class="form-group"><label>Material Replacement</label><input type="text" id="material" placeholder="Material..."></div>
         </div>
 
-        <div class="section-title">🔍 Finding / Problem</div>
-        <div id="findingsBox"></div>
-        <button class="btn btn-blue btn-full no-print" onclick="addItem('findings')">+ Tambah Finding</button>
+        <div class="section-title" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleSection('findings')">
+            <input type="checkbox" id="chkFindings" style="width:16px;height:16px;accent-color:#2ecc71;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();toggleSection('findings')" onchange="event.stopPropagation()">
+            <span>🔍 Finding / Problem</span>
+            <span id="badgeFindings" style="display:none;font-size:11px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:600"></span>
+        </div>
+        <div id="sectionFindings" style="display:none">
+            <div id="findingsBox"></div>
+            <button class="btn btn-blue btn-full no-print" onclick="addItem('findings')">+ Tambah Finding</button>
+        </div>
 
-        <div class="section-title">🔧 Action</div>
-        <div id="actionsBox"></div>
-        <button class="btn btn-blue btn-full no-print" onclick="addItem('actions')">+ Tambah Action</button>
+        <div class="section-title" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleSection('actions')">
+            <input type="checkbox" id="chkActions" style="width:16px;height:16px;accent-color:#2ecc71;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();toggleSection('actions')" onchange="event.stopPropagation()">
+            <span>🔧 Action</span>
+            <span id="badgeActions" style="display:none;font-size:11px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:600"></span>
+        </div>
+        <div id="sectionActions" style="display:none">
+            <div id="actionsBox"></div>
+            <button class="btn btn-blue btn-full no-print" onclick="addItem('actions')">+ Tambah Action</button>
+        </div>
 
-        <div class="section-title">✅ Restore</div>
-        <div id="restoreBox"></div>
-        <button class="btn btn-blue btn-full no-print" onclick="addItem('restore')">+ Tambah Restore</button>
+        <div class="section-title" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleSection('restore')">
+            <input type="checkbox" id="chkRestore" style="width:16px;height:16px;accent-color:#2ecc71;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();toggleSection('restore')" onchange="event.stopPropagation()">
+            <span>✅ Restore</span>
+            <span id="badgeRestore" style="display:none;font-size:11px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:600"></span>
+        </div>
+        <div id="sectionRestore" style="display:none">
+            <div id="restoreBox"></div>
+            <button class="btn btn-blue btn-full no-print" onclick="addItem('restore')">+ Tambah Restore</button>
+        </div>
 
         <div class="section-title">📝 Kesimpulan & Saran</div>
         <div class="form-group"><textarea id="conclusion"></textarea></div>
@@ -198,11 +216,36 @@
                 document.getElementById('pic').value = rec.pic || '';
                 document.getElementById('material').value = (rec.data && rec.data.material) || '';
                 document.getElementById('conclusion').value = (rec.data && rec.data.conclusion) || '';
-                sections.findings = (rec.data && Array.isArray(rec.data.findings) && rec.data.findings.length) ? rec.data.findings : [{title:'',desc:'',images:[]}];
-                sections.actions = (rec.data && Array.isArray(rec.data.actions) && rec.data.actions.length) ? rec.data.actions : [{title:'',desc:'',images:[]}];
-                sections.restore = (rec.data && Array.isArray(rec.data.restore) && rec.data.restore.length) ? rec.data.restore : [{title:'',desc:'',images:[]}];
+                function normalizeItems(arr) {
+                    if (!Array.isArray(arr) || !arr.length) return [{title:'',desc:'',images:[]}];
+                    return arr.map(function(it) {
+                        return {
+                            title:  it.title  || '',
+                            desc:   it.desc   || '',
+                            images: Array.isArray(it.images) ? it.images.map(function(im) {
+                                return { dataUrl: im.dataUrl||'', caption: im.caption||'' };
+                            }) : []
+                        };
+                    });
+                }
+                sections.findings = normalizeItems(rec.data && rec.data.findings);
+                sections.actions  = normalizeItems(rec.data && rec.data.actions);
+                sections.restore  = normalizeItems(rec.data && rec.data.restore);
                 renderAll();
                 window._editingId = id;
+                // Buka checkbox untuk section yang punya data
+                ['findings','actions','restore'].forEach(function(type) {
+                    var chkMap = {findings:'chkFindings', actions:'chkActions', restore:'chkRestore'};
+                    var secMap = {findings:'sectionFindings', actions:'sectionActions', restore:'sectionRestore'};
+                    var hasData = sections[type].some(function(it){ return it.title || it.desc || (it.images && it.images.length); });
+                    if (hasData) {
+                        var chk = document.getElementById(chkMap[type]);
+                        var sec = document.getElementById(secMap[type]);
+                        if (chk) chk.checked = true;
+                        if (sec) sec.style.display = 'block';
+                    }
+                });
+                updateBadges();
                 dbShowToast('Data dimuat dari riwayat ✓');
                 if (doPrint) {
                     setTimeout(printReport, 250);
@@ -222,6 +265,29 @@
             renderSection('findings','findingsBox');
             renderSection('actions','actionsBox');
             renderSection('restore','restoreBox');
+            updateBadges();
+        }
+
+        function toggleSection(type) {
+            var map = {findings:'chkFindings', actions:'chkActions', restore:'chkRestore'};
+            var secMap = {findings:'sectionFindings', actions:'sectionActions', restore:'sectionRestore'};
+            var chk = document.getElementById(map[type]);
+            var sec = document.getElementById(secMap[type]);
+            if (!chk || !sec) return;
+            chk.checked = !chk.checked;
+            sec.style.display = chk.checked ? 'block' : 'none';
+            updateBadges();
+        }
+
+        function updateBadges() {
+            var badgeMap = {findings:'badgeFindings', actions:'badgeActions', restore:'badgeRestore'};
+            ['findings','actions','restore'].forEach(function(type) {
+                var badge = document.getElementById(badgeMap[type]);
+                if (!badge) return;
+                var count = sections[type].filter(function(it){ return it.title || it.desc || (it.images && it.images.length); }).length;
+                badge.textContent = count + ' item';
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
+            });
         }
 
         function renderSection(type, boxId) {
@@ -271,6 +337,7 @@
         function addItem(type) {
             sections[type].push({title:'',desc:'',images:[]});
             renderSection(type, type+'Box');
+            updateBadges();
         }
 
         function deleteItem(type, idx) {
@@ -551,7 +618,6 @@
                 tanggal: document.getElementById('workDate').value || null,
                 pic: document.getElementById('pic').value || null,
                 work_order: document.getElementById('wo').value || null,
-                unit: 'Unit 7',
                 data: {
                     reportType: document.getElementById('reportType').value || 'EM',
                     assetTag: document.getElementById('assetTag').value || '',
@@ -692,7 +758,7 @@
                         var fdLines = doc.splitTextToSize(failureDesc, contentW-6);
                         doc.rect(marginX, y, contentW, 5 + fdLines.length*4, 'F');
                         doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(26,107,58);
-                        doc.text('Failure Description:', marginX+3, y+4); y += 7;
+                        doc.text('Work To be Done / Failure Description:', marginX+3, y+4); y += 7;
                         doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
                         fdLines.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y += 4; });
                         y += 3;
@@ -731,13 +797,18 @@
                                 var imgW=52, imgH=40, gap=4, perRow=3, x=marginX+3;
                                 y += 2;
                                 item.images.forEach(function(im, i) {
-                                    checkPage(imgH + 5);
+                                    var capH = im.caption ? 8 : 0;
+                                    checkPage(imgH + capH + 5);
                                     if (y + imgH > ph - marginBottom) { doc.addPage(); drawPdfBackground(doc,pw,ph); y = marginTop; x = marginX+3; }
                                     try { doc.addImage(im.dataUrl, 'JPEG', x, y, imgW, imgH); } catch(e) {}
+                                    if (im.caption) {
+                                        doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(80,80,80);
+                                        doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, x, y+imgH+3+ci*3.5); });
+                                    }
                                     x += imgW + gap;
-                                    if ((i+1) % perRow === 0) { x = marginX+3; y += imgH + gap; }
+                                    if ((i+1) % perRow === 0) { x = marginX+3; y += imgH + gap + capH; }
                                 });
-                                if (item.images.length % perRow !== 0) y += imgH + gap;
+                                if (item.images.length % perRow !== 0) y += imgH + gap + 8;
                                 y += 2;
                             }
 
