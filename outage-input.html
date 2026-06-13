@@ -751,6 +751,148 @@
     gap: 8px;
     padding-top: 4px;
   }
+
+  /* ── REFERENSI PANEL ── */
+  .ref-panel {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-top: 3px solid #7c3aed;
+    border-radius: 10px;
+    padding: clamp(12px,2vw,18px) clamp(12px,2.5vw,22px);
+    margin-bottom: clamp(10px,1.5vh,18px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ref-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .ref-panel-title {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(11px,1.2vw,13px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #7c3aed;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ref-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .ref-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 14px;
+    border-radius: 20px;
+    background: #f5f3ff;
+    border: 1.5px solid #c4b5fd;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5b21b6;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .ref-chip:hover {
+    background: #ede9fe;
+    border-color: #7c3aed;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(124,58,237,0.15);
+  }
+
+  .ref-chip .chip-label { pointer-events: none; }
+
+  .ref-chip .chip-del {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(124,58,237,0.15);
+    border: none;
+    color: #7c3aed;
+    font-size: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    line-height: 1;
+    padding: 0;
+  }
+
+  .ref-chip .chip-del:hover {
+    background: #dc2626;
+    color: #fff;
+  }
+
+  .ref-empty {
+    font-size: 12px;
+    color: var(--text-light);
+    font-family: 'Courier New', monospace;
+    font-style: italic;
+  }
+
+  /* ── MODAL PASSWORD INPUT ── */
+  .modal-input-pw {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: #fff;
+    outline: none;
+    margin-bottom: 8px;
+  }
+
+  .modal-input-pw:focus { border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124,58,237,0.1); }
+
+  .modal-input-pw.pw-error { border-color: var(--fail); box-shadow: 0 0 0 2px rgba(220,38,38,0.1); }
+
+  .modal-hint {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-bottom: 14px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .modal-hint.error-hint { color: var(--fail); font-weight: 600; }
+
+  .pw-toggle-wrap {
+    position: relative;
+    margin-bottom: 8px;
+  }
+
+  .pw-toggle-wrap .modal-input-pw { margin-bottom: 0; padding-right: 38px; }
+
+  .pw-toggle-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--text-light);
+    padding: 0;
+    line-height: 1;
+  }
 </style>
 </head>
 <body>
@@ -758,7 +900,7 @@
 <!-- TOPBAR -->
 <div class="topbar">
   <button class="topbar-back" onclick="window.location.href='outage-index.html'">← Outage</button>
-  <button class="topbar-back" onclick="window.location.href='outage-history.html'" style="margin-left:2px">📋 History Input</button>
+  <button class="topbar-back" onclick="window.location.href='history-outage.html'" style="margin-left:2px">📋 History Input</button>
   <div class="topbar-sep"></div>
   <div class="topbar-logo">INPUT DATA</div>
   <div class="topbar-sep"></div>
@@ -824,6 +966,16 @@
 
   </div>
 
+  <!-- PANEL REFERENSI -->
+  <div class="ref-panel">
+    <div class="ref-panel-header">
+      <div class="ref-panel-title">🗂 Referensi Template Kolom</div>
+    </div>
+    <div class="ref-chips" id="refChips">
+      <span class="ref-empty" id="refEmpty">Belum ada referensi tersimpan.</span>
+    </div>
+  </div>
+
   <!-- PANEL UTAMA -->
   <div class="panel">
     <div class="section-label">Tabel Data Asset</div>
@@ -839,7 +991,8 @@
     <div class="toolbar">
       <button class="btn btn-primary" onclick="addRow()">＋ Tambah Baris</button>
       <button class="btn btn-outline" onclick="openAddColModal()">＋ Tambah Kolom</button>
-      <button class="btn btn-success" onclick="saveAll()" id="btnSaveAll">💾 Simpan Semua</button>
+      <button class="btn btn-outline" onclick="openSaveRefModal()" style="border-color:#7c3aed;color:#7c3aed;">🗂 Simpan Referensi</button>
+      <button class="btn btn-success" onclick="saveAll()" id="btnSaveAll">💾 Simpan Semua Data</button>
       <button class="btn btn-secondary" onclick="loadData()">↺ Refresh</button>
     </div>
 
@@ -902,6 +1055,73 @@
     <div class="modal-btns">
       <button class="btn btn-outline" onclick="closeDelColModal()">Batal</button>
       <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelCol()">Hapus Kolom</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SIMPAN REFERENSI -->
+<div class="modal-overlay" id="saveRefModal">
+  <div class="modal-box">
+    <div class="modal-title">💾 Simpan Referensi Tabel Input</div>
+    <p style="font-size:12px;color:var(--text-mid);margin-bottom:14px;">
+      Referensi akan menyimpan <strong id="saveRefColCount">0</strong> kolom aktif saat ini sebagai template yang bisa dipakai kembali.
+    </p>
+    <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-mid);display:block;margin-bottom:5px;">Nama Referensi</label>
+    <input type="text" class="modal-input" id="refName" placeholder="Contoh: Template Mekanikal, Template Elektrikal..."
+      onkeydown="if(event.key==='Enter') document.getElementById('refPassword').focus()">
+    <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-mid);display:block;margin-bottom:5px;">Buat Sandi</label>
+    <div class="pw-toggle-wrap">
+      <input type="password" class="modal-input-pw" id="refPassword" placeholder="Sandi untuk menghapus referensi ini"
+        onkeydown="if(event.key==='Enter') document.getElementById('refPasswordConfirm').focus()">
+      <button class="pw-toggle-btn" onclick="togglePw('refPassword',this)" tabindex="-1">👁</button>
+    </div>
+    <div class="pw-toggle-wrap" style="margin-bottom:14px;">
+      <input type="password" class="modal-input-pw" id="refPasswordConfirm" placeholder="Konfirmasi sandi"
+        onkeydown="if(event.key==='Enter') confirmSaveRef()">
+      <button class="pw-toggle-btn" onclick="togglePw('refPasswordConfirm',this)" tabindex="-1">👁</button>
+    </div>
+    <div class="modal-hint" id="saveRefHint"></div>
+    <div class="modal-btns">
+      <button class="btn btn-danger" onclick="closeSaveRefModal()">Batal</button>
+      <button class="btn btn-primary" onclick="openConfirmRefModal()" style="background:#7c3aed;">Lanjut →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL KONFIRMASI SIMPAN REFERENSI -->
+<div class="modal-overlay" id="confirmRefModal">
+  <div class="modal-box">
+    <div class="modal-title">⚠️ Konfirmasi Simpan Referensi</div>
+    <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px;">
+      Yakin ingin menyimpan referensi tabel data input?
+    </p>
+    <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#5b21b6;margin-bottom:4px;" id="confirmRefName">—</div>
+      <div style="font-size:11px;color:#7c3aed;" id="confirmRefCols">—</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeConfirmRefModal()">← Kembali Edit</button>
+      <button class="btn btn-primary" onclick="confirmSaveRef()" style="background:#7c3aed;">✓ Ya, Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HAPUS REFERENSI -->
+<div class="modal-overlay" id="delRefModal">
+  <div class="modal-box">
+    <div class="modal-title">🗑 Hapus Referensi</div>
+    <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;">
+      Masukkan sandi untuk menghapus referensi <strong id="delRefName">—</strong>.
+    </p>
+    <div class="pw-toggle-wrap" style="margin-bottom:8px;">
+      <input type="password" class="modal-input-pw" id="delRefPassword" placeholder="Masukkan sandi referensi"
+        onkeydown="if(event.key==='Enter') confirmDelRef()">
+      <button class="pw-toggle-btn" onclick="togglePw('delRefPassword',this)" tabindex="-1">👁</button>
+    </div>
+    <div class="modal-hint" id="delRefHint"></div>
+    <div class="modal-btns" style="margin-top:6px;">
+      <button class="btn btn-outline" onclick="closeDelRefModal()">Batal</button>
+      <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelRef()">Hapus</button>
     </div>
   </div>
 </div>
@@ -1684,6 +1904,250 @@ saveDynCols = function() {
   _origSaveDynCols();
   renderManualDynFields();
 };
+
+/* ══════════════════════════════════════════════
+   REFERENSI TEMPLATE KOLOM
+══════════════════════════════════════════════ */
+var REF_TABLE      = 'outage_ref_template';
+var refTemplates   = [];      /* cache dari Supabase */
+var pendingDelRef  = null;    /* { id, name, pw_hash } */
+
+/* -- Hash SHA-256 sederhana -- */
+async function sha256(str) {
+  var buf  = new TextEncoder().encode(str);
+  var hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+
+/* ── LOAD referensi dari Supabase ── */
+function loadRefTemplates() {
+  supaFetch('GET', REF_TABLE + '?select=*&order=created_at.asc')
+    .then(function(data) {
+      refTemplates = data || [];
+      renderRefChips();
+    })
+    .catch(function() {
+      /* Tabel belum ada — tampil kosong */
+      refTemplates = [];
+      renderRefChips();
+    });
+}
+
+/* ── RENDER chip referensi ── */
+function renderRefChips() {
+  var container = document.getElementById('refChips');
+  var empty     = document.getElementById('refEmpty');
+
+  /* Hapus chip lama, sisakan elemen #refEmpty */
+  var chips = container.querySelectorAll('.ref-chip');
+  chips.forEach(function(c){ c.remove(); });
+
+  if (refTemplates.length === 0) {
+    empty.style.display = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  refTemplates.forEach(function(ref) {
+    var chip = document.createElement('div');
+    chip.className = 'ref-chip';
+    chip.title = 'Klik untuk muat kolom: ' + (ref.columns || []).join(', ');
+
+    var lbl = document.createElement('span');
+    lbl.className = 'chip-label';
+    lbl.textContent = ref.name;
+
+    var colBadge = document.createElement('span');
+    colBadge.style.cssText = 'font-size:10px;background:rgba(124,58,237,0.12);border-radius:3px;padding:1px 5px;color:#7c3aed;';
+    colBadge.textContent = (ref.columns || []).length + ' kol';
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'chip-del';
+    delBtn.title = 'Hapus referensi (butuh sandi)';
+    delBtn.textContent = '×';
+    delBtn.onclick = function(e) {
+      e.stopPropagation();
+      openDelRefModal(ref);
+    };
+
+    chip.appendChild(lbl);
+    chip.appendChild(colBadge);
+    chip.appendChild(delBtn);
+
+    chip.addEventListener('click', function() { applyRefTemplate(ref); });
+    container.appendChild(chip);
+  });
+}
+
+/* ── APPLY referensi → gabung kolom dinamis ── */
+function applyRefTemplate(ref) {
+  var cols   = ref.columns || [];
+  var added  = [];
+
+  cols.forEach(function(col) {
+    if (FIXED_COLS.indexOf(col) === -1 && dynamicCols.indexOf(col) === -1) {
+      dynamicCols.push(col);
+      added.push(col);
+    }
+  });
+
+  if (added.length > 0) {
+    saveDynCols();
+    renderTable();
+    showToast('✓ ' + added.length + ' kolom dari "' + ref.name + '" ditambahkan');
+  } else {
+    showToast('Semua kolom referensi sudah ada di tabel');
+  }
+}
+
+/* ══ MODAL SIMPAN REFERENSI ══ */
+function openSaveRefModal() {
+  if (dynamicCols.length === 0) {
+    showToast('Belum ada kolom dinamis untuk disimpan sebagai referensi');
+    return;
+  }
+  document.getElementById('saveRefColCount').textContent = dynamicCols.length;
+  document.getElementById('refName').value           = '';
+  document.getElementById('refPassword').value       = '';
+  document.getElementById('refPasswordConfirm').value= '';
+  document.getElementById('saveRefHint').textContent = '';
+  document.getElementById('saveRefHint').className   = 'modal-hint';
+  document.getElementById('saveRefModal').classList.add('show');
+  setTimeout(function(){ document.getElementById('refName').focus(); }, 100);
+}
+
+function closeSaveRefModal() {
+  document.getElementById('saveRefModal').classList.remove('show');
+}
+
+/* ── Validasi → buka modal konfirmasi ── */
+function openConfirmRefModal() {
+  var name    = document.getElementById('refName').value.trim();
+  var pw      = document.getElementById('refPassword').value;
+  var pwConf  = document.getElementById('refPasswordConfirm').value;
+  var hint    = document.getElementById('saveRefHint');
+
+  hint.className   = 'modal-hint error-hint';
+
+  if (!name) { hint.textContent = '⚠ Nama referensi tidak boleh kosong.'; return; }
+  if (!pw)   { hint.textContent = '⚠ Sandi tidak boleh kosong.'; return; }
+  if (pw.length < 4) { hint.textContent = '⚠ Sandi minimal 4 karakter.'; return; }
+  if (pw !== pwConf) { hint.textContent = '⚠ Konfirmasi sandi tidak cocok.'; return; }
+
+  hint.textContent = '';
+
+  /* Isi modal konfirmasi */
+  document.getElementById('confirmRefName').textContent = '📋 ' + name;
+  document.getElementById('confirmRefCols').textContent = dynamicCols.join(' · ');
+  document.getElementById('confirmRefModal').classList.add('show');
+}
+
+function closeConfirmRefModal() {
+  document.getElementById('confirmRefModal').classList.remove('show');
+}
+
+/* ── Simpan ke Supabase ── */
+function confirmSaveRef() {
+  var name   = document.getElementById('refName').value.trim();
+  var pw     = document.getElementById('refPassword').value;
+
+  sha256(pw).then(function(hash) {
+    var payload = {
+      name:       name,
+      columns:    dynamicCols.slice(),   /* snapshot kolom saat ini */
+      pw_hash:    hash,
+      created_at: new Date().toISOString()
+    };
+
+    supaFetch('POST', REF_TABLE, payload)
+      .then(function(result) {
+        closeConfirmRefModal();
+        closeSaveRefModal();
+        showToast('Referensi "' + name + '" berhasil disimpan ✓');
+        loadRefTemplates();
+      })
+      .catch(function(err) {
+        closeConfirmRefModal();
+        var hint = document.getElementById('saveRefHint');
+        hint.className   = 'modal-hint error-hint';
+        hint.textContent = '⚠ Gagal simpan: ' + (err.message || err);
+        document.getElementById('saveRefModal').classList.add('show');
+      });
+  });
+}
+
+/* ══ MODAL HAPUS REFERENSI ══ */
+function openDelRefModal(ref) {
+  pendingDelRef = ref;
+  document.getElementById('delRefName').textContent    = ref.name;
+  document.getElementById('delRefPassword').value      = '';
+  document.getElementById('delRefHint').textContent    = '';
+  document.getElementById('delRefHint').className      = 'modal-hint';
+  document.getElementById('delRefPassword').className  = 'modal-input-pw';
+  document.getElementById('delRefModal').classList.add('show');
+  setTimeout(function(){ document.getElementById('delRefPassword').focus(); }, 100);
+}
+
+function closeDelRefModal() {
+  pendingDelRef = null;
+  document.getElementById('delRefModal').classList.remove('show');
+}
+
+function confirmDelRef() {
+  if (!pendingDelRef) return;
+  var pw   = document.getElementById('delRefPassword').value;
+  var hint = document.getElementById('delRefHint');
+
+  if (!pw) {
+    hint.className   = 'modal-hint error-hint';
+    hint.textContent = '⚠ Sandi tidak boleh kosong.';
+    return;
+  }
+
+  sha256(pw).then(function(hash) {
+    if (hash !== pendingDelRef.pw_hash) {
+      document.getElementById('delRefPassword').className = 'modal-input-pw pw-error';
+      hint.className   = 'modal-hint error-hint';
+      hint.textContent = '⚠ Sandi salah. Referensi tidak dihapus.';
+      return;
+    }
+
+    /* Sandi benar → hapus dari Supabase */
+    supaFetch('DELETE', REF_TABLE + '?id=eq.' + pendingDelRef.id)
+      .then(function() {
+        closeDelRefModal();
+        showToast('Referensi "' + pendingDelRef.name + '" dihapus ✓');
+        loadRefTemplates();
+      })
+      .catch(function(err) {
+        hint.className   = 'modal-hint error-hint';
+        hint.textContent = '⚠ Gagal hapus: ' + (err.message || err);
+      });
+  });
+}
+
+/* ── Toggle show/hide password ── */
+function togglePw(inputId, btn) {
+  var el = document.getElementById(inputId);
+  if (el.type === 'password') {
+    el.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    el.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
+/* ── Close modal klik overlay ── */
+['saveRefModal','confirmRefModal','delRefModal'].forEach(function(id){
+  document.getElementById(id).addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('show');
+  });
+});
+
+/* ── Init referensi saat halaman load ── */
+loadRefTemplates();
 </script>
 </body>
 </html>
