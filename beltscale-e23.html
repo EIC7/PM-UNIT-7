@@ -527,13 +527,12 @@ function bsReEdit(side, idx) {
 function bsRemoveFile(side, idx) { bsImages[side].splice(idx,1); bsRenderPreviews(side); }
 
 function bs3mHasData() {
-  for (var i = 1; i <= 9; i++) {
-    var chkEl = document.getElementById('bs3mCheck_'+i);
+  // True jika ada minimal satu checkbox 3 Monthly / Defect yang dicentang.
+  // Hanya item yang dicentang yang akan dicetak di PDF.
+  var ids = ['1z','1','2','3','4','5','6','7','8','9'];
+  for (var i = 0; i < ids.length; i++) {
+    var chkEl = document.getElementById('bs3mCheck_'+ids[i]);
     if (chkEl && chkEl.checked) return true;
-    var aEl = document.getElementById('bs3mA_'+i);
-    var bEl = document.getElementById('bs3mB_'+i);
-    if (aEl && aEl.value.trim() !== '') return true;
-    if (bEl && bEl.value.trim() !== '') return true;
   }
   return false;
 }
@@ -712,24 +711,35 @@ function bsDownloadPdf() {
     if (has3m) {
       secHeader('3 MONTHLY — CALIBRATION PROCESS — '+safe(BS_CFG.label));
 
-      var chk = function(id){ var e=document.getElementById(id); return e&&e.checked?'[v]':'[ ]'; };
       var v   = function(id){ var e=document.getElementById(id); return safe(e?e.value:''); };
-      var rows3m = [
-        [{content:'Check If OK', colSpan:6, styles:{fontStyle:'bold', fillColor:[242,249,255], textColor:[26,107,58]}}],
-        ['1','Check Diagnostic Load (Span) dA1','Load Reading',(document.getElementById('bs3mCheck_1')&&document.getElementById('bs3mCheck_1').checked)?'__CHK__':'__BOX__',v('bs3mA_1')+' PPM',v('bs3mB_1')+' PPM'],
-        ['',  'Check Diagnostic Load Zero (dA1)','Load Reading',(document.getElementById('bs3mCheck_1z')&&document.getElementById('bs3mCheck_1z').checked)?'__CHK__':'__BOX__',v('bs3mA_1z')+' PPM',v('bs3mB_1z')+' PPM'],
-        ['',  'Initial calibration have 3 Pass (see note)','Pass 1',(document.getElementById('bs3mCheck_2')&&document.getElementById('bs3mCheck_2').checked)?'__CHK__':'__BOX__',v('bs3mA_2')+' M',v('bs3mB_2')+' M'],
-        ['',  '','Pass 2',(document.getElementById('bs3mCheck_3')&&document.getElementById('bs3mCheck_3').checked)?'__CHK__':'__BOX__',v('bs3mA_3')+' M',v('bs3mB_3')+' M'],
-        ['',  '','Pass 3',(document.getElementById('bs3mCheck_4')&&document.getElementById('bs3mCheck_4').checked)?'__CHK__':'__BOX__',v('bs3mA_4')+' M',v('bs3mB_4')+' M'],
-        ['',  'Average Pulse/Lenght','Pulse / M',(document.getElementById('bs3mCheck_5')&&document.getElementById('bs3mCheck_5').checked)?'__CHK__':'__BOX__',v('bs3mA_5')+' PPM',v('bs3mB_5')+' PPM'],
-        [{content:'Initial Calibration Zero & Span mA8', colSpan:6, styles:{fontStyle:'bold', fillColor:[242,249,255], textColor:[26,107,58]}}],
-        ['2','','Zero Check (Unloaded)',(document.getElementById('bs3mCheck_6')&&document.getElementById('bs3mCheck_6').checked)?'__CHK__':'__BOX__',v('bs3mA_6')+' PPM',v('bs3mB_6')+' PPM'],
-        ['','','Test Load Check',(document.getElementById('bs3mCheck_7')&&document.getElementById('bs3mCheck_7').checked)?'__CHK__':'__BOX__',v('bs3mA_7')+' PPM',v('bs3mB_7')+' PPM'],
-        [{content:'Normal Calibration', colSpan:6, styles:{fontStyle:'bold', fillColor:[242,249,255], textColor:[26,107,58]}}],
-        ['3','Calibration Zero and Span','Zero Error (%)',(document.getElementById('bs3mCheck_8')&&document.getElementById('bs3mCheck_8').checked)?'__CHK__':'__BOX__',v('bs3mA_8')+' %',v('bs3mB_8')+' %'],
-        ['','','Span Error (%)',(document.getElementById('bs3mCheck_9')&&document.getElementById('bs3mCheck_9').checked)?'__CHK__':'__BOX__',v('bs3mA_9')+' %',v('bs3mB_9')+' %'],
-        ['4','Load Reading After Calibration','R',(document.getElementById('bs3mCheck_10')&&document.getElementById('bs3mCheck_10').checked)?'__CHK__':'__BOX__',v('bs3mA_10')+' %',v('bs3mB_10')+' %']
+      var isChecked = function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
+
+      // Definisi seluruh baris 3 Monthly / Defect, dikelompokkan per section.
+      var ROWS_3M_DEF = [
+        {grp:'Check If OK', no:'1', label:'Check Diagnostic Load (Span) dA1', crit:'Load Reading', chk:'bs3mCheck_1', a:'bs3mA_1', b:'bs3mB_1', unit:'PPM'},
+        {grp:'Check If OK', no:'',  label:'Check Diagnostic Load Zero (dA1)', crit:'Load Reading', chk:'bs3mCheck_1z', a:'bs3mA_1z', b:'bs3mB_1z', unit:'PPM'},
+        {grp:'Check If OK', no:'',  label:'Initial calibration have 3 Pass (see note)', crit:'Pass 1', chk:'bs3mCheck_2', a:'bs3mA_2', b:'bs3mB_2', unit:'M'},
+        {grp:'Check If OK', no:'',  label:'', crit:'Pass 2', chk:'bs3mCheck_3', a:'bs3mA_3', b:'bs3mB_3', unit:'M'},
+        {grp:'Check If OK', no:'',  label:'', crit:'Pass 3', chk:'bs3mCheck_4', a:'bs3mA_4', b:'bs3mB_4', unit:'M'},
+        {grp:'Check If OK', no:'',  label:'Average Pulse/Lenght', crit:'Pulse / M', chk:'bs3mCheck_5', a:'bs3mA_5', b:'bs3mB_5', unit:'PPM'},
+        {grp:'Initial Calibration Zero & Span mA8', no:'2', label:'', crit:'Zero Check (Unloaded)', chk:'bs3mCheck_6', a:'bs3mA_6', b:'bs3mB_6', unit:'PPM'},
+        {grp:'Initial Calibration Zero & Span mA8', no:'',  label:'', crit:'Test Load Check', chk:'bs3mCheck_7', a:'bs3mA_7', b:'bs3mB_7', unit:'PPM'},
+        {grp:'Normal Calibration', no:'3', label:'Calibration Zero and Span', crit:'Zero Error (%)', chk:'bs3mCheck_8', a:'bs3mA_8', b:'bs3mB_8', unit:'%'},
+        {grp:'Normal Calibration', no:'',  label:'', crit:'Span Error (%)', chk:'bs3mCheck_9', a:'bs3mA_9', b:'bs3mB_9', unit:'%'}
       ];
+      var GRP_ORDER = ['Check If OK', 'Initial Calibration Zero & Span mA8', 'Normal Calibration'];
+
+      // Hanya tampilkan baris yang checkbox-nya dicentang. Header section hanya
+      // ditampilkan jika minimal satu baris di section itu dicentang.
+      var rows3m = [];
+      GRP_ORDER.forEach(function(grp) {
+        var grpRows = ROWS_3M_DEF.filter(function(r){ return r.grp === grp && isChecked(r.chk); });
+        if (grpRows.length === 0) return;
+        rows3m.push([{content: grp, colSpan:6, styles:{fontStyle:'bold', fillColor:[242,249,255], textColor:[26,107,58]}}]);
+        grpRows.forEach(function(r) {
+          rows3m.push([r.no, r.label, r.crit, '__CHK__', v(r.a)+' '+r.unit, v(r.b)+' '+r.unit]);
+        });
+      });
 
       doc.autoTable({
         startY: y,
