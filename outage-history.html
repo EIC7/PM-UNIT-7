@@ -555,6 +555,12 @@
         </select>
       </div>
       <div class="filter-group">
+        <label>Input Utama</label>
+        <select class="filter-select" id="filterCategory" onchange="applyFilter()">
+          <option value="">Semua Kategori</option>
+        </select>
+      </div>
+      <div class="filter-group">
         <label>Dari Tanggal</label>
         <input type="date" class="filter-input" id="filterFrom" onchange="applyFilter()">
       </div>
@@ -572,6 +578,7 @@
       <div class="stat-chip total">Total: <span id="statTotal">0</span></div>
       <div class="stat-chip asset">Asset: <span id="statAsset">0</span></div>
       <div class="stat-chip check">Checksheet: <span id="statCheck">0</span></div>
+      <div class="stat-chip" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">Kategori: <span id="statCategory">—</span></div>
     </div>
 
     <!-- TABLE -->
@@ -581,6 +588,7 @@
           <tr>
             <th style="width:42px">No.</th>
             <th>Modul / Jenis</th>
+            <th>Input Utama</th>
             <th>Asset Tag</th>
             <th>Deskripsi</th>
             <th>PIC</th>
@@ -696,42 +704,61 @@ function loadData() {
 
   Promise.all([p1, p2]).then(function(results) {
     allData = results[0].concat(results[1]);
-    /* Sort by created_at desc */
     allData.sort(function(a,b){
       return new Date(b.created_at||0) - new Date(a.created_at||0);
     });
+    populateCategoryFilter();
     applyFilter();
     showToast('Data dimuat: ' + allData.length + ' record ✓');
   });
+}
+
+function populateCategoryFilter() {
+  var sel = document.getElementById('filterCategory');
+  var cats = [];
+  allData.forEach(function(r) {
+    var cat = r.input_category || '';
+    if (cat && cats.indexOf(cat) === -1) cats.push(cat);
+  });
+  /* Simpan nilai yang dipilih sebelumnya */
+  var prev = sel.value;
+  sel.innerHTML = '<option value="">Semua Kategori</option>';
+  cats.sort().forEach(function(cat) {
+    var opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat;
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
 }
 
 /* ══════════════════════════════════════════════
    FILTER
 ══════════════════════════════════════════════ */
 function applyFilter() {
-  var search = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
-  var modul  = document.getElementById('filterModul').value;
-  var from   = document.getElementById('filterFrom').value;
-  var to     = document.getElementById('filterTo').value;
+  var search   = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+  var modul    = document.getElementById('filterModul').value;
+  var category = document.getElementById('filterCategory').value;
+  var from     = document.getElementById('filterFrom').value;
+  var to       = document.getElementById('filterTo').value;
 
   filtered = allData.filter(function(r) {
-    /* Filter modul */
     if (modul && r._source !== modul) return false;
+    if (category && (r.input_category || '') !== category) return false;
 
-    /* Filter tanggal */
     var dt = r.tanggal || (r.created_at ? r.created_at.substring(0,10) : '');
     if (from && dt && dt < from) return false;
     if (to   && dt && dt > to)   return false;
 
-    /* Filter search */
     if (search) {
       var hay = [
-        r.asset_tag   || '',
-        r.asset_desc  || '',
-        r.pic         || '',
-        r.modul       || '',
-        r.lokasi      || '',
-        r.work_order  || ''
+        r.asset_tag        || '',
+        r.asset_desc       || '',
+        r.pic              || '',
+        r.modul            || '',
+        r.lokasi           || '',
+        r.work_order       || '',
+        r.input_category   || ''
       ].join(' ').toLowerCase();
       if (hay.indexOf(search) === -1) return false;
     }
@@ -745,10 +772,11 @@ function applyFilter() {
 }
 
 function clearFilter() {
-  document.getElementById('filterSearch').value = '';
-  document.getElementById('filterModul').value  = '';
-  document.getElementById('filterFrom').value   = '';
-  document.getElementById('filterTo').value     = '';
+  document.getElementById('filterSearch').value   = '';
+  document.getElementById('filterModul').value    = '';
+  document.getElementById('filterCategory').value = '';
+  document.getElementById('filterFrom').value     = '';
+  document.getElementById('filterTo').value       = '';
   applyFilter();
 }
 
@@ -758,9 +786,11 @@ function clearFilter() {
 function updateStats() {
   var asset = filtered.filter(function(r){ return r._source === 'asset'; }).length;
   var check = filtered.filter(function(r){ return r._source === 'checksheet'; }).length;
-  document.getElementById('statTotal').textContent = filtered.length;
-  document.getElementById('statAsset').textContent = asset;
-  document.getElementById('statCheck').textContent = check;
+  var cat   = document.getElementById('filterCategory').value;
+  document.getElementById('statTotal').textContent    = filtered.length;
+  document.getElementById('statAsset').textContent    = asset;
+  document.getElementById('statCheck').textContent    = check;
+  document.getElementById('statCategory').textContent = cat || 'Semua';
 }
 
 /* ══════════════════════════════════════════════
@@ -772,7 +802,7 @@ function renderTable() {
 
   if (filtered.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="8">' +
+      '<tr><td colspan="9">' +
         '<div class="empty-state">' +
           '<div class="icon">🗂️</div>' +
           '<div>Tidak ada data ditemukan.</div>' +
@@ -795,10 +825,19 @@ function renderTable() {
     var badgeClass = r._source === 'asset' ? 'badge-asset' : 'badge-check';
     var badgeLabel = r._source === 'asset' ? 'DATA ASSET' : (r.modul || 'CHECKSHEET');
 
+    var catLabel = r.input_category || '—';
+    var catColors = {
+      'Control Valve': 'background:#fff7ed;color:#c2410c;border:1px solid #fed7aa',
+      'Temperature':   'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe',
+      'Level Switch':  'background:#f0fdf4;color:#166534;border:1px solid #bbf7d0'
+    };
+    var catStyle = catColors[catLabel] || 'background:#f8fafc;color:#475569;border:1px solid #e2e8f0';
+
     var tr = document.createElement('tr');
     tr.innerHTML =
       '<td style="text-align:center;font-family:\'Courier New\',monospace;font-size:11px;color:var(--text-light)">' + no + '</td>' +
       '<td><span class="badge ' + badgeClass + '">' + escHtml(badgeLabel) + '</span></td>' +
+      '<td><span style="display:inline-block;padding:2px 9px;border-radius:4px;font-size:10px;font-weight:700;font-family:\'Courier New\',monospace;white-space:nowrap;' + catStyle + '">' + escHtml(catLabel) + '</span></td>' +
       '<td style="font-family:\'Courier New\',monospace;font-size:12px;font-weight:600">' + escHtml(r.asset_tag || r.work_order || '—') + '</td>' +
       '<td style="font-size:12px;color:var(--text-mid)">' + escHtml(r.asset_desc || r.modul || '—') + '</td>' +
       '<td style="font-size:12px">' + escHtml(r.pic || '—') + '</td>' +
@@ -872,14 +911,15 @@ function openDetail(idx) {
 
   /* Detail grid */
   var fields = [
-    {label:'ID',          val: r.id},
-    {label:'Asset Tag',   val: r.asset_tag || r.work_order || '—'},
-    {label:'Deskripsi',   val: r.asset_desc || r.modul || '—'},
-    {label:'Lokasi',      val: r.lokasi || '—'},
-    {label:'PIC',         val: r.pic || '—'},
-    {label:'Tanggal',     val: r.tanggal || '—'},
-    {label:'Dibuat',      val: r.created_at ? r.created_at.substring(0,16).replace('T',' ') : '—'},
-    {label:'Diperbarui',  val: r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : '—'},
+    {label:'ID',            val: r.id},
+    {label:'Input Utama',   val: r.input_category || '—'},
+    {label:'Asset Tag',     val: r.asset_tag || r.work_order || '—'},
+    {label:'Deskripsi',     val: r.asset_desc || r.modul || '—'},
+    {label:'Lokasi',        val: r.lokasi || '—'},
+    {label:'PIC',           val: r.pic || '—'},
+    {label:'Tanggal',       val: r.tanggal || '—'},
+    {label:'Dibuat',        val: r.created_at ? r.created_at.substring(0,16).replace('T',' ') : '—'},
+    {label:'Diperbarui',    val: r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : '—'},
   ];
 
   var grid = document.getElementById('detailGrid');
