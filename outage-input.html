@@ -60,188 +60,99 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
+
   .topbar-back:hover { color: #a8d4b8; border-color: #0f766e; background: rgba(15,118,110,0.12); }
+
   .topbar-sep { width: 1px; height: 26px; background: #2a4a7a; flex-shrink: 0; }
-  .topbar-logo { font-family: 'Arial Narrow', sans-serif; font-size: clamp(12px,1.8vw,18px); font-weight: 700; letter-spacing: 2px; color: #a8d4c8; flex-shrink: 0; }
-  .topbar-sub { font-size: clamp(10px,1.2vw,13px); color: #7ab8c8; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
-  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #0f766e; animation: blink 2s ease-in-out infinite; }
+
+  .topbar-logo {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(12px,1.8vw,18px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #a8d4c8;
+    flex-shrink: 0;
+  }
+
+  .topbar-sub {
+    font-size: clamp(10px,1.2vw,13px);
+    color: #7ab8c8;
+    letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #0f766e;
+    animation: blink 2s ease-in-out infinite;
+  }
+
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .topbar-time { font-family: 'Courier New', monospace; font-size: clamp(9px,1.1vw,12px); color: #7ab8c8; }
+
+  .topbar-time {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(9px,1.1vw,12px);
+    color: #7ab8c8;
+  }
 
   /* ── WRAPPER ── */
-  .wrapper { max-width: 100%; margin: 0 auto; padding: clamp(12px,2vh,24px) clamp(10px,2.5vw,24px) 64px; }
+  .wrapper {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: clamp(12px,2vh,24px) clamp(10px,2.5vw,24px) 48px;
+  }
 
   /* ── PAGE HEADER ── */
-  .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: clamp(14px,2vh,24px); flex-wrap: wrap; }
-  .page-header-sub { font-size: clamp(9px,1vw,12px); color: var(--text-light); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
-  .page-header-title { font-family: 'Arial Narrow', sans-serif; font-size: clamp(20px,3.5vw,36px); font-weight: 700; color: var(--steel); line-height: 1; letter-spacing: 1px; }
-  .page-header-title span { color: var(--accent); }
-
-  /* ── TAB STRIP ── */
-  .tab-strip-wrap {
+  .page-header {
     display: flex;
     align-items: flex-end;
-    gap: 0;
-    margin-bottom: 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 0;
-    border-bottom: 2px solid var(--border);
-    position: relative;
-  }
-
-  .tab-strip-wrap::-webkit-scrollbar { height: 3px; }
-  .tab-strip-wrap::-webkit-scrollbar-track { background: transparent; }
-  .tab-strip-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .tab-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 10px 20px 12px;
-    font-size: clamp(11px,1.2vw,13px);
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    border: none;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    border: 1.5px solid transparent;
-    border-bottom: none;
-    white-space: nowrap;
-    transition: all 0.18s;
-    background: #e8eef5;
-    color: var(--text-mid);
-    margin-right: 4px;
-    position: relative;
-    bottom: -2px;
-    flex-shrink: 0;
-  }
-
-  .tab-btn:hover:not(.active) {
-    background: #dde7f0;
-    color: var(--steel);
-  }
-
-  .tab-btn.active {
-    background: var(--bg2);
-    color: var(--steel);
-    border-color: var(--border);
-    border-bottom-color: var(--bg2);
-    z-index: 2;
-  }
-
-  .tab-btn .tab-count {
-    background: var(--accent);
-    color: #fff;
-    font-size: 10px;
-    font-family: 'Courier New', monospace;
-    font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 10px;
-    min-width: 20px;
-    text-align: center;
-  }
-
-  .tab-btn.active .tab-count { background: var(--accent); }
-  .tab-btn:not(.active) .tab-count { background: var(--text-light); }
-
-  .tab-btn .tab-icon { font-size: 14px; }
-
-  /* Tombol Tambah Input Utama */
-  .btn-add-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    border: 1.5px dashed var(--accent);
-    border-bottom: none;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    background: rgba(15,118,110,0.04);
-    color: var(--accent);
-    white-space: nowrap;
-    transition: all 0.18s;
-    position: relative;
-    bottom: -2px;
-    flex-shrink: 0;
-  }
-  .btn-add-tab:hover { background: rgba(15,118,110,0.1); }
-
-  /* ── PANEL TAB CONTENT ── */
-  .tab-pane {
-    display: none;
-    background: var(--bg2);
-    border: 1.5px solid var(--border);
-    border-top: none;
-    border-radius: 0 0 10px 10px;
-    padding: clamp(14px,2vw,24px) clamp(12px,2.5vw,26px);
-    box-shadow: var(--shadow-sm);
-    margin-bottom: clamp(10px,1.5vh,20px);
-  }
-  .tab-pane.active { display: block; }
-
-  /* Tab pane header */
-  .pane-header {
-    display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
+    margin-bottom: clamp(14px,2vh,28px);
     flex-wrap: wrap;
-    margin-bottom: 16px;
   }
 
-  .pane-title-group { display: flex; align-items: center; gap: 12px; }
+  .page-header-sub {
+    font-size: clamp(9px,1vw,12px);
+    color: var(--text-light);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
 
-  .pane-title {
+  .page-header-title {
     font-family: 'Arial Narrow', sans-serif;
-    font-size: clamp(14px,1.8vw,18px);
+    font-size: clamp(20px,3.5vw,36px);
     font-weight: 700;
     color: var(--steel);
-    letter-spacing: 0.5px;
+    line-height: 1;
+    letter-spacing: 1px;
   }
 
-  .pane-title-input {
-    font-family: 'Arial Narrow', sans-serif;
-    font-size: clamp(14px,1.8vw,18px);
-    font-weight: 700;
-    color: var(--steel);
-    letter-spacing: 0.5px;
-    border: none;
-    border-bottom: 2px dashed var(--border);
-    outline: none;
-    background: transparent;
-    padding: 2px 4px;
-    min-width: 80px;
-    width: auto;
-    cursor: text;
-    transition: border-color 0.2s;
-  }
-  .pane-title-input:focus { border-bottom-color: var(--accent); }
+  .page-header-title span { color: var(--accent); }
 
-  .btn-del-tab {
-    padding: 4px 10px;
-    border-radius: 5px;
-    border: 1.5px solid #fecaca;
-    background: #fef2f2;
-    color: var(--fail);
-    font-size: 11px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    transition: all 0.15s;
+  /* ── PANEL ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: clamp(12px,2vw,22px) clamp(12px,2.5vw,26px);
+    margin-bottom: clamp(10px,1.5vh,20px);
+    box-shadow: var(--shadow-sm);
   }
-  .btn-del-tab:hover { background: var(--fail); color: #fff; border-color: var(--fail); }
 
-  /* ── SECTION LABEL ── */
   .section-label {
     font-family: 'Arial Narrow', sans-serif;
     font-size: clamp(10px,1.1vw,12px);
@@ -249,15 +160,27 @@
     letter-spacing: 2.5px;
     text-transform: uppercase;
     color: var(--text-light);
-    margin-bottom: clamp(10px,1.5vh,16px);
+    margin-bottom: clamp(10px,1.5vh,18px);
     display: flex;
     align-items: center;
     gap: 10px;
   }
-  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
 
   /* ── TOOLBAR ── */
-  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 14px;
+  }
 
   .btn {
     padding: clamp(6px,0.8vh,9px) clamp(10px,1.5vw,18px);
@@ -273,41 +196,43 @@
     gap: 6px;
     white-space: nowrap;
   }
+
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
   .btn-secondary { background: var(--steel); color: #fff; }
   .btn-secondary:hover { background: var(--steel-light); transform: translateY(-1px); }
+
   .btn-success { background: var(--ok); color: #fff; }
   .btn-success:hover { background: #15803d; transform: translateY(-1px); }
+
   .btn-danger { background: #f1f5f9; color: var(--fail); border: 1.5px solid #fecaca; }
   .btn-danger:hover { background: #fef2f2; border-color: var(--fail); }
+
   .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
   .btn-outline:hover { background: var(--accent); color: #fff; }
+
   .btn-sm { padding: 4px 10px; font-size: 11px; }
 
-  /* ── STATS ── */
-  .stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-  .stat-chip {
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    font-family: 'Courier New', monospace;
-    border: 1px solid;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  /* ── TABLE WRAPPER ── */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    border: 1px solid var(--border);
   }
-  .stat-chip.total { background: #f0f4f8; border-color: var(--border); color: var(--steel); }
-  .stat-chip.saved { background: #e0f2fe; border-color: #bae6fd; color: #0369a1; }
-  .stat-chip.unsaved { background: #fef9c3; border-color: #fde68a; color: #92400e; }
 
-  /* ── TABLE ── */
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid var(--border); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: clamp(11px,1.2vw,13px);
+    min-width: 600px;
+  }
 
-  table { width: 100%; border-collapse: collapse; font-size: clamp(11px,1.2vw,13px); min-width: 600px; }
+  thead tr {
+    background: linear-gradient(90deg, #1e3a5f, #2d4a6a);
+  }
 
-  thead tr { background: linear-gradient(90deg, #1e3a5f, #2d4a6a); }
   thead th {
     padding: clamp(8px,1vh,12px) clamp(8px,1vw,14px);
     text-align: left;
@@ -319,11 +244,27 @@
     color: #a8d4c8;
     white-space: nowrap;
     border-right: 1px solid rgba(255,255,255,0.06);
+    position: relative;
   }
+
   thead th:last-child { border-right: none; }
-  thead th.col-fixed { background: rgba(15,118,110,0.15); }
-  thead th.col-dynamic { background: rgba(29,78,216,0.12); }
-  thead th .th-inner { display: flex; align-items: center; gap: 6px; }
+
+  /* Kolom default — tidak bisa hapus */
+  thead th.col-fixed {
+    background: rgba(15,118,110,0.15);
+  }
+
+  /* Kolom dinamis — bisa hapus */
+  thead th.col-dynamic {
+    background: rgba(29,78,216,0.12);
+  }
+
+  thead th .th-inner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   thead th .col-name-input {
     background: transparent;
     border: none;
@@ -339,12 +280,17 @@
     outline: none;
     padding: 2px 0;
   }
-  thead th .col-name-input:focus { border-bottom: 1px solid #0d9488; }
+
+  thead th .col-name-input:focus {
+    border-bottom: 1px solid #0d9488;
+  }
+
   thead th .btn-del-col {
     background: rgba(220,38,38,0.25);
     border: none;
     color: #fca5a5;
-    width: 18px; height: 18px;
+    width: 18px;
+    height: 18px;
     border-radius: 3px;
     cursor: pointer;
     font-size: 11px;
@@ -354,9 +300,14 @@
     flex-shrink: 0;
     transition: background 0.15s;
   }
+
   thead th .btn-del-col:hover { background: rgba(220,38,38,0.55); color: #fff; }
 
-  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
   tbody tr:last-child { border-bottom: none; }
   tbody tr:hover { background: #f8fafc; }
   tbody tr.editing { background: #f0fdf4; }
@@ -367,10 +318,22 @@
     border-right: 1px solid #f1f5f9;
     color: var(--text-dark);
   }
+
   tbody td:last-child { border-right: none; }
 
-  td.col-no { text-align: center; font-family: 'Courier New', monospace; font-size: 11px; color: var(--text-light); width: 40px; font-weight: 600; }
+  /* Kolom No */
+  td.col-no {
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-light);
+    width: 40px;
+    font-weight: 600;
+  }
+
+  /* Cell input saat edit */
   td .cell-display { min-height: 20px; }
+
   td .cell-input {
     width: 100%;
     padding: 4px 6px;
@@ -382,14 +345,49 @@
     background: #fff;
     outline: none;
   }
+
   td .cell-input:focus { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(15,118,110,0.12); }
-  td.col-action { white-space: nowrap; width: 100px; text-align: center; }
+
+  /* Kolom aksi */
+  td.col-action {
+    white-space: nowrap;
+    width: 100px;
+    text-align: center;
+  }
+
   .action-btns { display: flex; gap: 5px; justify-content: center; align-items: center; }
 
-  .badge-new { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #15803d; font-weight: 700; letter-spacing: 0.5px; font-family: 'Courier New', monospace; }
-  .badge-saved { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1; font-weight: 700; letter-spacing: 0.5px; font-family: 'Courier New', monospace; }
+  /* Status badge */
+  .badge-new {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #dcfce7;
+    color: #15803d;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-family: 'Courier New', monospace;
+  }
 
-  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 13px; }
+  .badge-saved {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-light);
+    font-size: 13px;
+  }
+
   .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
   .empty-state .msg { font-family: 'Courier New', monospace; font-size: 12px; margin-top: 4px; }
 
@@ -414,20 +412,344 @@
     text-align: center;
   }
 
-  /* ── MODALS ── */
-  .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 500; align-items: center; justify-content: center; padding: 16px; }
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
   .modal-overlay.show { display: flex; }
-  .modal-box { background: var(--bg2); border-radius: 10px; padding: 24px; width: min(420px, 96vw); box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
-  .modal-title { font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 14px; }
-  .modal-input { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; color: var(--text-dark); background: #fff; outline: none; margin-bottom: 16px; }
+
+  .modal-box {
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 24px;
+    width: min(400px, 96vw);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  }
+
+  .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 14px;
+  }
+
+  .modal-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: #fff;
+    outline: none;
+    margin-bottom: 16px;
+  }
+
   .modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(15,118,110,0.1); }
+
   .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
-  .modal-desc { font-size: 13px; color: var(--text-mid); margin-bottom: 18px; }
+
+  /* ── INFO STATS ── */
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .stat-chip {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat-chip.total { background: #f0f4f8; border-color: var(--border); color: var(--steel); }
+  .stat-chip.saved { background: #e0f2fe; border-color: #bae6fd; color: #0369a1; }
+  .stat-chip.unsaved { background: #fef9c3; border-color: #fde68a; color: #92400e; }
 
   @media (max-width: 600px) {
     .toolbar { gap: 6px; }
     .btn { padding: 6px 10px; font-size: 11px; }
-    .tab-btn { padding: 8px 14px 10px; font-size: 11px; }
+  }
+
+  /* ── INPUT CARDS ROW ── */
+  .input-cards-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(10px,1.5vw,18px);
+    margin-bottom: clamp(10px,1.5vh,20px);
+  }
+
+  @media (max-width: 700px) {
+    .input-cards-row { grid-template-columns: 1fr; }
+  }
+
+  /* ── CARD: Input Excel ── */
+  .card-excel {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-top: 3px solid #0f766e;
+    border-radius: 10px;
+    padding: clamp(14px,2vw,22px);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card-manual {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-top: 3px solid #1e3a5f;
+    border-radius: 10px;
+    padding: clamp(14px,2vw,22px);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card-title {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(13px,1.4vw,15px);
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title.excel-title { color: var(--accent); }
+  .card-title.manual-title { color: var(--steel); }
+
+  /* ── DROP ZONE ── */
+  .drop-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: clamp(16px,2.5vh,28px) 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f8fafc;
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: #f0fdf9;
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-zone-icon { font-size: 28px; margin-bottom: 6px; }
+
+  .drop-zone-text {
+    font-size: 12px;
+    color: var(--text-mid);
+    font-weight: 600;
+  }
+
+  .drop-zone-sub {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-top: 3px;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── EXCEL PREVIEW ── */
+  .excel-preview {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .excel-preview.visible { display: flex; }
+
+  .excel-preview-meta {
+    font-size: 11px;
+    color: var(--text-mid);
+    font-family: 'Courier New', monospace;
+    background: #f1f5f9;
+    border-radius: 5px;
+    padding: 6px 10px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .excel-preview-meta span { font-weight: 700; color: var(--steel); }
+
+  .col-mapping {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 140px;
+    overflow-y: auto;
+  }
+
+  .col-map-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #f8fafc;
+  }
+
+  .col-map-item .col-src {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--text-dark);
+    min-width: 100px;
+  }
+
+  .col-map-item .arrow { color: var(--text-light); }
+
+  .col-map-item .col-dest {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+  }
+
+  .col-map-item .dest-fixed {
+    background: rgba(15,118,110,0.1);
+    color: #0f766e;
+  }
+
+  .col-map-item .dest-new {
+    background: rgba(99,102,241,0.1);
+    color: #4f46e5;
+  }
+
+  .excel-preview-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ── MANUAL FORM ── */
+  .manual-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  @media (max-width: 500px) {
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .form-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-mid);
+    font-family: 'Arial Narrow', sans-serif;
+  }
+
+  .form-label .required { color: var(--fail); margin-left: 2px; }
+
+  .form-input {
+    padding: 7px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .form-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(15,118,110,0.1);
+  }
+
+  .form-input.field-required-error {
+    border-color: var(--fail);
+    box-shadow: 0 0 0 2px rgba(220,38,38,0.1);
+  }
+
+  .dynamic-fields-section {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dynamic-fields-section.has-fields { display: flex; }
+
+  .dynamic-fields-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #4f46e5;
+    font-family: 'Arial Narrow', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dynamic-fields-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e0e7ff;
+  }
+
+  .dynamic-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  @media (max-width: 500px) {
+    .dynamic-fields-grid { grid-template-columns: 1fr; }
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 4px;
   }
 </style>
 </head>
@@ -458,18 +780,88 @@
     </div>
   </div>
 
-  <!-- TAB STRIP -->
-  <div class="tab-strip-wrap" id="tabStrip">
-    <!-- Tab buttons diisi JS -->
-    <button class="btn-add-tab" onclick="openAddTabModal()" title="Tambah Input Utama baru">＋ Tambah Input</button>
+  <!-- INPUT CARDS -->
+  <div class="input-cards-row">
+
+    <!-- CARD 1: Input by Excel -->
+    <div class="card-excel">
+      <div class="card-title excel-title">📊 Input by Excel</div>
+
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="excelDropZone">
+        <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv"
+          onchange="handleExcelFile(this.files[0])">
+        <div class="drop-zone-icon">📂</div>
+        <div class="drop-zone-text">Klik atau seret file ke sini</div>
+        <div class="drop-zone-sub">.xlsx · .xls · .csv</div>
+      </div>
+
+      <!-- Preview (muncul setelah file dipilih) -->
+      <div class="excel-preview" id="excelPreview">
+        <div class="excel-preview-meta" id="excelMeta"></div>
+
+        <!-- Mapping kolom -->
+        <div style="font-size:11px;font-weight:700;color:var(--text-mid);letter-spacing:1px;text-transform:uppercase;font-family:'Arial Narrow',sans-serif;margin-bottom:2px">
+          Pemetaan Kolom
+        </div>
+        <div class="col-mapping" id="colMapping"></div>
+
+        <div class="excel-preview-actions">
+          <button class="btn btn-primary" onclick="importExcel()">⬇ Import ke Tabel</button>
+          <button class="btn btn-danger" onclick="resetExcel()">✕ Batal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2: Input Manual -->
+    <div class="card-manual">
+      <div class="card-title manual-title">✏️ Input Manual</div>
+      <p style="font-size:12px;color:var(--text-mid);line-height:1.6;">
+        Input data langsung melalui tabel di bawah.<br>
+        Klik <strong>＋ Tambah Baris</strong> untuk menambah baris baru.
+      </p>
+    </div>
+
   </div>
 
-  <!-- TAB PANES diisi JS -->
-  <div id="tabPanes"></div>
+  <!-- PANEL UTAMA -->
+  <div class="panel">
+    <div class="section-label">Tabel Data Asset</div>
+
+    <!-- STATS -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-chip total">Total: <span id="statTotal">0</span></div>
+      <div class="stat-chip saved">Tersimpan: <span id="statSaved">0</span></div>
+      <div class="stat-chip unsaved">Belum Simpan: <span id="statUnsaved">0</span></div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="addRow()">＋ Tambah Baris</button>
+      <button class="btn btn-outline" onclick="openAddColModal()">＋ Tambah Kolom</button>
+      <button class="btn btn-success" onclick="saveAll()" id="btnSaveAll">💾 Simpan Semua</button>
+      <button class="btn btn-secondary" onclick="loadData()">↺ Refresh</button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-scroll">
+      <table id="dataTable">
+        <thead>
+          <tr id="tableHead">
+            <!-- Diisi JS -->
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Diisi JS -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
 
 </div>
 
-<!-- MODAL: Tambah Kolom -->
+<!-- MODAL TAMBAH KOLOM -->
 <div class="modal-overlay" id="addColModal">
   <div class="modal-box">
     <div class="modal-title">➕ Tambah Kolom Baru</div>
@@ -483,11 +875,13 @@
   </div>
 </div>
 
-<!-- MODAL: Hapus Baris -->
+<!-- MODAL KONFIRMASI HAPUS BARIS -->
 <div class="modal-overlay" id="delRowModal">
   <div class="modal-box">
     <div class="modal-title">🗑 Hapus Baris?</div>
-    <p class="modal-desc">Data baris ini akan dihapus permanen dari database. Lanjutkan?</p>
+    <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px">
+      Data baris ini akan dihapus permanen dari database. Lanjutkan?
+    </p>
     <div class="modal-btns">
       <button class="btn btn-outline" onclick="closeDelRowModal()">Batal</button>
       <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelRow()">Hapus</button>
@@ -495,41 +889,19 @@
   </div>
 </div>
 
-<!-- MODAL: Hapus Kolom -->
+<!-- MODAL KONFIRMASI HAPUS KOLOM -->
 <div class="modal-overlay" id="delColModal">
   <div class="modal-box">
     <div class="modal-title">🗑 Hapus Kolom?</div>
-    <p class="modal-desc">Kolom <strong id="delColName">—</strong> akan dihapus dari semua baris. Data di kolom ini akan hilang permanen setelah disimpan.</p>
+    <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px">
+      Kolom <strong id="delColName">—</strong> akan dihapus dari semua baris.
+    </p>
+    <p style="font-size:12px;color:var(--text-light);margin-bottom:18px">
+      Data di kolom ini akan hilang permanen setelah disimpan.
+    </p>
     <div class="modal-btns">
       <button class="btn btn-outline" onclick="closeDelColModal()">Batal</button>
       <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelCol()">Hapus Kolom</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Tambah Input Utama -->
-<div class="modal-overlay" id="addTabModal">
-  <div class="modal-box">
-    <div class="modal-title">➕ Tambah Input Utama Baru</div>
-    <p class="modal-desc">Masukkan nama kategori/jenis asset baru (contoh: Flow Meter, Pressure Gauge, dsb.)</p>
-    <input type="text" class="modal-input" id="newTabName"
-      placeholder="Nama input utama..."
-      onkeydown="if(event.key==='Enter') confirmAddTab()">
-    <div class="modal-btns">
-      <button class="btn btn-danger" onclick="closeAddTabModal()">Batal</button>
-      <button class="btn btn-primary" onclick="confirmAddTab()">Buat</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Hapus Input Utama -->
-<div class="modal-overlay" id="delTabModal">
-  <div class="modal-box">
-    <div class="modal-title">🗑 Hapus Input Utama?</div>
-    <p class="modal-desc">Semua data di tab <strong id="delTabName">—</strong> akan dihapus permanen dari database. Tindakan ini tidak dapat dibatalkan.</p>
-    <div class="modal-btns">
-      <button class="btn btn-outline" onclick="closeDelTabModal()">Batal</button>
-      <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelTab()">Hapus</button>
     </div>
   </div>
 </div>
@@ -541,9 +913,10 @@
 /* ══════════════════════════════════════════════
    SUPABASE CONFIG
 ══════════════════════════════════════════════ */
-var SUPA_URL    = 'https://ruvvximnnacpvvoogbzs.supabase.co';
-var SUPA_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
-var ASSET_TABLE = 'outage_assets';
+var SUPA_URL     = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var ASSET_TABLE  = 'outage_assets';   /* tabel data asset */
+var SCHEMA_TABLE = 'outage_schema';   /* tabel menyimpan definisi kolom dinamis */
 
 function supaFetch(method, path, body) {
   var opts = {
@@ -566,6 +939,7 @@ function supaFetch(method, path, body) {
 /* ══════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════ */
+/* Kolom default — tidak bisa dihapus */
 var FIXED_COLS = ['asset_tag','asset_desc','lokasi','pic'];
 var FIXED_LABELS = {
   'asset_tag':  'Asset Tag',
@@ -574,29 +948,15 @@ var FIXED_LABELS = {
   'pic':        'PIC'
 };
 
-/* Tab icons default */
-var TAB_ICONS = {
-  'Control Valve': '🔧',
-  'Temperature':   '🌡️',
-  'Level Switch':  '📡'
-};
+/* Kolom dinamis (array of key string) */
+var dynamicCols = [];
 
-function getTabIcon(name) {
-  return TAB_ICONS[name] || '📋';
-}
+/* Rows: { _id, _status:'saved'|'new'|'editing', asset_tag, asset_desc, lokasi, pic, [dyn...] } */
+var rows = [];
 
-/* Struktur utama:
-   tabs = [{ id, name, rows, dynamicCols }]
-*/
-var tabs = [];
-var activeTabId = null;
-
-/* Pending actions */
+/* Pending delete */
 var pendingDelRowIdx = null;
 var pendingDelCol    = null;
-var pendingColTabId  = null;
-var pendingDelTabId  = null;
-var colModalTabId    = null;
 
 /* ══════════════════════════════════════════════
    INIT
@@ -606,223 +966,61 @@ var colModalTabId    = null;
     var el = document.getElementById('clockInput');
     if (el) el.textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   }, 1000);
-
-  loadState();
+  loadData();
 })();
 
 /* ══════════════════════════════════════════════
-   LOAD & SAVE STATE (localStorage + Supabase)
+   LOAD DATA
 ══════════════════════════════════════════════ */
-function loadState() {
-  /* Load tab definitions dari localStorage */
-  var stored = null;
-  try { stored = JSON.parse(localStorage.getItem('outage_tabs_v2')); } catch(e){}
+function loadData() {
+  showToast('Memuat data...');
 
-  if (!stored || !stored.length) {
-    /* Default 3 tab */
-    tabs = [
-      { id: 'tab_cv',   name: 'Control Valve', rows: [], dynamicCols: [] },
-      { id: 'tab_temp', name: 'Temperature',   rows: [], dynamicCols: [] },
-      { id: 'tab_ls',   name: 'Level Switch',  rows: [], dynamicCols: [] }
-    ];
-  } else {
-    tabs = stored.map(function(t) {
-      return { id: t.id, name: t.name, rows: [], dynamicCols: t.dynamicCols || [] };
-    });
-  }
-
-  activeTabId = tabs[0].id;
-  renderTabStrip();
-  renderAllPanes();
+  /* Load schema (kolom dinamis) dari localStorage sebagai fallback + Supabase */
+  var localSchema = [];
+  try { localSchema = JSON.parse(localStorage.getItem('outage_dyn_cols') || '[]'); } catch(e) {}
+  dynamicCols = localSchema;
 
   /* Load rows dari Supabase */
-  showToast('Memuat data...');
-  supaFetch('GET', ASSET_TABLE + '?select=*&order=created_at.asc&limit=1000')
+  supaFetch('GET', ASSET_TABLE + '?select=*&order=created_at.asc&limit=500')
     .then(function(data) {
-      /* Distribusikan rows ke tab berdasarkan kolom input_category */
-      (data || []).forEach(function(r) {
-        var cat = (r.input_category || '').trim();
-        var tab = tabs.find(function(t){ return t.name === cat; });
-        if (!tab) {
-          /* Jika kategori belum ada, buat tab baru */
-          var newId = 'tab_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
-          tab = { id: newId, name: cat || 'Lainnya', rows: [], dynamicCols: [] };
-          tabs.push(tab);
-        }
-        /* Merge kolom dinamis dari extra_data */
-        if (r.extra_data && typeof r.extra_data === 'object') {
-          Object.keys(r.extra_data).forEach(function(k) {
-            if (tab.dynamicCols.indexOf(k) === -1) tab.dynamicCols.push(k);
-          });
-        }
-        tab.rows.push(Object.assign({}, r, { _status: 'saved' }));
+      rows = (data || []).map(function(r) {
+        return Object.assign({}, r, { _status: 'saved' });
       });
 
-      saveState();
-      renderTabStrip();
-      renderAllPanes();
+      /* Merge kolom dinamis dari data yang ada */
+      rows.forEach(function(r) {
+        var extra = r.extra_data;
+        if (extra && typeof extra === 'object') {
+          Object.keys(extra).forEach(function(k) {
+            if (dynamicCols.indexOf(k) === -1) dynamicCols.push(k);
+          });
+        }
+      });
+
+      saveDynCols();
+      renderTable();
+      renderManualDynFields();
       showToast('Data dimuat ✓');
     })
     .catch(function() {
-      renderAllPanes();
-      showToast('Gagal muat dari server — menampilkan data lokal');
+      /* Jika tabel belum ada, render kosong */
+      rows = [];
+      renderTable();
+      showToast('Tabel belum ada — tambah baris pertama untuk mulai');
     });
 }
 
-function saveState() {
-  var minimal = tabs.map(function(t){ return { id: t.id, name: t.name, dynamicCols: t.dynamicCols }; });
-  try { localStorage.setItem('outage_tabs_v2', JSON.stringify(minimal)); } catch(e){}
-}
-
-function getTab(tabId) {
-  return tabs.find(function(t){ return t.id === tabId; });
-}
-
 /* ══════════════════════════════════════════════
-   RENDER TAB STRIP
+   RENDER TABLE
 ══════════════════════════════════════════════ */
-function renderTabStrip() {
-  var strip = document.getElementById('tabStrip');
-  /* Hapus semua kecuali tombol add */
-  var addBtn = strip.querySelector('.btn-add-tab');
-  strip.innerHTML = '';
-
-  tabs.forEach(function(tab) {
-    var btn = document.createElement('button');
-    btn.className = 'tab-btn' + (tab.id === activeTabId ? ' active' : '');
-    btn.setAttribute('data-tabid', tab.id);
-    btn.onclick = function(){ switchTab(tab.id); };
-
-    var count = tab.rows.length;
-    btn.innerHTML =
-      '<span class="tab-icon">' + getTabIcon(tab.name) + '</span>' +
-      escHtml(tab.name) +
-      '<span class="tab-count">' + count + '</span>';
-
-    strip.appendChild(btn);
-  });
-
-  strip.appendChild(addBtn);
+function renderTable() {
+  renderHead();
+  renderBody();
+  updateStats();
 }
 
-/* ══════════════════════════════════════════════
-   RENDER PANES
-══════════════════════════════════════════════ */
-function renderAllPanes() {
-  var container = document.getElementById('tabPanes');
-  container.innerHTML = '';
-  tabs.forEach(function(tab) {
-    container.appendChild(buildPane(tab));
-  });
-}
-
-function buildPane(tab) {
-  var pane = document.createElement('div');
-  pane.className = 'tab-pane' + (tab.id === activeTabId ? ' active' : '');
-  pane.id = 'pane_' + tab.id;
-
-  /* Hitung stats */
-  var total   = tab.rows.length;
-  var saved   = tab.rows.filter(function(r){ return r._status === 'saved'; }).length;
-  var unsaved = total - saved;
-
-  /* Cek apakah tab bisa dihapus (bukan 3 default) */
-  var isDefault = ['tab_cv','tab_temp','tab_ls'].indexOf(tab.id) !== -1;
-
-  pane.innerHTML =
-    '<div class="pane-header">' +
-      '<div class="pane-title-group">' +
-        '<span class="tab-icon" style="font-size:20px">' + getTabIcon(tab.name) + '</span>' +
-        (isDefault
-          ? '<div class="pane-title">' + escHtml(tab.name) + '</div>'
-          : '<input class="pane-title-input" value="' + escAttr(tab.name) + '" ' +
-              'onblur="renameTab(\'' + tab.id + '\', this.value)" ' +
-              'onkeydown="if(event.key===\'Enter\')this.blur()" ' +
-              'title="Klik untuk ubah nama">'
-        ) +
-      '</div>' +
-      '<button class="btn-del-tab" onclick="openDelTabModal(\'' + tab.id + '\')" title="Hapus input utama ini">' +
-        '🗑 Hapus' +
-      '</button>' +
-    '</div>' +
-
-    '<div class="section-label">Tabel Data Asset</div>' +
-
-    '<div class="stats-row">' +
-      '<div class="stat-chip total">Total: <span id="statTotal_' + tab.id + '">' + total + '</span></div>' +
-      '<div class="stat-chip saved">Tersimpan: <span id="statSaved_' + tab.id + '">' + saved + '</span></div>' +
-      '<div class="stat-chip unsaved">Belum Simpan: <span id="statUnsaved_' + tab.id + '">' + unsaved + '</span></div>' +
-    '</div>' +
-
-    '<div class="toolbar">' +
-      '<button class="btn btn-primary" onclick="addRow(\'' + tab.id + '\')">＋ Tambah Baris</button>' +
-      '<button class="btn btn-outline" onclick="openAddColModal(\'' + tab.id + '\')">＋ Tambah Kolom</button>' +
-      '<button class="btn btn-success" onclick="saveAll(\'' + tab.id + '\')">💾 Simpan Semua</button>' +
-      '<button class="btn btn-secondary" onclick="refreshTab(\'' + tab.id + '\')">↺ Refresh</button>' +
-    '</div>' +
-
-    '<div class="table-scroll">' +
-      '<table id="table_' + tab.id + '">' +
-        '<thead><tr id="thead_' + tab.id + '"></tr></thead>' +
-        '<tbody id="tbody_' + tab.id + '"></tbody>' +
-      '</table>' +
-    '</div>';
-
-  /* Render head dan body setelah pane dibuat */
-  setTimeout(function(){
-    renderHead(tab.id);
-    renderBody(tab.id);
-  }, 0);
-
-  return pane;
-}
-
-function refreshPane(tabId) {
-  var pane = document.getElementById('pane_' + tabId);
-  if (!pane) return;
-  var tab = getTab(tabId);
-  if (!tab) return;
-
-  /* Update stats */
-  var total   = tab.rows.length;
-  var saved   = tab.rows.filter(function(r){ return r._status === 'saved'; }).length;
-  var unsaved = total - saved;
-  var elTotal   = document.getElementById('statTotal_' + tabId);
-  var elSaved   = document.getElementById('statSaved_' + tabId);
-  var elUnsaved = document.getElementById('statUnsaved_' + tabId);
-  if (elTotal)   elTotal.textContent   = total;
-  if (elSaved)   elSaved.textContent   = saved;
-  if (elUnsaved) elUnsaved.textContent = unsaved;
-
-  renderHead(tabId);
-  renderBody(tabId);
-}
-
-/* ══════════════════════════════════════════════
-   SWITCH TAB
-══════════════════════════════════════════════ */
-function switchTab(tabId) {
-  activeTabId = tabId;
-
-  /* Update tab strip */
-  document.querySelectorAll('.tab-btn').forEach(function(btn) {
-    btn.classList.toggle('active', btn.getAttribute('data-tabid') === tabId);
-  });
-
-  /* Update panes */
-  document.querySelectorAll('.tab-pane').forEach(function(p) {
-    p.classList.toggle('active', p.id === 'pane_' + tabId);
-  });
-}
-
-/* ══════════════════════════════════════════════
-   RENDER HEAD & BODY
-══════════════════════════════════════════════ */
-function renderHead(tabId) {
-  var tab = getTab(tabId);
-  if (!tab) return;
-  var tr = document.getElementById('thead_' + tabId);
-  if (!tr) return;
+function renderHead() {
+  var tr = document.getElementById('tableHead');
   tr.innerHTML = '';
 
   /* No */
@@ -831,7 +1029,7 @@ function renderHead(tabId) {
   thNo.textContent = 'No.';
   tr.appendChild(thNo);
 
-  /* Fixed */
+  /* Kolom Fixed */
   FIXED_COLS.forEach(function(key) {
     var th = document.createElement('th');
     th.className = 'col-fixed';
@@ -840,18 +1038,18 @@ function renderHead(tabId) {
     tr.appendChild(th);
   });
 
-  /* Dynamic */
-  tab.dynamicCols.forEach(function(key) {
+  /* Kolom Dinamis */
+  dynamicCols.forEach(function(key) {
     var th = document.createElement('th');
     th.className = 'col-dynamic';
     th.style.minWidth = '120px';
     th.innerHTML =
       '<div class="th-inner">' +
         '<input class="col-name-input" value="' + escHtml(key) + '" ' +
-          'onblur="renameCol(\'' + tabId + '\',\'' + escAttr(key) + '\', this.value)" ' +
+          'onblur="renameCol(\'' + escAttr(key) + '\', this.value)" ' +
           'onkeydown="if(event.key===\'Enter\')this.blur()" ' +
           'title="Klik untuk rename kolom">' +
-        '<button class="btn-del-col" onclick="openDelColModal(\'' + tabId + '\',\'' + escAttr(key) + '\')" title="Hapus kolom">×</button>' +
+        '<button class="btn-del-col" onclick="openDelColModal(\'' + escAttr(key) + '\')" title="Hapus kolom">×</button>' +
       '</div>';
     tr.appendChild(th);
   });
@@ -863,28 +1061,25 @@ function renderHead(tabId) {
   tr.appendChild(thAct);
 }
 
-function renderBody(tabId) {
-  var tab = getTab(tabId);
-  if (!tab) return;
-  var tbody = document.getElementById('tbody_' + tabId);
-  if (!tbody) return;
+function renderBody() {
+  var tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
 
-  var colCount = FIXED_COLS.length + tab.dynamicCols.length + 2;
-
-  if (tab.rows.length === 0) {
-    tbody.innerHTML =
-      '<tr><td colspan="' + colCount + '">' +
+  if (rows.length === 0) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td colspan="' + (FIXED_COLS.length + dynamicCols.length + 2) + '">' +
         '<div class="empty-state">' +
           '<div class="icon">📭</div>' +
           '<div>Belum ada data asset.</div>' +
-          '<div class="msg">Klik "＋ Tambah Baris" untuk mulai.</div>' +
+          '<div class="msg">Klik "+ Tambah Baris" untuk mulai.</div>' +
         '</div>' +
-      '</td></tr>';
+      '</td>';
+    tbody.appendChild(tr);
     return;
   }
 
-  tab.rows.forEach(function(row, idx) {
+  rows.forEach(function(row, idx) {
     var tr = document.createElement('tr');
     if (row._status === 'editing' || row._status === 'new') tr.classList.add('editing');
 
@@ -895,11 +1090,11 @@ function renderBody(tabId) {
       (row._status === 'saved' ? 'OK' : 'BARU') + '</span>';
     tr.appendChild(tdNo);
 
-    /* Fixed */
+    /* Kolom Fixed */
     FIXED_COLS.forEach(function(key) {
       var td = document.createElement('td');
       if (row._status === 'editing' || row._status === 'new') {
-        td.innerHTML = '<input class="cell-input" id="cell_' + tabId + '_' + idx + '_' + key + '" ' +
+        td.innerHTML = '<input class="cell-input" id="cell_' + idx + '_' + key + '" ' +
           'value="' + escAttr(row[key] || '') + '" placeholder="' + FIXED_LABELS[key] + '">';
       } else {
         td.innerHTML = '<div class="cell-display">' + escHtml(row[key] || '<span style="color:#94a3b8">—</span>') + '</div>';
@@ -907,13 +1102,13 @@ function renderBody(tabId) {
       tr.appendChild(td);
     });
 
-    /* Dynamic */
-    tab.dynamicCols.forEach(function(key) {
+    /* Kolom Dinamis */
+    dynamicCols.forEach(function(key) {
       var td = document.createElement('td');
       var extra = row.extra_data || {};
       var val = extra[key] || '';
       if (row._status === 'editing' || row._status === 'new') {
-        td.innerHTML = '<input class="cell-input" id="cell_' + tabId + '_' + idx + '_dyn_' + escAttr(key) + '" ' +
+        td.innerHTML = '<input class="cell-input" id="cell_' + idx + '_dyn_' + escAttr(key) + '" ' +
           'value="' + escAttr(val) + '" placeholder="' + escAttr(key) + '">';
       } else {
         td.innerHTML = '<div class="cell-display">' + escHtml(val || '<span style="color:#94a3b8">—</span>') + '</div>';
@@ -927,14 +1122,14 @@ function renderBody(tabId) {
     if (row._status === 'editing' || row._status === 'new') {
       tdAct.innerHTML =
         '<div class="action-btns">' +
-          '<button class="btn btn-success btn-sm" onclick="saveRow(\'' + tabId + '\',' + idx + ')">💾</button>' +
-          '<button class="btn btn-danger btn-sm" onclick="cancelEdit(\'' + tabId + '\',' + idx + ')">✕</button>' +
+          '<button class="btn btn-success btn-sm" onclick="saveRow(' + idx + ')">💾</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="cancelEdit(' + idx + ')">✕</button>' +
         '</div>';
     } else {
       tdAct.innerHTML =
         '<div class="action-btns">' +
-          '<button class="btn btn-outline btn-sm" onclick="editRow(\'' + tabId + '\',' + idx + ')">✏</button>' +
-          '<button class="btn btn-danger btn-sm" onclick="openDelRowModal(\'' + tabId + '\',' + idx + ')">🗑</button>' +
+          '<button class="btn btn-outline btn-sm" onclick="editRow(' + idx + ')">✏</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="openDelRowModal(' + idx + ')">🗑</button>' +
         '</div>';
     }
     tr.appendChild(tdAct);
@@ -945,62 +1140,52 @@ function renderBody(tabId) {
 /* ══════════════════════════════════════════════
    ROW ACTIONS
 ══════════════════════════════════════════════ */
-function addRow(tabId) {
-  var tab = getTab(tabId);
-  if (!tab) return;
-  tab.rows.push({ _status: 'new', id: null, asset_tag:'', asset_desc:'', lokasi:'', pic:'', extra_data:{}, input_category: tab.name });
-  refreshPane(tabId);
-  updateTabCount(tabId);
+function addRow() {
+  var newRow = { _status: 'new', _id: null, asset_tag:'', asset_desc:'', lokasi:'', pic:'', extra_data:{} };
+  rows.push(newRow);
+  renderTable();
+  /* Scroll ke bawah */
   setTimeout(function(){
-    var tbody = document.getElementById('tbody_' + tabId);
-    if (tbody && tbody.lastElementChild) tbody.lastElementChild.scrollIntoView({behavior:'smooth', block:'center'});
+    var tbody = document.getElementById('tableBody');
+    if (tbody) tbody.lastElementChild && tbody.lastElementChild.scrollIntoView({behavior:'smooth', block:'center'});
   }, 100);
 }
 
-function editRow(tabId, idx) {
-  var tab = getTab(tabId);
-  if (!tab) return;
-  tab.rows[idx]._status = 'editing';
-  refreshPane(tabId);
+function editRow(idx) {
+  rows[idx]._status = 'editing';
+  renderTable();
 }
 
-function cancelEdit(tabId, idx) {
-  var tab = getTab(tabId);
-  if (!tab) return;
-  if (tab.rows[idx]._status === 'new') {
-    tab.rows.splice(idx, 1);
+function cancelEdit(idx) {
+  if (rows[idx]._status === 'new') {
+    rows.splice(idx, 1);
   } else {
-    tab.rows[idx]._status = 'saved';
+    rows[idx]._status = 'saved';
   }
-  refreshPane(tabId);
-  updateTabCount(tabId);
+  renderTable();
 }
 
-function collectRowFromDom(tabId, idx) {
-  var tab = getTab(tabId);
-  var row = tab.rows[idx];
+function collectRowFromDom(idx) {
+  var row = rows[idx];
   var updated = Object.assign({}, row);
 
   FIXED_COLS.forEach(function(key) {
-    var el = document.getElementById('cell_' + tabId + '_' + idx + '_' + key);
+    var el = document.getElementById('cell_' + idx + '_' + key);
     if (el) updated[key] = el.value.trim();
   });
 
   var extra = {};
-  tab.dynamicCols.forEach(function(key) {
-    var el = document.getElementById('cell_' + tabId + '_' + idx + '_dyn_' + key);
+  dynamicCols.forEach(function(key) {
+    var el = document.getElementById('cell_' + idx + '_dyn_' + key);
     if (el) extra[key] = el.value.trim();
   });
   updated.extra_data = extra;
-  updated.input_category = tab.name;
 
   return updated;
 }
 
-function saveRow(tabId, idx) {
-  var tab = getTab(tabId);
-  if (!tab) return;
-  var updated = collectRowFromDom(tabId, idx);
+function saveRow(idx) {
+  var updated = collectRowFromDom(idx);
 
   if (!updated.asset_tag && !updated.asset_desc) {
     showToast('Asset Tag atau Description harus diisi!');
@@ -1008,29 +1193,31 @@ function saveRow(tabId, idx) {
   }
 
   var payload = {
-    asset_tag:      updated.asset_tag,
-    asset_desc:     updated.asset_desc,
-    lokasi:         updated.lokasi,
-    pic:            updated.pic,
-    extra_data:     updated.extra_data,
-    input_category: updated.input_category,
-    updated_at:     new Date().toISOString()
+    asset_tag:  updated.asset_tag,
+    asset_desc: updated.asset_desc,
+    lokasi:     updated.lokasi,
+    pic:        updated.pic,
+    extra_data: updated.extra_data,
+    updated_at: new Date().toISOString()
   };
 
-  var isNew = !updated.id;
-  if (isNew) payload.created_at = new Date().toISOString();
+  var promise, isNew = !updated.id;
 
-  var promise = isNew
-    ? supaFetch('POST', ASSET_TABLE, payload)
-    : supaFetch('PATCH', ASSET_TABLE + '?id=eq.' + updated.id, payload);
+  if (isNew) {
+    payload.created_at = new Date().toISOString();
+    promise = supaFetch('POST', ASSET_TABLE, payload);
+  } else {
+    promise = supaFetch('PATCH', ASSET_TABLE + '?id=eq.' + updated.id, payload);
+  }
 
   promise
     .then(function(result) {
-      if (isNew && result && result[0]) updated.id = result[0].id;
+      if (isNew && result && result[0]) {
+        updated.id = result[0].id;
+      }
       updated._status = 'saved';
-      tab.rows[idx] = updated;
-      refreshPane(tabId);
-      updateTabCount(tabId);
+      rows[idx] = updated;
+      renderTable();
       showToast('Baris ' + (idx + 1) + ' tersimpan ✓');
     })
     .catch(function(err) {
@@ -1038,140 +1225,24 @@ function saveRow(tabId, idx) {
     });
 }
 
-function saveAll(tabId) {
-  var tab = getTab(tabId);
-  if (!tab) return;
-  var unsaved = tab.rows.filter(function(r){ return r._status !== 'saved'; });
-  if (!unsaved.length) { showToast('Semua data sudah tersimpan ✓'); return; }
+function saveAll() {
+  var unsaved = rows.filter(function(r){ return r._status !== 'saved'; });
+  if (unsaved.length === 0) { showToast('Semua data sudah tersimpan ✓'); return; }
 
-  tab.rows.forEach(function(r, i){
-    if (r._status !== 'saved') saveRow(tabId, i);
-  });
-}
-
-function refreshTab(tabId) {
-  showToast('Memuat ulang...');
-  var tab = getTab(tabId);
-  if (!tab) return;
-  tab.rows = [];
-
-  supaFetch('GET', ASSET_TABLE + '?select=*&input_category=eq.' + encodeURIComponent(tab.name) + '&order=created_at.asc&limit=500')
-    .then(function(data) {
-      tab.rows = (data || []).map(function(r){ return Object.assign({}, r, { _status: 'saved' }); });
-      tab.rows.forEach(function(r) {
-        if (r.extra_data && typeof r.extra_data === 'object') {
-          Object.keys(r.extra_data).forEach(function(k) {
-            if (tab.dynamicCols.indexOf(k) === -1) tab.dynamicCols.push(k);
-          });
-        }
-      });
-      refreshPane(tabId);
-      updateTabCount(tabId);
-      showToast('Data dimuat ulang ✓');
-    })
-    .catch(function() { showToast('Gagal muat dari server'); });
-}
-
-/* ══════════════════════════════════════════════
-   TAB MANAGEMENT
-══════════════════════════════════════════════ */
-function openAddTabModal() {
-  document.getElementById('newTabName').value = '';
-  document.getElementById('addTabModal').classList.add('show');
-  setTimeout(function(){ document.getElementById('newTabName').focus(); }, 100);
-}
-
-function closeAddTabModal() {
-  document.getElementById('addTabModal').classList.remove('show');
-}
-
-function confirmAddTab() {
-  var name = document.getElementById('newTabName').value.trim();
-  if (!name) { showToast('Nama input utama tidak boleh kosong'); return; }
-  if (tabs.find(function(t){ return t.name.toLowerCase() === name.toLowerCase(); })) {
-    showToast('Input utama "' + name + '" sudah ada'); return;
-  }
-
-  var newId = 'tab_' + Date.now();
-  tabs.push({ id: newId, name: name, rows: [], dynamicCols: [] });
-  saveState();
-  activeTabId = newId;
-  renderTabStrip();
-
-  /* Tambah pane baru */
-  var container = document.getElementById('tabPanes');
-  container.appendChild(buildPane(getTab(newId)));
-
-  /* Hide semua pane, show yang baru */
-  switchTab(newId);
-  closeAddTabModal();
-  showToast('Input Utama "' + name + '" dibuat ✓');
-}
-
-function renameTab(tabId, newName) {
-  newName = newName.trim();
-  if (!newName) return;
-  var tab = getTab(tabId);
-  if (!tab || tab.name === newName) return;
-  tab.name = newName;
-  saveState();
-  renderTabStrip();
-  showToast('Nama diubah menjadi "' + newName + '"');
-}
-
-function openDelTabModal(tabId) {
-  pendingDelTabId = tabId;
-  var tab = getTab(tabId);
-  document.getElementById('delTabName').textContent = tab ? tab.name : '—';
-  document.getElementById('delTabModal').classList.add('show');
-}
-
-function closeDelTabModal() {
-  pendingDelTabId = null;
-  document.getElementById('delTabModal').classList.remove('show');
-}
-
-function confirmDelTab() {
-  var tabId = pendingDelTabId;
-  if (!tabId) return;
-  closeDelTabModal();
-
-  var tab = getTab(tabId);
-  if (!tab) return;
-
-  /* Hapus baris dari Supabase */
-  var savedIds = tab.rows.filter(function(r){ return r.id; }).map(function(r){ return r.id; });
-  var delPromise = savedIds.length
-    ? supaFetch('DELETE', ASSET_TABLE + '?id=in.(' + savedIds.join(',') + ')')
-    : Promise.resolve();
-
-  delPromise.then(function() {
-    var idx = tabs.findIndex(function(t){ return t.id === tabId; });
-    if (idx !== -1) tabs.splice(idx, 1);
-
-    /* Hapus pane dari DOM */
-    var pane = document.getElementById('pane_' + tabId);
-    if (pane) pane.remove();
-
-    /* Switch ke tab lain */
-    if (tabs.length) {
-      activeTabId = tabs[0].id;
-      switchTab(activeTabId);
-    }
-
-    saveState();
-    renderTabStrip();
-    showToast('Input Utama dihapus ✓');
-  }).catch(function(err){ showToast('Gagal hapus: ' + (err.message || err)); });
-
-  pendingDelTabId = null;
+  /* Edit semua yang belum editing */
+  rows.forEach(function(r, i){ if(r._status === 'new' || r._status === 'editing') editRow(i); });
+  setTimeout(function(){
+    var promises = [];
+    rows.forEach(function(r, i){
+      if (r._status === 'editing' || r._status === 'new') promises.push(saveRow(i));
+    });
+  }, 100);
 }
 
 /* ══════════════════════════════════════════════
    KOLOM DINAMIS
 ══════════════════════════════════════════════ */
-function openAddColModal(tabId) {
-  colModalTabId = tabId;
+function openAddColModal() {
   document.getElementById('newColName').value = '';
   document.getElementById('addColModal').classList.add('show');
   setTimeout(function(){ document.getElementById('newColName').focus(); }, 100);
@@ -1182,137 +1253,133 @@ function closeAddColModal() {
 }
 
 function confirmAddCol() {
-  var tabId = colModalTabId;
-  var tab = getTab(tabId);
-  if (!tab) return;
   var name = document.getElementById('newColName').value.trim();
   if (!name) { showToast('Nama kolom tidak boleh kosong'); return; }
 
+  /* Normalize jadi key */
   var key = name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   if (!key) { showToast('Nama kolom tidak valid'); return; }
-  if (FIXED_COLS.indexOf(key) !== -1 || tab.dynamicCols.indexOf(name) !== -1) {
-    showToast('Kolom sudah ada'); return;
+  if (FIXED_COLS.indexOf(key) !== -1 || dynamicCols.indexOf(key) !== -1) {
+    showToast('Kolom "' + key + '" sudah ada'); return;
   }
 
-  tab.dynamicCols.push(name);
-  saveState();
-  refreshPane(tabId);
+  /* Simpan nama asli sebagai key (lebih mudah dibaca) */
+  dynamicCols.push(name);
+  saveDynCols();
+  renderTable();
   closeAddColModal();
   showToast('Kolom "' + name + '" ditambahkan ✓');
 }
 
-function renameCol(tabId, oldKey, newName) {
+function renameCol(oldKey, newName) {
   newName = newName.trim();
   if (!newName || newName === oldKey) return;
-  var tab = getTab(tabId);
-  if (!tab) return;
-  var idx = tab.dynamicCols.indexOf(oldKey);
+  var idx = dynamicCols.indexOf(oldKey);
   if (idx === -1) return;
 
-  tab.rows.forEach(function(r) {
+  /* Rename di semua rows */
+  rows.forEach(function(r) {
     if (r.extra_data && r.extra_data[oldKey] !== undefined) {
       r.extra_data[newName] = r.extra_data[oldKey];
       delete r.extra_data[oldKey];
     }
   });
 
-  tab.dynamicCols[idx] = newName;
-  saveState();
-  refreshPane(tabId);
+  dynamicCols[idx] = newName;
+  saveDynCols();
+  renderTable();
   showToast('Kolom diubah menjadi "' + newName + '"');
 }
 
-function openDelColModal(tabId, key) {
+function openDelColModal(key) {
   pendingDelCol = key;
-  pendingColTabId = tabId;
   document.getElementById('delColName').textContent = key;
   document.getElementById('delColModal').classList.add('show');
 }
 
 function closeDelColModal() {
   pendingDelCol = null;
-  pendingColTabId = null;
   document.getElementById('delColModal').classList.remove('show');
 }
 
 function confirmDelCol() {
-  var tabId = pendingColTabId;
-  var key   = pendingDelCol;
-  if (!tabId || !key) return;
-  var tab = getTab(tabId);
-  if (!tab) return;
-
-  var idx = tab.dynamicCols.indexOf(key);
-  if (idx !== -1) tab.dynamicCols.splice(idx, 1);
-  tab.rows.forEach(function(r){ if (r.extra_data) delete r.extra_data[key]; });
-
-  saveState();
-  refreshPane(tabId);
+  if (!pendingDelCol) return;
+  var idx = dynamicCols.indexOf(pendingDelCol);
+  if (idx !== -1) dynamicCols.splice(idx, 1);
+  rows.forEach(function(r){
+    if (r.extra_data) delete r.extra_data[pendingDelCol];
+  });
+  saveDynCols();
+  renderTable();
   closeDelColModal();
-  showToast('Kolom "' + key + '" dihapus');
+  showToast('Kolom "' + pendingDelCol + '" dihapus');
+  pendingDelCol = null;
 }
 
 /* ══════════════════════════════════════════════
    DELETE ROW
 ══════════════════════════════════════════════ */
-var delRowTabId = null;
-
-function openDelRowModal(tabId, idx) {
-  delRowTabId = tabId;
+function openDelRowModal(idx) {
   pendingDelRowIdx = idx;
   document.getElementById('delRowModal').classList.add('show');
 }
 
 function closeDelRowModal() {
-  delRowTabId = null;
   pendingDelRowIdx = null;
   document.getElementById('delRowModal').classList.remove('show');
 }
 
 function confirmDelRow() {
-  var tabId = delRowTabId;
-  var idx   = pendingDelRowIdx;
-  if (idx === null || !tabId) return;
-  var tab = getTab(tabId);
-  if (!tab) return;
-  var row = tab.rows[idx];
+  var idx = pendingDelRowIdx;
+  if (idx === null || idx === undefined) return;
+  var row = rows[idx];
 
   closeDelRowModal();
 
   if (!row.id) {
-    tab.rows.splice(idx, 1);
-    refreshPane(tabId);
-    updateTabCount(tabId);
+    rows.splice(idx, 1);
+    renderTable();
     showToast('Baris dihapus');
     return;
   }
 
   supaFetch('DELETE', ASSET_TABLE + '?id=eq.' + row.id)
     .then(function() {
-      tab.rows.splice(idx, 1);
-      refreshPane(tabId);
-      updateTabCount(tabId);
+      rows.splice(idx, 1);
+      renderTable();
       showToast('Baris dihapus dari database ✓');
     })
-    .catch(function(err){ showToast('Gagal hapus: ' + (err.message || err)); });
+    .catch(function(err) {
+      showToast('Gagal hapus: ' + (err.message || err));
+    });
+
+  pendingDelRowIdx = null;
 }
 
 /* ══════════════════════════════════════════════
-   HELPERS
+   STATS & SCHEMA
 ══════════════════════════════════════════════ */
-function updateTabCount(tabId) {
-  var btn = document.querySelector('.tab-btn[data-tabid="' + tabId + '"]');
-  if (!btn) return;
-  var tab = getTab(tabId);
-  if (!tab) return;
-  var countEl = btn.querySelector('.tab-count');
-  if (countEl) countEl.textContent = tab.rows.length;
+function updateStats() {
+  var total = rows.length;
+  var saved = rows.filter(function(r){ return r._status === 'saved'; }).length;
+  var unsaved = total - saved;
+  document.getElementById('statTotal').textContent   = total;
+  document.getElementById('statSaved').textContent   = saved;
+  document.getElementById('statUnsaved').textContent = unsaved;
 }
 
+function saveDynCols() {
+  try { localStorage.setItem('outage_dyn_cols', JSON.stringify(dynamicCols)); } catch(e){}
+}
+
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+
 function escAttr(s) { return escHtml(s); }
 
 function showToast(msg) {
@@ -1323,11 +1390,300 @@ function showToast(msg) {
   t._timeout = setTimeout(function(){ t.style.opacity = '0'; }, 3000);
 }
 
-/* Close modal klik overlay */
-['addColModal','delRowModal','delColModal','addTabModal','delTabModal'].forEach(function(id){
-  var el = document.getElementById(id);
-  if (el) el.addEventListener('click', function(e){ if (e.target === this) this.classList.remove('show'); });
+/* Close modal saat klik overlay */
+['addColModal','delRowModal','delColModal'].forEach(function(id){
+  document.getElementById(id).addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('show');
+  });
 });
+
+/* ══════════════════════════════════════════════
+   DRAG & DROP EXCEL
+══════════════════════════════════════════════ */
+(function setupDragDrop() {
+  var zone = document.getElementById('excelDropZone');
+  zone.addEventListener('dragover', function(e){ e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', function(){ zone.classList.remove('drag-over'); });
+  zone.addEventListener('drop', function(e){
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleExcelFile(file);
+  });
+})();
+
+/* ══════════════════════════════════════════════
+   EXCEL IMPORT
+══════════════════════════════════════════════ */
+var excelParsedData  = [];  /* array of objects (header → value) */
+var excelColMapping  = {};  /* { excelHeader: {type:'fixed'|'dynamic', key:string} } */
+
+/* Normalisasi header Excel ke key internal */
+function normalizeKey(h) {
+  return String(h).trim().toLowerCase()
+    .replace(/\s+/g,'_')
+    .replace(/[^a-z0-9_]/g,'');
+}
+
+/* Cek apakah header Excel cocok dengan FIXED_COLS */
+var FIXED_ALIASES = {
+  'asset_tag':  ['asset_tag','asset tag','tag','kode','kode aset'],
+  'asset_desc': ['asset_desc','asset description','asset desc','deskripsi','nama aset','description','nama'],
+  'lokasi':     ['lokasi','location','lokasi aset','tempat'],
+  'pic':        ['pic','penanggung jawab','person in charge','pj']
+};
+
+function matchFixed(header) {
+  var h = String(header).trim().toLowerCase();
+  for (var col in FIXED_ALIASES) {
+    if (FIXED_ALIASES[col].indexOf(h) !== -1 || normalizeKey(header) === col) {
+      return col;
+    }
+  }
+  return null;
+}
+
+function handleExcelFile(file) {
+  if (!file) return;
+
+  var ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'csv') {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var parsed = parseCSV(text);
+      processExcelData(parsed, file.name);
+    };
+    reader.readAsText(file);
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    /* Load SheetJS dari CDN secara dinamis jika belum ada */
+    if (typeof XLSX !== 'undefined') {
+      readWithXLSX(file);
+    } else {
+      var script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      script.onload = function() { readWithXLSX(file); };
+      script.onerror = function() {
+        showToast('Gagal load library Excel. Coba format CSV.');
+      };
+      document.head.appendChild(script);
+    }
+  } else {
+    showToast('Format tidak didukung. Gunakan .xlsx, .xls, atau .csv');
+  }
+}
+
+function readWithXLSX(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb  = XLSX.read(e.target.result, { type: 'array' });
+      var ws  = wb.Sheets[wb.SheetNames[0]];
+      var raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      processExcelData(raw, file.name);
+    } catch(err) {
+      showToast('Gagal baca file Excel: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseCSV(text) {
+  var lines  = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
+  if (lines.length < 2) return [];
+  var headers = lines[0].split(',').map(function(h){ return h.replace(/^"|"$/g,'').trim(); });
+  return lines.slice(1).map(function(line) {
+    var vals = line.split(',').map(function(v){ return v.replace(/^"|"$/g,'').trim(); });
+    var obj  = {};
+    headers.forEach(function(h, i){ obj[h] = vals[i] || ''; });
+    return obj;
+  });
+}
+
+function processExcelData(data, filename) {
+  if (!data || data.length === 0) { showToast('File kosong atau tidak bisa dibaca'); return; }
+
+  excelParsedData = data;
+
+  /* Bangun mapping kolom */
+  var headers = Object.keys(data[0]);
+  excelColMapping = {};
+
+  headers.forEach(function(h) {
+    var fixedMatch = matchFixed(h);
+    if (fixedMatch) {
+      excelColMapping[h] = { type: 'fixed', key: fixedMatch };
+    } else {
+      var key = h.trim() || normalizeKey(h);
+      excelColMapping[h] = { type: 'dynamic', key: key || h };
+    }
+  });
+
+  /* Tampilkan preview */
+  document.getElementById('excelMeta').innerHTML =
+    'File: <span>' + escHtml(filename) + '</span> &nbsp;|&nbsp; ' +
+    'Baris: <span>' + data.length + '</span> &nbsp;|&nbsp; ' +
+    'Kolom: <span>' + headers.length + '</span>';
+
+  var mappingHtml = '';
+  headers.forEach(function(h) {
+    var m   = excelColMapping[h];
+    var cls = m.type === 'fixed' ? 'dest-fixed' : 'dest-new';
+    var lbl = m.type === 'fixed'
+      ? (FIXED_LABELS[m.key] || m.key)
+      : '+ Kolom Baru: ' + m.key;
+    mappingHtml +=
+      '<div class="col-map-item">' +
+        '<span class="col-src">' + escHtml(h) + '</span>' +
+        '<span class="arrow">→</span>' +
+        '<span class="col-dest ' + cls + '">' + escHtml(lbl) + '</span>' +
+      '</div>';
+  });
+  document.getElementById('colMapping').innerHTML = mappingHtml;
+
+  document.getElementById('excelDropZone').style.display  = 'none';
+  document.getElementById('excelPreview').classList.add('visible');
+}
+
+function importExcel() {
+  if (!excelParsedData.length) return;
+
+  /* 1. Tambah kolom dinamis baru yang belum ada */
+  Object.values(excelColMapping).forEach(function(m) {
+    if (m.type === 'dynamic' && dynamicCols.indexOf(m.key) === -1) {
+      dynamicCols.push(m.key);
+    }
+  });
+  saveDynCols();
+
+  /* 2. Convert baris Excel → format rows */
+  var newRows = excelParsedData.map(function(r) {
+    var row = {
+      _status: 'new', _id: null,
+      asset_tag: '', asset_desc: '', lokasi: '', pic: '',
+      extra_data: {}
+    };
+    Object.keys(r).forEach(function(h) {
+      var m = excelColMapping[h];
+      if (!m) return;
+      if (m.type === 'fixed') {
+        row[m.key] = String(r[h] || '').trim();
+      } else {
+        row.extra_data[m.key] = String(r[h] || '').trim();
+      }
+    });
+    return row;
+  });
+
+  /* 3. Append ke rows */
+  rows = rows.concat(newRows);
+  renderTable();
+  renderManualDynFields();
+  showToast(newRows.length + ' baris berhasil diimport ✓');
+  resetExcel();
+}
+
+function resetExcel() {
+  excelParsedData = [];
+  excelColMapping = {};
+  document.getElementById('excelFileInput').value  = '';
+  document.getElementById('excelPreview').classList.remove('visible');
+  document.getElementById('excelDropZone').style.display = '';
+  document.getElementById('colMapping').innerHTML  = '';
+  document.getElementById('excelMeta').innerHTML   = '';
+}
+
+/* ══════════════════════════════════════════════
+   MANUAL FORM
+══════════════════════════════════════════════ */
+function renderManualDynFields() {
+  var section = document.getElementById('manualDynSection');
+  var grid    = document.getElementById('manualDynFields');
+
+  if (dynamicCols.length === 0) {
+    section.classList.remove('has-fields');
+    grid.innerHTML = '';
+    return;
+  }
+
+  section.classList.add('has-fields');
+  grid.innerHTML = dynamicCols.map(function(col) {
+    return '<div class="form-field">' +
+      '<div class="form-label">' + escHtml(col) + '</div>' +
+      '<input type="text" class="form-input" id="mf_dyn_' + escAttr(col) + '" placeholder="' + escAttr(col) + '">' +
+    '</div>';
+  }).join('');
+}
+
+function submitManual() {
+  var assetTag  = document.getElementById('mf_asset_tag').value.trim();
+  var assetDesc = document.getElementById('mf_asset_desc').value.trim();
+  var lokasi    = document.getElementById('mf_lokasi').value.trim();
+  var pic       = document.getElementById('mf_pic').value.trim();
+
+  /* Validasi minimal 1 field wajib */
+  var tagEl  = document.getElementById('mf_asset_tag');
+  var descEl = document.getElementById('mf_asset_desc');
+
+  tagEl.classList.remove('field-required-error');
+  descEl.classList.remove('field-required-error');
+
+  if (!assetTag && !assetDesc) {
+    tagEl.classList.add('field-required-error');
+    descEl.classList.add('field-required-error');
+    showToast('Asset Tag atau Description harus diisi!');
+    return;
+  }
+
+  /* Kumpulkan kolom dinamis */
+  var extra = {};
+  dynamicCols.forEach(function(col) {
+    var el = document.getElementById('mf_dyn_' + col);
+    if (el) extra[col] = el.value.trim();
+  });
+
+  var newRow = {
+    _status:    'new',
+    _id:        null,
+    asset_tag:  assetTag,
+    asset_desc: assetDesc,
+    lokasi:     lokasi,
+    pic:        pic,
+    extra_data: extra
+  };
+
+  rows.push(newRow);
+  renderTable();
+  showToast('Baris ditambahkan ke tabel ✓ — klik 💾 untuk simpan');
+  resetManual();
+
+  /* Scroll ke tabel */
+  setTimeout(function(){
+    var tbody = document.getElementById('tableBody');
+    if (tbody && tbody.lastElementChild) {
+      tbody.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 150);
+}
+
+function resetManual() {
+  ['mf_asset_tag','mf_asset_desc','mf_lokasi','mf_pic'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('field-required-error'); }
+  });
+  dynamicCols.forEach(function(col){
+    var el = document.getElementById('mf_dyn_' + col);
+    if (el) el.value = '';
+  });
+}
+
+/* Re-render form manual saat kolom dinamis berubah */
+var _origSaveDynCols = saveDynCols;
+saveDynCols = function() {
+  _origSaveDynCols();
+  renderManualDynFields();
+};
 </script>
 </body>
 </html>
