@@ -925,7 +925,7 @@
 <!-- TOPBAR -->
 <div class="topbar">
   <button class="topbar-back" onclick="window.location.href='outage-index.html'">← Outage</button>
-  <button class="topbar-back" onclick="window.location.href='outage-history.html'" style="margin-left:2px">📋 History Input</button>
+  <button class="topbar-back" onclick="window.location.href='history-outage.html'" style="margin-left:2px">📋 History Input</button>
   <div class="topbar-sep"></div>
   <div class="topbar-logo">INPUT DATA</div>
   <div class="topbar-sep"></div>
@@ -1118,6 +1118,18 @@
 
 
 <div id="toast"></div>
+
+<!-- MODAL: Reset Referensi -->
+<div class="modal-overlay" id="resetRefModal">
+  <div class="modal-box">
+    <div class="modal-title">🔄 Reset Kolom Tambahan?</div>
+    <p class="modal-desc">Semua kolom tambahan pada tab <strong id="resetRefTabName">—</strong> akan dihapus. Kolom fix (Asset Tag, Deskripsi, Lokasi, PIC) tetap ada.</p>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeResetRefModal()">Batal</button>
+      <button class="btn btn-danger" style="background:var(--warn,#d97706);color:#fff;border:none" onclick="confirmResetRef()">Reset</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ══════════════════════════════════════════════
@@ -1642,18 +1654,32 @@ function updateTabCount(tabId){
   var tab=getTab(tabId); if(!tab) return;
   var el=btn.querySelector('.tab-count'); if(el) el.textContent=tab.rows.length;
 }
+var pendingResetTabId = null;
 function resetToDynCols(tabId){
+  pendingResetTabId = tabId;
   var tab = getTab(tabId); if(!tab) return;
-  if(!confirm('Reset semua kolom tambahan pada tab "'+tab.name+'"?\nKolom fix (Asset Tag, Deskripsi, Lokasi, PIC) tetap ada.')) return;
+  document.getElementById('resetRefTabName').textContent = tab.name;
+  document.getElementById('resetRefModal').classList.add('show');
+}
+function closeResetRefModal(){
+  pendingResetTabId = null;
+  document.getElementById('resetRefModal').classList.remove('show');
+}
+function confirmResetRef(){
+  var tabId = pendingResetTabId; if(!tabId) return;
+  var tab = getTab(tabId); if(!tab) return;
+  closeResetRefModal();
   tab.dynamicCols = [];
   tab.rows.forEach(function(r){ if(r.extra_data) r.extra_data = {}; });
   saveState();
-  /* Rebuild pane dari awal supaya head & body ikut reset */
   var container = document.getElementById('tabPanes');
   var oldPane = document.getElementById('pane_'+tabId);
   if(oldPane && container) {
     var newPane = buildPane(tab);
     container.replaceChild(newPane, oldPane);
+    /* Re-attach reset button listener */
+    var resetBtn = newPane.querySelector('.reset-ref-btn');
+    if(resetBtn) resetBtn.onclick = function(){ resetToDynCols(tabId); };
   }
   showToast('Kolom tambahan "'+tab.name+'" direset ✓');
 }
@@ -1672,7 +1698,7 @@ function showToast(msg){
 }
 
 /* Close modal on overlay click */
-['addColModal','delRowModal','delColModal','addTabModal','delTabModal','saveRefModal','delRefModal'].forEach(function(id){
+['addColModal','delRowModal','delColModal','addTabModal','delTabModal','saveRefModal','delRefModal','resetRefModal'].forEach(function(id){
   var el=document.getElementById(id); if(el) el.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('show'); });
 });
 </script>
