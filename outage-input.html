@@ -893,7 +893,32 @@
     padding: 0;
     line-height: 1;
   }
+
+  /* ── TAB STRIP ── */
+  .tab-strip-wrap { display:flex; align-items:flex-end; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch; border-bottom:2px solid var(--border); margin-bottom:0; padding-bottom:0; position:relative; }
+  .tab-strip-wrap::-webkit-scrollbar { height:3px; }
+  .tab-strip-wrap::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .tab-btn { display:inline-flex; align-items:center; gap:7px; padding:10px 20px 12px; font-size:clamp(11px,1.2vw,13px); font-weight:600; font-family:inherit; cursor:pointer; border:1.5px solid transparent; border-bottom:none; border-top-left-radius:8px; border-top-right-radius:8px; white-space:nowrap; transition:all 0.18s; background:#e8eef5; color:var(--text-mid); margin-right:4px; position:relative; bottom:-2px; flex-shrink:0; }
+  .tab-btn:hover:not(.active) { background:#dde7f0; color:var(--steel); }
+  .tab-btn.active { background:var(--bg2); color:var(--steel); border-color:var(--border); border-bottom-color:var(--bg2); z-index:2; }
+  .tab-btn .tab-count { font-size:10px; font-family:'Courier New',monospace; font-weight:700; padding:1px 6px; border-radius:10px; min-width:20px; text-align:center; }
+  .tab-btn.active .tab-count { background:var(--accent); color:#fff; }
+  .tab-btn:not(.active) .tab-count { background:var(--text-light); color:#fff; }
+  .tab-btn .tab-icon { font-size:14px; }
+  .btn-add-tab { display:inline-flex; align-items:center; gap:6px; padding:8px 16px 10px; font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; border:1.5px dashed var(--accent); border-bottom:none; border-top-left-radius:8px; border-top-right-radius:8px; background:rgba(15,118,110,0.04); color:var(--accent); white-space:nowrap; transition:all 0.18s; position:relative; bottom:-2px; flex-shrink:0; }
+  .btn-add-tab:hover { background:rgba(15,118,110,0.1); }
+  .tab-pane { display:none; background:var(--bg2); border:1.5px solid var(--border); border-top:none; border-radius:0 0 10px 10px; padding:clamp(14px,2vw,24px) clamp(12px,2.5vw,26px); box-shadow:var(--shadow-sm); margin-bottom:clamp(10px,1.5vh,20px); }
+  .tab-pane.active { display:block; }
+  .pane-header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .pane-title-group { display:flex; align-items:center; gap:12px; }
+  .pane-title { font-family:'Arial Narrow',sans-serif; font-size:clamp(14px,1.8vw,18px); font-weight:700; color:var(--steel); letter-spacing:0.5px; }
+  .pane-title-input { font-family:'Arial Narrow',sans-serif; font-size:clamp(14px,1.8vw,18px); font-weight:700; color:var(--steel); border:none; border-bottom:2px dashed var(--border); outline:none; background:transparent; padding:2px 4px; min-width:80px; cursor:text; transition:border-color 0.2s; }
+  .pane-title-input:focus { border-bottom-color:var(--accent); }
+  .btn-del-tab { padding:4px 10px; border-radius:5px; border:1.5px solid #fecaca; background:#fef2f2; color:var(--fail); font-size:11px; font-weight:600; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s; }
+  .btn-del-tab:hover { background:var(--fail); color:#fff; border-color:var(--fail); }
+
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -960,7 +985,8 @@
       <div class="card-title manual-title">✏️ Input Manual</div>
       <p style="font-size:12px;color:var(--text-mid);line-height:1.6;">
         Input data langsung melalui tabel di bawah.<br>
-        Klik <strong>＋ Tambah Baris</strong> untuk menambah baris baru.
+        Klik <strong>＋ Tambah Baris</strong> untuk menambah baris baru.<br>
+        Klik <strong>＋ Tambah Kolom</strong> untuk menambah nomor WO, deskripsi asset, atau informasi lainnya.
       </p>
     </div>
 
@@ -976,45 +1002,17 @@
     </div>
   </div>
 
-  <!-- PANEL UTAMA -->
-  <div class="panel">
-    <div class="section-label">Tabel Data Asset</div>
-
-    <!-- STATS -->
-    <div class="stats-row" id="statsRow">
-      <div class="stat-chip total">Total: <span id="statTotal">0</span></div>
-      <div class="stat-chip saved">Tersimpan: <span id="statSaved">0</span></div>
-      <div class="stat-chip unsaved">Belum Simpan: <span id="statUnsaved">0</span></div>
-    </div>
-
-    <!-- TOOLBAR -->
-    <div class="toolbar">
-      <button class="btn btn-primary" onclick="addRow()">＋ Tambah Baris</button>
-      <button class="btn btn-outline" onclick="openAddColModal()">＋ Tambah Kolom</button>
-      <button class="btn btn-outline" onclick="openSaveRefModal()" style="border-color:#7c3aed;color:#7c3aed;">🗂 Simpan Referensi</button>
-      <button class="btn btn-success" onclick="saveAll()" id="btnSaveAll">💾 Simpan Semua Data</button>
-      <button class="btn btn-secondary" onclick="loadData()">↺ Refresh</button>
-    </div>
-
-    <!-- TABLE -->
-    <div class="table-scroll">
-      <table id="dataTable">
-        <thead>
-          <tr id="tableHead">
-            <!-- Diisi JS -->
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <!-- Diisi JS -->
-        </tbody>
-      </table>
-    </div>
-
+  <!-- TAB STRIP -->
+  <div class="tab-strip-wrap" id="tabStrip">
+    <button class="btn-add-tab" onclick="openAddTabModal()" title="Tambah Input Utama baru">＋ Tambah Input</button>
   </div>
+
+  <!-- TAB PANES -->
+  <div id="tabPanes"></div>
 
 </div>
 
-<!-- MODAL TAMBAH KOLOM -->
+<!-- MODAL: Tambah Kolom -->
 <div class="modal-overlay" id="addColModal">
   <div class="modal-box">
     <div class="modal-title">➕ Tambah Kolom Baru</div>
@@ -1028,13 +1026,11 @@
   </div>
 </div>
 
-<!-- MODAL KONFIRMASI HAPUS BARIS -->
+<!-- MODAL: Hapus Baris -->
 <div class="modal-overlay" id="delRowModal">
   <div class="modal-box">
     <div class="modal-title">🗑 Hapus Baris?</div>
-    <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px">
-      Data baris ini akan dihapus permanen dari database. Lanjutkan?
-    </p>
+    <p class="modal-desc">Data baris ini akan dihapus permanen dari database. Lanjutkan?</p>
     <div class="modal-btns">
       <button class="btn btn-outline" onclick="closeDelRowModal()">Batal</button>
       <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelRow()">Hapus</button>
@@ -1042,16 +1038,11 @@
   </div>
 </div>
 
-<!-- MODAL KONFIRMASI HAPUS KOLOM -->
+<!-- MODAL: Hapus Kolom -->
 <div class="modal-overlay" id="delColModal">
   <div class="modal-box">
     <div class="modal-title">🗑 Hapus Kolom?</div>
-    <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px">
-      Kolom <strong id="delColName">—</strong> akan dihapus dari semua baris.
-    </p>
-    <p style="font-size:12px;color:var(--text-light);margin-bottom:18px">
-      Data di kolom ini akan hilang permanen setelah disimpan.
-    </p>
+    <p class="modal-desc">Kolom <strong id="delColName">—</strong> akan dihapus dari semua baris. Data di kolom ini akan hilang permanen setelah disimpan.</p>
     <div class="modal-btns">
       <button class="btn btn-outline" onclick="closeDelColModal()">Batal</button>
       <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelCol()">Hapus Kolom</button>
@@ -1059,84 +1050,82 @@
   </div>
 </div>
 
-<!-- MODAL SIMPAN REFERENSI -->
+<!-- MODAL: Tambah Input Utama -->
+<div class="modal-overlay" id="addTabModal">
+  <div class="modal-box">
+    <div class="modal-title">➕ Tambah Input Utama Baru</div>
+    <p class="modal-desc">Masukkan nama kategori/jenis asset baru (contoh: Flow Meter, Pressure Gauge, dsb.)</p>
+    <input type="text" class="modal-input" id="newTabName"
+      placeholder="Nama input utama..."
+      onkeydown="if(event.key==='Enter') confirmAddTab()">
+    <div class="modal-btns">
+      <button class="btn btn-danger" onclick="closeAddTabModal()">Batal</button>
+      <button class="btn btn-primary" onclick="confirmAddTab()">Buat</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Hapus Input Utama -->
+<div class="modal-overlay" id="delTabModal">
+  <div class="modal-box">
+    <div class="modal-title">🗑 Hapus Input Utama?</div>
+    <p class="modal-desc">Semua data di tab <strong id="delTabName">—</strong> akan dihapus permanen dari database. Tindakan ini tidak dapat dibatalkan.</p>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeDelTabModal()">Batal</button>
+      <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelTab()">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Simpan Referensi -->
 <div class="modal-overlay" id="saveRefModal">
   <div class="modal-box">
-    <div class="modal-title">💾 Simpan Referensi Tabel Input</div>
-    <p style="font-size:12px;color:var(--text-mid);margin-bottom:14px;">
-      Referensi akan menyimpan <strong id="saveRefColCount">0</strong> kolom aktif saat ini sebagai template yang bisa dipakai kembali.
-    </p>
-    <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-mid);display:block;margin-bottom:5px;">Nama Referensi</label>
-    <input type="text" class="modal-input" id="refName" placeholder="Contoh: Template Mekanikal, Template Elektrikal..."
-      onkeydown="if(event.key==='Enter') document.getElementById('refPassword').focus()">
-    <label style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-mid);display:block;margin-bottom:5px;">Buat Sandi</label>
-    <div class="pw-toggle-wrap">
-      <input type="password" class="modal-input-pw" id="refPassword" placeholder="Sandi untuk menghapus referensi ini"
-        onkeydown="if(event.key==='Enter') document.getElementById('refPasswordConfirm').focus()">
-      <button class="pw-toggle-btn" onclick="togglePw('refPassword',this)" tabindex="-1">👁</button>
+    <div class="modal-title">🗂 Simpan Referensi Template Kolom</div>
+    <p class="modal-desc">Simpan konfigurasi kolom tab aktif sebagai template. Masukkan nama dan sandi untuk mengamankan referensi ini.</p>
+    <input type="text" class="modal-input" id="refNameInput"
+      placeholder="Nama referensi, contoh: Template CV Standard..."
+      onkeydown="if(event.key==='Enter') document.getElementById('refPassInput').focus()">
+    <div style="position:relative">
+      <input type="password" class="modal-input" id="refPassInput"
+        placeholder="Buat kata sandi..."
+        onkeydown="if(event.key==='Enter') confirmSaveRef()" style="padding-right:36px">
+      <button onclick="togglePw('refPassInput',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:#94a3b8">👁</button>
     </div>
-    <div class="pw-toggle-wrap" style="margin-bottom:14px;">
-      <input type="password" class="modal-input-pw" id="refPasswordConfirm" placeholder="Konfirmasi sandi"
-        onkeydown="if(event.key==='Enter') confirmSaveRef()">
-      <button class="pw-toggle-btn" onclick="togglePw('refPasswordConfirm',this)" tabindex="-1">👁</button>
-    </div>
-    <div class="modal-hint" id="saveRefHint"></div>
     <div class="modal-btns">
       <button class="btn btn-danger" onclick="closeSaveRefModal()">Batal</button>
-      <button class="btn btn-primary" onclick="openConfirmRefModal()" style="background:#7c3aed;">Lanjut →</button>
+      <button class="btn btn-primary" onclick="confirmSaveRef()">Simpan</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL KONFIRMASI SIMPAN REFERENSI -->
-<div class="modal-overlay" id="confirmRefModal">
-  <div class="modal-box">
-    <div class="modal-title">⚠️ Konfirmasi Simpan Referensi</div>
-    <p style="font-size:13px;color:var(--text-mid);margin-bottom:6px;">
-      Yakin ingin menyimpan referensi tabel data input?
-    </p>
-    <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;margin-bottom:16px;">
-      <div style="font-size:12px;font-weight:700;color:#5b21b6;margin-bottom:4px;" id="confirmRefName">—</div>
-      <div style="font-size:11px;color:#7c3aed;" id="confirmRefCols">—</div>
-    </div>
-    <div class="modal-btns">
-      <button class="btn btn-outline" onclick="closeConfirmRefModal()">← Kembali Edit</button>
-      <button class="btn btn-primary" onclick="confirmSaveRef()" style="background:#7c3aed;">✓ Ya, Simpan</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL HAPUS REFERENSI -->
+<!-- MODAL: Hapus Referensi (dengan sandi) -->
 <div class="modal-overlay" id="delRefModal">
   <div class="modal-box">
-    <div class="modal-title">🗑 Hapus Referensi</div>
-    <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;">
-      Masukkan sandi untuk menghapus referensi <strong id="delRefName">—</strong>.
-    </p>
-    <div class="pw-toggle-wrap" style="margin-bottom:8px;">
-      <input type="password" class="modal-input-pw" id="delRefPassword" placeholder="Masukkan sandi referensi"
-        onkeydown="if(event.key==='Enter') confirmDelRef()">
-      <button class="pw-toggle-btn" onclick="togglePw('delRefPassword',this)" tabindex="-1">👁</button>
+    <div class="modal-title">🗑 Hapus Referensi?</div>
+    <p class="modal-desc">Masukkan sandi untuk menghapus referensi <strong id="delRefName">—</strong>.</p>
+    <div style="position:relative">
+      <input type="password" class="modal-input" id="delRefPassInput"
+        placeholder="Buat kata sandi..."
+        onkeydown="if(event.key==='Enter') confirmDelRef()" style="padding-right:36px">
+      <button onclick="togglePw('delRefPassInput',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:#94a3b8">👁</button>
     </div>
-    <div class="modal-hint" id="delRefHint"></div>
-    <div class="modal-btns" style="margin-top:6px;">
+    <div class="modal-btns">
       <button class="btn btn-outline" onclick="closeDelRefModal()">Batal</button>
       <button class="btn btn-danger" style="background:var(--fail);color:#fff;border:none" onclick="confirmDelRef()">Hapus</button>
     </div>
   </div>
 </div>
 
-<!-- TOAST -->
+
 <div id="toast"></div>
 
 <script>
 /* ══════════════════════════════════════════════
    SUPABASE CONFIG
 ══════════════════════════════════════════════ */
-var SUPA_URL     = 'https://ruvvximnnacpvvoogbzs.supabase.co';
-var SUPA_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
-var ASSET_TABLE  = 'outage_assets';   /* tabel data asset */
-var SCHEMA_TABLE = 'outage_schema';   /* tabel menyimpan definisi kolom dinamis */
+var SUPA_URL    = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var ASSET_TABLE = 'outage_assets';
 
 function supaFetch(method, path, body) {
   var opts = {
@@ -1159,995 +1148,533 @@ function supaFetch(method, path, body) {
 /* ══════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════ */
-/* Kolom default — tidak bisa dihapus */
 var FIXED_COLS = ['asset_tag','asset_desc','lokasi','pic'];
-var FIXED_LABELS = {
-  'asset_tag':  'Asset Tag',
-  'asset_desc': 'Asset Description',
-  'lokasi':     'Lokasi',
-  'pic':        'PIC'
-};
+var FIXED_LABELS = { 'asset_tag':'Asset Tag','asset_desc':'Asset Description','lokasi':'Lokasi','pic':'PIC' };
+var TAB_ICONS = { 'Control Valve':'🔧','Temperature':'🌡️','Level Switch':'📡' };
+function getTabIcon(n){ return TAB_ICONS[n]||'📋'; }
 
-/* Kolom dinamis (array of key string) */
-var dynamicCols = [];
+var tabs = [];
+var activeTabId = null;
+var pendingDelRowIdx = null; var delRowTabId = null;
+var pendingDelCol = null; var pendingColTabId = null;
+var pendingDelTabId = null; var colModalTabId = null;
 
-/* Rows: { _id, _status:'saved'|'new'|'editing', asset_tag, asset_desc, lokasi, pic, [dyn...] } */
-var rows = [];
-
-/* Pending delete */
-var pendingDelRowIdx = null;
-var pendingDelCol    = null;
+/* ══════════════════════════════════════════════
+   CLOCK
+══════════════════════════════════════════════ */
+setInterval(function(){
+  var el = document.getElementById('clockInput');
+  if (el) el.textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
 
 /* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
-(function init() {
-  setInterval(function(){
-    var el = document.getElementById('clockInput');
-    if (el) el.textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  }, 1000);
-  loadData();
-})();
+window.addEventListener('DOMContentLoaded', function(){
+  initExcel();
+  initRefChips();
+  loadState();
+});
 
 /* ══════════════════════════════════════════════
-   LOAD DATA
+   LOAD STATE
 ══════════════════════════════════════════════ */
-function loadData() {
+function loadState() {
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('outage_tabs_v2')); } catch(e){}
+  if (!stored || !stored.length) {
+    tabs = [
+      { id:'tab_cv',   name:'Control Valve', rows:[], dynamicCols:[] },
+      { id:'tab_temp', name:'Temperature',   rows:[], dynamicCols:[] },
+      { id:'tab_ls',   name:'Level Switch',  rows:[], dynamicCols:[] }
+    ];
+  } else {
+    tabs = stored.map(function(t){ return { id:t.id, name:t.name, rows:[], dynamicCols:t.dynamicCols||[] }; });
+  }
+  activeTabId = tabs[0].id;
+  renderTabStrip();
+  renderAllPanes();
   showToast('Memuat data...');
-
-  /* Load schema (kolom dinamis) dari localStorage sebagai fallback + Supabase */
-  var localSchema = [];
-  try { localSchema = JSON.parse(localStorage.getItem('outage_dyn_cols') || '[]'); } catch(e) {}
-  dynamicCols = localSchema;
-
-  /* Load rows dari Supabase */
-  supaFetch('GET', ASSET_TABLE + '?select=*&order=created_at.asc&limit=500')
-    .then(function(data) {
-      rows = (data || []).map(function(r) {
-        return Object.assign({}, r, { _status: 'saved' });
-      });
-
-      /* Merge kolom dinamis dari data yang ada */
-      rows.forEach(function(r) {
-        var extra = r.extra_data;
-        if (extra && typeof extra === 'object') {
-          Object.keys(extra).forEach(function(k) {
-            if (dynamicCols.indexOf(k) === -1) dynamicCols.push(k);
-          });
+  supaFetch('GET', ASSET_TABLE+'?select=*&order=created_at.asc&limit=1000')
+    .then(function(data){
+      (data||[]).forEach(function(r){
+        var cat = (r.input_category||'').trim();
+        var tab = tabs.find(function(t){ return t.name===cat; });
+        if (!tab) {
+          var nid='tab_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
+          tab={id:nid,name:cat||'Lainnya',rows:[],dynamicCols:[]};
+          tabs.push(tab);
         }
+        if (r.extra_data && typeof r.extra_data==='object') {
+          Object.keys(r.extra_data).forEach(function(k){ if(tab.dynamicCols.indexOf(k)===-1) tab.dynamicCols.push(k); });
+        }
+        tab.rows.push(Object.assign({},r,{_status:'saved'}));
       });
-
-      saveDynCols();
-      renderTable();
-      renderManualDynFields();
+      saveState(); renderTabStrip(); renderAllPanes();
       showToast('Data dimuat ✓');
     })
-    .catch(function() {
-      /* Jika tabel belum ada, render kosong */
-      rows = [];
-      renderTable();
-      showToast('Tabel belum ada — tambah baris pertama untuk mulai');
-    });
+    .catch(function(){ renderAllPanes(); showToast('Gagal muat dari server'); });
+}
+
+function saveState() {
+  var m=tabs.map(function(t){ return {id:t.id,name:t.name,dynamicCols:t.dynamicCols}; });
+  try { localStorage.setItem('outage_tabs_v2',JSON.stringify(m)); } catch(e){}
+}
+function getTab(id){ return tabs.find(function(t){ return t.id===id; }); }
+
+/* ══════════════════════════════════════════════
+   RENDER TAB STRIP
+══════════════════════════════════════════════ */
+function renderTabStrip() {
+  var strip=document.getElementById('tabStrip');
+  var addBtn=strip.querySelector('.btn-add-tab');
+  strip.innerHTML='';
+  tabs.forEach(function(tab){
+    var btn=document.createElement('button');
+    btn.className='tab-btn'+(tab.id===activeTabId?' active':'');
+    btn.setAttribute('data-tabid',tab.id);
+    btn.onclick=function(){ switchTab(tab.id); };
+    btn.innerHTML='<span class="tab-icon">'+getTabIcon(tab.name)+'</span>'+escHtml(tab.name)+'<span class="tab-count">'+tab.rows.length+'</span>';
+    strip.appendChild(btn);
+  });
+  strip.appendChild(addBtn);
 }
 
 /* ══════════════════════════════════════════════
-   RENDER TABLE
+   RENDER PANES
 ══════════════════════════════════════════════ */
-function renderTable() {
-  renderHead();
-  renderBody();
-  updateStats();
+function renderAllPanes() {
+  var c=document.getElementById('tabPanes'); c.innerHTML='';
+  tabs.forEach(function(tab){ c.appendChild(buildPane(tab)); });
 }
 
-function renderHead() {
-  var tr = document.getElementById('tableHead');
-  tr.innerHTML = '';
-
-  /* No */
-  var thNo = document.createElement('th');
-  thNo.style.cssText = 'width:46px;text-align:center';
-  thNo.textContent = 'No.';
-  tr.appendChild(thNo);
-
-  /* Kolom Fixed */
-  FIXED_COLS.forEach(function(key) {
-    var th = document.createElement('th');
-    th.className = 'col-fixed';
-    th.style.minWidth = '120px';
-    th.innerHTML = '<div class="th-inner"><span>' + FIXED_LABELS[key] + '</span></div>';
-    tr.appendChild(th);
-  });
-
-  /* Kolom Dinamis */
-  dynamicCols.forEach(function(key) {
-    var th = document.createElement('th');
-    th.className = 'col-dynamic';
-    th.style.minWidth = '120px';
-    th.innerHTML =
-      '<div class="th-inner">' +
-        '<input class="col-name-input" value="' + escHtml(key) + '" ' +
-          'onblur="renameCol(\'' + escAttr(key) + '\', this.value)" ' +
-          'onkeydown="if(event.key===\'Enter\')this.blur()" ' +
-          'title="Klik untuk rename kolom">' +
-        '<button class="btn-del-col" onclick="openDelColModal(\'' + escAttr(key) + '\')" title="Hapus kolom">×</button>' +
-      '</div>';
-    tr.appendChild(th);
-  });
-
-  /* Aksi */
-  var thAct = document.createElement('th');
-  thAct.style.cssText = 'width:110px;text-align:center';
-  thAct.textContent = 'Aksi';
-  tr.appendChild(thAct);
+function buildPane(tab) {
+  var pane=document.createElement('div');
+  pane.className='tab-pane'+(tab.id===activeTabId?' active':'');
+  pane.id='pane_'+tab.id;
+  var total=tab.rows.length;
+  var saved=tab.rows.filter(function(r){ return r._status==='saved'; }).length;
+  var unsaved=total-saved;
+  var isDefault=['tab_cv','tab_temp','tab_ls'].indexOf(tab.id)!==-1;
+  var tid = tab.id;
+  pane.innerHTML=
+    '<div class="pane-header">'+
+      '<div class="pane-title-group">'+
+        '<span class="tab-icon" style="font-size:20px">'+getTabIcon(tab.name)+'</span>'+
+        (isDefault
+          ? '<div class="pane-title">'+escHtml(tab.name)+'</div>'
+          : '<input class="pane-title-input" value="'+escAttr(tab.name)+'" data-tabid="'+tid+'" onblur="renameTab(this.dataset.tabid,this.value)" onkeydown="if(event.key===String.fromCharCode(13))this.blur()" title="Klik untuk ubah nama">'
+        )+
+      '</div>'+
+      '<button class="btn-del-tab" data-tabid="'+tid+'" onclick="openDelTabModal(this.dataset.tabid)">🗑 Hapus</button>'+
+    '</div>'+
+    '<div class="section-label">Tabel Data Asset</div>'+
+    '<div class="stats-row">'+
+      '<div class="stat-chip total">Total: <span id="statTotal_'+tid+'">'+total+'</span></div>'+
+      '<div class="stat-chip saved">Tersimpan: <span id="statSaved_'+tid+'">'+saved+'</span></div>'+
+      '<div class="stat-chip unsaved">Belum Simpan: <span id="statUnsaved_'+tid+'">'+unsaved+'</span></div>'+
+    '</div>'+
+    '<div class="toolbar">'+
+      '<button class="btn btn-primary" data-tabid="'+tid+'" onclick="addRow(this.dataset.tabid)">＋ Tambah Baris</button>'+
+      '<button class="btn btn-outline" data-tabid="'+tid+'" onclick="openAddColModal(this.dataset.tabid)">＋ Tambah Kolom</button>'+
+      '<button class="btn btn-outline" data-tabid="'+tid+'" onclick="openSaveRefModal(this.dataset.tabid)" style="border-color:#7c3aed;color:#7c3aed;">🗂 Simpan Referensi</button>'+
+      '<button class="btn btn-success" data-tabid="'+tid+'" onclick="saveAll(this.dataset.tabid)">💾 Simpan Semua Data</button>'+
+      '<button class="btn btn-secondary" data-tabid="'+tid+'" onclick="refreshTab(this.dataset.tabid)">↺ Refresh</button>'+
+      '<button class="btn reset-ref-btn" style="background:#fff3cd;color:#92400e;border:1.5px solid #fbbf24;font-weight:600">🔄 Reset Referensi</button>'+
+    '</div>'+
+    '<div class="table-scroll">'+
+      '<table id="table_'+tid+'"><thead><tr id="thead_'+tid+'"></tr></thead><tbody id="tbody_'+tid+'"></tbody></table>'+
+    '</div>';
+  setTimeout(function(){
+    renderHead(tab.id); renderBody(tab.id);
+    var resetBtn = pane.querySelector('.reset-ref-btn');
+    if(resetBtn) resetBtn.onclick = function(){ resetToDynCols(tab.id); };
+  }, 0);
+  return pane;
 }
 
-function renderBody() {
-  var tbody = document.getElementById('tableBody');
-  tbody.innerHTML = '';
+function refreshPane(tabId) {
+  var tab=getTab(tabId); if(!tab) return;
+  var total=tab.rows.length;
+  var saved=tab.rows.filter(function(r){ return r._status==='saved'; }).length;
+  var elT=document.getElementById('statTotal_'+tabId);
+  var elS=document.getElementById('statSaved_'+tabId);
+  var elU=document.getElementById('statUnsaved_'+tabId);
+  if(elT) elT.textContent=total;
+  if(elS) elS.textContent=saved;
+  if(elU) elU.textContent=total-saved;
+  renderHead(tabId); renderBody(tabId);
+}
 
-  if (rows.length === 0) {
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td colspan="' + (FIXED_COLS.length + dynamicCols.length + 2) + '">' +
-        '<div class="empty-state">' +
-          '<div class="icon">📭</div>' +
-          '<div>Belum ada data asset.</div>' +
-          '<div class="msg">Klik "+ Tambah Baris" untuk mulai.</div>' +
-        '</div>' +
-      '</td>';
-    tbody.appendChild(tr);
-    return;
+function switchTab(tabId) {
+  activeTabId=tabId;
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active',b.getAttribute('data-tabid')===tabId); });
+  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.toggle('active',p.id==='pane_'+tabId); });
+}
+
+/* ══════════════════════════════════════════════
+   RENDER HEAD & BODY
+══════════════════════════════════════════════ */
+function renderHead(tabId) {
+  var tab=getTab(tabId); if(!tab) return;
+  var tr=document.getElementById('thead_'+tabId); if(!tr) return;
+  tr.innerHTML='';
+  var thNo=document.createElement('th'); thNo.style.cssText='width:46px;text-align:center'; thNo.textContent='No.'; tr.appendChild(thNo);
+  FIXED_COLS.forEach(function(key){
+    var th=document.createElement('th'); th.className='col-fixed'; th.style.minWidth='120px';
+    th.innerHTML='<div class="th-inner"><span>'+FIXED_LABELS[key]+'</span></div>'; tr.appendChild(th);
+  });
+  tab.dynamicCols.forEach(function(key){
+    var th=document.createElement('th'); th.className='col-dynamic'; th.style.minWidth='120px';
+    th.innerHTML='<div class="th-inner"><input class="col-name-input" value="'+escHtml(key)+'" data-tabid="'+tabId+'" data-key="'+escAttr(key)+'" onblur="renameCol(this.dataset.tabid,this.dataset.key,this.value)" onkeydown="if(event.key===String.fromCharCode(13))this.blur()" title="Rename kolom"><button class="btn-del-col" data-tabid="'+tabId+'" data-key="'+escAttr(key)+'" onclick="openDelColModal(this.dataset.tabid,this.dataset.key)">×</button></div>'; tr.appendChild(th);
+  });
+  var thAct=document.createElement('th'); thAct.style.cssText='width:110px;text-align:center'; thAct.textContent='Aksi'; tr.appendChild(thAct);
+}
+
+function renderBody(tabId) {
+  var tab=getTab(tabId); if(!tab) return;
+  var tbody=document.getElementById('tbody_'+tabId); if(!tbody) return;
+  tbody.innerHTML='';
+  var cc=FIXED_COLS.length+tab.dynamicCols.length+2;
+  if(!tab.rows.length){
+    tbody.innerHTML='<tr><td colspan="'+cc+'"><div class="empty-state"><div class="icon">📭</div><div>Belum ada data asset.</div><div class="msg">Klik "＋ Tambah Baris" untuk mulai.</div></div></td></tr>'; return;
   }
-
-  rows.forEach(function(row, idx) {
-    var tr = document.createElement('tr');
-    if (row._status === 'editing' || row._status === 'new') tr.classList.add('editing');
-
-    /* No */
-    var tdNo = document.createElement('td');
-    tdNo.className = 'col-no';
-    tdNo.innerHTML = (idx + 1) + '<br><span class="badge-' + (row._status === 'saved' ? 'saved' : 'new') + '">' +
-      (row._status === 'saved' ? 'OK' : 'BARU') + '</span>';
-    tr.appendChild(tdNo);
-
-    /* Kolom Fixed */
-    FIXED_COLS.forEach(function(key) {
-      var td = document.createElement('td');
-      if (row._status === 'editing' || row._status === 'new') {
-        td.innerHTML = '<input class="cell-input" id="cell_' + idx + '_' + key + '" ' +
-          'value="' + escAttr(row[key] || '') + '" placeholder="' + FIXED_LABELS[key] + '">';
+  tab.rows.forEach(function(row,idx){
+    var tr=document.createElement('tr');
+    if(row._status==='editing'||row._status==='new') tr.classList.add('editing');
+    var tdNo=document.createElement('td'); tdNo.className='col-no';
+    tdNo.innerHTML=(idx+1)+'<br><span class="badge-'+(row._status==='saved'?'saved':'new')+'">'+(row._status==='saved'?'OK':'BARU')+'</span>'; tr.appendChild(tdNo);
+    FIXED_COLS.forEach(function(key){
+      var td=document.createElement('td');
+      if(row._status==='editing'||row._status==='new'){
+        td.innerHTML='<input class="cell-input" id="cell_'+tabId+'_'+idx+'_'+key+'" value="'+escAttr(row[key]||'')+'" placeholder="'+FIXED_LABELS[key]+'">';
       } else {
-        td.innerHTML = '<div class="cell-display">' + escHtml(row[key] || '<span style="color:#94a3b8">—</span>') + '</div>';
+        td.innerHTML='<div class="cell-display">'+escHtml(row[key]||'<span style="color:#94a3b8">—</span>')+'</div>';
       }
       tr.appendChild(td);
     });
-
-    /* Kolom Dinamis */
-    dynamicCols.forEach(function(key) {
-      var td = document.createElement('td');
-      var extra = row.extra_data || {};
-      var val = extra[key] || '';
-      if (row._status === 'editing' || row._status === 'new') {
-        td.innerHTML = '<input class="cell-input" id="cell_' + idx + '_dyn_' + escAttr(key) + '" ' +
-          'value="' + escAttr(val) + '" placeholder="' + escAttr(key) + '">';
+    tab.dynamicCols.forEach(function(key){
+      var td=document.createElement('td'); var extra=row.extra_data||{}; var val=extra[key]||'';
+      if(row._status==='editing'||row._status==='new'){
+        td.innerHTML='<input class="cell-input" id="cell_'+tabId+'_'+idx+'_dyn_'+escAttr(key)+'" value="'+escAttr(val)+'" placeholder="'+escAttr(key)+'">';
       } else {
-        td.innerHTML = '<div class="cell-display">' + escHtml(val || '<span style="color:#94a3b8">—</span>') + '</div>';
+        td.innerHTML='<div class="cell-display">'+escHtml(val||'<span style="color:#94a3b8">—</span>')+'</div>';
       }
       tr.appendChild(td);
     });
-
-    /* Aksi */
-    var tdAct = document.createElement('td');
-    tdAct.className = 'col-action';
-    if (row._status === 'editing' || row._status === 'new') {
-      tdAct.innerHTML =
-        '<div class="action-btns">' +
-          '<button class="btn btn-success btn-sm" onclick="saveRow(' + idx + ')">💾</button>' +
-          '<button class="btn btn-danger btn-sm" onclick="cancelEdit(' + idx + ')">✕</button>' +
-        '</div>';
+    var tdAct=document.createElement('td'); tdAct.className='col-action';
+    if(row._status==='editing'||row._status==='new'){
+      tdAct.innerHTML='<div class="action-btns"><button class="btn btn-success btn-sm" data-tabid="'+tabId+'" data-idx="'+idx+'" onclick="saveRow(this.dataset.tabid,+this.dataset.idx)">💾</button><button class="btn btn-danger btn-sm" data-tabid="'+tabId+'" data-idx="'+idx+'" onclick="cancelEdit(this.dataset.tabid,+this.dataset.idx)">✕</button></div>';
     } else {
-      tdAct.innerHTML =
-        '<div class="action-btns">' +
-          '<button class="btn btn-outline btn-sm" onclick="editRow(' + idx + ')">✏</button>' +
-          '<button class="btn btn-danger btn-sm" onclick="openDelRowModal(' + idx + ')">🗑</button>' +
-        '</div>';
+      tdAct.innerHTML='<div class="action-btns"><button class="btn btn-outline btn-sm" data-tabid="'+tabId+'" data-idx="'+idx+'" onclick="editRow(this.dataset.tabid,+this.dataset.idx)">✏</button><button class="btn btn-danger btn-sm" data-tabid="'+tabId+'" data-idx="'+idx+'" onclick="openDelRowModal(this.dataset.tabid,+this.dataset.idx)">🗑</button></div>';
     }
-    tr.appendChild(tdAct);
-    tbody.appendChild(tr);
+    tr.appendChild(tdAct); tbody.appendChild(tr);
   });
 }
 
 /* ══════════════════════════════════════════════
    ROW ACTIONS
 ══════════════════════════════════════════════ */
-function addRow() {
-  var newRow = { _status: 'new', _id: null, asset_tag:'', asset_desc:'', lokasi:'', pic:'', extra_data:{} };
-  rows.push(newRow);
-  renderTable();
-  /* Scroll ke bawah */
-  setTimeout(function(){
-    var tbody = document.getElementById('tableBody');
-    if (tbody) tbody.lastElementChild && tbody.lastElementChild.scrollIntoView({behavior:'smooth', block:'center'});
-  }, 100);
+function addRow(tabId) {
+  var tab=getTab(tabId); if(!tab) return;
+  tab.rows.push({_status:'new',id:null,asset_tag:'',asset_desc:'',lokasi:'',pic:'',extra_data:{},input_category:tab.name});
+  refreshPane(tabId); updateTabCount(tabId);
+  setTimeout(function(){ var tb=document.getElementById('tbody_'+tabId); if(tb&&tb.lastElementChild) tb.lastElementChild.scrollIntoView({behavior:'smooth',block:'center'}); },100);
+}
+function editRow(tabId,idx){ var tab=getTab(tabId); if(!tab) return; tab.rows[idx]._status='editing'; refreshPane(tabId); }
+function cancelEdit(tabId,idx){
+  var tab=getTab(tabId); if(!tab) return;
+  if(tab.rows[idx]._status==='new') tab.rows.splice(idx,1); else tab.rows[idx]._status='saved';
+  refreshPane(tabId); updateTabCount(tabId);
+}
+function collectRowFromDom(tabId,idx){
+  var tab=getTab(tabId); var row=tab.rows[idx]; var updated=Object.assign({},row);
+  FIXED_COLS.forEach(function(key){ var el=document.getElementById('cell_'+tabId+'_'+idx+'_'+key); if(el) updated[key]=el.value.trim(); });
+  var extra={};
+  tab.dynamicCols.forEach(function(key){ var el=document.getElementById('cell_'+tabId+'_'+idx+'_dyn_'+key); if(el) extra[key]=el.value.trim(); });
+  updated.extra_data=extra; updated.input_category=tab.name; return updated;
+}
+function saveRow(tabId,idx){
+  var tab=getTab(tabId); if(!tab) return;
+  var updated=collectRowFromDom(tabId,idx);
+  if(!updated.asset_tag&&!updated.asset_desc){ showToast('Asset Tag atau Description harus diisi!'); return; }
+  var payload={asset_tag:updated.asset_tag,asset_desc:updated.asset_desc,lokasi:updated.lokasi,pic:updated.pic,extra_data:updated.extra_data,input_category:updated.input_category,updated_at:new Date().toISOString()};
+  var isNew=!updated.id; if(isNew) payload.created_at=new Date().toISOString();
+  var promise=isNew?supaFetch('POST',ASSET_TABLE,payload):supaFetch('PATCH',ASSET_TABLE+'?id=eq.'+updated.id,payload);
+  promise.then(function(result){
+    if(isNew&&result&&result[0]) updated.id=result[0].id;
+    updated._status='saved'; tab.rows[idx]=updated; refreshPane(tabId); updateTabCount(tabId);
+    showToast('Baris '+(idx+1)+' tersimpan ✓');
+  }).catch(function(err){ showToast('Gagal simpan: '+(err.message||err)); });
+}
+function saveAll(tabId){
+  var tab=getTab(tabId); if(!tab) return;
+  var unsaved=tab.rows.filter(function(r){ return r._status!=='saved'; });
+  if(!unsaved.length){ showToast('Semua data sudah tersimpan ✓'); return; }
+  tab.rows.forEach(function(r,i){ if(r._status!=='saved') saveRow(tabId,i); });
+}
+function refreshTab(tabId){
+  showToast('Memuat ulang...'); var tab=getTab(tabId); if(!tab) return; tab.rows=[];
+  supaFetch('GET',ASSET_TABLE+'?select=*&input_category=eq.'+encodeURIComponent(tab.name)+'&order=created_at.asc&limit=500')
+    .then(function(data){
+      tab.rows=(data||[]).map(function(r){ return Object.assign({},r,{_status:'saved'}); });
+      tab.rows.forEach(function(r){ if(r.extra_data&&typeof r.extra_data==='object') Object.keys(r.extra_data).forEach(function(k){ if(tab.dynamicCols.indexOf(k)===-1) tab.dynamicCols.push(k); }); });
+      refreshPane(tabId); updateTabCount(tabId); showToast('Data dimuat ulang ✓');
+    }).catch(function(){ showToast('Gagal muat dari server'); });
 }
 
-function editRow(idx) {
-  rows[idx]._status = 'editing';
-  renderTable();
+/* ══════════════════════════════════════════════
+   TAB MANAGEMENT
+══════════════════════════════════════════════ */
+function openAddTabModal(){ document.getElementById('newTabName').value=''; document.getElementById('addTabModal').classList.add('show'); setTimeout(function(){ document.getElementById('newTabName').focus(); },100); }
+function closeAddTabModal(){ document.getElementById('addTabModal').classList.remove('show'); }
+function confirmAddTab(){
+  var name=document.getElementById('newTabName').value.trim();
+  if(!name){ showToast('Nama tidak boleh kosong'); return; }
+  if(tabs.find(function(t){ return t.name.toLowerCase()===name.toLowerCase(); })){ showToast('Sudah ada!'); return; }
+  var newId='tab_'+Date.now(); tabs.push({id:newId,name:name,rows:[],dynamicCols:[]}); saveState();
+  activeTabId=newId; renderTabStrip();
+  document.getElementById('tabPanes').appendChild(buildPane(getTab(newId)));
+  switchTab(newId); closeAddTabModal(); showToast('Input Utama "'+name+'" dibuat ✓');
 }
-
-function cancelEdit(idx) {
-  if (rows[idx]._status === 'new') {
-    rows.splice(idx, 1);
-  } else {
-    rows[idx]._status = 'saved';
-  }
-  renderTable();
+function renameTab(tabId,newName){
+  newName=newName.trim(); if(!newName) return;
+  var tab=getTab(tabId); if(!tab||tab.name===newName) return;
+  tab.name=newName; saveState(); renderTabStrip(); showToast('Nama diubah ✓');
 }
-
-function collectRowFromDom(idx) {
-  var row = rows[idx];
-  var updated = Object.assign({}, row);
-
-  FIXED_COLS.forEach(function(key) {
-    var el = document.getElementById('cell_' + idx + '_' + key);
-    if (el) updated[key] = el.value.trim();
-  });
-
-  var extra = {};
-  dynamicCols.forEach(function(key) {
-    var el = document.getElementById('cell_' + idx + '_dyn_' + key);
-    if (el) extra[key] = el.value.trim();
-  });
-  updated.extra_data = extra;
-
-  return updated;
-}
-
-function saveRow(idx) {
-  var updated = collectRowFromDom(idx);
-
-  if (!updated.asset_tag && !updated.asset_desc) {
-    showToast('Asset Tag atau Description harus diisi!');
-    return;
-  }
-
-  var payload = {
-    asset_tag:  updated.asset_tag,
-    asset_desc: updated.asset_desc,
-    lokasi:     updated.lokasi,
-    pic:        updated.pic,
-    extra_data: updated.extra_data,
-    updated_at: new Date().toISOString()
-  };
-
-  var promise, isNew = !updated.id;
-
-  if (isNew) {
-    payload.created_at = new Date().toISOString();
-    promise = supaFetch('POST', ASSET_TABLE, payload);
-  } else {
-    promise = supaFetch('PATCH', ASSET_TABLE + '?id=eq.' + updated.id, payload);
-  }
-
-  promise
-    .then(function(result) {
-      if (isNew && result && result[0]) {
-        updated.id = result[0].id;
-      }
-      updated._status = 'saved';
-      rows[idx] = updated;
-      renderTable();
-      showToast('Baris ' + (idx + 1) + ' tersimpan ✓');
-    })
-    .catch(function(err) {
-      showToast('Gagal simpan: ' + (err.message || err));
-    });
-}
-
-function saveAll() {
-  var unsaved = rows.filter(function(r){ return r._status !== 'saved'; });
-  if (unsaved.length === 0) { showToast('Semua data sudah tersimpan ✓'); return; }
-
-  /* Edit semua yang belum editing */
-  rows.forEach(function(r, i){ if(r._status === 'new' || r._status === 'editing') editRow(i); });
-  setTimeout(function(){
-    var promises = [];
-    rows.forEach(function(r, i){
-      if (r._status === 'editing' || r._status === 'new') promises.push(saveRow(i));
-    });
-  }, 100);
+function openDelTabModal(tabId){ pendingDelTabId=tabId; var tab=getTab(tabId); document.getElementById('delTabName').textContent=tab?tab.name:'—'; document.getElementById('delTabModal').classList.add('show'); }
+function closeDelTabModal(){ pendingDelTabId=null; document.getElementById('delTabModal').classList.remove('show'); }
+function confirmDelTab(){
+  var tabId=pendingDelTabId; if(!tabId) return; closeDelTabModal();
+  var tab=getTab(tabId); if(!tab) return;
+  var ids=tab.rows.filter(function(r){ return r.id; }).map(function(r){ return r.id; });
+  var p=ids.length?supaFetch('DELETE',ASSET_TABLE+'?id=in.('+ids.join(',')+')'):Promise.resolve();
+  p.then(function(){
+    var i=tabs.findIndex(function(t){ return t.id===tabId; }); if(i!==-1) tabs.splice(i,1);
+    var pane=document.getElementById('pane_'+tabId); if(pane) pane.remove();
+    if(tabs.length){ activeTabId=tabs[0].id; switchTab(activeTabId); }
+    saveState(); renderTabStrip(); showToast('Input Utama dihapus ✓');
+  }).catch(function(err){ showToast('Gagal hapus: '+(err.message||err)); });
+  pendingDelTabId=null;
 }
 
 /* ══════════════════════════════════════════════
    KOLOM DINAMIS
 ══════════════════════════════════════════════ */
-function openAddColModal() {
-  document.getElementById('newColName').value = '';
-  document.getElementById('addColModal').classList.add('show');
-  setTimeout(function(){ document.getElementById('newColName').focus(); }, 100);
+function openAddColModal(tabId){ colModalTabId=tabId; document.getElementById('newColName').value=''; document.getElementById('addColModal').classList.add('show'); setTimeout(function(){ document.getElementById('newColName').focus(); },100); }
+function closeAddColModal(){ document.getElementById('addColModal').classList.remove('show'); }
+function confirmAddCol(){
+  var tabId=colModalTabId; var tab=getTab(tabId); if(!tab) return;
+  var name=document.getElementById('newColName').value.trim(); if(!name){ showToast('Nama kolom tidak boleh kosong'); return; }
+  if(FIXED_COLS.indexOf(name)!==-1||tab.dynamicCols.indexOf(name)!==-1){ showToast('Kolom sudah ada'); return; }
+  tab.dynamicCols.push(name); saveState(); refreshPane(tabId); closeAddColModal(); showToast('Kolom "'+name+'" ditambahkan ✓');
 }
-
-function closeAddColModal() {
-  document.getElementById('addColModal').classList.remove('show');
+function renameCol(tabId,oldKey,newName){
+  newName=newName.trim(); if(!newName||newName===oldKey) return;
+  var tab=getTab(tabId); if(!tab) return; var i=tab.dynamicCols.indexOf(oldKey); if(i===-1) return;
+  tab.rows.forEach(function(r){ if(r.extra_data&&r.extra_data[oldKey]!==undefined){ r.extra_data[newName]=r.extra_data[oldKey]; delete r.extra_data[oldKey]; } });
+  tab.dynamicCols[i]=newName; saveState(); refreshPane(tabId); showToast('Kolom diubah ✓');
 }
-
-function confirmAddCol() {
-  var name = document.getElementById('newColName').value.trim();
-  if (!name) { showToast('Nama kolom tidak boleh kosong'); return; }
-
-  /* Normalize jadi key */
-  var key = name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
-  if (!key) { showToast('Nama kolom tidak valid'); return; }
-  if (FIXED_COLS.indexOf(key) !== -1 || dynamicCols.indexOf(key) !== -1) {
-    showToast('Kolom "' + key + '" sudah ada'); return;
-  }
-
-  /* Simpan nama asli sebagai key (lebih mudah dibaca) */
-  dynamicCols.push(name);
-  saveDynCols();
-  renderTable();
-  closeAddColModal();
-  showToast('Kolom "' + name + '" ditambahkan ✓');
-}
-
-function renameCol(oldKey, newName) {
-  newName = newName.trim();
-  if (!newName || newName === oldKey) return;
-  var idx = dynamicCols.indexOf(oldKey);
-  if (idx === -1) return;
-
-  /* Rename di semua rows */
-  rows.forEach(function(r) {
-    if (r.extra_data && r.extra_data[oldKey] !== undefined) {
-      r.extra_data[newName] = r.extra_data[oldKey];
-      delete r.extra_data[oldKey];
-    }
-  });
-
-  dynamicCols[idx] = newName;
-  saveDynCols();
-  renderTable();
-  showToast('Kolom diubah menjadi "' + newName + '"');
-}
-
-function openDelColModal(key) {
-  pendingDelCol = key;
-  document.getElementById('delColName').textContent = key;
-  document.getElementById('delColModal').classList.add('show');
-}
-
-function closeDelColModal() {
-  pendingDelCol = null;
-  document.getElementById('delColModal').classList.remove('show');
-}
-
-function confirmDelCol() {
-  if (!pendingDelCol) return;
-  var idx = dynamicCols.indexOf(pendingDelCol);
-  if (idx !== -1) dynamicCols.splice(idx, 1);
-  rows.forEach(function(r){
-    if (r.extra_data) delete r.extra_data[pendingDelCol];
-  });
-  saveDynCols();
-  renderTable();
-  closeDelColModal();
-  showToast('Kolom "' + pendingDelCol + '" dihapus');
-  pendingDelCol = null;
+function openDelColModal(tabId,key){ pendingDelCol=key; pendingColTabId=tabId; document.getElementById('delColName').textContent=key; document.getElementById('delColModal').classList.add('show'); }
+function closeDelColModal(){ pendingDelCol=null; pendingColTabId=null; document.getElementById('delColModal').classList.remove('show'); }
+function confirmDelCol(){
+  var tabId=pendingColTabId; var key=pendingDelCol; if(!tabId||!key) return;
+  var tab=getTab(tabId); if(!tab) return;
+  var i=tab.dynamicCols.indexOf(key); if(i!==-1) tab.dynamicCols.splice(i,1);
+  tab.rows.forEach(function(r){ if(r.extra_data) delete r.extra_data[key]; });
+  saveState(); refreshPane(tabId); closeDelColModal(); showToast('Kolom "'+key+'" dihapus');
 }
 
 /* ══════════════════════════════════════════════
    DELETE ROW
 ══════════════════════════════════════════════ */
-function openDelRowModal(idx) {
-  pendingDelRowIdx = idx;
-  document.getElementById('delRowModal').classList.add('show');
+function openDelRowModal(tabId,idx){ delRowTabId=tabId; pendingDelRowIdx=idx; document.getElementById('delRowModal').classList.add('show'); }
+function closeDelRowModal(){ delRowTabId=null; pendingDelRowIdx=null; document.getElementById('delRowModal').classList.remove('show'); }
+function confirmDelRow(){
+  var tabId=delRowTabId; var idx=pendingDelRowIdx; if(idx===null||!tabId) return;
+  var tab=getTab(tabId); if(!tab) return; var row=tab.rows[idx]; closeDelRowModal();
+  if(!row.id){ tab.rows.splice(idx,1); refreshPane(tabId); updateTabCount(tabId); showToast('Baris dihapus'); return; }
+  supaFetch('DELETE',ASSET_TABLE+'?id=eq.'+row.id)
+    .then(function(){ tab.rows.splice(idx,1); refreshPane(tabId); updateTabCount(tabId); showToast('Baris dihapus ✓'); })
+    .catch(function(err){ showToast('Gagal hapus: '+(err.message||err)); });
 }
 
-function closeDelRowModal() {
-  pendingDelRowIdx = null;
-  document.getElementById('delRowModal').classList.remove('show');
+/* ══════════════════════════════════════════════
+   REFERENSI TEMPLATE
+══════════════════════════════════════════════ */
+var savedRefs = [];
+function initRefChips() {
+  try { savedRefs=JSON.parse(localStorage.getItem('outage_refs_v2'))||[]; } catch(e){ savedRefs=[]; }
+  renderRefChips();
 }
-
-function confirmDelRow() {
-  var idx = pendingDelRowIdx;
-  if (idx === null || idx === undefined) return;
-  var row = rows[idx];
-
-  closeDelRowModal();
-
-  if (!row.id) {
-    rows.splice(idx, 1);
-    renderTable();
-    showToast('Baris dihapus');
+function renderRefChips() {
+  var c=document.getElementById('refChips'); var e=document.getElementById('refEmpty');
+  if(!c) return;
+  var chips=c.querySelectorAll('.ref-chip');
+  chips.forEach(function(ch){ ch.remove(); });
+  if(savedRefs.length===0){ if(e) e.style.display=''; return; }
+  if(e) e.style.display='none';
+  savedRefs.forEach(function(ref,i){
+    var chip=document.createElement('div'); chip.className='ref-chip';
+    chip.innerHTML='<span class="ref-chip-name">'+escHtml(ref.name)+'</span><span class="ref-chip-cols">'+ref.cols.length+' kolom</span>'+
+      '<button class="ref-chip-apply" onclick="applyRef('+i+')">Terapkan</button>'+
+      '<button class="ref-chip-del" onclick="deleteRef('+i+')" title="Hapus">×</button>';
+    c.insertBefore(chip,e||null);
+  });
+}
+function openSaveRefModal(tabId){
+  colModalTabId=tabId||activeTabId;
+  document.getElementById('refNameInput').value='';
+  document.getElementById('saveRefModal').classList.add('show');
+  setTimeout(function(){ document.getElementById('refNameInput').focus(); },100);
+}
+function closeSaveRefModal(){ 
+  document.getElementById('saveRefModal').classList.remove('show');
+  document.getElementById('refPassInput').value='';
+  document.getElementById('refNameInput').value='';
+}
+function confirmSaveRef(){
+  var name=document.getElementById('refNameInput').value.trim();
+  var pass=document.getElementById('refPassInput').value.trim();
+  if(!name){ showToast('Nama referensi tidak boleh kosong'); return; }
+  if(!pass){ showToast('Sandi tidak boleh kosong'); return; }
+  var tab=getTab(colModalTabId||activeTabId);
+  var cols=tab?tab.dynamicCols.slice():[];
+  savedRefs.push({name:name,cols:cols,pass:pass});
+  try { localStorage.setItem('outage_refs_v2',JSON.stringify(savedRefs)); } catch(e){}
+  renderRefChips(); closeSaveRefModal(); showToast('Referensi "'+name+'" disimpan ✓');
+}
+function applyRef(i){
+  var ref=savedRefs[i]; if(!ref) return;
+  var tab=getTab(activeTabId); if(!tab) return;
+  ref.cols.forEach(function(col){ if(tab.dynamicCols.indexOf(col)===-1) tab.dynamicCols.push(col); });
+  saveState(); refreshPane(activeTabId); showToast('Referensi "'+ref.name+'" diterapkan ✓');
+}
+var pendingDelRefIdx = null;
+function deleteRef(i){
+  pendingDelRefIdx = i;
+  var ref = savedRefs[i];
+  document.getElementById('delRefName').textContent = ref ? ref.name : '—';
+  document.getElementById('delRefPassInput').value = '';
+  document.getElementById('delRefModal').classList.add('show');
+  setTimeout(function(){ document.getElementById('delRefPassInput').focus(); }, 100);
+}
+function closeDelRefModal(){
+  pendingDelRefIdx = null;
+  document.getElementById('delRefPassInput').value = '';
+  document.getElementById('delRefModal').classList.remove('show');
+}
+function confirmDelRef(){
+  var i = pendingDelRefIdx;
+  if(i === null) return;
+  var ref = savedRefs[i];
+  var entered = document.getElementById('delRefPassInput').value.trim();
+  if(!ref){ closeDelRefModal(); return; }
+  if(entered !== ref.pass){
+    showToast('❌ Sandi salah! Referensi tidak dihapus.');
+    document.getElementById('delRefPassInput').value='';
+    document.getElementById('delRefPassInput').focus();
     return;
   }
-
-  supaFetch('DELETE', ASSET_TABLE + '?id=eq.' + row.id)
-    .then(function() {
-      rows.splice(idx, 1);
-      renderTable();
-      showToast('Baris dihapus dari database ✓');
-    })
-    .catch(function(err) {
-      showToast('Gagal hapus: ' + (err.message || err));
-    });
-
-  pendingDelRowIdx = null;
+  savedRefs.splice(i,1);
+  try { localStorage.setItem('outage_refs_v2',JSON.stringify(savedRefs)); } catch(e){}
+  renderRefChips(); closeDelRefModal(); showToast('Referensi dihapus ✓');
 }
-
-/* ══════════════════════════════════════════════
-   STATS & SCHEMA
-══════════════════════════════════════════════ */
-function updateStats() {
-  var total = rows.length;
-  var saved = rows.filter(function(r){ return r._status === 'saved'; }).length;
-  var unsaved = total - saved;
-  document.getElementById('statTotal').textContent   = total;
-  document.getElementById('statSaved').textContent   = saved;
-  document.getElementById('statUnsaved').textContent = unsaved;
-}
-
-function saveDynCols() {
-  try { localStorage.setItem('outage_dyn_cols', JSON.stringify(dynamicCols)); } catch(e){}
-}
-
-/* ══════════════════════════════════════════════
-   UTILS
-══════════════════════════════════════════════ */
-function escHtml(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
-function escAttr(s) { return escHtml(s); }
-
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.opacity = '1';
-  clearTimeout(t._timeout);
-  t._timeout = setTimeout(function(){ t.style.opacity = '0'; }, 3000);
-}
-
-/* Close modal saat klik overlay */
-['addColModal','delRowModal','delColModal'].forEach(function(id){
-  document.getElementById(id).addEventListener('click', function(e){
-    if (e.target === this) this.classList.remove('show');
-  });
-});
-
-/* ══════════════════════════════════════════════
-   DRAG & DROP EXCEL
-══════════════════════════════════════════════ */
-(function setupDragDrop() {
-  var zone = document.getElementById('excelDropZone');
-  zone.addEventListener('dragover', function(e){ e.preventDefault(); zone.classList.add('drag-over'); });
-  zone.addEventListener('dragleave', function(){ zone.classList.remove('drag-over'); });
-  zone.addEventListener('drop', function(e){
-    e.preventDefault();
-    zone.classList.remove('drag-over');
-    var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (file) handleExcelFile(file);
-  });
-})();
 
 /* ══════════════════════════════════════════════
    EXCEL IMPORT
 ══════════════════════════════════════════════ */
-var excelParsedData  = [];  /* array of objects (header → value) */
-var excelColMapping  = {};  /* { excelHeader: {type:'fixed'|'dynamic', key:string} } */
-
-/* Normalisasi header Excel ke key internal */
-function normalizeKey(h) {
-  return String(h).trim().toLowerCase()
-    .replace(/\s+/g,'_')
-    .replace(/[^a-z0-9_]/g,'');
+var excelData = [];
+function initExcel() {
+  var dz=document.getElementById('excelDropZone'); if(!dz) return;
+  dz.addEventListener('dragover',function(e){ e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave',function(){ dz.classList.remove('drag-over'); });
+  dz.addEventListener('drop',function(e){ e.preventDefault(); dz.classList.remove('drag-over'); if(e.dataTransfer.files[0]) handleExcelFile(e.dataTransfer.files[0]); });
+  dz.addEventListener('click',function(){ document.getElementById('excelFileInput').click(); });
 }
-
-/* Cek apakah header Excel cocok dengan FIXED_COLS */
-var FIXED_ALIASES = {
-  'asset_tag':  ['asset_tag','asset tag','tag','kode','kode aset'],
-  'asset_desc': ['asset_desc','asset description','asset desc','deskripsi','nama aset','description','nama'],
-  'lokasi':     ['lokasi','location','lokasi aset','tempat'],
-  'pic':        ['pic','penanggung jawab','person in charge','pj']
-};
-
-function matchFixed(header) {
-  var h = String(header).trim().toLowerCase();
-  for (var col in FIXED_ALIASES) {
-    if (FIXED_ALIASES[col].indexOf(h) !== -1 || normalizeKey(header) === col) {
-      return col;
-    }
-  }
-  return null;
-}
-
 function handleExcelFile(file) {
-  if (!file) return;
-
-  var ext = file.name.split('.').pop().toLowerCase();
-
-  if (ext === 'csv') {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var text = e.target.result;
-      var parsed = parseCSV(text);
-      processExcelData(parsed, file.name);
-    };
-    reader.readAsText(file);
-  } else if (ext === 'xlsx' || ext === 'xls') {
-    /* Load SheetJS dari CDN secara dinamis jika belum ada */
-    if (typeof XLSX !== 'undefined') {
-      readWithXLSX(file);
-    } else {
-      var script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-      script.onload = function() { readWithXLSX(file); };
-      script.onerror = function() {
-        showToast('Gagal load library Excel. Coba format CSV.');
-      };
-      document.head.appendChild(script);
-    }
-  } else {
-    showToast('Format tidak didukung. Gunakan .xlsx, .xls, atau .csv');
-  }
-}
-
-function readWithXLSX(file) {
-  var reader = new FileReader();
-  reader.onload = function(e) {
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
     try {
-      var wb  = XLSX.read(e.target.result, { type: 'array' });
-      var ws  = wb.Sheets[wb.SheetNames[0]];
-      var raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
-      processExcelData(raw, file.name);
-    } catch(err) {
-      showToast('Gagal baca file Excel: ' + err.message);
-    }
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      excelData=rows;
+      var meta=document.getElementById('excelMeta');
+      if(meta) meta.innerHTML='<span>File:</span> '+escHtml(file.name)+'<br><span>Baris:</span> '+rows.length+'<br><span>Kolom:</span> '+(rows.length?Object.keys(rows[0]).join(', '):'—');
+      var prev=document.getElementById('excelPreview'); if(prev) prev.classList.add('visible');
+      showToast('File dibaca: '+rows.length+' baris ✓');
+    } catch(err){ showToast('Gagal baca file: '+err.message); }
   };
   reader.readAsArrayBuffer(file);
 }
-
-function parseCSV(text) {
-  var lines  = text.split(/\r?\n/).filter(function(l){ return l.trim(); });
-  if (lines.length < 2) return [];
-  var headers = lines[0].split(',').map(function(h){ return h.replace(/^"|"$/g,'').trim(); });
-  return lines.slice(1).map(function(line) {
-    var vals = line.split(',').map(function(v){ return v.replace(/^"|"$/g,'').trim(); });
-    var obj  = {};
-    headers.forEach(function(h, i){ obj[h] = vals[i] || ''; });
-    return obj;
-  });
-}
-
-function processExcelData(data, filename) {
-  if (!data || data.length === 0) { showToast('File kosong atau tidak bisa dibaca'); return; }
-
-  excelParsedData = data;
-
-  /* Bangun mapping kolom */
-  var headers = Object.keys(data[0]);
-  excelColMapping = {};
-
-  headers.forEach(function(h) {
-    var fixedMatch = matchFixed(h);
-    if (fixedMatch) {
-      excelColMapping[h] = { type: 'fixed', key: fixedMatch };
-    } else {
-      var key = h.trim() || normalizeKey(h);
-      excelColMapping[h] = { type: 'dynamic', key: key || h };
-    }
-  });
-
-  /* Tampilkan preview */
-  document.getElementById('excelMeta').innerHTML =
-    'File: <span>' + escHtml(filename) + '</span> &nbsp;|&nbsp; ' +
-    'Baris: <span>' + data.length + '</span> &nbsp;|&nbsp; ' +
-    'Kolom: <span>' + headers.length + '</span>';
-
-  var mappingHtml = '';
-  headers.forEach(function(h) {
-    var m   = excelColMapping[h];
-    var cls = m.type === 'fixed' ? 'dest-fixed' : 'dest-new';
-    var lbl = m.type === 'fixed'
-      ? (FIXED_LABELS[m.key] || m.key)
-      : '+ Kolom Baru: ' + m.key;
-    mappingHtml +=
-      '<div class="col-map-item">' +
-        '<span class="col-src">' + escHtml(h) + '</span>' +
-        '<span class="arrow">→</span>' +
-        '<span class="col-dest ' + cls + '">' + escHtml(lbl) + '</span>' +
-      '</div>';
-  });
-  document.getElementById('colMapping').innerHTML = mappingHtml;
-
-  document.getElementById('excelDropZone').style.display  = 'none';
-  document.getElementById('excelPreview').classList.add('visible');
-}
-
-function importExcel() {
-  if (!excelParsedData.length) return;
-
-  /* 1. Tambah kolom dinamis baru yang belum ada */
-  Object.values(excelColMapping).forEach(function(m) {
-    if (m.type === 'dynamic' && dynamicCols.indexOf(m.key) === -1) {
-      dynamicCols.push(m.key);
-    }
-  });
-  saveDynCols();
-
-  /* 2. Convert baris Excel → format rows */
-  var newRows = excelParsedData.map(function(r) {
-    var row = {
-      _status: 'new', _id: null,
-      asset_tag: '', asset_desc: '', lokasi: '', pic: '',
-      extra_data: {}
-    };
-    Object.keys(r).forEach(function(h) {
-      var m = excelColMapping[h];
-      if (!m) return;
-      if (m.type === 'fixed') {
-        row[m.key] = String(r[h] || '').trim();
-      } else {
-        row.extra_data[m.key] = String(r[h] || '').trim();
+function importExcel(){
+  var tab=getTab(activeTabId); if(!tab){ showToast('Pilih tab dulu'); return; }
+  if(!excelData.length){ showToast('Tidak ada data Excel'); return; }
+  var colMap={'asset tag':'asset_tag','asset_tag':'asset_tag','asset description':'asset_desc','asset_desc':'asset_desc','description':'asset_desc','lokasi':'lokasi','location':'lokasi','pic':'pic'};
+  excelData.forEach(function(row){
+    var newRow={_status:'new',id:null,asset_tag:'',asset_desc:'',lokasi:'',pic:'',extra_data:{},input_category:tab.name};
+    Object.keys(row).forEach(function(k){
+      var kl=k.toLowerCase().trim(); var mapped=colMap[kl];
+      if(mapped) newRow[mapped]=String(row[k]||'');
+      else if(FIXED_COLS.indexOf(kl)===-1){
+        newRow.extra_data[k]=String(row[k]||'');
+        if(tab.dynamicCols.indexOf(k)===-1) tab.dynamicCols.push(k);
       }
     });
-    return row;
+    tab.rows.push(newRow);
   });
-
-  /* 3. Append ke rows */
-  rows = rows.concat(newRows);
-  renderTable();
-  renderManualDynFields();
-  showToast(newRows.length + ' baris berhasil diimport ✓');
-  resetExcel();
+  saveState(); refreshPane(activeTabId); updateTabCount(activeTabId);
+  resetExcel(); showToast(excelData.length+' baris diimpor dari Excel ✓');
 }
-
-function resetExcel() {
-  excelParsedData = [];
-  excelColMapping = {};
-  document.getElementById('excelFileInput').value  = '';
-  document.getElementById('excelPreview').classList.remove('visible');
-  document.getElementById('excelDropZone').style.display = '';
-  document.getElementById('colMapping').innerHTML  = '';
-  document.getElementById('excelMeta').innerHTML   = '';
+function resetExcel(){
+  excelData=[];
+  var prev=document.getElementById('excelPreview'); if(prev) prev.classList.remove('visible');
+  var fi=document.getElementById('excelFileInput'); if(fi) fi.value='';
 }
 
 /* ══════════════════════════════════════════════
-   MANUAL FORM
+   HELPERS
 ══════════════════════════════════════════════ */
-function renderManualDynFields() {
-  var section = document.getElementById('manualDynSection');
-  var grid    = document.getElementById('manualDynFields');
-
-  if (dynamicCols.length === 0) {
-    section.classList.remove('has-fields');
-    grid.innerHTML = '';
-    return;
+function updateTabCount(tabId){
+  var btn=document.querySelector('.tab-btn[data-tabid="'+tabId+'"]'); if(!btn) return;
+  var tab=getTab(tabId); if(!tab) return;
+  var el=btn.querySelector('.tab-count'); if(el) el.textContent=tab.rows.length;
+}
+function resetToDynCols(tabId){
+  var tab = getTab(tabId); if(!tab) return;
+  if(!confirm('Reset semua kolom tambahan pada tab "'+tab.name+'"?\nKolom fix (Asset Tag, Deskripsi, Lokasi, PIC) tetap ada.')) return;
+  tab.dynamicCols = [];
+  tab.rows.forEach(function(r){ if(r.extra_data) r.extra_data = {}; });
+  saveState();
+  /* Rebuild pane dari awal supaya head & body ikut reset */
+  var container = document.getElementById('tabPanes');
+  var oldPane = document.getElementById('pane_'+tabId);
+  if(oldPane && container) {
+    var newPane = buildPane(tab);
+    container.replaceChild(newPane, oldPane);
   }
-
-  section.classList.add('has-fields');
-  grid.innerHTML = dynamicCols.map(function(col) {
-    return '<div class="form-field">' +
-      '<div class="form-label">' + escHtml(col) + '</div>' +
-      '<input type="text" class="form-input" id="mf_dyn_' + escAttr(col) + '" placeholder="' + escAttr(col) + '">' +
-    '</div>';
-  }).join('');
+  showToast('Kolom tambahan "'+tab.name+'" direset ✓');
+}
+function togglePw(id, btn){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function escAttr(s){ return escHtml(s); }
+function showToast(msg){
+  var t=document.getElementById('toast'); if(!t) return;
+  t.textContent=msg; t.style.opacity='1';
+  clearTimeout(t._timeout); t._timeout=setTimeout(function(){ t.style.opacity='0'; },3000);
 }
 
-function submitManual() {
-  var assetTag  = document.getElementById('mf_asset_tag').value.trim();
-  var assetDesc = document.getElementById('mf_asset_desc').value.trim();
-  var lokasi    = document.getElementById('mf_lokasi').value.trim();
-  var pic       = document.getElementById('mf_pic').value.trim();
-
-  /* Validasi minimal 1 field wajib */
-  var tagEl  = document.getElementById('mf_asset_tag');
-  var descEl = document.getElementById('mf_asset_desc');
-
-  tagEl.classList.remove('field-required-error');
-  descEl.classList.remove('field-required-error');
-
-  if (!assetTag && !assetDesc) {
-    tagEl.classList.add('field-required-error');
-    descEl.classList.add('field-required-error');
-    showToast('Asset Tag atau Description harus diisi!');
-    return;
-  }
-
-  /* Kumpulkan kolom dinamis */
-  var extra = {};
-  dynamicCols.forEach(function(col) {
-    var el = document.getElementById('mf_dyn_' + col);
-    if (el) extra[col] = el.value.trim();
-  });
-
-  var newRow = {
-    _status:    'new',
-    _id:        null,
-    asset_tag:  assetTag,
-    asset_desc: assetDesc,
-    lokasi:     lokasi,
-    pic:        pic,
-    extra_data: extra
-  };
-
-  rows.push(newRow);
-  renderTable();
-  showToast('Baris ditambahkan ke tabel ✓ — klik 💾 untuk simpan');
-  resetManual();
-
-  /* Scroll ke tabel */
-  setTimeout(function(){
-    var tbody = document.getElementById('tableBody');
-    if (tbody && tbody.lastElementChild) {
-      tbody.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, 150);
-}
-
-function resetManual() {
-  ['mf_asset_tag','mf_asset_desc','mf_lokasi','mf_pic'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) { el.value = ''; el.classList.remove('field-required-error'); }
-  });
-  dynamicCols.forEach(function(col){
-    var el = document.getElementById('mf_dyn_' + col);
-    if (el) el.value = '';
-  });
-}
-
-/* Re-render form manual saat kolom dinamis berubah */
-var _origSaveDynCols = saveDynCols;
-saveDynCols = function() {
-  _origSaveDynCols();
-  renderManualDynFields();
-};
-
-/* ══════════════════════════════════════════════
-   REFERENSI TEMPLATE KOLOM
-══════════════════════════════════════════════ */
-var REF_TABLE      = 'outage_ref_template';
-var refTemplates   = [];      /* cache dari Supabase */
-var pendingDelRef  = null;    /* { id, name, pw_hash } */
-
-/* -- Hash SHA-256 sederhana -- */
-async function sha256(str) {
-  var buf  = new TextEncoder().encode(str);
-  var hash = await crypto.subtle.digest('SHA-256', buf);
-  return Array.from(new Uint8Array(hash)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
-}
-
-/* ── LOAD referensi dari Supabase ── */
-function loadRefTemplates() {
-  supaFetch('GET', REF_TABLE + '?select=*&order=created_at.asc')
-    .then(function(data) {
-      refTemplates = data || [];
-      renderRefChips();
-    })
-    .catch(function() {
-      /* Tabel belum ada — tampil kosong */
-      refTemplates = [];
-      renderRefChips();
-    });
-}
-
-/* ── RENDER chip referensi ── */
-function renderRefChips() {
-  var container = document.getElementById('refChips');
-  var empty     = document.getElementById('refEmpty');
-
-  /* Hapus chip lama, sisakan elemen #refEmpty */
-  var chips = container.querySelectorAll('.ref-chip');
-  chips.forEach(function(c){ c.remove(); });
-
-  if (refTemplates.length === 0) {
-    empty.style.display = '';
-    return;
-  }
-
-  empty.style.display = 'none';
-
-  refTemplates.forEach(function(ref) {
-    var chip = document.createElement('div');
-    chip.className = 'ref-chip';
-    chip.title = 'Klik untuk muat kolom: ' + (ref.columns || []).join(', ');
-
-    var lbl = document.createElement('span');
-    lbl.className = 'chip-label';
-    lbl.textContent = ref.name;
-
-    var colBadge = document.createElement('span');
-    colBadge.style.cssText = 'font-size:10px;background:rgba(124,58,237,0.12);border-radius:3px;padding:1px 5px;color:#7c3aed;';
-    colBadge.textContent = (ref.columns || []).length + ' kol';
-
-    var delBtn = document.createElement('button');
-    delBtn.className = 'chip-del';
-    delBtn.title = 'Hapus referensi (butuh sandi)';
-    delBtn.textContent = '×';
-    delBtn.onclick = function(e) {
-      e.stopPropagation();
-      openDelRefModal(ref);
-    };
-
-    chip.appendChild(lbl);
-    chip.appendChild(colBadge);
-    chip.appendChild(delBtn);
-
-    chip.addEventListener('click', function() { applyRefTemplate(ref); });
-    container.appendChild(chip);
-  });
-}
-
-/* ── APPLY referensi → gabung kolom dinamis ── */
-function applyRefTemplate(ref) {
-  var cols   = ref.columns || [];
-  var added  = [];
-
-  cols.forEach(function(col) {
-    if (FIXED_COLS.indexOf(col) === -1 && dynamicCols.indexOf(col) === -1) {
-      dynamicCols.push(col);
-      added.push(col);
-    }
-  });
-
-  if (added.length > 0) {
-    saveDynCols();
-    renderTable();
-    showToast('✓ ' + added.length + ' kolom dari "' + ref.name + '" ditambahkan');
-  } else {
-    showToast('Semua kolom referensi sudah ada di tabel');
-  }
-}
-
-/* ══ MODAL SIMPAN REFERENSI ══ */
-function openSaveRefModal() {
-  if (dynamicCols.length === 0) {
-    showToast('Belum ada kolom dinamis untuk disimpan sebagai referensi');
-    return;
-  }
-  document.getElementById('saveRefColCount').textContent = dynamicCols.length;
-  document.getElementById('refName').value           = '';
-  document.getElementById('refPassword').value       = '';
-  document.getElementById('refPasswordConfirm').value= '';
-  document.getElementById('saveRefHint').textContent = '';
-  document.getElementById('saveRefHint').className   = 'modal-hint';
-  document.getElementById('saveRefModal').classList.add('show');
-  setTimeout(function(){ document.getElementById('refName').focus(); }, 100);
-}
-
-function closeSaveRefModal() {
-  document.getElementById('saveRefModal').classList.remove('show');
-}
-
-/* ── Validasi → buka modal konfirmasi ── */
-function openConfirmRefModal() {
-  var name    = document.getElementById('refName').value.trim();
-  var pw      = document.getElementById('refPassword').value;
-  var pwConf  = document.getElementById('refPasswordConfirm').value;
-  var hint    = document.getElementById('saveRefHint');
-
-  hint.className   = 'modal-hint error-hint';
-
-  if (!name) { hint.textContent = '⚠ Nama referensi tidak boleh kosong.'; return; }
-  if (!pw)   { hint.textContent = '⚠ Sandi tidak boleh kosong.'; return; }
-  if (pw.length < 4) { hint.textContent = '⚠ Sandi minimal 4 karakter.'; return; }
-  if (pw !== pwConf) { hint.textContent = '⚠ Konfirmasi sandi tidak cocok.'; return; }
-
-  hint.textContent = '';
-
-  /* Isi modal konfirmasi */
-  document.getElementById('confirmRefName').textContent = '📋 ' + name;
-  document.getElementById('confirmRefCols').textContent = dynamicCols.join(' · ');
-  document.getElementById('confirmRefModal').classList.add('show');
-}
-
-function closeConfirmRefModal() {
-  document.getElementById('confirmRefModal').classList.remove('show');
-}
-
-/* ── Simpan ke Supabase ── */
-function confirmSaveRef() {
-  var name   = document.getElementById('refName').value.trim();
-  var pw     = document.getElementById('refPassword').value;
-
-  sha256(pw).then(function(hash) {
-    var payload = {
-      name:       name,
-      columns:    dynamicCols.slice(),   /* snapshot kolom saat ini */
-      pw_hash:    hash,
-      created_at: new Date().toISOString()
-    };
-
-    supaFetch('POST', REF_TABLE, payload)
-      .then(function(result) {
-        closeConfirmRefModal();
-        closeSaveRefModal();
-        showToast('Referensi "' + name + '" berhasil disimpan ✓');
-        loadRefTemplates();
-      })
-      .catch(function(err) {
-        closeConfirmRefModal();
-        var hint = document.getElementById('saveRefHint');
-        hint.className   = 'modal-hint error-hint';
-        hint.textContent = '⚠ Gagal simpan: ' + (err.message || err);
-        document.getElementById('saveRefModal').classList.add('show');
-      });
-  });
-}
-
-/* ══ MODAL HAPUS REFERENSI ══ */
-function openDelRefModal(ref) {
-  pendingDelRef = ref;
-  document.getElementById('delRefName').textContent    = ref.name;
-  document.getElementById('delRefPassword').value      = '';
-  document.getElementById('delRefHint').textContent    = '';
-  document.getElementById('delRefHint').className      = 'modal-hint';
-  document.getElementById('delRefPassword').className  = 'modal-input-pw';
-  document.getElementById('delRefModal').classList.add('show');
-  setTimeout(function(){ document.getElementById('delRefPassword').focus(); }, 100);
-}
-
-function closeDelRefModal() {
-  pendingDelRef = null;
-  document.getElementById('delRefModal').classList.remove('show');
-}
-
-function confirmDelRef() {
-  if (!pendingDelRef) return;
-  var pw   = document.getElementById('delRefPassword').value;
-  var hint = document.getElementById('delRefHint');
-
-  if (!pw) {
-    hint.className   = 'modal-hint error-hint';
-    hint.textContent = '⚠ Sandi tidak boleh kosong.';
-    return;
-  }
-
-  sha256(pw).then(function(hash) {
-    if (hash !== pendingDelRef.pw_hash) {
-      document.getElementById('delRefPassword').className = 'modal-input-pw pw-error';
-      hint.className   = 'modal-hint error-hint';
-      hint.textContent = '⚠ Sandi salah. Referensi tidak dihapus.';
-      return;
-    }
-
-    /* Sandi benar → hapus dari Supabase */
-    supaFetch('DELETE', REF_TABLE + '?id=eq.' + pendingDelRef.id)
-      .then(function() {
-        closeDelRefModal();
-        showToast('Referensi "' + pendingDelRef.name + '" dihapus ✓');
-        loadRefTemplates();
-      })
-      .catch(function(err) {
-        hint.className   = 'modal-hint error-hint';
-        hint.textContent = '⚠ Gagal hapus: ' + (err.message || err);
-      });
-  });
-}
-
-/* ── Toggle show/hide password ── */
-function togglePw(inputId, btn) {
-  var el = document.getElementById(inputId);
-  if (el.type === 'password') {
-    el.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    el.type = 'password';
-    btn.textContent = '👁';
-  }
-}
-
-/* ── Close modal klik overlay ── */
-['saveRefModal','confirmRefModal','delRefModal'].forEach(function(id){
-  document.getElementById(id).addEventListener('click', function(e){
-    if (e.target === this) this.classList.remove('show');
-  });
+/* Close modal on overlay click */
+['addColModal','delRowModal','delColModal','addTabModal','delTabModal','saveRefModal','delRefModal'].forEach(function(id){
+  var el=document.getElementById(id); if(el) el.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('show'); });
 });
-
-/* ── Init referensi saat halaman load ── */
-loadRefTemplates();
 </script>
 </body>
 </html>
