@@ -22,6 +22,18 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .input-unit-wrap{display:flex;align-items:center;width:100%;}
 .unit-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 6px;font-size:10px;font-weight:600;color:var(--steel);background:var(--bg2);border:1px solid var(--border);border-left:none;border-radius:0 3px 3px 0;white-space:nowrap;min-width:28px;font-family:'Courier New',monospace;letter-spacing:0.2px;}
 .unit-badge.no-unit{color:var(--text3);font-weight:400;}
+
+@media print {
+  body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .topbar, .topbar-back, button, .section-label { display: none !important; }
+  .panel { box-shadow: none !important; border: 1px solid #ccc !important; margin-bottom: 12px !important; page-break-inside: avoid; }
+  .wrapper { padding: 0 !important; }
+  .data-input { border: none !important; background: transparent !important; font-weight: 600; }
+  .unit-badge { background: transparent !important; border: none !important; }
+  .manual-table { width: 100% !important; }
+  .manual-table th { background: #1e3a8a !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .input-unit-wrap { display: flex !important; }
+}
 </style>
 </head>
 <body>
@@ -397,7 +409,7 @@ function cfDownloadPdf() {
       var nowStr = dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
       function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
-      function safe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
+      function safe(s){ return String(s||''); }
       function pad(n){ return String(n).padStart(2,'0'); }
 
       var y = marginTop;
@@ -478,7 +490,7 @@ function cfDownloadPdf() {
           var rx = marginX;
           doc.setFillColor(bg[0],bg[1],bg[2]);
           COL_W.forEach(function(w){ doc.rect(rx, y, w, rowH, 'FD'); rx += w; });
-          doc.setDrawColor(200,215,230); doc.setLineWidth(0.15);
+          doc.setDrawColor(200,215,230); doc.setLineWidth(0.3);
 
           // selfTest
           doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,138);
@@ -490,7 +502,8 @@ function cfDownloadPdf() {
           var t = [gv(row.id+'1'), gv(row.id+'2'), gv(row.id+'3')];
           t.forEach(function(tv, ti) {
             var tx = marginX + COL_W[0] + COL_W[1] + COL_W[2]*ti;
-            var displayVal = tv ? (safe(tv) + (row.unit ? ' '+safe(row.unit) : '')) : '—';
+            var unit = row.unit || '';
+            var displayVal = (tv !== undefined && tv !== '') ? (tv + (unit ? ' '+unit : '')) : '-';
             doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(20,20,60);
             doc.text(displayVal, tx + COL_W[2]/2, y+5.8, {align:'center'});
           });
