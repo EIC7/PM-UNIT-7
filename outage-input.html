@@ -1206,26 +1206,49 @@ function loadState() {
   activeTabId = tabs[0].id;
   renderTabStrip();
   renderAllPanes();
-  showToast('Memuat data...');
-  supaFetch('GET', ASSET_TABLE+'?select=*&order=created_at.asc&limit=1000')
-    .then(function(data){
-      (data||[]).forEach(function(r){
-        var cat = (r.input_category||'').trim();
-        var tab = tabs.find(function(t){ return t.name===cat; });
-        if (!tab) {
-          var nid='tab_'+Date.now()+'_'+Math.random().toString(36).substr(2,5);
-          tab={id:nid,name:cat||'Lainnya',rows:[],dynamicCols:[]};
-          tabs.push(tab);
-        }
-        if (r.extra_data && typeof r.extra_data==='object') {
-          Object.keys(r.extra_data).forEach(function(k){ if(tab.dynamicCols.indexOf(k)===-1) tab.dynamicCols.push(k); });
-        }
-        tab.rows.push(Object.assign({},r,{_status:'saved'}));
-      });
-      saveState(); renderTabStrip(); renderAllPanes();
-      showToast('Data dimuat ✓');
-    })
-    .catch(function(){ renderAllPanes(); showToast('Gagal muat dari server'); });
+
+  /* Cek apakah ada data edit dari history (via sessionStorage) */
+  try {
+    var editData = sessionStorage.getItem('outage_edit_row');
+    if (editData) {
+      sessionStorage.removeItem('outage_edit_row');
+      var row = JSON.parse(editData);
+      loadEditRow(row);
+    }
+  } catch(e){}
+}
+
+function loadEditRow(row) {
+  var cat = (row.input_category || '').trim() || 'Control Valve';
+  var tab = tabs.find(function(t){ return t.name === cat; });
+  if (!tab) {
+    /* Buat tab baru jika kategori belum ada */
+    var nid = 'tab_edit_' + Date.now();
+    tab = { id: nid, name: cat, rows: [], dynamicCols: [] };
+    tabs.push(tab);
+    saveState();
+    renderTabStrip();
+    var container = document.getElementById('tabPanes');
+    container.appendChild(buildPane(tab));
+  }
+  /* Merge kolom dinamis */
+  if (row.extra_data && typeof row.extra_data === 'object') {
+    Object.keys(row.extra_data).forEach(function(k){
+      if (tab.dynamicCols.indexOf(k) === -1) tab.dynamicCols.push(k);
+    });
+  }
+  tab.rows.push(Object.assign({}, row, { _status: 'editing' }));
+  switchTab(tab.id);
+  saveState();
+  var oldPane = document.getElementById('pane_' + tab.id);
+  var container = document.getElementById('tabPanes');
+  if (oldPane && container) {
+    var newPane = buildPane(tab);
+    container.replaceChild(newPane, oldPane);
+    var resetBtn = newPane.querySelector('.reset-ref-btn');
+    if (resetBtn) resetBtn.onclick = function(){ resetToDynCols(tab.id); };
+  }
+  showToast('Data dari History dimuat untuk diedit ✓');
 }
 
 function saveState() {

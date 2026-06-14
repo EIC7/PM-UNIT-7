@@ -509,7 +509,7 @@
 <!-- TOPBAR -->
 <div class="topbar">
   <button class="topbar-back" onclick="window.location.href='outage-index.html'">← Outage</button>
-  <button class="topbar-back" onclick="window.location.href='outage-input.html'" style="margin-left:2px">📝 Input Data</button>
+  <button class="topbar-back" onclick="window.location.href='index.html'" style="margin-left:2px">⌂ PM Dashboard</button>
   <div class="topbar-sep"></div>
   <div class="topbar-logo">HISTORY</div>
   <div class="topbar-sep"></div>
@@ -969,10 +969,14 @@ function closeModal() {
 
 function openRecord() {
   if (!activeRecord) return;
-  var url = activeRecord._source === 'asset'
-    ? 'outage-input.html'
-    : 'outage-checksheet.html?id=' + activeRecord.id;
-  window.location.href = url;
+  if (activeRecord._source === 'asset') {
+    try {
+      sessionStorage.setItem('outage_edit_row', JSON.stringify(activeRecord));
+    } catch(e){}
+    window.location.href = 'outage-input.html';
+  } else {
+    window.location.href = 'outage-checksheet.html?id=' + activeRecord.id;
+  }
 }
 
 function deleteRecord() {
