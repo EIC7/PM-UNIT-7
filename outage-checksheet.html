@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kumpulan Checksheet — Outage Unit 7</title>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --bg2: #ffffff;
+    --border: #e2e8f0;
+    --steel: #1e3a5f;
+    --steel-light: #2d4a6a;
+    --accent: #1d4ed8;
+    --text-dark: #0f172a;
+    --text-mid: #475569;
+    --text-light: #94a3b8;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 10px 28px rgba(0,0,0,0.12);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6a 60%, #1e3a5f 100%);
+    padding: 0 clamp(10px,3vw,32px);
+    display: flex;
+    align-items: center;
+    gap: clamp(6px,1.2vw,16px);
+    min-height: clamp(44px,5vh,54px);
+    border-bottom: 2px solid #1d4ed844;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-wrap: nowrap;
+  }
+
+  .topbar-back {
+    padding: clamp(4px,0.5vh,6px) clamp(8px,1vw,14px);
+    border: 1px solid #2a4a7a;
+    border-radius: 4px;
+    background: rgba(29,78,216,0.06);
+    color: #93c5fd;
+    font-size: clamp(9px,1vw,11px);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .topbar-back:hover { color: #bfdbfe; border-color: #1d4ed8; background: rgba(29,78,216,0.14); }
+
+  .topbar-sep { width: 1px; height: 26px; background: #2a4a7a; flex-shrink: 0; }
+
+  .topbar-logo {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(12px,1.8vw,18px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #93c5fd;
+    flex-shrink: 0;
+  }
+
+  .topbar-sub {
+    font-size: clamp(10px,1.2vw,13px);
+    color: #7ab4d8;
+    letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #3b82f6;
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .topbar-time {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(9px,1.1vw,12px);
+    color: #93c5fd;
+  }
+
+  @media(max-width:600px){ .topbar-sub, .topbar-sep { display:none; } }
+
+  /* ── WRAPPER ── */
+  .wrapper {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: clamp(16px,2.5vh,32px) clamp(12px,2.5vw,28px) 60px;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: clamp(20px,3vh,36px);
+    flex-wrap: wrap;
+  }
+
+  .page-header-sub {
+    font-size: clamp(9px,1vw,12px);
+    color: var(--text-light);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  .page-header-title {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(22px,4vw,42px);
+    font-weight: 700;
+    color: var(--steel);
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+
+  .page-header-title span { color: var(--accent); }
+
+  .page-header-sub2 {
+    font-size: 13px;
+    color: var(--text-mid);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  /* ── DIVIDER ── */
+  .divider-label {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: clamp(18px,2.5vh,28px);
+  }
+  .divider-label .line { flex:1; height:1px; background:var(--border); }
+  .divider-label .txt {
+    font-size: 11px;
+    color: var(--text-light);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── CARDS GRID ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+    gap: 20px;
+  }
+
+  /* ── CHECKSHEET CARD ── */
+  .cs-card {
+    background: var(--bg2);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 26px 24px 22px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: inherit;
+    animation: slideUp 0.4s ease both;
+  }
+
+  .cs-card:nth-child(1) { animation-delay: 0.04s; }
+  .cs-card:nth-child(2) { animation-delay: 0.10s; }
+  .cs-card:nth-child(3) { animation-delay: 0.16s; }
+  .cs-card:nth-child(4) { animation-delay: 0.22s; }
+
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  .cs-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--card-color, var(--accent));
+    border-radius: 14px 14px 0 0;
+    transition: height 0.22s;
+  }
+
+  .cs-card:hover {
+    border-color: var(--card-color, var(--accent));
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-5px);
+  }
+
+  .cs-card:hover::before { height: 6px; }
+
+  /* Warna per card */
+  .card-cv   { --card-color: #0891b2; --card-bg-icon: rgba(8,145,178,0.10); }
+  .card-temp { --card-color: #dc2626; --card-bg-icon: rgba(220,38,38,0.10); }
+  .card-ls   { --card-color: #7c3aed; --card-bg-icon: rgba(124,58,237,0.10); }
+  .card-add  { --card-color: #16a34a; --card-bg-icon: rgba(22,163,74,0.10);
+               border-style: dashed; background: #f8fafb; }
+
+  .card-num {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: var(--text-light);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+  }
+
+  .card-icon-wrap {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 16px;
+    background: var(--card-bg-icon, rgba(29,78,216,0.10));
+    transition: transform 0.25s;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+
+  .cs-card:hover .card-icon-wrap { transform: scale(1.08) rotate(4deg); }
+
+  .card-title {
+    font-size: clamp(14px,2vw,18px);
+    font-weight: 700;
+    color: var(--text-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    line-height: 1.2;
+    transition: color 0.2s;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cs-card:hover .card-title { color: var(--card-color, var(--accent)); }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--text-mid);
+    line-height: 1.55;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 16px;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ctag {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--card-bg-icon, rgba(29,78,216,0.08));
+    color: var(--card-color, var(--accent));
+    border: 1px solid var(--card-color, var(--accent));
+    font-family: 'Courier New', monospace;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .cs-card:hover .ctag { opacity: 1; }
+
+  .card-arrow {
+    position: absolute;
+    bottom: 18px;
+    right: 18px;
+    font-size: 18px;
+    color: var(--border);
+    transition: all 0.25s;
+    z-index: 1;
+  }
+
+  .cs-card:hover .card-arrow {
+    color: var(--card-color, var(--accent));
+    transform: translate(3px, -3px);
+  }
+
+  /* Card ADD */
+  .card-add .card-title { color: var(--text-mid); }
+  .card-add:hover .card-title { color: #16a34a; }
+  .card-add .card-desc  { color: var(--text-light); font-size: 12px; }
+
+  /* ── MODAL TAMBAH CARD ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.5);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal-box {
+    background: var(--bg2);
+    border-radius: 12px;
+    padding: 26px;
+    width: min(440px, 96vw);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-group {
+    margin-bottom: 14px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--accent); }
+
+  .form-group textarea { resize: vertical; min-height: 70px; }
+
+  .icon-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .icon-opt {
+    width: 40px; height: 40px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #f8fafc;
+  }
+
+  .icon-opt:hover  { border-color: var(--accent); background: #eff6ff; }
+  .icon-opt.active { border-color: var(--accent); background: #dbeafe; }
+
+  .modal-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  .btn {
+    padding: 9px 18px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #1e40af; transform: translateY(-1px); }
+  .btn-outline { background: transparent; color: var(--text-mid); border: 1.5px solid var(--border); }
+  .btn-outline:hover { border-color: var(--text-mid); }
+  .btn-danger  { background: transparent; color: #dc2626; border: 1.5px solid #fecaca; }
+  .btn-danger:hover { background: #fef2f2; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: #1e3a5f;
+    color: #fff;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+    max-width: 90vw;
+    text-align: center;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 16px clamp(12px,2.5vw,28px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 40px;
+  }
+  footer span {
+    font-size: 11px;
+    color: var(--text-light);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  @media(max-width:640px){
+    .cards-grid { grid-template-columns: 1fr; }
+    .page-header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='outage-index.html'">← Outage</button>
+  <button class="topbar-back" onclick="window.location.href='outage-history.html'" style="margin-left:2px">🗂 History</button>
+  <button class="topbar-back" onclick="window.location.href='index.html'" style="margin-left:2px">⌂ PM Dashboard</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">CHECKSHEET</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">Outage Unit 7 · Kumpulan Checksheet</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clockCS">--:--:--</div>
+  </div>
+</div>
+
+<!-- WRAPPER -->
+<div class="wrapper">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Outage Management · MOD-02</div>
+      <div class="page-header-title">Kumpulan <span>Checksheet</span></div>
+      <div class="page-header-sub2">
+        Pilih jenis checksheet. Data asset otomatis terisi dari database Input Data.
+      </div>
+    </div>
+  </div>
+
+  <!-- DIVIDER -->
+  <div class="divider-label">
+    <div class="line"></div>
+    <div class="txt">— Pilih Checksheet —</div>
+    <div class="line"></div>
+  </div>
+
+  <!-- CARDS GRID -->
+  <div class="cards-grid" id="cardsGrid">
+
+    <!-- Card 1: Control Valve -->
+    <a class="cs-card card-cv" href="checksheet-control-valve.html">
+      <div class="card-num">CS — 01</div>
+      <div class="card-icon-wrap">🔧</div>
+      <div class="card-title">Control<br>Valve</div>
+      <div class="card-desc">
+        Checksheet pemeriksaan dan pengujian control valve. Stroke test, leak test, posisi, dan kondisi aktuator.
+      </div>
+      <div class="card-tags">
+        <span class="ctag">STROKE TEST</span>
+        <span class="ctag">LEAK TEST</span>
+        <span class="ctag">AKTUATOR</span>
+      </div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+    <!-- Card 2: Temperature -->
+    <a class="cs-card card-temp" href="checksheet-temperature.html">
+      <div class="card-num">CS — 02</div>
+      <div class="card-icon-wrap">🌡️</div>
+      <div class="card-title">Temperature</div>
+      <div class="card-desc">
+        Checksheet kalibrasi dan verifikasi sensor temperatur. Reading, setpoint, deviasi, dan kondisi sensor.
+      </div>
+      <div class="card-tags">
+        <span class="ctag">KALIBRASI</span>
+        <span class="ctag">SENSOR</span>
+        <span class="ctag">DEVIASI</span>
+      </div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+    <!-- Card 3: Level Switch -->
+    <a class="cs-card card-ls" href="checksheet-level-switch.html">
+      <div class="card-num">CS — 03</div>
+      <div class="card-icon-wrap">🔘</div>
+      <div class="card-title">Level<br>Switch</div>
+      <div class="card-desc">
+        Checksheet pengujian level switch. Trip point, response test, dan verifikasi sinyal ke DCS/relay.
+      </div>
+      <div class="card-tags">
+        <span class="ctag">TRIP POINT</span>
+        <span class="ctag">RESPONSE</span>
+        <span class="ctag">DCS SIGNAL</span>
+      </div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+    <!-- Card ADD -->
+    <div class="cs-card card-add" onclick="openAddModal()">
+      <div class="card-num">CS — ??</div>
+      <div class="card-icon-wrap" style="font-size:32px">➕</div>
+      <div class="card-title">Tambah<br>Checksheet</div>
+      <div class="card-desc">
+        Buat checksheet baru sesuai kebutuhan. Tentukan nama, ikon, dan deskripsi.
+      </div>
+      <div class="card-tags">
+        <span class="ctag">KUSTOM</span>
+        <span class="ctag">BARU</span>
+      </div>
+      <div class="card-arrow">↗</div>
+    </div>
+
+  </div><!-- /cards-grid -->
+
+  <!-- Extra cards dari localStorage -->
+  <div id="extraCardsWrap"></div>
+
+</div><!-- /wrapper -->
+
+<!-- FOOTER -->
+<footer>
+  <span>PT POMI · PLTU PAITON UNIT 7 · OUTAGE CHECKSHEET v1.0</span>
+  <span id="footerDate">—</span>
+</footer>
+
+<!-- MODAL TAMBAH CHECKSHEET -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-box">
+    <div class="modal-title">➕ Tambah Checksheet Baru</div>
+
+    <div class="form-group">
+      <label>Nama Checksheet</label>
+      <input type="text" id="newCsName" placeholder="contoh: Pressure Transmitter">
+    </div>
+
+    <div class="form-group">
+      <label>Deskripsi</label>
+      <textarea id="newCsDesc" placeholder="Deskripsi singkat checksheet ini..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Pilih Ikon</label>
+      <div class="icon-picker" id="iconPicker">
+        <div class="icon-opt active" data-icon="⚙️">⚙️</div>
+        <div class="icon-opt" data-icon="📡">📡</div>
+        <div class="icon-opt" data-icon="💧">💧</div>
+        <div class="icon-opt" data-icon="⚡">⚡</div>
+        <div class="icon-opt" data-icon="🔩">🔩</div>
+        <div class="icon-opt" data-icon="🛢️">🛢️</div>
+        <div class="icon-opt" data-icon="📊">📊</div>
+        <div class="icon-opt" data-icon="🔌">🔌</div>
+        <div class="icon-opt" data-icon="🌀">🌀</div>
+        <div class="icon-opt" data-icon="🔋">🔋</div>
+        <div class="icon-opt" data-icon="🧲">🧲</div>
+        <div class="icon-opt" data-icon="📟">📟</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Warna Aksen</label>
+      <select id="newCsColor">
+        <option value="#0891b2">Biru Teal</option>
+        <option value="#1d4ed8">Biru</option>
+        <option value="#dc2626">Merah</option>
+        <option value="#7c3aed">Ungu</option>
+        <option value="#16a34a">Hijau</option>
+        <option value="#d97706">Oranye</option>
+        <option value="#db2777">Pink</option>
+        <option value="#0f766e">Teal Gelap</option>
+      </select>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeAddModal()">Batal</button>
+      <button class="btn btn-primary" onclick="confirmAddCard()">➕ Tambah</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* ── CLOCK & DATE ── */
+(function(){
+  function tick() {
+    var now = new Date();
+    var el = document.getElementById('clockCS');
+    if(el) el.textContent = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+    var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    var fd = document.getElementById('footerDate');
+    if(fd) fd.textContent = String(now.getDate()).padStart(2,'0') + ' ' + BULAN[now.getMonth()] + ' ' + now.getFullYear();
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+/* ── EXTRA CARDS (dari localStorage) ── */
+var extraCards = [];
+
+function loadExtraCards() {
+  try { extraCards = JSON.parse(localStorage.getItem('outage_extra_checksheets') || '[]'); } catch(e){ extraCards = []; }
+  renderExtraCards();
+}
+
+function saveExtraCards() {
+  try { localStorage.setItem('outage_extra_checksheets', JSON.stringify(extraCards)); } catch(e){}
+}
+
+function renderExtraCards() {
+  if (!extraCards.length) { document.getElementById('extraCardsWrap').innerHTML=''; return; }
+
+  var html = '<div style="margin-top:20px"><div class="divider-label"><div class="line"></div><div class="txt">— Checksheet Tambahan —</div><div class="line"></div></div>';
+  html += '<div class="cards-grid">';
+
+  extraCards.forEach(function(cs, idx){
+    var color   = cs.color || '#1d4ed8';
+    var hexAlpha = color + '1a'; /* ~10% opacity untuk bg icon */
+    html +=
+      '<div class="cs-card" style="--card-color:'+color+';--card-bg-icon:'+hexAlpha+'" ' +
+        'onclick="window.location.href=\'checksheet-custom.html?id='+idx+'\'">' +
+        '<div class="card-num">CS — ' + String(4 + idx).padStart(2,'0') + '</div>' +
+        '<div class="card-icon-wrap">' + (cs.icon||'⚙️') + '</div>' +
+        '<div class="card-title">' + escHtml(cs.name) + '</div>' +
+        '<div class="card-desc">' + escHtml(cs.desc||'—') + '</div>' +
+        '<div class="card-tags"><span class="ctag">CUSTOM</span></div>' +
+        '<button onclick="event.stopPropagation();deleteCard('+idx+')" ' +
+          'style="position:absolute;top:14px;right:14px;background:rgba(220,38,38,0.12);border:none;' +
+          'color:#dc2626;width:24px;height:24px;border-radius:5px;cursor:pointer;font-size:12px;' +
+          'display:flex;align-items:center;justify-content:center;z-index:2">×</button>' +
+        '<div class="card-arrow">↗</div>' +
+      '</div>';
+  });
+
+  html += '</div></div>';
+  document.getElementById('extraCardsWrap').innerHTML = html;
+}
+
+function deleteCard(idx) {
+  if (!confirm('Hapus checksheet "' + extraCards[idx].name + '"?')) return;
+  extraCards.splice(idx, 1);
+  saveExtraCards();
+  renderExtraCards();
+  showToast('Checksheet dihapus');
+}
+
+/* ── MODAL TAMBAH CARD ── */
+var selectedIcon = '⚙️';
+
+function openAddModal() {
+  selectedIcon = '⚙️';
+  document.getElementById('newCsName').value = '';
+  document.getElementById('newCsDesc').value = '';
+  document.getElementById('newCsColor').value = '#0891b2';
+  document.querySelectorAll('.icon-opt').forEach(function(el){
+    el.classList.toggle('active', el.dataset.icon === '⚙️');
+  });
+  document.getElementById('addModal').classList.add('show');
+  setTimeout(function(){ document.getElementById('newCsName').focus(); }, 80);
+}
+
+function closeAddModal() {
+  document.getElementById('addModal').classList.remove('show');
+}
+
+function confirmAddCard() {
+  var name = document.getElementById('newCsName').value.trim();
+  if (!name) { showToast('Nama checksheet tidak boleh kosong'); return; }
+
+  extraCards.push({
+    name:  name,
+    desc:  document.getElementById('newCsDesc').value.trim(),
+    icon:  selectedIcon,
+    color: document.getElementById('newCsColor').value
+  });
+
+  saveExtraCards();
+  renderExtraCards();
+  closeAddModal();
+  showToast('Checksheet "' + name + '" ditambahkan ✓');
+}
+
+/* Icon picker */
+document.getElementById('iconPicker').addEventListener('click', function(e){
+  var opt = e.target.closest('.icon-opt');
+  if (!opt) return;
+  document.querySelectorAll('.icon-opt').forEach(function(el){ el.classList.remove('active'); });
+  opt.classList.add('active');
+  selectedIcon = opt.dataset.icon;
+});
+
+/* Close modal on overlay click */
+document.getElementById('addModal').addEventListener('click', function(e){
+  if (e.target === this) closeAddModal();
+});
+
+/* ── UTILS ── */
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(function(){ t.style.opacity='0'; }, 3000);
+}
+
+/* ── INIT ── */
+loadExtraCards();
+</script>
+</body>
+</html>
