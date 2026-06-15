@@ -527,9 +527,18 @@ function bsReEdit(side, idx) {
 function bsRemoveFile(side, idx) { bsImages[side].splice(idx,1); bsRenderPreviews(side); }
 
 function bs3mHasData() {
-  // True jika ada minimal satu checkbox 3 Monthly / Defect yang dicentang.
-  // Hanya item yang dicentang yang akan dicetak di PDF.
-  var ids = ['1z','1','2','3','4','5','6','7','8','9'];
+  // True jika ada minimal satu checkbox 3 Monthly yang dicentang (Normal Calibration: 8,9)
+  var ids = ['8','9'];
+  for (var i = 0; i < ids.length; i++) {
+    var chkEl = document.getElementById('bs3mCheck_'+ids[i]);
+    if (chkEl && chkEl.checked) return true;
+  }
+  return false;
+}
+
+function bsDefectHasData() {
+  // True jika ada minimal satu checkbox Defect yang dicentang (1z,1,2,3,4,5,6,7)
+  var ids = ['1z','1','2','3','4','5','6','7'];
   for (var i = 0; i < ids.length; i++) {
     var chkEl = document.getElementById('bs3mCheck_'+ids[i]);
     if (chkEl && chkEl.checked) return true;
@@ -591,7 +600,8 @@ function bsDownloadPdf() {
   try {
     bsSyncImageCaptions();
 
-    var has3m = bs3mHasData();
+    var has3m    = bs3mHasData();
+    var hasDefect = bsDefectHasData();
 
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
@@ -707,6 +717,67 @@ function bsDownloadPdf() {
     });
     y = doc.lastAutoTable.finalY + 8;
 
+    // ── DEFECT PREVENTIVE MAINTENANCE — hanya cetak jika ada data ──
+    if (hasDefect) {
+      secHeader('DEFECT PREVENTIVE MAINTENANCE — '+safe(BS_CFG.label));
+
+      var vd   = function(id){ var e=document.getElementById(id); return safe(e?e.value:''); };
+      var isCheckedD = function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
+
+      var ROWS_DEFECT = [
+        {grp:'Initial Calibration', no:'1', label:'Check Diagnostic Load (Span) dA1', crit:'Load Reading', chk:'bs3mCheck_1', a:'bs3mA_1', b:'bs3mB_1', unit:'PPM'},
+        {grp:'Initial Calibration', no:'',  label:'Check Diagnostic Load Zero (dA1)', crit:'Load Reading', chk:'bs3mCheck_1z', a:'bs3mA_1z', b:'bs3mB_1z', unit:'PPM'},
+        {grp:'Initial Calibration', no:'',  label:'Initial calibration have 3 Pass (see note)', crit:'Pass 1', chk:'bs3mCheck_2', a:'bs3mA_2', b:'bs3mB_2', unit:'M'},
+        {grp:'Initial Calibration', no:'',  label:'', crit:'Pass 2', chk:'bs3mCheck_3', a:'bs3mA_3', b:'bs3mB_3', unit:'M'},
+        {grp:'Initial Calibration', no:'',  label:'', crit:'Pass 3', chk:'bs3mCheck_4', a:'bs3mA_4', b:'bs3mB_4', unit:'M'},
+        {grp:'Initial Calibration', no:'',  label:'Average Pulse/Lenght', crit:'Pulse / M', chk:'bs3mCheck_5', a:'bs3mA_5', b:'bs3mB_5', unit:'PPM'},
+        {grp:'Initial Calibration Zero & Span mA8', no:'2', label:'', crit:'Zero Check (Unloaded)', chk:'bs3mCheck_6', a:'bs3mA_6', b:'bs3mB_6', unit:'PPM'},
+        {grp:'Initial Calibration Zero & Span mA8', no:'',  label:'', crit:'Test Load Check', chk:'bs3mCheck_7', a:'bs3mA_7', b:'bs3mB_7', unit:'PPM'},
+      ];
+      var GRP_DEFECT = ['Initial Calibration', 'Initial Calibration Zero & Span mA8'];
+
+      var rowsDefect = [];
+      GRP_DEFECT.forEach(function(grp) {
+        var grpRows = ROWS_DEFECT.filter(function(r){ return r.grp === grp && isCheckedD(r.chk); });
+        if (grpRows.length === 0) return;
+        rowsDefect.push([{content: grp, colSpan:6, styles:{fontStyle:'bold', fillColor:[235,241,255], textColor:[37,99,235]}}]);
+        grpRows.forEach(function(r) {
+          rowsDefect.push([r.no, r.label, r.crit, '__CHK__', vd(r.a)+' '+r.unit, vd(r.b)+' '+r.unit]);
+        });
+      });
+
+      doc.autoTable({
+        startY: y,
+        head: [['No','Calibration Process','Criteria', '?', safe(BS_CFG.a.name), safe(BS_CFG.b.name)]],
+        body: rowsDefect,
+        theme: 'grid',
+        margin: {left: marginX, right: marginX, top: 20},
+        headStyles: {fillColor:[37,99,235], textColor:[255,255,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
+        bodyStyles: {fontSize:7.5, textColor:[20,20,60], font:'helvetica', cellPadding:2},
+        columnStyles: {
+          0:{cellWidth:10, halign:'center'},
+          1:{cellWidth:50},
+          2:{cellWidth:43},
+          3:{cellWidth:12, halign:'center'},
+          4:{cellWidth:27, halign:'center'},
+          5:{cellWidth:28, halign:'center'}
+        },
+        alternateRowStyles: {fillColor:[246,248,255]},
+        willDrawPage: function(data) { if (data.pageNumber > 1) { bsDrawBg(doc, pw, ph); } },
+        didDrawCell: function(data) {
+          if (data.section !== 'body') return;
+          if (data.column.index !== 3) return;
+          var val3 = data.cell.raw;
+          if (val3 !== '__CHK__' && val3 !== '__BOX__') return;
+          var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,248,255];
+          doc.setFillColor(bg[0], bg[1], bg[2]);
+          doc.rect(data.cell.x+0.2, data.cell.y+0.2, data.cell.width-0.4, data.cell.height-0.4, 'F');
+          drawCheckboxBs(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val3 === '__CHK__');
+        }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
     // ── 3 MONTHLY — hanya cetak jika ada data ──
     if (has3m) {
       secHeader('3 MONTHLY — CALIBRATION PROCESS — '+safe(BS_CFG.label));
@@ -814,7 +885,7 @@ function bsDownloadPdf() {
       addSide('Note '+safe(BS_CFG.b.note)+' ('+safe(BS_CFG.b.code)+'):', n2, imgs2);
     }
 
-    var suffix = has3m ? '3Monthly' : 'Monthly';
+    var suffix = hasDefect ? 'Defect' : (has3m ? '3Monthly' : 'Monthly');
     var dateStr = (gv('bsDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
     doc.save('BeltScale_E23_'+suffix+'_'+dateStr+'.pdf');
   } catch(err) { alert('PDF Error: '+err.message); console.error(err); }
