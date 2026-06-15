@@ -474,12 +474,18 @@ function cfDownloadPdf() {
         // header
         var hx = marginX;
         var headers = ['Self Test', 'Description', 'TEST #1', 'TEST #2', 'TEST #3', 'Accept.'];
-        doc.setFillColor(30,58,138); doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(210,225,255);
+        doc.setFillColor(30,58,138);
+        doc.setDrawColor(20,40,110);
+        doc.setLineWidth(0.3);
+        doc.rect(marginX, y, contentW, HEAD_H, 'FD'); // full background fill first
+        doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(255,255,255);
         headers.forEach(function(h, i) {
-          doc.rect(hx, y, COL_W[i], HEAD_H, 'F');
+          doc.rect(hx, y, COL_W[i], HEAD_H, 'FD');
+          doc.setTextColor(255,255,255);
           doc.text(h, hx + COL_W[i]/2, y + 6, {align:'center'});
           hx += COL_W[i];
         });
+        doc.setDrawColor(200,215,230); doc.setLineWidth(0.3);
         y += HEAD_H;
 
         // rows
