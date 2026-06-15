@@ -23,9 +23,26 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .unit-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 6px;font-size:10px;font-weight:600;color:var(--steel);background:var(--bg2);border:1px solid var(--border);border-left:none;border-radius:0 3px 3px 0;white-space:nowrap;min-width:28px;font-family:'Courier New',monospace;letter-spacing:0.2px;}
 .unit-badge.no-unit{color:var(--text3);font-weight:400;}
 
+/* ── section toggle ── */
+.section-toggle-bar{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,0.82);border:1px solid var(--border);border-radius:10px;padding:12px 18px;margin-bottom:16px;flex-wrap:wrap;}
+.section-toggle-bar label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--steel);cursor:pointer;user-select:none;padding:6px 14px;border-radius:8px;border:1.5px solid var(--border);background:#fff;transition:all .15s;}
+.section-toggle-bar label.active{background:var(--ok);color:#fff;border-color:var(--ok);}
+.section-toggle-bar input[type=checkbox]{width:16px;height:16px;cursor:pointer;}
+.section-toggle-bar .toggle-title{font-size:12px;color:var(--text3);margin-right:6px;font-weight:500;}
+
+/* ── demand table ── */
+.demand-table{width:100%;border-collapse:collapse;font-size:12px;}
+.demand-table th{background:#1e3a8a;color:#fff;padding:7px 10px;text-align:center;font-size:11px;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.demand-table td{padding:6px 10px;border:1px solid #c8d8ea;vertical-align:middle;}
+.demand-table tr:nth-child(even) td{background:#f3f8ff;}
+.demand-table .row-label{font-weight:700;color:var(--steel);background:#eef5fb !important;text-align:center;font-size:11px;width:90px;}
+.demand-table .pct-cell{text-align:center;font-weight:700;color:#1d74c7;width:60px;}
+.demand-input{width:100%;padding:4px 6px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#000;text-align:center;font-weight:700;font-family:'Courier New',monospace;box-sizing:border-box;}
+.demand-input:focus{outline:none;border-color:var(--ok);}
+
 @media print {
   body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .topbar, .topbar-back, button, .section-label { display: none !important; }
+  .topbar, .topbar-back, button, .section-label, .section-toggle-bar, .btn-row { display: none !important; }
   .panel { box-shadow: none !important; border: 1px solid #ccc !important; margin-bottom: 12px !important; page-break-inside: avoid; }
   .wrapper { padding: 0 !important; }
   .data-input { border: none !important; background: transparent !important; font-weight: 600; }
@@ -33,6 +50,11 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   .manual-table { width: 100% !important; }
   .manual-table th { background: #1e3a8a !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .input-unit-wrap { display: flex !important; }
+  .demand-table th { background: #1e3a8a !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .demand-table tr:nth-child(even) td { background: #f3f8ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .demand-table .row-label { background: #eef5fb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .demand-input { border: none !important; background: transparent !important; font-weight: 700; }
+  .print-hidden { display: none !important; }
 }
 </style>
 </head>
@@ -48,6 +70,16 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 </div>
 
 <div class="wrapper">
+
+  <!-- SECTION SELECTOR -->
+  <div class="section-toggle-bar">
+    <span class="toggle-title">&#9776; Pilih Section:</span>
+    <label id="lbl-feeder"><input type="checkbox" id="chk-feeder" checked onchange="toggleSection()"> &#128200; Feeder Calibration</label>
+    <label id="lbl-demand"><input type="checkbox" id="chk-demand" onchange="toggleSection()"> &#9889; Test Demand Signal</label>
+  </div>
+
+  <!-- SECTION FEEDER -->
+  <div id="section-feeder">
 
   <!-- ── INFORMASI PEKERJAAN ── -->
   <div class="panel">
@@ -184,6 +216,96 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
     </div>
   </div>
 
+  </div><!-- /section-feeder -->
+
+  <!-- SECTION TEST DEMAND -->
+  <div id="section-demand" style="display:none">
+  <div class="panel">
+    <div class="section-label">TEST DEMAND SIGNAL — AC TECH MC1000 Inverter</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Demand Signal: A02 → AI3 &nbsp;·&nbsp; Belt Load: A01 &nbsp;·&nbsp; Ref: PI-10-01-175-F01</div>
+    <div style="overflow-x:auto">
+    <table class="demand-table" id="demandTable">
+      <thead>
+        <tr>
+          <th style="width:55px">% Ma</th>
+          <th style="width:65px">Feed Rate<br>Setpoint</th>
+          <th>Actual Feed Rate<br>on Display (t/h)</th>
+          <th>Demand/<br>Setpoint</th>
+          <th>Motor Speed<br>(rpm)</th>
+          <th>FREQ (Hz)<br>P527</th>
+          <th>LOAD (%)<br>P507</th>
+          <th>VOLT (VAC)<br>P506</th>
+          <th>CURRENT (A)<br>P508</th>
+          <th>Bel Load<br>(kg/m) A01</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="pct-cell">100%</td>
+          <td class="row-label">20 t/h</td>
+          <td><input class="demand-input" id="td_fr_act_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_100" placeholder="-"></td>
+        </tr>
+        <tr>
+          <td class="pct-cell">75%</td>
+          <td class="row-label">16 t/h</td>
+          <td><input class="demand-input" id="td_fr_act_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_75" placeholder="-"></td>
+        </tr>
+        <tr>
+          <td class="pct-cell">50%</td>
+          <td class="row-label">12 t/h</td>
+          <td><input class="demand-input" id="td_fr_act_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_50" placeholder="-"></td>
+        </tr>
+        <tr>
+          <td class="pct-cell">25%</td>
+          <td class="row-label">8 t/h</td>
+          <td><input class="demand-input" id="td_fr_act_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_25" placeholder="-"></td>
+        </tr>
+        <tr>
+          <td class="pct-cell">0%</td>
+          <td class="row-label">4 t/h</td>
+          <td><input class="demand-input" id="td_fr_act_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_0" placeholder="-"></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+  </div><!-- /section-demand -->
+
   <!-- ── ACTION BUTTONS ── -->
   <div class="btn-row" style="margin-top:20px">
     <button class="btn btn-pdf" onclick="cfDownloadPdf()">&#11015; Download PDF Report</button>
@@ -229,6 +351,16 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 </div>
 
 <script>
+// ── SECTION TOGGLE ──────────────────────────────────────────────
+function toggleSection() {
+  var showFeeder = document.getElementById('chk-feeder').checked;
+  var showDemand = document.getElementById('chk-demand').checked;
+  document.getElementById('section-feeder').style.display = showFeeder ? '' : 'none';
+  document.getElementById('section-demand').style.display = showDemand ? '' : 'none';
+  document.getElementById('lbl-feeder').className = showFeeder ? 'active' : '';
+  document.getElementById('lbl-demand').className = showDemand ? 'active' : '';
+}
+
 // ── FIELD DEFINITIONS ─────────────────────────────────────────────────────────
 var CF_CAL1_ROWS = [
   {id:'cal1_dev',  selfTest:'CAL 1',  desc:'Deviation',           unit:'%',     acceptance:'±0.25%'},
@@ -344,7 +476,12 @@ function cfReset() {
     'cal2_ppl1','cal2_ppl2','cal2_ppl3',
     'cal2_bcn1','cal2_bcn2','cal2_bcn3',
     'cal2_rctw1','cal2_rctw2','cal2_rctw3',
-    'cfDate','cfPIC','cfWO','cfNote'
+    'cfDate','cfPIC','cfWO','cfNote',
+    'td_fr_act_100','td_sp_100','td_rpm_100','td_freq_100','td_load_100','td_volt_100','td_curr_100','td_blt_100',
+    'td_fr_act_75','td_sp_75','td_rpm_75','td_freq_75','td_load_75','td_volt_75','td_curr_75','td_blt_75',
+    'td_fr_act_50','td_sp_50','td_rpm_50','td_freq_50','td_load_50','td_volt_50','td_curr_50','td_blt_50',
+    'td_fr_act_25','td_sp_25','td_rpm_25','td_freq_25','td_load_25','td_volt_25','td_curr_25','td_blt_25',
+    'td_fr_act_0','td_sp_0','td_rpm_0','td_freq_0','td_load_0','td_volt_0','td_curr_0','td_blt_0'
   ];
   allIds.forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
   document.getElementById('cfFeederNo').value = 'UNIT 7A';
@@ -389,6 +526,9 @@ function dbCollectData(modul) {
 
 // ── PDF ───────────────────────────────────────────────────────────────────────
 function cfDownloadPdf() {
+  var doFeeder = document.getElementById('chk-feeder').checked;
+  var doDemand = document.getElementById('chk-demand').checked;
+  if (!doFeeder && !doDemand) { alert('Pilih minimal satu section untuk di-print.'); return; }
   ensureReportBackground(function() {
     try {
       cfSyncCaptions();
@@ -528,7 +668,7 @@ function cfDownloadPdf() {
         y += 4;
       }
 
-      secHeader('FEEDER NO-LOAD AND TEST WEIGHT CALIBRATION');
+      if (doFeeder) { secHeader('FEEDER NO-LOAD AND TEST WEIGHT CALIBRATION');
       doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,80,120);
       doc.text('Feeder No: '+safe(gv('cfFeederNo'))+'   Reference: '+safe(gv('cfRef'))+'   — 4 pieces of tape used', marginX+3, y);
       y += 8;
@@ -566,6 +706,109 @@ function cfDownloadPdf() {
         }
       }
 
+      } // end if(doFeeder)
+
+      // ── TEST DEMAND SECTION ──
+      if (doDemand) {
+        if (doFeeder) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+        secHeader('TEST DEMAND SIGNAL — AC TECH MC1000 Inverter');
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,80,120);
+        doc.text('Demand Signal: A02 → AI3  ·  Belt Load: A01  ·  Reference: PI-10-01-175-F01', marginX+3, y);
+        y += 8;
+
+        // demand table col widths total = contentW = 170
+        var DW = [20, 22, 28, 28, 26, 22, 20, 22, 24, 28]; // 240? let's scale: 170/240
+        // simpler: fixed cols
+        var DW = [18, 20, 24, 24, 22, 20, 18, 22, 22, 20]; // sum=190, trim
+        // use: [16,18,22,22,20,18,17,20,20,17] = 190 still. Let's just do 7 cols visible
+        // From PDF: %Ma | Setpoint | Actual FR | Demand/SP | RPM | FREQ | LOAD | VOLT | CURR | BelLoad
+        var DW = [14, 18, 22, 22, 20, 17, 16, 20, 20, 21]; // sum=190 but contentW=170
+        // scale down: *170/190
+        var rawDW = [14,18,22,22,20,17,16,20,20,21];
+        var rawSum = rawDW.reduce(function(a,b){return a+b;},0);
+        var DW = rawDW.map(function(w){ return Math.round(w * contentW / rawSum); });
+        // fix rounding
+        var dSum = DW.reduce(function(a,b){return a+b;},0);
+        DW[DW.length-1] += (contentW - dSum);
+
+        var DHEADS = ['%Ma','Setpoint','Actual FR
+(t/h)','Demand/
+Setpoint','Motor
+RPM','FREQ
+(Hz)
+P527','LOAD
+(%)
+P507','VOLT
+(VAC)
+P506','CURR
+(A)
+P508','Bel Load
+(kg/m)'];
+        var DHEAD_H = 14;
+        checkPage(DHEAD_H + 5*9 + 4);
+
+        // draw header background
+        doc.setFillColor(30,58,138);
+        doc.setDrawColor(20,40,110);
+        doc.setLineWidth(0.3);
+        doc.rect(marginX, y, contentW, DHEAD_H, 'FD');
+        var dhx = marginX;
+        DHEADS.forEach(function(h, i){ doc.rect(dhx, y, DW[i], DHEAD_H, 'S'); dhx += DW[i]; });
+        // draw header text
+        doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(255,255,255);
+        dhx = marginX;
+        DHEADS.forEach(function(h, i) {
+          var lines = h.split('
+');
+          var lineH = 3.5;
+          var totalH = lines.length * lineH;
+          var ty = y + (DHEAD_H - totalH) / 2 + lineH;
+          lines.forEach(function(line, li) {
+            doc.text(line, dhx + DW[i]/2, ty + li*lineH, {align:'center'});
+          });
+          dhx += DW[i];
+        });
+        doc.setDrawColor(200,215,230); doc.setLineWidth(0.3);
+        y += DHEAD_H;
+
+        var DPCTS = [
+          {label:'100%', setpt:'20 t/h', keys:['td_fr_act_100','td_sp_100','td_rpm_100','td_freq_100','td_load_100','td_volt_100','td_curr_100','td_blt_100']},
+          {label:'75%',  setpt:'16 t/h', keys:['td_fr_act_75','td_sp_75','td_rpm_75','td_freq_75','td_load_75','td_volt_75','td_curr_75','td_blt_75']},
+          {label:'50%',  setpt:'12 t/h', keys:['td_fr_act_50','td_sp_50','td_rpm_50','td_freq_50','td_load_50','td_volt_50','td_curr_50','td_blt_50']},
+          {label:'25%',  setpt:'8 t/h',  keys:['td_fr_act_25','td_sp_25','td_rpm_25','td_freq_25','td_load_25','td_volt_25','td_curr_25','td_blt_25']},
+          {label:'0%',   setpt:'4 t/h',  keys:['td_fr_act_0','td_sp_0','td_rpm_0','td_freq_0','td_load_0','td_volt_0','td_curr_0','td_blt_0']}
+        ];
+
+        DPCTS.forEach(function(row, ri) {
+          var rowH = 9;
+          checkPage(rowH+2);
+          var bg = (ri%2===0) ? [255,255,255] : [246,249,253];
+          doc.setFillColor(bg[0],bg[1],bg[2]);
+          var rx = marginX;
+          DW.forEach(function(w){ doc.rect(rx, y, w, rowH, 'FD'); rx += w; });
+          doc.setDrawColor(200,215,230); doc.setLineWidth(0.3);
+          // % label
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(29,116,199);
+          doc.text(row.label, marginX + DW[0]/2, y+5.8, {align:'center'});
+          // setpoint
+          doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(41,76,111);
+          doc.text(row.setpt, marginX+DW[0] + DW[1]/2, y+5.8, {align:'center'});
+          // data cells
+          row.keys.forEach(function(kid, ki) {
+            var val = safe(gv(kid)) || '-';
+            var cx = marginX + DW[0] + DW[1] + DW[2]*ki;
+            // ki maps to cols 2..9 (DW[2] through DW[9])
+            var colIdx = ki + 2;
+            var cx2 = marginX;
+            for (var cc=0; cc<colIdx; cc++) cx2 += DW[cc];
+            doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(20,20,60);
+            doc.text(val, cx2 + DW[colIdx]/2, y+5.8, {align:'center'});
+          });
+          y += rowH;
+        });
+        y += 4;
+      } // end if(doDemand)
+
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
 
@@ -577,6 +820,8 @@ function cfDownloadPdf() {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+// init toggle label state
+document.getElementById('lbl-feeder').className = 'active';
 setInterval(function(){
   var el=document.getElementById('clockFeeder');
   if(el) el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
