@@ -27,6 +27,22 @@ body{
 .topbar-back{border-color:#315d86;background:rgba(29,116,199,0.06)}.topbar-back:hover{color:#b7d8f5;border-color:#1d74c7;background:rgba(29,116,199,0.12)}
 .badge{background:#1d74c722;color:var(--ok);border-color:#1d74c744}
 
+/* Drop selector tag (mirip ph-unit-tag) */
+.dcs-drop-tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 11px;border-radius:20px;cursor:pointer;
+  font-size:12px;font-weight:600;border:1.5px solid var(--border);
+  background:#f0f7ff;color:var(--text2);user-select:none;
+  transition:all .15s;
+}
+.dcs-drop-tag.active{
+  background:#1d74c7;color:#fff;border-color:#1d74c7;
+}
+.dcs-drop-tag input[type=checkbox]{
+  width:13px;height:13px;accent-color:#fff;cursor:pointer;
+  pointer-events:none;
+}
+
 /* Drop header style */
 .drop-col-header{
   font-size:11px;font-weight:700;text-align:center;
@@ -111,6 +127,13 @@ body{
         <input type="text" id="dcsProgram" value="JP-DROP" placeholder="JP-DROP...">
       </div>
     </div>
+  </div>
+
+  <!-- PILIH DROP -->
+  <div class="panel">
+    <div class="section-label">Pilih Drop yang Dikerjakan</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Centang drop yang akan diisi. Kolom yang tidak dipilih disembunyikan dari tabel.</div>
+    <div id="dcsDropBar" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
   </div>
 
   <!-- CHECKLIST TABLE -->
@@ -239,6 +262,46 @@ var DCS_DROPS = [
 var dcsImages   = {general:[], defect:[]};
 var dcsTableBuilt = false;
 
+/* Semua drop aktif by default */
+var dcsActiveDrops = {};
+DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = true; });
+
+/* ══════════════════════════════════════════════
+   DROP BAR — selector per kolom (mirip PH unit bar)
+══════════════════════════════════════════════ */
+function dcsBuildDropBar() {
+  var bar = document.getElementById('dcsDropBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  DCS_DROPS.forEach(function(drop) {
+    var tag = document.createElement('label');
+    tag.className = 'dcs-drop-tag' + (dcsActiveDrops[drop.id] ? ' active' : '');
+    tag.title = drop.desc;
+    tag.innerHTML = '<input type="checkbox"' + (dcsActiveDrops[drop.id] ? ' checked' : '') + '>' + drop.label +
+      '<span style="font-size:10px;opacity:0.75;font-weight:400;display:block;line-height:1.2">' + drop.desc + '</span>';
+    tag.querySelector('input').addEventListener('change', function(e) {
+      dcsActiveDrops[drop.id] = e.target.checked;
+      tag.className = 'dcs-drop-tag' + (dcsActiveDrops[drop.id] ? ' active' : '');
+      dcsToggleDropColumn(drop.id, e.target.checked);
+    });
+    bar.appendChild(tag);
+  });
+}
+
+function dcsToggleDropColumn(dropId, visible) {
+  /* Header col */
+  var th = document.getElementById('dcsDropTh_' + dropId);
+  if (th) th.style.display = visible ? '' : 'none';
+  /* All-row cell */
+  var allTd = document.getElementById('dcsAllTd_' + dropId);
+  if (allTd) allTd.style.display = visible ? '' : 'none';
+  /* Data cells */
+  DCS_CHECKS.forEach(function(item, idx) {
+    var td = document.getElementById('dcsTd_' + dropId + '_' + idx);
+    if (td) td.style.display = visible ? '' : 'none';
+  });
+}
+
 /* ══════════════════════════════════════════════
    BUILD TABLE
 ══════════════════════════════════════════════ */
@@ -249,9 +312,11 @@ function dcsBuildTable() {
   var headerRow = document.getElementById('dcsDropHeader');
   DCS_DROPS.forEach(function(drop) {
     var th = document.createElement('th');
+    th.id = 'dcsDropTh_' + drop.id;
     th.className = 'drop-col-header';
     th.style.width = '72px';
     th.innerHTML = drop.label + '<span class="drop-asset-label">' + drop.desc + '</span>';
+    if (!dcsActiveDrops[drop.id]) th.style.display = 'none';
     headerRow.appendChild(th);
   });
 
@@ -268,7 +333,7 @@ function dcsBuildTable() {
   var allCells = '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#1d74c7;font-weight:600">&#10003; Centang Semua</td>' +
     '<td style="text-align:center"><input type="checkbox" id="dcsAllCheck" onchange="dcsCheckAll(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>';
   DCS_DROPS.forEach(function(drop) {
-    allCells += '<td style="text-align:center"><input type="checkbox" id="dcsAllDrop_'+drop.id+'" onchange="dcsCheckAllDrop(\''+drop.id+'\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>';
+    allCells += '<td id="dcsAllTd_'+drop.id+'" style="text-align:center'+(dcsActiveDrops[drop.id]?'':';display:none')+'"><input type="checkbox" id="dcsAllDrop_'+drop.id+'" onchange="dcsCheckAllDrop(\''+drop.id+'\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>';
   });
   allCells += '<td style="font-size:11px;color:#1d74c7;font-style:italic;padding-left:8px">semua OK</td>';
   trAll.innerHTML = allCells;
@@ -284,7 +349,7 @@ function dcsBuildTable() {
       '<td style="text-align:center"><input type="checkbox" id="dcsChk_'+idx+'" onchange="dcsChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>';
 
     DCS_DROPS.forEach(function(drop) {
-      cells += '<td class="check-cell"><input type="checkbox" id="dcsDrop_'+drop.id+'_'+idx+'" onchange="dcsChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>';
+      cells += '<td id="dcsTd_'+drop.id+'_'+idx+'" class="check-cell"'+(dcsActiveDrops[drop.id]?'':' style="display:none"')+'><input type="checkbox" id="dcsDrop_'+drop.id+'_'+idx+'" onchange="dcsChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>';
     });
 
     cells += '<td id="dcsRec_'+idx+'" style="font-size:12px;font-family:\'Courier New\',monospace;color:var(--ok);font-weight:600;padding-left:8px"></td>';
@@ -345,7 +410,6 @@ function dcsRefreshAll() {
    IMAGES — self-contained, tidak pakai imgOpenCropper
 ══════════════════════════════════════════════ */
 var DCS_IMG_EXTS = /\.(jpe?g|png|gif|webp|bmp|tiff?|heic|heif|avif|svg)$/i;
-var MAX_IMG_PX   = 1600; /* resize panjang sisi terpanjang */
 
 function dcsHandleDrop(e, side) { e.preventDefault(); dcsHandleFiles(e.dataTransfer.files, side); }
 
@@ -353,7 +417,6 @@ function dcsHandleFiles(files, side) {
   Array.from(files).forEach(function(file) {
     var isImg = DCS_IMG_EXTS.test(file.name) || (file.type && file.type.startsWith('image/'));
     if (!isImg) {
-      /* File non-gambar — langsung baca */
       var r = new FileReader();
       r.onload = function(ev) {
         dcsImages[side].push({ name: file.name, dataUrl: ev.target.result, type: file.type||'', caption: '' });
@@ -362,39 +425,16 @@ function dcsHandleFiles(files, side) {
       r.readAsDataURL(file);
       return;
     }
-    /* Gambar — resize ke JPEG via canvas */
-    dcsResizeAndPush(file, side);
+    /* Gambar — pakai fileToJpegDataUrl + imgOpenCropper dari shared.js (sama seperti opacity) */
+    fileToJpegDataUrl(file, function(dataUrl) {
+      if (!dataUrl) return;
+      imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/, '.jpg'), 'image/jpeg', dcsImages[side], side, 'dcs', -1);
+    });
   });
 }
 
-function dcsResizeAndPush(file, side) {
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var img = new Image();
-    img.onload = function() {
-      var w = img.width, h = img.height;
-      /* Resize jika terlalu besar */
-      if (w > MAX_IMG_PX || h > MAX_IMG_PX) {
-        if (w > h) { h = Math.round(h * MAX_IMG_PX / w); w = MAX_IMG_PX; }
-        else       { w = Math.round(w * MAX_IMG_PX / h); h = MAX_IMG_PX; }
-      }
-      var canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      var dataUrl  = canvas.toDataURL('image/jpeg', 0.82);
-      var fileName = file.name.replace(/\.[^.]+$/, '.jpg');
-      dcsImages[side].push({ name: fileName, dataUrl: dataUrl, type: 'image/jpeg', caption: '' });
-      dcsRenderPreviews(side);
-    };
-    img.onerror = function() {
-      /* Fallback: simpan as-is */
-      dcsImages[side].push({ name: file.name, dataUrl: ev.target.result, type: file.type||'image/jpeg', caption: '' });
-      dcsRenderPreviews(side);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
+
+
 
 function dcsRenderPreviews(side) {
   dcsSyncCaptions();
@@ -444,17 +484,8 @@ function dcsSyncCaptions() {
 
 function dcsRemoveImg(side, idx) { dcsImages[side].splice(idx, 1); dcsRenderPreviews(side); }
 
-/* Patch updateSizeIndicator shared.js agar tidak error */
-window.addEventListener('load', function() {
-  if (typeof updateSizeIndicator === 'function' && !updateSizeIndicator._dcsPatch) {
-    var _orig = updateSizeIndicator;
-    updateSizeIndicator = function(prefix, side) {
-      if (prefix === 'dcs') return; /* handled inline di dcsRenderPreviews */
-      _orig(prefix, side);
-    };
-    updateSizeIndicator._dcsPatch = true;
-  }
-});
+
+
 
 /* ══════════════════════════════════════════════
    RESET
@@ -473,6 +504,9 @@ function dcsReset() {
   DCS_DROPS.forEach(function(drop){ var el=document.getElementById('dcsAllDrop_'+drop.id); if(el) el.checked=false; });
   var allEl = document.getElementById('dcsAllCheck');
   if (allEl) allEl.checked = false;
+  DCS_DROPS.forEach(function(drop){ dcsActiveDrops[drop.id] = true; });
+  dcsBuildDropBar();
+  DCS_DROPS.forEach(function(drop){ dcsToggleDropColumn(drop.id, true); });
   ['dcsDate','dcsPIC','dcsWO','dcsNoteGeneral','dcsNoteDefect'].forEach(function(id){ var e=document.getElementById(id); if(e)e.value=''; });
   dcsImages = {general:[], defect:[]};
   ['dcsImgPreviewgeneral','dcsImgPreviewdefect'].forEach(function(id){ var e=document.getElementById(id); if(e)e.innerHTML=''; });
@@ -517,12 +551,13 @@ function dcsDownloadPdf() {
       doc.setFont('helvetica','bold'); doc.text('Program: ', pw/2+4, y+12); doc.setFont('helvetica','normal'); doc.text(prog||'-', pw/2+22, y+12);
       y += 26;
 
-      /* Checklist table */
-      var head = [['No.','Step of Work','Criteria','✓'].concat(DCS_DROPS.map(function(d){ return d.label; })).concat(['Result'])];
+      /* Checklist table — hanya drop yang aktif */
+      var activeDropList = DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; });
+      var head = [['No.','Step of Work','Criteria','✓'].concat(activeDropList.map(function(d){ return d.label; })).concat(['Result'])];
       var body = DCS_CHECKS.map(function(item, idx){
         var chk = document.getElementById('dcsChk_'+idx);
         var row = [String(item.no), item.label, item.criteria||'', (chk&&chk.checked)?'✓':''];
-        DCS_DROPS.forEach(function(drop){
+        activeDropList.forEach(function(drop){
           var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
           row.push((el&&el.checked)?'✓':'');
         });
@@ -532,8 +567,8 @@ function dcsDownloadPdf() {
       });
 
       var colStyles = {0:{cellWidth:8},1:{cellWidth:55},2:{cellWidth:28},3:{cellWidth:8}};
-      DCS_DROPS.forEach(function(d, i){ colStyles[4+i] = {cellWidth:16, halign:'center'}; });
-      colStyles[4+DCS_DROPS.length] = {cellWidth:14, halign:'center'};
+      activeDropList.forEach(function(d, i){ colStyles[4+i] = {cellWidth:16, halign:'center'}; });
+      colStyles[4+activeDropList.length] = {cellWidth:14, halign:'center'};
 
       doc.autoTable({
         startY: y,
@@ -633,6 +668,7 @@ function dbCollectData(modul) {
     unit:       gv('dcsUnit'),
     data: {
       program:  gv('dcsProgram'),
+      activeDrops: Object.assign({}, dcsActiveDrops),
       checks:   checks,
       notes:    { general: gv('dcsNoteGeneral'), defect: gv('dcsNoteDefect') },
       images:   { general: dcsImages.general.map(ki), defect: dcsImages.defect.map(ki) }
@@ -654,8 +690,20 @@ function dbCollectData(modul) {
     window._editingId = id;
     var sv = function(id2,val){ var e=document.getElementById(id2); if(e) e.value=val||''; };
     setTimeout(function(){
-      sv('dcsDate', rec.tanggal); sv('dcsPIC', rec.pic); sv('dcsWO', rec.work_order);
-      sv('dcsUnit', rec.unit||'U7'); sv('dcsProgram', data.program||'JP-DROP');
+      sv('dcsDate', rec.tanggal    || data.tanggal    || '');
+      sv('dcsPIC',  rec.pic        || data.pic        || '');
+      sv('dcsWO',   rec.work_order || data.work_order || '');
+      sv('dcsUnit', rec.unit || data.unit || 'U7');
+      sv('dcsProgram', data.program || 'JP-DROP');
+      /* Restore drop visibility */
+      if (data.activeDrops) {
+        DCS_DROPS.forEach(function(drop) {
+          var active = data.activeDrops.hasOwnProperty(drop.id) ? !!data.activeDrops[drop.id] : true;
+          dcsActiveDrops[drop.id] = active;
+        });
+        dcsBuildDropBar();
+        DCS_DROPS.forEach(function(drop){ dcsToggleDropColumn(drop.id, dcsActiveDrops[drop.id]); });
+      }
       if (data.notes){ sv('dcsNoteGeneral',data.notes.general||''); sv('dcsNoteDefect',data.notes.defect||''); }
       if (data.images){
         dcsImages.general = (data.images.general||[]).map(function(i){ return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||''}; });
@@ -683,72 +731,8 @@ function dbCollectData(modul) {
   });
 })();
 
-/* ══════════════════════════════════════════════
-   PATCH shared.js — tambah support prefix 'dcs'
-══════════════════════════════════════════════ */
-(function patchShared() {
-  /* Tunggu shared.js selesai load */
-  var _origCropSave = null;
-  var _origSizeInd  = null;
 
-  function applyPatch() {
-    /* Patch updateSizeIndicator */
-    if (typeof updateSizeIndicator === 'function' && !updateSizeIndicator._dcsPatch) {
-      var _orig = updateSizeIndicator;
-      updateSizeIndicator = function(prefix, side) {
-        if (prefix === 'dcs') {
-          var arr = dcsImages[side] || [];
-          var total = arr.reduce(function(acc,im){ return acc+(im.dataUrl?im.dataUrl.length*0.75:0); },0);
-          var kb    = (total/1024).toFixed(0);
-          var color = total > 900*1024 ? '#e74c3c' : total > 700*1024 ? '#f39c12' : 'var(--text3)';
-          var el    = document.getElementById('dcsSizeInfo'+(side||''));
-          if (el) { el.textContent = kb+' KB / 1024 KB'; el.style.color = color; }
-          return;
-        }
-        _orig(prefix, side);
-      };
-      updateSizeIndicator._dcsPatch = true;
-    }
 
-    /* Patch imgOpenCropper — tambah handler 'dcs' di callback akhir */
-    if (typeof imgOpenCropper === 'function' && !imgOpenCropper._dcsPatch) {
-      var _origCrop = imgOpenCropper;
-      imgOpenCropper = function(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
-        if (modulePrefix !== 'dcs') {
-          return _origCrop(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx);
-        }
-        /* Untuk dcs: gunakan crop modal yang sama dari shared.js
-           tapi callback setelah crop kita inject */
-        _origCrop(dataUrl, name, type, imgArr, side, 'dcs_internal', replaceIdx);
-      };
-      imgOpenCropper._dcsPatch = true;
-    }
-  }
-
-  /* shared.js sudah di-load sebelum script ini karena urutan tag,
-     tapi kita defer sedikit agar DOM ready */
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyPatch);
-  } else {
-    applyPatch();
-  }
-})();
-
-/* Override cropAndSave & skipCrop agar setelah crop memanggil dcsRenderPreviews */
-document.addEventListener('DOMContentLoaded', function() {
-  /* Kita intercept tombol "Simpan" di crop modal */
-  var cropSaveBtn = document.querySelector('#cropModal button:last-child');
-  if (cropSaveBtn) {
-    var _origClick = cropSaveBtn.onclick;
-    cropSaveBtn.onclick = function() {
-      if (typeof _origClick === 'function') _origClick.call(this);
-      /* Setelah cropAndSave dari shared.js, re-render semua side */
-      setTimeout(function() {
-        ['general','defect'].forEach(function(side){ dcsRenderPreviews(side); });
-      }, 50);
-    };
-  }
-});
 
 /* ══════════════════════════════════════════════
    INIT
@@ -758,6 +742,7 @@ setInterval(function(){
   if (el) el.textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }, 1000);
 
+dcsBuildDropBar();
 dcsBuildTable();
 initReportBackground();
 

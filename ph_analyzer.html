@@ -812,7 +812,9 @@ function phDownloadPdf(){
     window._editingId=id;
     var sv=function(eid,val){var e=document.getElementById(eid);if(e)e.value=val||'';};
     setTimeout(function(){
-      sv('phDate',rec.tanggal); sv('phPIC',rec.pic); sv('phWO',rec.work_order);
+      sv('phDate', rec.tanggal    || data.tanggal    || '');
+      sv('phPIC',  rec.pic        || data.pic        || '');
+      sv('phWO',   rec.work_order || data.work_order || '');
       if(data.docNo) sv('phDocNo',data.docNo);
 
       // Restore active units

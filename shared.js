@@ -186,6 +186,7 @@ function normalizeModul(name) {
   if (n.indexOf('MAINTENANCE')>=0 || n.indexOf('REPORT')>=0) return 'MAINTENANCE_REPORT';
   if (n.indexOf('COAL')>=0 || n.indexOf('FEEDER')>=0) return 'COAL_FEEDER';
   if (n.indexOf('PH')>=0 || n.indexOf('TRANSMITTER')>=0 || n.indexOf('AIT')>=0) return 'PH_TRANSMITTER';
+  if (n.indexOf('DCS')>=0 || n.indexOf('HMI')>=0 || n.indexOf('OIS')>=0) return 'DCS_HMI';
   return n;
 }
 
@@ -487,6 +488,9 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
   else if (modulePrefix === 'ph') {
     if (typeof phRenderPreviews === 'function') phRenderPreviews(side);
     if (typeof phUpdateSizeInfo === 'function') phUpdateSizeInfo(side);
+  }
+  else if (modulePrefix === 'dcs') {
+    if (typeof dcsRenderPreviews === 'function') dcsRenderPreviews(side);
   }
 }
 

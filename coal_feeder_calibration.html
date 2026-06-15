@@ -1430,7 +1430,9 @@ initReportBackground();
     window._editingId = id;
     var sv = function(id2,val){ var e=document.getElementById(id2); if(e) e.value=val||''; };
     setTimeout(function(){
-      sv('cfDate',rec.tanggal); sv('cfPIC',rec.pic); sv('cfWO',rec.work_order);
+      sv('cfDate', rec.tanggal || data.tanggal || '');
+      sv('cfPIC',  rec.pic     || data.pic     || '');
+      sv('cfWO',   rec.work_order || data.work_order || '');
       sv('cfFeederNo', data.feeder_no||''); sv('cfRef', data.reference||''); sv('cfNote', data.note||'');
       if (data.cal1) {
         var map1 = {deviation:'cal1_dev', pulses_per_length:'cal1_ppl', belt_circuit_no:'cal1_bcn', basic_tare:'cal1_bt'};
