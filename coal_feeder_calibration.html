@@ -471,17 +471,24 @@ function cfDownloadPdf() {
         var HEAD_H = 9;
         checkPage(HEAD_H + calRows.length * 8 + 4);
 
-        // header
+        // header — draw ALL rects first, then ALL text on top
         var hx = marginX;
         var headers = ['Self Test', 'Description', 'TEST #1', 'TEST #2', 'TEST #3', 'Accept.'];
+        // Step 1: fill entire header background in one shot
         doc.setFillColor(30,58,138);
         doc.setDrawColor(20,40,110);
         doc.setLineWidth(0.3);
-        doc.rect(marginX, y, contentW, HEAD_H, 'FD'); // full background fill first
-        doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(255,255,255);
+        doc.rect(marginX, y, contentW, HEAD_H, 'FD');
+        // Step 2: column dividers only (stroke, no fill — so background stays blue)
+        hx = marginX;
         headers.forEach(function(h, i) {
-          doc.rect(hx, y, COL_W[i], HEAD_H, 'FD');
-          doc.setTextColor(255,255,255);
+          doc.rect(hx, y, COL_W[i], HEAD_H, 'S');
+          hx += COL_W[i];
+        });
+        // Step 3: draw ALL text on top last
+        doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(255,255,255);
+        hx = marginX;
+        headers.forEach(function(h, i) {
           doc.text(h, hx + COL_W[i]/2, y + 6, {align:'center'});
           hx += COL_W[i];
         });
