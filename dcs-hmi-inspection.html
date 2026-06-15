@@ -203,42 +203,6 @@ body{
 
 </div>
 
-<!-- CROP MODAL -->
-<div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
-  <div style="background:#172536;border:1px solid #243b55;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
-    <div style="background:#243b55;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-weight:700;font-size:14px;color:#e8f2ff;letter-spacing:1px">&#9986;&#65039; Crop Gambar</div>
-      <div id="cropNatSize" style="font-size:11px;color:#8fb7dc">— x — px</div>
-    </div>
-    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none">
-      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
-      <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
-        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;left:-7px;cursor:nw-resize;touch-action:none"></div>
-        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;right:-7px;cursor:ne-resize;touch-action:none"></div>
-        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;left:-7px;cursor:sw-resize;touch-action:none"></div>
-        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;right:-7px;cursor:se-resize;touch-action:none"></div>
-      </div>
-    </div>
-    <div style="padding:8px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <label style="font-size:11px;color:#8fb7dc;display:flex;align-items:center;gap:4px">
-        <input type="checkbox" id="cropLock" checked style="accent-color:#3498db"> Lock ratio
-      </label>
-      <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
-        <span style="font-size:11px;color:#8fb7dc">W:</span>
-        <input type="number" id="cropOutW" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('w')">
-        <span style="font-size:11px;color:#8fb7dc">H:</span>
-        <input type="number" id="cropOutH" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('h')">
-        <span style="font-size:10px;color:#6a8faa">px</span>
-      </div>
-    </div>
-    <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">&#8634; Reset</button>
-      <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Lewati</button>
-      <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">&#10003; Simpan</button>
-    </div>
-  </div>
-</div>
-
 <script>
 /* ══════════════════════════════════════════════
    DATA — Dari Excel P7EIC Program Maintenance DCS
@@ -378,53 +342,119 @@ function dcsRefreshAll() {
 }
 
 /* ══════════════════════════════════════════════
-   IMAGES
+   IMAGES — self-contained, tidak pakai imgOpenCropper
 ══════════════════════════════════════════════ */
+var DCS_IMG_EXTS = /\.(jpe?g|png|gif|webp|bmp|tiff?|heic|heif|avif|svg)$/i;
+var MAX_IMG_PX   = 1600; /* resize panjang sisi terpanjang */
+
 function dcsHandleDrop(e, side) { e.preventDefault(); dcsHandleFiles(e.dataTransfer.files, side); }
 
 function dcsHandleFiles(files, side) {
   Array.from(files).forEach(function(file) {
-    if (!isImageFile(file)) {
-      var r=new FileReader(); r.onload=function(ev){dcsImages[side].push({name:file.name,dataUrl:ev.target.result,type:file.type||'',caption:''});dcsRenderPreviews(side);}; r.readAsDataURL(file); return;
+    var isImg = DCS_IMG_EXTS.test(file.name) || (file.type && file.type.startsWith('image/'));
+    if (!isImg) {
+      /* File non-gambar — langsung baca */
+      var r = new FileReader();
+      r.onload = function(ev) {
+        dcsImages[side].push({ name: file.name, dataUrl: ev.target.result, type: file.type||'', caption: '' });
+        dcsRenderPreviews(side);
+      };
+      r.readAsDataURL(file);
+      return;
     }
-    fileToJpegDataUrl(file, function(dataUrl){ if(!dataUrl)return; imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', dcsImages[side], side, 'dcs', -1); });
+    /* Gambar — resize ke JPEG via canvas */
+    dcsResizeAndPush(file, side);
   });
+}
+
+function dcsResizeAndPush(file, side) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      /* Resize jika terlalu besar */
+      if (w > MAX_IMG_PX || h > MAX_IMG_PX) {
+        if (w > h) { h = Math.round(h * MAX_IMG_PX / w); w = MAX_IMG_PX; }
+        else       { w = Math.round(w * MAX_IMG_PX / h); h = MAX_IMG_PX; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var dataUrl  = canvas.toDataURL('image/jpeg', 0.82);
+      var fileName = file.name.replace(/\.[^.]+$/, '.jpg');
+      dcsImages[side].push({ name: fileName, dataUrl: dataUrl, type: 'image/jpeg', caption: '' });
+      dcsRenderPreviews(side);
+    };
+    img.onerror = function() {
+      /* Fallback: simpan as-is */
+      dcsImages[side].push({ name: file.name, dataUrl: ev.target.result, type: file.type||'image/jpeg', caption: '' });
+      dcsRenderPreviews(side);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function dcsRenderPreviews(side) {
   dcsSyncCaptions();
-  var container = document.getElementById('dcsImgPreview'+side);
+  var container = document.getElementById('dcsImgPreview' + side);
   if (!container) return;
   container.innerHTML = '';
+
   dcsImages[side].forEach(function(img, idx) {
     if (!img || !img.name) return;
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px';
     var safe = function(s){ return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); };
-    var isImg = IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
+    var isImg = DCS_IMG_EXTS.test(img.name) || (img.type && img.type.startsWith('image/'));
+
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px;vertical-align:top';
+
     var thumb = isImg
-      ? '<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+safe(img.dataUrl)+'" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="imgReEditDcs(\''+side+'\','+idx+')" title="Klik crop ulang"></div>'
-      : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
-    var cropBtn = isImg
-      ? '<button onclick="imgReEditDcs(\''+side+'\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
-      : '';
-    wrap.innerHTML = thumb + cropBtn +
+      ? '<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f0f7ff">' +
+          '<img src="'+safe(img.dataUrl)+'" style="max-width:100%;max-height:100%;object-fit:contain">' +
+        '</div>'
+      : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">📄</div>';
+
+    wrap.innerHTML = thumb +
       '<button onclick="dcsRemoveImg(\''+side+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>' +
-      '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>' +
-      '<input id="dcsCap_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="dcsImages[\''+side+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+      '<div style="font-size:9px;color:var(--text3);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:112px">'+safe(img.name)+'</div>' +
+      '<input id="dcsCap_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" ' +
+        'oninput="dcsImages[\''+side+'\']['+idx+'].caption=this.value" ' +
+        'style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
-  updateSizeIndicator('dcs', side);
+
+  /* Update size indicator */
+  var total = dcsImages[side].reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); },0);
+  var kb    = (total/1024).toFixed(0);
+  var color = total>900*1024?'#e74c3c':total>700*1024?'#f39c12':'var(--text3)';
+  var el    = document.getElementById('dcsSizeInfo'+side);
+  if (el){ el.textContent = kb+' KB / 1024 KB'; el.style.color = color; }
 }
 
 function dcsSyncCaptions() {
-  Object.keys(dcsImages).forEach(function(side){
-    dcsImages[side].forEach(function(img,idx){ var inp=document.getElementById('dcsCap_'+side+'_'+idx); if(inp)img.caption=inp.value||''; });
+  Object.keys(dcsImages).forEach(function(side) {
+    dcsImages[side].forEach(function(img, idx) {
+      var inp = document.getElementById('dcsCap_'+side+'_'+idx);
+      if (inp) img.caption = inp.value || '';
+    });
   });
 }
 
-function imgReEditDcs(side, idx){ var img=dcsImages[side][idx]; imgOpenCropper(img.dataUrl,img.name,img.type,dcsImages[side],side,'dcs',idx); }
-function dcsRemoveImg(side, idx){ dcsImages[side].splice(idx,1); dcsRenderPreviews(side); }
+function dcsRemoveImg(side, idx) { dcsImages[side].splice(idx, 1); dcsRenderPreviews(side); }
+
+/* Patch updateSizeIndicator shared.js agar tidak error */
+window.addEventListener('load', function() {
+  if (typeof updateSizeIndicator === 'function' && !updateSizeIndicator._dcsPatch) {
+    var _orig = updateSizeIndicator;
+    updateSizeIndicator = function(prefix, side) {
+      if (prefix === 'dcs') return; /* handled inline di dcsRenderPreviews */
+      _orig(prefix, side);
+    };
+    updateSizeIndicator._dcsPatch = true;
+  }
+});
 
 /* ══════════════════════════════════════════════
    RESET
@@ -450,38 +480,6 @@ function dcsReset() {
   dbShowToast('Form direset ✓');
 }
 
-  // ── BACKGROUND ───────────────────────────────────────────────────────────────
-var reportBgImg = null;
-var reportBgReady = false;
-var reportBgCallbacks = [];
-
-function initReportBackground() {
-  if (reportBgImg) return;
-  reportBgImg = new Image();
-  reportBgImg.onload = function() {
-    reportBgReady = true;
-    var cbs = reportBgCallbacks.splice(0);
-    for (var i = 0; i < cbs.length; i++) cbs[i]();
-  };
-  reportBgImg.onerror = function() {
-    reportBgReady = false;
-    var cbs = reportBgCallbacks.splice(0);
-    for (var i = 0; i < cbs.length; i++) cbs[i]();
-  };
-  reportBgImg.src = 'DRAFT PM KOSONG.jpg';
-}
-
-function ensureReportBackground(callback) {
-  if (!reportBgImg) { reportBgCallbacks.push(callback); initReportBackground(); return; }
-  if (reportBgReady) { callback(); return; }
-  if (reportBgImg.complete && reportBgImg.naturalWidth > 0) { reportBgReady = true; callback(); return; }
-  reportBgCallbacks.push(callback);
-}
-
-function drawBg(doc, pw, ph) {
-  if (!reportBgImg || !reportBgImg.naturalWidth) return;
-  try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
-}
 /* ══════════════════════════════════════════════
    PDF
 ══════════════════════════════════════════════ */
@@ -684,6 +682,73 @@ function dbCollectData(modul) {
     }, 600);
   });
 })();
+
+/* ══════════════════════════════════════════════
+   PATCH shared.js — tambah support prefix 'dcs'
+══════════════════════════════════════════════ */
+(function patchShared() {
+  /* Tunggu shared.js selesai load */
+  var _origCropSave = null;
+  var _origSizeInd  = null;
+
+  function applyPatch() {
+    /* Patch updateSizeIndicator */
+    if (typeof updateSizeIndicator === 'function' && !updateSizeIndicator._dcsPatch) {
+      var _orig = updateSizeIndicator;
+      updateSizeIndicator = function(prefix, side) {
+        if (prefix === 'dcs') {
+          var arr = dcsImages[side] || [];
+          var total = arr.reduce(function(acc,im){ return acc+(im.dataUrl?im.dataUrl.length*0.75:0); },0);
+          var kb    = (total/1024).toFixed(0);
+          var color = total > 900*1024 ? '#e74c3c' : total > 700*1024 ? '#f39c12' : 'var(--text3)';
+          var el    = document.getElementById('dcsSizeInfo'+(side||''));
+          if (el) { el.textContent = kb+' KB / 1024 KB'; el.style.color = color; }
+          return;
+        }
+        _orig(prefix, side);
+      };
+      updateSizeIndicator._dcsPatch = true;
+    }
+
+    /* Patch imgOpenCropper — tambah handler 'dcs' di callback akhir */
+    if (typeof imgOpenCropper === 'function' && !imgOpenCropper._dcsPatch) {
+      var _origCrop = imgOpenCropper;
+      imgOpenCropper = function(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
+        if (modulePrefix !== 'dcs') {
+          return _origCrop(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx);
+        }
+        /* Untuk dcs: gunakan crop modal yang sama dari shared.js
+           tapi callback setelah crop kita inject */
+        _origCrop(dataUrl, name, type, imgArr, side, 'dcs_internal', replaceIdx);
+      };
+      imgOpenCropper._dcsPatch = true;
+    }
+  }
+
+  /* shared.js sudah di-load sebelum script ini karena urutan tag,
+     tapi kita defer sedikit agar DOM ready */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyPatch);
+  } else {
+    applyPatch();
+  }
+})();
+
+/* Override cropAndSave & skipCrop agar setelah crop memanggil dcsRenderPreviews */
+document.addEventListener('DOMContentLoaded', function() {
+  /* Kita intercept tombol "Simpan" di crop modal */
+  var cropSaveBtn = document.querySelector('#cropModal button:last-child');
+  if (cropSaveBtn) {
+    var _origClick = cropSaveBtn.onclick;
+    cropSaveBtn.onclick = function() {
+      if (typeof _origClick === 'function') _origClick.call(this);
+      /* Setelah cropAndSave dari shared.js, re-render semua side */
+      setTimeout(function() {
+        ['general','defect'].forEach(function(side){ dcsRenderPreviews(side); });
+      }, 50);
+    };
+  }
+});
 
 /* ══════════════════════════════════════════════
    INIT
