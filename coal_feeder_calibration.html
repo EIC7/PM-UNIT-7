@@ -71,16 +71,6 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 
 <div class="wrapper">
 
-  <!-- SECTION SELECTOR -->
-  <div class="section-toggle-bar">
-    <span class="toggle-title">&#9776; Pilih Section:</span>
-    <label id="lbl-feeder"><input type="checkbox" id="chk-feeder" checked onchange="toggleSection()"> &#128200; Feeder Calibration</label>
-    <label id="lbl-demand"><input type="checkbox" id="chk-demand" onchange="toggleSection()"> &#9889; Test Demand Signal</label>
-  </div>
-
-  <!-- SECTION FEEDER -->
-  <div id="section-feeder">
-
   <!-- ── INFORMASI PEKERJAAN ── -->
   <div class="panel">
     <div class="section-label">Informasi Pekerjaan</div>
@@ -191,8 +181,124 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
           </tr>
         </tbody>
       </table>
+
+    <!-- ── PRINT SELECTION ── -->
+    <div style="display:flex;gap:12px;align-items:center;margin-top:18px;padding:12px 16px;background:rgba(29,116,199,0.06);border:1.5px solid rgba(29,116,199,0.2);border-radius:8px;flex-wrap:wrap;">
+      <span style="font-size:12px;font-weight:600;color:var(--steel)">&#128438; Pilih untuk di-print ke PDF:</span>
+      <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--steel);cursor:pointer;padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:#fff;" id="lbl-feeder">
+        <input type="checkbox" id="chk-feeder" checked onchange="updatePrintLabels()"> &#128200; Feeder Calibration
+      </label>
+      <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--steel);cursor:pointer;padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:#fff;" id="lbl-demand">
+        <input type="checkbox" id="chk-demand" checked onchange="updatePrintLabels()"> &#9889; Test Demand Signal
+      </label>
+    </div>
     </div>
   </div>
+
+
+  <!-- ══ SECTION TEST DEMAND SIGNAL ══ -->
+  <div id="section-demand" class="panel">
+    <div class="section-label">TEST DEMAND SIGNAL — AC TECH MC1000 Inverter</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Demand Signal: A02 → AI3 &nbsp;·&nbsp; Belt Load: A01 &nbsp;·&nbsp; Ref: PI-10-01-175-F01</div>
+    <div style="overflow-x:auto">
+    <table class="demand-table" id="demandTable">
+      <thead>
+        <tr>
+          <th style="width:48px">% Ma</th>
+          <th style="width:58px">mA Source</th>
+          <th>AI3<br><small>(mA)</small></th>
+          <th>AO1<br><small>(mA)</small></th>
+          <th>AO2<br><small>(mA)</small></th>
+          <th>Actual Feed Rate<br>on Display (t/h)</th>
+          <th>Feed Rate<br>Demand/<br>Setpoint</th>
+          <th>Motor Speed<br>(rpm)</th>
+          <th>FREQ (Hz)<br>P527</th>
+          <th>LOAD (%)<br>P507</th>
+          <th>VOLT (VAC)<br>P506</th>
+          <th>CURRENT (A)<br>P508</th>
+          <th>Bel Load<br>(kg/m) A01</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="pct-cell">100%</td>
+          <td class="row-label">20 mA</td>
+          <td><input class="demand-input" id="td_ai3_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao1_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao2_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_fr_act_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_100" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_100" placeholder="-"></td>
+        </tr>
+        <tr>
+          <td class="pct-cell">75%</td>
+          <td class="row-label">16 mA</td>
+          <td><input class="demand-input" id="td_ai3_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao1_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao2_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_fr_act_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_75" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_75" placeholder="-"></td>
+        </tr>
+        <tr>
+          <td class="pct-cell">50%</td>
+          <td class="row-label">12 mA</td>
+          <td><input class="demand-input" id="td_ai3_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao1_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao2_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_fr_act_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_50" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_50" placeholder="-"></td>
+        </tr>
+        <tr>
+          <td class="pct-cell">25%</td>
+          <td class="row-label">8 mA</td>
+          <td><input class="demand-input" id="td_ai3_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao1_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao2_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_fr_act_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_25" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_25" placeholder="-"></td>
+        </tr>
+        <tr>
+          <td class="pct-cell">0%</td>
+          <td class="row-label">4 mA</td>
+          <td><input class="demand-input" id="td_ai3_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao1_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_ao2_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_fr_act_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_sp_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_rpm_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_freq_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_load_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_volt_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_curr_0" placeholder="-"></td>
+          <td><input class="demand-input" id="td_blt_0" placeholder="-"></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div><!-- /section-demand -->
 
   <!-- ── CATATAN & EVIDENCE PHOTO ── -->
   <div class="panel">
@@ -216,95 +322,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
     </div>
   </div>
 
-  </div><!-- /section-feeder -->
 
-  <!-- SECTION TEST DEMAND -->
-  <div id="section-demand" style="display:none">
-  <div class="panel">
-    <div class="section-label">TEST DEMAND SIGNAL — AC TECH MC1000 Inverter</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Demand Signal: A02 → AI3 &nbsp;·&nbsp; Belt Load: A01 &nbsp;·&nbsp; Ref: PI-10-01-175-F01</div>
-    <div style="overflow-x:auto">
-    <table class="demand-table" id="demandTable">
-      <thead>
-        <tr>
-          <th style="width:55px">% Ma</th>
-          <th style="width:65px">Feed Rate<br>Setpoint</th>
-          <th>Actual Feed Rate<br>on Display (t/h)</th>
-          <th>Demand/<br>Setpoint</th>
-          <th>Motor Speed<br>(rpm)</th>
-          <th>FREQ (Hz)<br>P527</th>
-          <th>LOAD (%)<br>P507</th>
-          <th>VOLT (VAC)<br>P506</th>
-          <th>CURRENT (A)<br>P508</th>
-          <th>Bel Load<br>(kg/m) A01</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="pct-cell">100%</td>
-          <td class="row-label">20 t/h</td>
-          <td><input class="demand-input" id="td_fr_act_100" placeholder="-"></td>
-          <td><input class="demand-input" id="td_sp_100" placeholder="-"></td>
-          <td><input class="demand-input" id="td_rpm_100" placeholder="-"></td>
-          <td><input class="demand-input" id="td_freq_100" placeholder="-"></td>
-          <td><input class="demand-input" id="td_load_100" placeholder="-"></td>
-          <td><input class="demand-input" id="td_volt_100" placeholder="-"></td>
-          <td><input class="demand-input" id="td_curr_100" placeholder="-"></td>
-          <td><input class="demand-input" id="td_blt_100" placeholder="-"></td>
-        </tr>
-        <tr>
-          <td class="pct-cell">75%</td>
-          <td class="row-label">16 t/h</td>
-          <td><input class="demand-input" id="td_fr_act_75" placeholder="-"></td>
-          <td><input class="demand-input" id="td_sp_75" placeholder="-"></td>
-          <td><input class="demand-input" id="td_rpm_75" placeholder="-"></td>
-          <td><input class="demand-input" id="td_freq_75" placeholder="-"></td>
-          <td><input class="demand-input" id="td_load_75" placeholder="-"></td>
-          <td><input class="demand-input" id="td_volt_75" placeholder="-"></td>
-          <td><input class="demand-input" id="td_curr_75" placeholder="-"></td>
-          <td><input class="demand-input" id="td_blt_75" placeholder="-"></td>
-        </tr>
-        <tr>
-          <td class="pct-cell">50%</td>
-          <td class="row-label">12 t/h</td>
-          <td><input class="demand-input" id="td_fr_act_50" placeholder="-"></td>
-          <td><input class="demand-input" id="td_sp_50" placeholder="-"></td>
-          <td><input class="demand-input" id="td_rpm_50" placeholder="-"></td>
-          <td><input class="demand-input" id="td_freq_50" placeholder="-"></td>
-          <td><input class="demand-input" id="td_load_50" placeholder="-"></td>
-          <td><input class="demand-input" id="td_volt_50" placeholder="-"></td>
-          <td><input class="demand-input" id="td_curr_50" placeholder="-"></td>
-          <td><input class="demand-input" id="td_blt_50" placeholder="-"></td>
-        </tr>
-        <tr>
-          <td class="pct-cell">25%</td>
-          <td class="row-label">8 t/h</td>
-          <td><input class="demand-input" id="td_fr_act_25" placeholder="-"></td>
-          <td><input class="demand-input" id="td_sp_25" placeholder="-"></td>
-          <td><input class="demand-input" id="td_rpm_25" placeholder="-"></td>
-          <td><input class="demand-input" id="td_freq_25" placeholder="-"></td>
-          <td><input class="demand-input" id="td_load_25" placeholder="-"></td>
-          <td><input class="demand-input" id="td_volt_25" placeholder="-"></td>
-          <td><input class="demand-input" id="td_curr_25" placeholder="-"></td>
-          <td><input class="demand-input" id="td_blt_25" placeholder="-"></td>
-        </tr>
-        <tr>
-          <td class="pct-cell">0%</td>
-          <td class="row-label">4 t/h</td>
-          <td><input class="demand-input" id="td_fr_act_0" placeholder="-"></td>
-          <td><input class="demand-input" id="td_sp_0" placeholder="-"></td>
-          <td><input class="demand-input" id="td_rpm_0" placeholder="-"></td>
-          <td><input class="demand-input" id="td_freq_0" placeholder="-"></td>
-          <td><input class="demand-input" id="td_load_0" placeholder="-"></td>
-          <td><input class="demand-input" id="td_volt_0" placeholder="-"></td>
-          <td><input class="demand-input" id="td_curr_0" placeholder="-"></td>
-          <td><input class="demand-input" id="td_blt_0" placeholder="-"></td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-  </div>
-  </div><!-- /section-demand -->
 
   <!-- ── ACTION BUTTONS ── -->
   <div class="btn-row" style="margin-top:20px">
@@ -351,14 +369,18 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 </div>
 
 <script>
-// ── SECTION TOGGLE ──────────────────────────────────────────────
-function toggleSection() {
-  var showFeeder = document.getElementById('chk-feeder').checked;
-  var showDemand = document.getElementById('chk-demand').checked;
-  document.getElementById('section-feeder').style.display = showFeeder ? '' : 'none';
-  document.getElementById('section-demand').style.display = showDemand ? '' : 'none';
-  document.getElementById('lbl-feeder').className = showFeeder ? 'active' : '';
-  document.getElementById('lbl-demand').className = showDemand ? 'active' : '';
+// ── PRINT SELECTION ─────────────────────────────────────────
+function updatePrintLabels() {
+  var fChk = document.getElementById('chk-feeder');
+  var dChk = document.getElementById('chk-demand');
+  var fLbl = document.getElementById('lbl-feeder');
+  var dLbl = document.getElementById('lbl-demand');
+  if (fLbl) fLbl.style.background = fChk && fChk.checked ? 'var(--ok)' : '#fff';
+  if (fLbl) fLbl.style.color = fChk && fChk.checked ? '#fff' : 'var(--steel)';
+  if (fLbl) fLbl.style.borderColor = fChk && fChk.checked ? 'var(--ok)' : 'var(--border)';
+  if (dLbl) dLbl.style.background = dChk && dChk.checked ? 'var(--ok)' : '#fff';
+  if (dLbl) dLbl.style.color = dChk && dChk.checked ? '#fff' : 'var(--steel)';
+  if (dLbl) dLbl.style.borderColor = dChk && dChk.checked ? 'var(--ok)' : 'var(--border)';
 }
 
 // ── FIELD DEFINITIONS ─────────────────────────────────────────────────────────
@@ -477,11 +499,11 @@ function cfReset() {
     'cal2_bcn1','cal2_bcn2','cal2_bcn3',
     'cal2_rctw1','cal2_rctw2','cal2_rctw3',
     'cfDate','cfPIC','cfWO','cfNote',
-    'td_fr_act_100','td_sp_100','td_rpm_100','td_freq_100','td_load_100','td_volt_100','td_curr_100','td_blt_100',
-    'td_fr_act_75','td_sp_75','td_rpm_75','td_freq_75','td_load_75','td_volt_75','td_curr_75','td_blt_75',
-    'td_fr_act_50','td_sp_50','td_rpm_50','td_freq_50','td_load_50','td_volt_50','td_curr_50','td_blt_50',
-    'td_fr_act_25','td_sp_25','td_rpm_25','td_freq_25','td_load_25','td_volt_25','td_curr_25','td_blt_25',
-    'td_fr_act_0','td_sp_0','td_rpm_0','td_freq_0','td_load_0','td_volt_0','td_curr_0','td_blt_0'
+    'td_ai3_100','td_ao1_100','td_ao2_100','td_fr_act_100','td_sp_100','td_rpm_100','td_freq_100','td_load_100','td_volt_100','td_curr_100','td_blt_100',
+    'td_ai3_75','td_ao1_75','td_ao2_75','td_fr_act_75','td_sp_75','td_rpm_75','td_freq_75','td_load_75','td_volt_75','td_curr_75','td_blt_75',
+    'td_ai3_50','td_ao1_50','td_ao2_50','td_fr_act_50','td_sp_50','td_rpm_50','td_freq_50','td_load_50','td_volt_50','td_curr_50','td_blt_50',
+    'td_ai3_25','td_ao1_25','td_ao2_25','td_fr_act_25','td_sp_25','td_rpm_25','td_freq_25','td_load_25','td_volt_25','td_curr_25','td_blt_25',
+    'td_ai3_0','td_ao1_0','td_ao2_0','td_fr_act_0','td_sp_0','td_rpm_0','td_freq_0','td_load_0','td_volt_0','td_curr_0','td_blt_0'
   ];
   allIds.forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
   document.getElementById('cfFeederNo').value = 'UNIT 7A';
@@ -724,17 +746,24 @@ function cfDownloadPdf() {
         // From PDF: %Ma | Setpoint | Actual FR | Demand/SP | RPM | FREQ | LOAD | VOLT | CURR | BelLoad
         var DW = [14, 18, 22, 22, 20, 17, 16, 20, 20, 21]; // sum=190 but contentW=170
         // scale down: *170/190
-        var rawDW = [14,18,22,22,20,17,16,20,20,21];
+        // 13 cols: %Ma | mA Source | AI3 | AO1 | AO2 | ActualFR | FRDemand/SP | RPM | FREQ | LOAD | VOLT | CURR | BelLoad
+        var rawDW = [12, 14, 13, 13, 13, 20, 18, 16, 14, 13, 16, 16, 18];
         var rawSum = rawDW.reduce(function(a,b){return a+b;},0);
         var DW = rawDW.map(function(w){ return Math.round(w * contentW / rawSum); });
-        // fix rounding
         var dSum = DW.reduce(function(a,b){return a+b;},0);
         DW[DW.length-1] += (contentW - dSum);
 
-        var DHEADS = ['%Ma','Setpoint','Actual FR
-(t/h)','Demand/
+        var DHEADS = ['%Ma','mA
+Source','AI3
+(mA)','AO1
+(mA)','AO2
+(mA)','Actual FR
+on Display
+(t/h)','Feed Rate
+Demand/
 Setpoint','Motor
-RPM','FREQ
+Speed
+(rpm)','FREQ
 (Hz)
 P527','LOAD
 (%)
@@ -743,8 +772,9 @@ P507','VOLT
 P506','CURR
 (A)
 P508','Bel Load
-(kg/m)'];
-        var DHEAD_H = 14;
+(kg/m)
+A01'];
+        var DHEAD_H = 16;
         checkPage(DHEAD_H + 5*9 + 4);
 
         // draw header background
@@ -754,13 +784,11 @@ P508','Bel Load
         doc.rect(marginX, y, contentW, DHEAD_H, 'FD');
         var dhx = marginX;
         DHEADS.forEach(function(h, i){ doc.rect(dhx, y, DW[i], DHEAD_H, 'S'); dhx += DW[i]; });
-        // draw header text
-        doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(255,255,255);
+        doc.setFont('helvetica','bold'); doc.setFontSize(5.8); doc.setTextColor(255,255,255);
         dhx = marginX;
         DHEADS.forEach(function(h, i) {
-          var lines = h.split('
-');
-          var lineH = 3.5;
+          var lines = h.split('\n');
+          var lineH = 3.2;
           var totalH = lines.length * lineH;
           var ty = y + (DHEAD_H - totalH) / 2 + lineH;
           lines.forEach(function(line, li) {
@@ -772,11 +800,11 @@ P508','Bel Load
         y += DHEAD_H;
 
         var DPCTS = [
-          {label:'100%', setpt:'20 t/h', keys:['td_fr_act_100','td_sp_100','td_rpm_100','td_freq_100','td_load_100','td_volt_100','td_curr_100','td_blt_100']},
-          {label:'75%',  setpt:'16 t/h', keys:['td_fr_act_75','td_sp_75','td_rpm_75','td_freq_75','td_load_75','td_volt_75','td_curr_75','td_blt_75']},
-          {label:'50%',  setpt:'12 t/h', keys:['td_fr_act_50','td_sp_50','td_rpm_50','td_freq_50','td_load_50','td_volt_50','td_curr_50','td_blt_50']},
-          {label:'25%',  setpt:'8 t/h',  keys:['td_fr_act_25','td_sp_25','td_rpm_25','td_freq_25','td_load_25','td_volt_25','td_curr_25','td_blt_25']},
-          {label:'0%',   setpt:'4 t/h',  keys:['td_fr_act_0','td_sp_0','td_rpm_0','td_freq_0','td_load_0','td_volt_0','td_curr_0','td_blt_0']}
+          {label:'100%', ma:'20 mA', keys:['td_ai3_100','td_ao1_100','td_ao2_100','td_fr_act_100','td_sp_100','td_rpm_100','td_freq_100','td_load_100','td_volt_100','td_curr_100','td_blt_100']},
+          {label:'75%',  ma:'16 mA', keys:['td_ai3_75', 'td_ao1_75', 'td_ao2_75', 'td_fr_act_75', 'td_sp_75', 'td_rpm_75', 'td_freq_75', 'td_load_75', 'td_volt_75', 'td_curr_75', 'td_blt_75']},
+          {label:'50%',  ma:'12 mA', keys:['td_ai3_50', 'td_ao1_50', 'td_ao2_50', 'td_fr_act_50', 'td_sp_50', 'td_rpm_50', 'td_freq_50', 'td_load_50', 'td_volt_50', 'td_curr_50', 'td_blt_50']},
+          {label:'25%',  ma:'8 mA',  keys:['td_ai3_25', 'td_ao1_25', 'td_ao2_25', 'td_fr_act_25', 'td_sp_25', 'td_rpm_25', 'td_freq_25', 'td_load_25', 'td_volt_25', 'td_curr_25', 'td_blt_25']},
+          {label:'0%',   ma:'4 mA',  keys:['td_ai3_0',  'td_ao1_0',  'td_ao2_0',  'td_fr_act_0',  'td_sp_0',  'td_rpm_0',  'td_freq_0',  'td_load_0',  'td_volt_0',  'td_curr_0',  'td_blt_0']}
         ];
 
         DPCTS.forEach(function(row, ri) {
@@ -787,21 +815,19 @@ P508','Bel Load
           var rx = marginX;
           DW.forEach(function(w){ doc.rect(rx, y, w, rowH, 'FD'); rx += w; });
           doc.setDrawColor(200,215,230); doc.setLineWidth(0.3);
-          // % label
-          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(29,116,199);
+          // % label col 0
+          doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(29,116,199);
           doc.text(row.label, marginX + DW[0]/2, y+5.8, {align:'center'});
-          // setpoint
+          // mA source col 1
           doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(41,76,111);
-          doc.text(row.setpt, marginX+DW[0] + DW[1]/2, y+5.8, {align:'center'});
-          // data cells
+          doc.text(row.ma, marginX+DW[0] + DW[1]/2, y+5.8, {align:'center'});
+          // data cells cols 2..12
           row.keys.forEach(function(kid, ki) {
             var val = safe(gv(kid)) || '-';
-            var cx = marginX + DW[0] + DW[1] + DW[2]*ki;
-            // ki maps to cols 2..9 (DW[2] through DW[9])
             var colIdx = ki + 2;
             var cx2 = marginX;
             for (var cc=0; cc<colIdx; cc++) cx2 += DW[cc];
-            doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(20,20,60);
+            doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(20,20,60);
             doc.text(val, cx2 + DW[colIdx]/2, y+5.8, {align:'center'});
           });
           y += rowH;
@@ -821,7 +847,7 @@ P508','Bel Load
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 // init toggle label state
-document.getElementById('lbl-feeder').className = 'active';
+updatePrintLabels();
 setInterval(function(){
   var el=document.getElementById('clockFeeder');
   if(el) el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
