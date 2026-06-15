@@ -71,6 +71,17 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 
 <div class="wrapper">
 
+  <!-- ── SECTION SELECTOR ── -->
+  <div style="display:flex;gap:10px;align-items:center;background:rgba(255,255,255,0.9);border:1.5px solid var(--border);border-radius:10px;padding:12px 18px;margin-bottom:14px;flex-wrap:wrap;">
+    <span style="font-size:12px;font-weight:600;color:var(--text3);margin-right:4px">&#9776; Pilih pekerjaan yang dilakukan:</span>
+    <label id="lbl-feeder" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--steel);transition:all .15s;user-select:none;">
+      <input type="checkbox" id="chk-feeder" onchange="toggleSections()" style="width:16px;height:16px;cursor:pointer;"> &#128200; Feeder Calibration
+    </label>
+    <label id="lbl-demand" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--steel);transition:all .15s;user-select:none;">
+      <input type="checkbox" id="chk-demand" onchange="toggleSections()" style="width:16px;height:16px;cursor:pointer;"> &#9889; Test Demand Signal
+    </label>
+  </div>
+
   <!-- ── INFORMASI PEKERJAAN ── -->
   <div class="panel">
     <div class="section-label">Informasi Pekerjaan</div>
@@ -83,6 +94,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
     </div>
   </div>
 
+  <div id="section-feeder" style="display:none">
   <!-- ── TABEL CAL 1 ── -->
   <div class="panel">
     <div class="section-label">FEEDER CALIBRATION DATA SHEET — 4 pieces of tape used</div>
@@ -182,22 +194,14 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
         </tbody>
       </table>
 
-    <!-- ── PRINT SELECTION ── -->
-    <div style="display:flex;gap:12px;align-items:center;margin-top:18px;padding:12px 16px;background:rgba(29,116,199,0.06);border:1.5px solid rgba(29,116,199,0.2);border-radius:8px;flex-wrap:wrap;">
-      <span style="font-size:12px;font-weight:600;color:var(--steel)">&#128438; Pilih untuk di-print ke PDF:</span>
-      <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--steel);cursor:pointer;padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:#fff;" id="lbl-feeder">
-        <input type="checkbox" id="chk-feeder" checked onchange="updatePrintLabels()"> &#128200; Feeder Calibration
-      </label>
-      <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--steel);cursor:pointer;padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:#fff;" id="lbl-demand">
-        <input type="checkbox" id="chk-demand" checked onchange="updatePrintLabels()"> &#9889; Test Demand Signal
-      </label>
-    </div>
+
     </div>
   </div>
 
+  </div><!-- /section-feeder -->
 
   <!-- ══ SECTION TEST DEMAND SIGNAL ══ -->
-  <div id="section-demand" class="panel">
+  <div id="section-demand" class="panel" style="display:none">
     <div class="section-label">TEST DEMAND SIGNAL — AC TECH MC1000 Inverter</div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Demand Signal: A02 → AI3 &nbsp;·&nbsp; Belt Load: A01 &nbsp;·&nbsp; Ref: PI-10-01-175-F01</div>
     <div style="overflow-x:auto">
@@ -369,31 +373,36 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 </div>
 
 <script>
-// ── PRINT SELECTION ─────────────────────────────────────────
-function updatePrintLabels() {
+// ── SECTION TOGGLE ─────────────────────────────────────────
+function toggleSections() {
   var fChk = document.getElementById('chk-feeder');
   var dChk = document.getElementById('chk-demand');
   var fLbl = document.getElementById('lbl-feeder');
   var dLbl = document.getElementById('lbl-demand');
-  if (fLbl) fLbl.style.background = fChk && fChk.checked ? 'var(--ok)' : '#fff';
-  if (fLbl) fLbl.style.color = fChk && fChk.checked ? '#fff' : 'var(--steel)';
-  if (fLbl) fLbl.style.borderColor = fChk && fChk.checked ? 'var(--ok)' : 'var(--border)';
-  if (dLbl) dLbl.style.background = dChk && dChk.checked ? 'var(--ok)' : '#fff';
-  if (dLbl) dLbl.style.color = dChk && dChk.checked ? '#fff' : 'var(--steel)';
-  if (dLbl) dLbl.style.borderColor = dChk && dChk.checked ? 'var(--ok)' : 'var(--border)';
+  var fSec = document.getElementById('section-feeder');
+  var dSec = document.getElementById('section-demand');
+  var fOn = fChk && fChk.checked;
+  var dOn = dChk && dChk.checked;
+  // Toggle visibility
+  if (fSec) fSec.style.display = fOn ? '' : 'none';
+  if (dSec) dSec.style.display = dOn ? '' : 'none';
+  // Style labels
+  if (fLbl) { fLbl.style.background = fOn ? '#1d74c7' : '#fff'; fLbl.style.color = fOn ? '#fff' : 'var(--steel)'; fLbl.style.borderColor = fOn ? '#1d74c7' : 'var(--border)'; }
+  if (dLbl) { dLbl.style.background = dOn ? '#1d74c7' : '#fff'; dLbl.style.color = dOn ? '#fff' : 'var(--steel)'; dLbl.style.borderColor = dOn ? '#1d74c7' : 'var(--border)'; }
 }
+function updatePrintLabels() { toggleSections(); } // alias for backward compat
 
 // ── FIELD DEFINITIONS ─────────────────────────────────────────────────────────
 var CF_CAL1_ROWS = [
-  {id:'cal1_dev',  selfTest:'CAL 1',  desc:'Deviation',           unit:'%',     acceptance:'±0.25%'},
+  {id:'cal1_dev',  selfTest:'CAL 1',  desc:'Deviation',           unit:'%',     acceptance:'\u00b10.25%'},
   {id:'cal1_ppl',  selfTest:'P10.02', desc:'Pulses per Length',   unit:'l/m',   acceptance:'n/a'},
-  {id:'cal1_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'±0.25%'},
+  {id:'cal1_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'\u00b10.25%'},
   {id:'cal1_bt',   selfTest:'P10.10', desc:'Basic Tare',          unit:'kg/m',  acceptance:'n/a'}
 ];
 var CF_CAL2_ROWS = [
-  {id:'cal2_dev',  selfTest:'CAL 2',  desc:'Deviation',           unit:'%',     acceptance:'±0.25%'},
+  {id:'cal2_dev',  selfTest:'CAL 2',  desc:'Deviation',           unit:'%',     acceptance:'\u00b10.25%'},
   {id:'cal2_ppl',  selfTest:'P10.02', desc:'Pulses per Length',   unit:'l/m',   acceptance:'n/a'},
-  {id:'cal2_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'±0.25%'},
+  {id:'cal2_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'\u00b10.25%'},
   {id:'cal2_rctw', selfTest:'P10.03', desc:'Range Correction TW', unit:'',      acceptance:'n/a'}
 ];
 
@@ -519,6 +528,13 @@ function dbCollectData(modul) {
   cfSyncCaptions();
   var gv = function(id){ var e=document.getElementById(id); return e?e.value:''; };
   var ki = function(img){ return {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||''}; };
+  var pcts = ['100','75','50','25','0'];
+  var dfields = ['ai3','ao1','ao2','fr_act','sp','rpm','freq','load','volt','curr','blt'];
+  var demandRows = {};
+  pcts.forEach(function(p) {
+    demandRows[p] = {};
+    dfields.forEach(function(f){ demandRows[p][f] = gv('td_'+f+'_'+p); });
+  });
   return {
     modul: 'Coal Feeder Calibration',
     tanggal: gv('cfDate'),
@@ -528,18 +544,21 @@ function dbCollectData(modul) {
     data: {
       feeder_no: gv('cfFeederNo'),
       reference: gv('cfRef'),
+      print_feeder: document.getElementById('chk-feeder') ? document.getElementById('chk-feeder').checked : false,
+      print_demand: document.getElementById('chk-demand') ? document.getElementById('chk-demand').checked : false,
       cal1: {
-        deviation:   [gv('cal1_dev1'),  gv('cal1_dev2'),  gv('cal1_dev3')],
-        pulses_per_length: [gv('cal1_ppl1'), gv('cal1_ppl2'), gv('cal1_ppl3')],
-        belt_circuit_no:   [gv('cal1_bcn1'), gv('cal1_bcn2'), gv('cal1_bcn3')],
-        basic_tare:        [gv('cal1_bt1'),  gv('cal1_bt2'),  gv('cal1_bt3')]
+        deviation:         [gv('cal1_dev1'),  gv('cal1_dev2'),  gv('cal1_dev3')],
+        pulses_per_length: [gv('cal1_ppl1'),  gv('cal1_ppl2'),  gv('cal1_ppl3')],
+        belt_circuit_no:   [gv('cal1_bcn1'),  gv('cal1_bcn2'),  gv('cal1_bcn3')],
+        basic_tare:        [gv('cal1_bt1'),   gv('cal1_bt2'),   gv('cal1_bt3')]
       },
       cal2: {
-        deviation:     [gv('cal2_dev1'),  gv('cal2_dev2'),  gv('cal2_dev3')],
-        pulses_per_length: [gv('cal2_ppl1'), gv('cal2_ppl2'), gv('cal2_ppl3')],
-        belt_circuit_no:   [gv('cal2_bcn1'), gv('cal2_bcn2'), gv('cal2_bcn3')],
+        deviation:           [gv('cal2_dev1'),  gv('cal2_dev2'),  gv('cal2_dev3')],
+        pulses_per_length:   [gv('cal2_ppl1'),  gv('cal2_ppl2'),  gv('cal2_ppl3')],
+        belt_circuit_no:     [gv('cal2_bcn1'),  gv('cal2_bcn2'),  gv('cal2_bcn3')],
         range_correction_tw: [gv('cal2_rctw1'), gv('cal2_rctw2'), gv('cal2_rctw3')]
       },
+      demand: demandRows,
       note: gv('cfNote'),
       images: cfImages.map(ki)
     }
@@ -548,9 +567,23 @@ function dbCollectData(modul) {
 
 // ── PDF ───────────────────────────────────────────────────────────────────────
 function cfDownloadPdf() {
-  var doFeeder = document.getElementById('chk-feeder').checked;
-  var doDemand = document.getElementById('chk-demand').checked;
-  if (!doFeeder && !doDemand) { alert('Pilih minimal satu section untuk di-print.'); return; }
+  var fChk = document.getElementById('chk-feeder');
+  var dChk = document.getElementById('chk-demand');
+  var doFeeder = fChk && fChk.checked;
+  var doDemand = dChk && dChk.checked;
+  // Auto-detect: if neither checked but one has data, include it
+  if (!doFeeder && !doDemand) {
+    // Check if any feeder field has data
+    var feederHasData = ['cal1_dev1','cal1_dev2','cal1_dev3','cal2_dev1','cal2_dev2','cal2_dev3'].some(function(id){
+      var e = document.getElementById(id); return e && e.value && e.value !== '0.000' && e.value !== '';
+    });
+    var demandHasData = ['td_ai3_100','td_ao1_100','td_fr_act_100'].some(function(id){
+      var e = document.getElementById(id); return e && e.value && e.value !== '' && e.value !== '-';
+    });
+    if (!feederHasData && !demandHasData) { alert('Pilih minimal satu section untuk di-print.'); return; }
+    doFeeder = feederHasData;
+    doDemand = demandHasData;
+  }
   ensureReportBackground(function() {
     try {
       cfSyncCaptions();
@@ -582,7 +615,7 @@ function cfDownloadPdf() {
         }
       }
 
-      // Halaman pertama — draw background
+      // Halaman pertama \u2014 draw background
       drawBg(doc, pw, ph);
 
       // ── INFO BOX ──
@@ -625,7 +658,7 @@ function cfDownloadPdf() {
         y += 9;
       }
 
-      // col widths: 20+55+30+30+30+15 = 180 (contentW 170 — tweak)
+      // col widths: 20+55+30+30+30+15 = 180 (contentW 170 \u2014 tweak)
       // contentW=170: 18+52+28+28+28+16 = 170
       var COL_W = [22, 52, 26, 26, 26, 18];
 
@@ -633,7 +666,7 @@ function cfDownloadPdf() {
         var HEAD_H = 9;
         checkPage(HEAD_H + calRows.length * 8 + 4);
 
-        // header — draw ALL rects first, then ALL text on top
+        // header \u2014 draw ALL rects first, then ALL text on top
         var hx = marginX;
         var headers = ['Self Test', 'Description', 'TEST #1', 'TEST #2', 'TEST #3', 'Accept.'];
         // Step 1: fill entire header background in one shot
@@ -641,7 +674,7 @@ function cfDownloadPdf() {
         doc.setDrawColor(20,40,110);
         doc.setLineWidth(0.3);
         doc.rect(marginX, y, contentW, HEAD_H, 'FD');
-        // Step 2: column dividers only (stroke, no fill — so background stays blue)
+        // Step 2: column dividers only (stroke, no fill \u2014 so background stays blue)
         hx = marginX;
         headers.forEach(function(h, i) {
           doc.rect(hx, y, COL_W[i], HEAD_H, 'S');
@@ -692,14 +725,14 @@ function cfDownloadPdf() {
 
       if (doFeeder) { secHeader('FEEDER NO-LOAD AND TEST WEIGHT CALIBRATION');
       doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,80,120);
-      doc.text('Feeder No: '+safe(gv('cfFeederNo'))+'   Reference: '+safe(gv('cfRef'))+'   — 4 pieces of tape used', marginX+3, y);
+      doc.text('Feeder No: '+safe(gv('cfFeederNo'))+'   Reference: '+safe(gv('cfRef'))+'   \u2014 4 pieces of tape used', marginX+3, y);
       y += 8;
 
-      subHeader('CAL 1 — Zero Calibration');
+      subHeader('CAL 1 \u2014 Zero Calibration');
       drawCalTable(CF_CAL1_ROWS, 1);
 
       checkPage(5);
-      subHeader('CAL 2 — Span Calibration');
+      subHeader('CAL 2 \u2014 Span Calibration');
       drawCalTable(CF_CAL2_ROWS, 2);
 
       // ── CATATAN & EVIDENCE ──
@@ -733,9 +766,9 @@ function cfDownloadPdf() {
       // ── TEST DEMAND SECTION ──
       if (doDemand) {
         if (doFeeder) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
-        secHeader('TEST DEMAND SIGNAL — AC TECH MC1000 Inverter');
+        secHeader('TEST DEMAND SIGNAL \u2014 AC TECH MC1000 Inverter');
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,80,120);
-        doc.text('Demand Signal: A02 → AI3  ·  Belt Load: A01  ·  Reference: PI-10-01-175-F01', marginX+3, y);
+        doc.text('Demand Signal: A02 \u2192 AI3  \u00b7  Belt Load: A01  \u00b7  Reference: PI-10-01-175-F01', marginX+3, y);
         y += 8;
 
         // demand table col widths total = contentW = 170
@@ -847,7 +880,7 @@ A01'];
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 // init toggle label state
-updatePrintLabels();
+toggleSections();
 setInterval(function(){
   var el=document.getElementById('clockFeeder');
   if(el) el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -889,6 +922,21 @@ initReportBackground();
         cfImages = data.images.map(function(img){ return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''}; });
         cfRenderPreviews();
       }
+      if (data.demand) {
+        var pcts = ['100','75','50','25','0'];
+        var dfields = ['ai3','ao1','ao2','fr_act','sp','rpm','freq','load','volt','curr','blt'];
+        pcts.forEach(function(p) {
+          if (!data.demand[p]) return;
+          dfields.forEach(function(f){ sv('td_'+f+'_'+p, data.demand[p][f]||''); });
+        });
+      }
+      if (data.print_feeder !== undefined) {
+        var fc = document.getElementById('chk-feeder'); if(fc) fc.checked = data.print_feeder;
+      }
+      if (data.print_demand !== undefined) {
+        var dc = document.getElementById('chk-demand'); if(dc) dc.checked = data.print_demand;
+      }
+      if (typeof toggleSections === 'function') toggleSections();
       dbShowToast('Data dimuat dari riwayat \u2713');
       if (doPrint) { ensureReportBackground(function(){ setTimeout(cfDownloadPdf,300); }); }
     }, 800);
