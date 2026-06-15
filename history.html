@@ -39,6 +39,7 @@
       <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR E2-E3')" style="font-size:12px;padding:6px 14px;flex:none">Belt E2/E3</button>
       <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR B1-B2')" style="font-size:12px;padding:6px 14px;flex:none">Belt B1/B2</button>
       <button class="btn btn-outline" onclick="loadHistory('Coal Feeder Calibration')" style="font-size:12px;padding:6px 14px;flex:none">Coal Feeder</button>
+      <button class="btn btn-outline" onclick="loadHistory('DCS-HMI')" style="font-size:12px;padding:6px 14px;flex:none">Dcs-HMI</button>
     </div>
     <div id="historyList" style="overflow-x:auto">
       <div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Memuat...</div>
@@ -59,6 +60,7 @@ function modulToUrl(modul, id) {
   if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id;
   if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id;
   if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id;
+  if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id;
   return 'index.html';
 }
 
@@ -72,6 +74,7 @@ function modulToPrintUrl(modul, id) {
   if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id + '&print=1';
   if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id + '&print=1';
   if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id + '&print=1';
+  if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id + '&print=1';
   return 'index.html';
 }
 
