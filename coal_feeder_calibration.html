@@ -579,12 +579,12 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   <!-- ── SECTION SELECTOR ── -->
   <div style="display:flex;gap:10px;align-items:center;background:rgba(255,255,255,0.9);border:1.5px solid var(--border);border-radius:10px;padding:12px 18px;margin-bottom:14px;flex-wrap:wrap;">
     <span style="font-size:12px;font-weight:600;color:var(--text3);margin-right:4px">&#9776; Pilih pekerjaan yang dilakukan:</span>
-    <label id="lbl-feeder" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--steel);transition:all .15s;user-select:none;">
-      <input type="checkbox" id="chk-feeder" onchange="toggleSections()" style="width:16px;height:16px;cursor:pointer;"> &#128200; Feeder Calibration
-    </label>
-    <label id="lbl-demand" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--steel);transition:all .15s;user-select:none;">
-      <input type="checkbox" id="chk-demand" onchange="toggleSections()" style="width:16px;height:16px;cursor:pointer;"> &#9889; Test Demand Signal
-    </label>
+    <div id="lbl-feeder" onclick="cfToggleSection('feeder')" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--steel);transition:all .15s;user-select:none;">
+      <input type="checkbox" id="chk-feeder" onclick="event.stopPropagation();cfToggleSection('feeder')" onchange="event.stopPropagation()" style="width:16px;height:16px;cursor:pointer;"> &#128200; Feeder Calibration
+    </div>
+    <div id="lbl-demand" onclick="cfToggleSection('demand')" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--steel);transition:all .15s;user-select:none;">
+      <input type="checkbox" id="chk-demand" onclick="event.stopPropagation();cfToggleSection('demand')" onchange="event.stopPropagation()" style="width:16px;height:16px;cursor:pointer;"> &#9889; Test Demand Signal
+    </div>
   </div>
 
   <!-- ── INFORMASI PEKERJAAN ── -->
@@ -878,24 +878,26 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 </div>
 
 <script>
-// ── SECTION TOGGLE ─────────────────────────────────────────
-function toggleSections() {
-  var fChk = document.getElementById('chk-feeder');
-  var dChk = document.getElementById('chk-demand');
-  var fLbl = document.getElementById('lbl-feeder');
-  var dLbl = document.getElementById('lbl-demand');
-  var fSec = document.getElementById('section-feeder');
-  var dSec = document.getElementById('section-demand');
-  var fOn = fChk && fChk.checked;
-  var dOn = dChk && dChk.checked;
-  // Toggle visibility
-  if (fSec) fSec.style.display = fOn ? '' : 'none';
-  if (dSec) dSec.style.display = dOn ? '' : 'none';
-  // Style labels
-  if (fLbl) { fLbl.style.background = fOn ? '#1d74c7' : '#fff'; fLbl.style.color = fOn ? '#fff' : 'var(--steel)'; fLbl.style.borderColor = fOn ? '#1d74c7' : 'var(--border)'; }
-  if (dLbl) { dLbl.style.background = dOn ? '#1d74c7' : '#fff'; dLbl.style.color = dOn ? '#fff' : 'var(--steel)'; dLbl.style.borderColor = dOn ? '#1d74c7' : 'var(--border)'; }
+// ── SECTION TOGGLE (pola dari maintenance_report_form) ──────────────
+function cfToggleSection(type) {
+  var chkMap  = {feeder:'chk-feeder', demand:'chk-demand'};
+  var secMap  = {feeder:'section-feeder', demand:'section-demand'};
+  var lblMap  = {feeder:'lbl-feeder', demand:'lbl-demand'};
+  var chk = document.getElementById(chkMap[type]);
+  var sec = document.getElementById(secMap[type]);
+  var lbl = document.getElementById(lblMap[type]);
+  if (!chk || !sec) return;
+  chk.checked = !chk.checked;
+  var on = chk.checked;
+  sec.style.display = on ? '' : 'none';
+  if (lbl) {
+    lbl.style.background   = on ? '#1d74c7' : '#fff';
+    lbl.style.color        = on ? '#fff'    : 'var(--steel)';
+    lbl.style.borderColor  = on ? '#1d74c7' : 'var(--border)';
+  }
 }
-function updatePrintLabels() { toggleSections(); } // alias for backward compat
+function toggleSections() {}     // stub (tidak dipakai lagi)
+function updatePrintLabels() {}  // stub
 
 // ── FIELD DEFINITIONS ─────────────────────────────────────────────────────────
 var CF_CAL1_ROWS = [
@@ -1447,6 +1449,7 @@ initReportBackground();
     }, 800);
   });
 })();
+
 </script>
 </body>
 </html>
