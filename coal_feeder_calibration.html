@@ -562,6 +562,25 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   .print-hidden { display: none !important; }
 }
 </style>
+<script>
+function cfToggleSection(type) {
+  var chkMap = {feeder:'chk-feeder', demand:'chk-demand'};
+  var secMap = {feeder:'section-feeder', demand:'section-demand'};
+  var lblMap = {feeder:'lbl-feeder', demand:'lbl-demand'};
+  var chk = document.getElementById(chkMap[type]);
+  var sec = document.getElementById(secMap[type]);
+  var lbl = document.getElementById(lblMap[type]);
+  if (!chk || !sec) return;
+  chk.checked = !chk.checked;
+  var on = chk.checked;
+  sec.style.display = on ? '' : 'none';
+  if (lbl) {
+    lbl.style.background  = on ? '#1d74c7' : '#fff';
+    lbl.style.color       = on ? '#fff' : '';
+    lbl.style.borderColor = on ? '#1d74c7' : '';
+  }
+}
+</script>
 </head>
 <body>
 <div class="topbar">
