@@ -465,19 +465,19 @@ function cfDownloadPdf() {
 
       // col widths: 20+55+30+30+30+15 = 180 (contentW 170 — tweak)
       // contentW=170: 18+52+28+28+28+16 = 170
-      var COL_W = [18, 52, 28, 28, 28, 16];
+      var COL_W = [22, 60, 30, 30, 30, 20];
 
       function drawCalTable(calRows, calNumber) {
-        var HEAD_H = 8;
+        var HEAD_H = 9;
         checkPage(HEAD_H + calRows.length * 8 + 4);
 
         // header
         var hx = marginX;
         var headers = ['Self Test', 'Description', 'TEST #1', 'TEST #2', 'TEST #3', 'Accept.'];
-        doc.setFillColor(30,58,138); doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(210,225,255);
+        doc.setFillColor(30,58,138); doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(210,225,255);
         headers.forEach(function(h, i) {
           doc.rect(hx, y, COL_W[i], HEAD_H, 'F');
-          doc.text(h, hx + COL_W[i]/2, y + 5.5, {align:'center'});
+          doc.text(h, hx + COL_W[i]/2, y + 6, {align:'center'});
           hx += COL_W[i];
         });
         y += HEAD_H;
