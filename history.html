@@ -61,6 +61,8 @@ function modulToUrl(modul, id) {
   if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id;
   if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id;
   if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id;
+  if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id;
+  if (norm === 'CONDUCTIVITY')       return 'conductivity.html?id=' + id;
   return 'index.html';
 }
 
@@ -75,6 +77,8 @@ function modulToPrintUrl(modul, id) {
   if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id + '&print=1';
   if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id + '&print=1';
   if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id + '&print=1';
+  if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id + '&print=1';
+  if (norm === 'CONDUCTIVITY')       return 'conductivity.html?id=' + id + '&print=1';
   return 'index.html';
 }
 
