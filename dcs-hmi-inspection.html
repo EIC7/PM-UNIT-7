@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DCS HMI/OIS Inspection — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root{
+  --bg:#eef5fb;--bg2:#dceaf6;--panel:rgba(255,255,255,0.78);
+  --panel-border:rgba(150,180,210,0.65);--steel:#1e3a5f;--steel-light:#2d5282;
+  --ok:#1d74c7;--text:#152638;--text2:#2c4660;--text3:#6f879c;
+  --border:rgba(150,180,210,0.65);--shadow:0 4px 24px rgba(35,75,120,0.10);
+  --shadow2:0 2px 8px rgba(35,75,120,0.08);--accent:#0f766e;
+}
+body{
+  background-image:
+    radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 0%,transparent 55%),
+    radial-gradient(ellipse at 85% 80%,rgba(135,185,225,0.30) 0%,transparent 50%),
+    linear-gradient(180deg,#f8fbfe 0%,var(--bg) 100%);
+}
+.topbar{background:linear-gradient(90deg,#1c3550 0%,#294c6f 60%,#1c3550 100%);border-bottom-color:#1d74c744;}
+.topbar-logo{color:#b7d8f5}.topbar-sep{background:#3f668a}.topbar-sub,.topbar-back,.topbar-time{color:#8fb7dc}
+.topbar-back{border-color:#315d86;background:rgba(29,116,199,0.06)}.topbar-back:hover{color:#b7d8f5;border-color:#1d74c7;background:rgba(29,116,199,0.12)}
+.badge{background:#1d74c722;color:var(--ok);border-color:#1d74c744}
+
+/* Drop header style */
+.drop-col-header{
+  font-size:11px;font-weight:700;text-align:center;
+  line-height:1.3;padding:8px 6px;
+  background:#e8f2ff;color:#1e3a5f;
+  border-bottom:2px solid #1d74c744;
+  white-space:nowrap;
+}
+.drop-asset-label{
+  font-size:10px;font-weight:400;color:#6f879c;
+  font-style:italic;display:block;margin-top:2px;
+}
+.check-cell{text-align:center;vertical-align:middle;}
+.check-cell input[type=checkbox]{
+  width:16px;height:16px;cursor:pointer;accent-color:var(--ok);
+}
+.na-cell{text-align:center;color:var(--text3);font-size:12px;}
+
+/* Responsive scroll hint */
+.scroll-hint{
+  font-size:11px;color:var(--text3);font-style:italic;
+  margin-bottom:6px;display:none;
+}
+@media(max-width:700px){ .scroll-hint{display:block;} }
+
+/* Badge modul */
+.modul-badge{
+  display:inline-block;padding:3px 10px;border-radius:12px;
+  font-size:11px;font-weight:700;letter-spacing:1px;
+  background:#1d74c722;color:#1e3a5f;border:1px solid #1d74c744;
+  margin-right:6px;margin-bottom:4px;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">DCS HMI/OIS</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; 1 Yearly Inspection &amp; Cleaning DCS HMI/OIS</div>
+  <div class="topbar-right"><div class="live-dot"></div><div class="topbar-time" id="clockDCS">--:--:--</div></div>
+</div>
+
+<div class="wrapper">
+
+  <!-- INFO HEADER -->
+  <div class="panel">
+    <div class="section-label">Informasi Pekerjaan</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+      <span class="modul-badge">MOD-12</span>
+      <span class="modul-badge">DCS</span>
+      <span class="modul-badge">HMI</span>
+      <span class="modul-badge">OIS</span>
+      <span class="modul-badge">INSPEKSI</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:4px">
+      <div class="meta-field">
+        <label>Date</label>
+        <input type="date" id="dcsDate">
+      </div>
+      <div class="meta-field">
+        <label>PIC</label>
+        <input type="text" id="dcsPIC" placeholder="Nama PIC...">
+      </div>
+      <div class="meta-field">
+        <label>Work Order Ref.</label>
+        <input type="text" id="dcsWO" placeholder="Work Order...">
+      </div>
+      <div class="meta-field">
+        <label>Unit</label>
+        <select id="dcsUnit" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:13px;color:var(--text)">
+          <option value="U7">U7</option>
+          <option value="U8">U8</option>
+          <option value="Common">Common</option>
+        </select>
+      </div>
+      <div class="meta-field">
+        <label>Program Maintenance</label>
+        <input type="text" id="dcsProgram" value="JP-DROP" placeholder="JP-DROP...">
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST TABLE -->
+  <div class="panel">
+    <div class="section-label">Step of Work — Inspection &amp; Cleaning DCS HMI/OIS</div>
+    <p class="scroll-hint">&#8617; Geser kanan untuk melihat semua kolom Drop</p>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="dcsCheckTable" style="min-width:900px">
+        <thead>
+          <tr>
+            <th style="width:36px;text-align:center">No.</th>
+            <th style="min-width:220px">Step of Work</th>
+            <th style="width:130px">Criteria</th>
+            <th style="width:38px;text-align:center">&#10003;</th>
+            <!-- Drop columns diisi JS -->
+          </tr>
+          <tr id="dcsDropHeader">
+            <td colspan="4" style="background:#e8f2ff;font-size:11px;color:#1e3a5f;font-weight:700;padding:6px 12px;letter-spacing:1px">
+              ▸ DROP ASSETS — Centang kolom sesuai unit yang dikerjakan
+            </td>
+            <!-- Drop headers diisi JS -->
+          </tr>
+        </thead>
+        <tbody id="dcsCheckBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CATATAN & FOTO -->
+  <div class="panel">
+    <div class="section-label">Catatan &amp; Evidence Photo</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
+
+      <!-- Note General -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#128247; Evidence Photo &amp; Catatan</div>
+        <textarea id="dcsNoteGeneral" rows="3" placeholder="Catatan umum pekerjaan DCS HMI/OIS..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px;box-sizing:border-box"></textarea>
+        <div id="dcsImgDropGeneral" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2)"
+          onclick="toggleSourceChoices('dcsSourceGeneral')"
+          ondragover="event.preventDefault()"
+          ondrop="dcsHandleDrop(event,'general')">
+          <input type="file" id="dcsImgInputGeneral" accept="image/*,.heic,.heif" multiple style="display:none" onchange="dcsHandleFiles(this.files,'general')">
+          <div style="font-size:24px;margin-bottom:6px">&#128444;&#65039;</div>
+          <div style="font-size:12px;color:var(--text3)">Klik untuk pilih sumber atau drag file</div>
+          <div id="dcsSourceGeneral" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('dcsImgInputGeneral','storage')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Penyimpanan</button>
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('dcsImgInputGeneral','camera')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Kamera</button>
+          </div>
+        </div>
+        <div id="dcsImgPreviewgeneral" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+        <div id="dcsSizeInfogeneral" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
+      </div>
+
+      <!-- Note Defect -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#9888;&#65039; Temuan &amp; Defect</div>
+        <textarea id="dcsNoteDefect" rows="3" placeholder="Catat temuan / defect yang ditemukan..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px;box-sizing:border-box"></textarea>
+        <div id="dcsImgDropDefect" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2)"
+          onclick="toggleSourceChoices('dcsSourceDefect')"
+          ondragover="event.preventDefault()"
+          ondrop="dcsHandleDrop(event,'defect')">
+          <input type="file" id="dcsImgInputDefect" accept="image/*,.heic,.heif" multiple style="display:none" onchange="dcsHandleFiles(this.files,'defect')">
+          <div style="font-size:24px;margin-bottom:6px">&#128444;&#65039;</div>
+          <div style="font-size:12px;color:var(--text3)">Foto temuan / defect</div>
+          <div id="dcsSourceDefect" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('dcsImgInputDefect','storage')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Penyimpanan</button>
+            <button type="button" onclick="event.stopPropagation();openFileInputSource('dcsImgInputDefect','camera')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Kamera</button>
+          </div>
+        </div>
+        <div id="dcsImgPreviewdefect" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+        <div id="dcsSizeInfodefect" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
+      </div>
+
+    </div>
+
+    <!-- Catatan footer sesuai excel -->
+    <div style="margin-top:18px;padding:12px 16px;background:#f0f7ff;border-left:4px solid #1d74c7;border-radius:4px;font-size:12px;color:var(--text2)">
+      <strong>Note:</strong><br>
+      - Entry PM Result into maximo work order.<br>
+      - Inform to immediate superior if any defect found.
+    </div>
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="btn-row" style="margin-top:20px">
+    <button class="btn btn-pdf" onclick="dcsDownloadPdf()">&#11015; Download PDF Report</button>
+    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('dcs_hmi')">&#128190; Simpan ke Database</button>
+    <button class="btn btn-danger" onclick="dcsReset()">&#10005; Reset</button>
+  </div>
+
+</div>
+
+<!-- CROP MODAL -->
+<div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#172536;border:1px solid #243b55;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="background:#243b55;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:14px;color:#e8f2ff;letter-spacing:1px">&#9986;&#65039; Crop Gambar</div>
+      <div id="cropNatSize" style="font-size:11px;color:#8fb7dc">— x — px</div>
+    </div>
+    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none">
+      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
+      <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;left:-7px;cursor:nw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;right:-7px;cursor:ne-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;left:-7px;cursor:sw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;right:-7px;cursor:se-resize;touch-action:none"></div>
+      </div>
+    </div>
+    <div style="padding:8px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:11px;color:#8fb7dc;display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="cropLock" checked style="accent-color:#3498db"> Lock ratio
+      </label>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+        <span style="font-size:11px;color:#8fb7dc">W:</span>
+        <input type="number" id="cropOutW" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('w')">
+        <span style="font-size:11px;color:#8fb7dc">H:</span>
+        <input type="number" id="cropOutH" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('h')">
+        <span style="font-size:10px;color:#6a8faa">px</span>
+      </div>
+    </div>
+    <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">&#8634; Reset</button>
+      <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Lewati</button>
+      <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">&#10003; Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   DATA — Dari Excel P7EIC Program Maintenance DCS
+══════════════════════════════════════════════ */
+var DCS_CHECKS = [
+  {no:1,  label:'Make sure PTW already issue.',                                                                                             criteria:'PTW Issued'},
+  {no:2,  label:'Prepare tool & material required.',                                                                                        criteria:'Tool Ready'},
+  {no:3,  label:'Stop & Close Any Program Running.',                                                                                        criteria:'No Program Running'},
+  {no:4,  label:'Shutdown computer unit and disconnect all cable.',                                                                         criteria:'System Off'},
+  {no:5,  label:'Cleaning Console, Cubicle, Card and Accessories using Vacuum and Wiper.',                                                  criteria:'Cleanliness'},
+  {no:6,  label:'Cleaning CPU Fan sink using anti-static vacuum cleaner.',                                                                  criteria:'Cleanliness'},
+  {no:7,  label:'Cleaning GPU Fan sink using anti-static vacuum cleaner.',                                                                  criteria:'Cleanliness'},
+  {no:8,  label:'Cleaning Monitor.',                                                                                                        criteria:'Cleanliness'},
+  {no:9,  label:'Cleaning external Fan with anti-static vacuum cleaner.',                                                                   criteria:'Cleanliness'},
+  {no:10, label:'Cleaning socket cable power CPU, LAN cable, cable socket mouse and keyboard, cable socket monitor and other cable connected with CPU.', criteria:'Cleanliness'},
+  {no:11, label:'Make sure all cables connected correctly to the ports.',                                                                   criteria:'All Cable Connected / LAN Port Status Ok'},
+  {no:12, label:'Turn On CPU Power.',                                                                                                       criteria:'System On'},
+  {no:13, label:'Open Program and clear any OPS alarm, in service.',                                                                        criteria:'Program Running'},
+];
+
+/* Drop Assets dari Excel */
+var DCS_DROPS = [
+  {id:'drop200', label:'Drop 200',  desc:'EWS, engineering workstation'},
+  {id:'drop210', label:'Drop 210',  desc:'OPT/OPC, operator workstation'},
+  {id:'drop211', label:'Drop 211',  desc:'OPT/OPC, operator workstation'},
+  {id:'drop212', label:'Drop 212',  desc:'OPT/OPC, operator workstation'},
+  {id:'drop213', label:'Drop 213',  desc:'OPT/OPC, operator workstation'},
+  {id:'drop214', label:'Drop 214',  desc:'OPR, operation and as EDS server'},
+  {id:'ceccons', label:'CEC-CONS-WW',  desc:'WWT Area DCS Operator Control'},
+  {id:'cecch1',  label:'CEC-CONS-CH1', desc:'Common Coal Handling Operator'},
+  {id:'cecch2',  label:'CEC-CONS-CH2', desc:'Common Coal Handling Operator'},
+];
+
+var dcsImages   = {general:[], defect:[]};
+var dcsTableBuilt = false;
+
+/* ══════════════════════════════════════════════
+   BUILD TABLE
+══════════════════════════════════════════════ */
+function dcsBuildTable() {
+  if (dcsTableBuilt) return; dcsTableBuilt = true;
+
+  /* Drop column headers */
+  var headerRow = document.getElementById('dcsDropHeader');
+  DCS_DROPS.forEach(function(drop) {
+    var th = document.createElement('th');
+    th.className = 'drop-col-header';
+    th.style.width = '72px';
+    th.innerHTML = drop.label + '<span class="drop-asset-label">' + drop.desc + '</span>';
+    headerRow.appendChild(th);
+  });
+
+  var thRem = document.createElement('th');
+  thRem.style.cssText = 'min-width:120px;background:#e8f2ff;color:#1e3a5f;font-size:11px;font-weight:700;padding:8px;';
+  thRem.textContent = 'Result / Remark';
+  headerRow.appendChild(thRem);
+
+  var tbody = document.getElementById('dcsCheckBody');
+
+  /* Row: Centang Semua */
+  var trAll = document.createElement('tr');
+  trAll.style.cssText = 'background:#e8f2ff;border-left:4px solid #1d74c7;';
+  var allCells = '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#1d74c7;font-weight:600">&#10003; Centang Semua</td>' +
+    '<td style="text-align:center"><input type="checkbox" id="dcsAllCheck" onchange="dcsCheckAll(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>';
+  DCS_DROPS.forEach(function(drop) {
+    allCells += '<td style="text-align:center"><input type="checkbox" id="dcsAllDrop_'+drop.id+'" onchange="dcsCheckAllDrop(\''+drop.id+'\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>';
+  });
+  allCells += '<td style="font-size:11px;color:#1d74c7;font-style:italic;padding-left:8px">semua OK</td>';
+  trAll.innerHTML = allCells;
+  tbody.appendChild(trAll);
+
+  /* Step rows */
+  DCS_CHECKS.forEach(function(item, idx) {
+    var tr = document.createElement('tr');
+    var cells =
+      '<td style="text-align:center;font-size:12px;color:var(--text3);white-space:nowrap">' + item.no + '</td>' +
+      '<td style="font-size:13px;padding:8px 12px">' + item.label + '</td>' +
+      '<td style="font-size:11px;color:var(--text3);font-style:italic;white-space:nowrap">' + (item.criteria||'') + '</td>' +
+      '<td style="text-align:center"><input type="checkbox" id="dcsChk_'+idx+'" onchange="dcsChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>';
+
+    DCS_DROPS.forEach(function(drop) {
+      cells += '<td class="check-cell"><input type="checkbox" id="dcsDrop_'+drop.id+'_'+idx+'" onchange="dcsChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>';
+    });
+
+    cells += '<td id="dcsRec_'+idx+'" style="font-size:12px;font-family:\'Courier New\',monospace;color:var(--ok);font-weight:600;padding-left:8px"></td>';
+
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+}
+
+function dcsChk(idx) {
+  var chk = document.getElementById('dcsChk_'+idx);
+  var anyChecked = chk && chk.checked;
+  if (!anyChecked) {
+    DCS_DROPS.forEach(function(drop){
+      var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
+      if (el && el.checked) anyChecked = true;
+    });
+  }
+  var rec = document.getElementById('dcsRec_'+idx);
+  if (rec) rec.textContent = anyChecked ? 'ok' : '';
+}
+
+function dcsCheckAll(checked) {
+  DCS_CHECKS.forEach(function(item, idx) {
+    var el = document.getElementById('dcsChk_'+idx);
+    if (el) el.checked = checked;
+    dcsChk(idx);
+  });
+}
+
+function dcsCheckAllDrop(dropId, checked) {
+  DCS_CHECKS.forEach(function(item, idx) {
+    var el = document.getElementById('dcsDrop_'+dropId+'_'+idx);
+    if (el) el.checked = checked;
+    dcsChk(idx);
+  });
+}
+
+function dcsRefreshAll() {
+  DCS_CHECKS.forEach(function(item, idx){ dcsChk(idx); });
+  /* Refresh all-drop checkboxes */
+  DCS_DROPS.forEach(function(drop){
+    var allChecked = true;
+    DCS_CHECKS.forEach(function(item, idx){
+      var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
+      if (el && !el.checked) allChecked = false;
+    });
+    var allEl = document.getElementById('dcsAllDrop_'+drop.id);
+    if (allEl) allEl.checked = allChecked;
+  });
+  var allCheck = true;
+  DCS_CHECKS.forEach(function(item,idx){ var e=document.getElementById('dcsChk_'+idx); if(!e||!e.checked) allCheck=false; });
+  var allEl = document.getElementById('dcsAllCheck');
+  if (allEl) allEl.checked = allCheck;
+}
+
+/* ══════════════════════════════════════════════
+   IMAGES
+══════════════════════════════════════════════ */
+function dcsHandleDrop(e, side) { e.preventDefault(); dcsHandleFiles(e.dataTransfer.files, side); }
+
+function dcsHandleFiles(files, side) {
+  Array.from(files).forEach(function(file) {
+    if (!isImageFile(file)) {
+      var r=new FileReader(); r.onload=function(ev){dcsImages[side].push({name:file.name,dataUrl:ev.target.result,type:file.type||'',caption:''});dcsRenderPreviews(side);}; r.readAsDataURL(file); return;
+    }
+    fileToJpegDataUrl(file, function(dataUrl){ if(!dataUrl)return; imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', dcsImages[side], side, 'dcs', -1); });
+  });
+}
+
+function dcsRenderPreviews(side) {
+  dcsSyncCaptions();
+  var container = document.getElementById('dcsImgPreview'+side);
+  if (!container) return;
+  container.innerHTML = '';
+  dcsImages[side].forEach(function(img, idx) {
+    if (!img || !img.name) return;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px';
+    var safe = function(s){ return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); };
+    var isImg = IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
+    var thumb = isImg
+      ? '<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+safe(img.dataUrl)+'" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="imgReEditDcs(\''+side+'\','+idx+')" title="Klik crop ulang"></div>'
+      : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
+    var cropBtn = isImg
+      ? '<button onclick="imgReEditDcs(\''+side+'\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
+      : '';
+    wrap.innerHTML = thumb + cropBtn +
+      '<button onclick="dcsRemoveImg(\''+side+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>' +
+      '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>' +
+      '<input id="dcsCap_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="dcsImages[\''+side+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+    container.appendChild(wrap);
+  });
+  updateSizeIndicator('dcs', side);
+}
+
+function dcsSyncCaptions() {
+  Object.keys(dcsImages).forEach(function(side){
+    dcsImages[side].forEach(function(img,idx){ var inp=document.getElementById('dcsCap_'+side+'_'+idx); if(inp)img.caption=inp.value||''; });
+  });
+}
+
+function imgReEditDcs(side, idx){ var img=dcsImages[side][idx]; imgOpenCropper(img.dataUrl,img.name,img.type,dcsImages[side],side,'dcs',idx); }
+function dcsRemoveImg(side, idx){ dcsImages[side].splice(idx,1); dcsRenderPreviews(side); }
+
+/* ══════════════════════════════════════════════
+   RESET
+══════════════════════════════════════════════ */
+function dcsReset() {
+  DCS_CHECKS.forEach(function(item, idx){
+    var chk = document.getElementById('dcsChk_'+idx);
+    if (chk) chk.checked = false;
+    DCS_DROPS.forEach(function(drop){
+      var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
+      if (el) el.checked = false;
+    });
+    var rec = document.getElementById('dcsRec_'+idx);
+    if (rec) rec.textContent = '';
+  });
+  DCS_DROPS.forEach(function(drop){ var el=document.getElementById('dcsAllDrop_'+drop.id); if(el) el.checked=false; });
+  var allEl = document.getElementById('dcsAllCheck');
+  if (allEl) allEl.checked = false;
+  ['dcsDate','dcsPIC','dcsWO','dcsNoteGeneral','dcsNoteDefect'].forEach(function(id){ var e=document.getElementById(id); if(e)e.value=''; });
+  dcsImages = {general:[], defect:[]};
+  ['dcsImgPreviewgeneral','dcsImgPreviewdefect'].forEach(function(id){ var e=document.getElementById(id); if(e)e.innerHTML=''; });
+  updateSizeIndicator('dcs','general'); updateSizeIndicator('dcs','defect');
+  dbShowToast('Form direset ✓');
+}
+
+/* ══════════════════════════════════════════════
+   PDF
+══════════════════════════════════════════════ */
+function dcsDownloadPdf() {
+  ensureReportBackground(function() {
+    try {
+      dcsSyncCaptions();
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+      var pw = doc.internal.pageSize.getWidth();
+      var ph = doc.internal.pageSize.getHeight();
+      var marginX=12, marginTop=18, marginBottom=18, contentW=pw-marginX*2;
+      var y = marginTop;
+
+      function safe(s){ return String(s||''); }
+      function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
+      function checkPage(need){ if(y+need>ph-marginBottom){ doc.addPage(); drawBg(doc,pw,ph); y=marginTop; } }
+
+      drawBg(doc, pw, ph);
+
+      /* Title */
+      doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(30,58,95);
+      doc.text('INSPECTION & CLEANING DCS HMI/OIS', pw/2, y, {align:'center'}); y+=7;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(80,100,130);
+      doc.text('PLTU Paiton Unit 7  ·  1 Yearly Inspection  ·  MOD-12', pw/2, y, {align:'center'}); y+=8;
+
+      /* Info box */
+      doc.setFillColor(235,243,252); doc.roundedRect(marginX,y,contentW,22,2,2,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
+      var unit=gv('dcsUnit'), date=gv('dcsDate'), pic=gv('dcsPIC'), wo=gv('dcsWO'), prog=gv('dcsProgram');
+      doc.text('Tanggal: ', marginX+4, y+6); doc.setFont('helvetica','normal'); doc.text(date||'-', marginX+22, y+6);
+      doc.setFont('helvetica','bold'); doc.text('PIC: ', marginX+4, y+12); doc.setFont('helvetica','normal'); doc.text(pic||'-', marginX+14, y+12);
+      doc.setFont('helvetica','bold'); doc.text('Work Order: ', marginX+4, y+18); doc.setFont('helvetica','normal'); doc.text(wo||'-', marginX+26, y+18);
+      doc.setFont('helvetica','bold'); doc.text('Unit: ', pw/2+4, y+6); doc.setFont('helvetica','normal'); doc.text(unit||'-', pw/2+14, y+6);
+      doc.setFont('helvetica','bold'); doc.text('Program: ', pw/2+4, y+12); doc.setFont('helvetica','normal'); doc.text(prog||'-', pw/2+22, y+12);
+      y += 26;
+
+      /* Checklist table */
+      var head = [['No.','Step of Work','Criteria','✓'].concat(DCS_DROPS.map(function(d){ return d.label; })).concat(['Result'])];
+      var body = DCS_CHECKS.map(function(item, idx){
+        var chk = document.getElementById('dcsChk_'+idx);
+        var row = [String(item.no), item.label, item.criteria||'', (chk&&chk.checked)?'✓':''];
+        DCS_DROPS.forEach(function(drop){
+          var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
+          row.push((el&&el.checked)?'✓':'');
+        });
+        var rec = document.getElementById('dcsRec_'+idx);
+        row.push(rec&&rec.textContent?'OK':'');
+        return row;
+      });
+
+      var colStyles = {0:{cellWidth:8},1:{cellWidth:55},2:{cellWidth:28},3:{cellWidth:8}};
+      DCS_DROPS.forEach(function(d, i){ colStyles[4+i] = {cellWidth:16, halign:'center'}; });
+      colStyles[4+DCS_DROPS.length] = {cellWidth:14, halign:'center'};
+
+      doc.autoTable({
+        startY: y,
+        head: head,
+        body: body,
+        margin: {left:marginX, right:marginX},
+        styles: {fontSize:7, cellPadding:2.5, lineColor:[180,200,220], lineWidth:0.3},
+        headStyles: {fillColor:[30,58,95], textColor:255, fontStyle:'bold', fontSize:7, halign:'center'},
+        alternateRowStyles: {fillColor:[240,247,255]},
+        columnStyles: colStyles,
+        willDrawPage: function(data){ if(data.pageNumber>1){ drawBg(doc,pw,ph); } }
+      });
+
+      y = doc.lastAutoTable.finalY + 8;
+
+      /* Catatan */
+      var noteGeneral = safe(gv('dcsNoteGeneral'));
+      var noteDefect  = safe(gv('dcsNoteDefect'));
+
+      if (noteGeneral || noteDefect || dcsImages.general.length || dcsImages.defect.length) {
+        checkPage(14);
+        doc.setFillColor(30,58,95); doc.rect(marginX, y, contentW, 6, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+        doc.text('CATATAN & EVIDENCE PHOTO', marginX+3, y+4); y += 10;
+
+        function addSection(label, note, imgs) {
+          if (!note && !imgs.length) return;
+          checkPage(10);
+          doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,58,95);
+          doc.text(label, marginX+3, y); y+=6;
+          if (note) {
+            doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+            var ls = doc.splitTextToSize(note, contentW-6);
+            ls.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y+=4.5; });
+            y += 2;
+          }
+          if (imgs.length) {
+            var imgW=54, imgH=42, gap=4, perRow=3, x=marginX+3;
+            imgs.forEach(function(img, i){
+              if (y+imgH+12>ph-marginBottom){ doc.addPage(); drawBg(doc,pw,ph); y=marginTop; x=marginX+3; }
+              try { doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH); } catch(e){}
+              var cap = safe(img.caption||'');
+              if (cap){ doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW),x,y+imgH+3); }
+              x += imgW+gap;
+              if ((i+1)%perRow===0){ x=marginX+3; y+=imgH+12; }
+            });
+            if (imgs.length%perRow!==0) y+=imgH+12;
+            y+=3;
+          }
+        }
+
+        addSection('Evidence Photo & Catatan Umum:', noteGeneral, dcsImages.general);
+        addSection('Temuan & Defect:', noteDefect, dcsImages.defect);
+      }
+
+      /* Note footer */
+      checkPage(16);
+      doc.setFillColor(240,247,255); doc.roundedRect(marginX,y,contentW,14,2,2,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(30,58,95);
+      doc.text('Note:', marginX+3, y+5);
+      doc.setFont('helvetica','normal'); doc.setTextColor(60,80,110);
+      doc.text('- Entry PM Result into maximo work order.', marginX+3, y+9.5);
+      doc.text('- Inform to immediate superior if any defect found.', marginX+3, y+13.5);
+
+      var dateStr = (gv('dcsDate')||'').replace(/-/g,'')||new Date().toISOString().slice(0,10).replace(/-/g,'');
+      doc.save('DCS_HMI_OIS_Inspection_'+dateStr+'.pdf');
+
+    } catch(err) { alert('PDF Error: '+err.message); console.error(err); }
+  });
+}
+
+/* ══════════════════════════════════════════════
+   DB COLLECT
+══════════════════════════════════════════════ */
+function dbCollectData(modul) {
+  if (modul !== 'dcs_hmi') return null;
+  dcsSyncCaptions();
+  var gv = function(id){ var e=document.getElementById(id); return e?e.value:''; };
+
+  var checks = {};
+  DCS_CHECKS.forEach(function(item, idx){
+    var chk = document.getElementById('dcsChk_'+idx);
+    var drops = {};
+    DCS_DROPS.forEach(function(drop){
+      var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
+      drops[drop.id] = !!(el&&el.checked);
+    });
+    checks[idx] = { chk: !!(chk&&chk.checked), drops: drops };
+  });
+
+  var ki = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''}; };
+  return {
+    modul: 'DCS HMI/OIS Inspection',
+    tanggal:    gv('dcsDate'),
+    pic:        gv('dcsPIC'),
+    work_order: gv('dcsWO'),
+    unit:       gv('dcsUnit'),
+    data: {
+      program:  gv('dcsProgram'),
+      checks:   checks,
+      notes:    { general: gv('dcsNoteGeneral'), defect: gv('dcsNoteDefect') },
+      images:   { general: dcsImages.general.map(ki), defect: dcsImages.defect.map(ki) }
+    }
+  };
+}
+
+/* ══════════════════════════════════════════════
+   LOAD FROM HISTORY
+══════════════════════════════════════════════ */
+(function(){
+  var params  = new URLSearchParams(window.location.search);
+  var id      = params.get('id');
+  var doPrint = params.get('print') === '1';
+  if (!id) return;
+
+  dbLoad(id, function(rec){
+    var data = rec.data || {};
+    window._editingId = id;
+    var sv = function(id2,val){ var e=document.getElementById(id2); if(e) e.value=val||''; };
+    setTimeout(function(){
+      sv('dcsDate', rec.tanggal); sv('dcsPIC', rec.pic); sv('dcsWO', rec.work_order);
+      sv('dcsUnit', rec.unit||'U7'); sv('dcsProgram', data.program||'JP-DROP');
+      if (data.notes){ sv('dcsNoteGeneral',data.notes.general||''); sv('dcsNoteDefect',data.notes.defect||''); }
+      if (data.images){
+        dcsImages.general = (data.images.general||[]).map(function(i){ return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||''}; });
+        dcsImages.defect  = (data.images.defect||[]).map(function(i){  return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||''}; });
+        dcsRenderPreviews('general'); dcsRenderPreviews('defect');
+      }
+      if (data.checks){
+        Object.keys(data.checks).forEach(function(i){
+          var c = data.checks[i];
+          var chk = document.getElementById('dcsChk_'+i);
+          if (chk) chk.checked = !!c.chk;
+          if (c.drops) {
+            DCS_DROPS.forEach(function(drop){
+              var el = document.getElementById('dcsDrop_'+drop.id+'_'+i);
+              if (el) el.checked = !!c.drops[drop.id];
+            });
+          }
+          dcsChk(i);
+        });
+        dcsRefreshAll();
+      }
+      dbShowToast('Data dimuat dari riwayat ✓');
+      if (doPrint){ ensureReportBackground(function(){ setTimeout(dcsDownloadPdf, 300); }); }
+    }, 600);
+  });
+})();
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+setInterval(function(){
+  var el = document.getElementById('clockDCS');
+  if (el) el.textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}, 1000);
+
+dcsBuildTable();
+initReportBackground();
+
+(function(){
+  var today = new Date();
+  var el = document.getElementById('dcsDate');
+  if (el && !el.value) el.value = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+})();
+</script>
+</body>
+</html>
