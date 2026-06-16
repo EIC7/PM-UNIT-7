@@ -872,27 +872,25 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
-<!-- ── CROP MODAL ── -->
-<div class="modal-overlay" id="cropModal">
-  <div class="crop-modal-box">
-    <div class="crop-modal-header">
-      <div class="title">✂️ Crop Gambar</div>
-      <button class="preview-close-btn" onclick="closeCropModal()">×</button>
+<!-- ── CROP MODAL — struktur sama dengan opacity.html ── -->
+<div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#172536;border:1px solid #243b55;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="background:#1e3a5f;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:14px;color:#a8d4c8;letter-spacing:1px">✂️ CROP GAMBAR</div>
+      <button onclick="closeCropModal()" style="background:rgba(255,255,255,0.08);border:1px solid #2d4a6a;border-radius:4px;color:#a8d4c8;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>
     </div>
-    <div class="crop-modal-body">
-      <div class="crop-canvas-wrap" id="cropWrap">
-        <img id="cropSourceImg" src="" alt="" draggable="false" />
-        <div class="crop-box" id="cropBox">
-          <div class="crop-handle tl" data-corner="tl"></div>
-          <div class="crop-handle tr" data-corner="tr"></div>
-          <div class="crop-handle bl" data-corner="bl"></div>
-          <div class="crop-handle br" data-corner="br"></div>
-        </div>
+    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none">
+      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
+      <div id="cropBox" style="position:absolute;border:2px solid #0f766e;box-shadow:0 0 0 9999px rgba(0,0,0,0.50);cursor:move;touch-action:none;min-width:40px;min-height:40px">
+        <div class="ch" data-c="tl" style="position:absolute;width:14px;height:14px;background:#0f766e;border-radius:2px;top:-7px;left:-7px;cursor:nw-resize;touch-action:none"></div>
+        <div class="ch" data-c="tr" style="position:absolute;width:14px;height:14px;background:#0f766e;border-radius:2px;top:-7px;right:-7px;cursor:ne-resize;touch-action:none"></div>
+        <div class="ch" data-c="bl" style="position:absolute;width:14px;height:14px;background:#0f766e;border-radius:2px;bottom:-7px;left:-7px;cursor:sw-resize;touch-action:none"></div>
+        <div class="ch" data-c="br" style="position:absolute;width:14px;height:14px;background:#0f766e;border-radius:2px;bottom:-7px;right:-7px;cursor:se-resize;touch-action:none"></div>
       </div>
-      <div class="crop-controls">
-        <button class="btn btn-outline btn-sm" onclick="closeCropModal()">Batal</button>
-        <button class="btn btn-primary btn-sm" onclick="applyCrop()">✅ Simpan Crop</button>
-      </div>
+    </div>
+    <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeCropModal()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Batal</button>
+      <button onclick="applyCrop()" style="padding:7px 18px;border:none;border-radius:6px;background:#0f766e;color:#fff;cursor:pointer;font-size:13px;font-weight:700">✅ Simpan Crop</button>
     </div>
   </div>
 </div>
@@ -1020,61 +1018,53 @@ function setPreviewImage(dataUrl) {
   document.getElementById('imgUploadArea').classList.add('has-image');
 }
 
-/* ── CROP LOGIC ── */
-var cropState = {
+/* ── CROP LOGIC — ported from opacity.html (proven working) ── */
+var CS = {
   srcDataUrl: null,
-  imgEl: null,
-  wrap: null,
-  box: null,
-  // box coords in display px
-  bx: 0, by: 0, bw: 0, bh: 0,
-  dragging: false, resizing: false,
-  corner: null,
+  dragging: false, resizing: false, corner: null,
   startX: 0, startY: 0,
+  bx: 0, by: 0, bw: 0, bh: 0,
   startBx: 0, startBy: 0, startBw: 0, startBh: 0
 };
 
 function openCropModal(dataUrl) {
-  cropState.srcDataUrl = dataUrl;
-  // 1. Show modal FIRST so the wrap has real layout dimensions
-  document.getElementById('cropModal').classList.add('show');
+  CS.srcDataUrl = dataUrl;
+  var modal = document.getElementById('cropModal');
+  var img   = document.getElementById('cropImg');
+  var wrap  = document.getElementById('cropWrap');
 
-  var img  = document.getElementById('cropSourceImg');
-  var wrap = document.getElementById('cropWrap');
+  // Show modal first so wrap has real clientWidth
+  modal.style.display = 'flex';
 
   function initBox() {
-    // Use clientWidth (layout width after modal is visible)
-    var availW = wrap.clientWidth  || wrap.offsetWidth  || 400;
-    var availH = 360; // max height cap
+    var availW = wrap.clientWidth;
+    var availH = parseInt(getComputedStyle(wrap).height) || 340;
+    var sw = availW / img.naturalWidth;
+    var sh = availH / img.naturalHeight;
+    var sc = Math.min(sw, sh, 1);
+    var dw = Math.round(img.naturalWidth  * sc);
+    var dh = Math.round(img.naturalHeight * sc);
 
-    // Scale image to fit, never upscale
-    var scaleW = availW / img.naturalWidth;
-    var scaleH = availH / img.naturalHeight;
-    var scale  = Math.min(scaleW, scaleH, 1);
-
-    var dw = Math.round(img.naturalWidth  * scale);
-    var dh = Math.round(img.naturalHeight * scale);
-
-    // Size the wrap and the image explicitly
-    wrap.style.width  = dw + 'px';
-    wrap.style.height = dh + 'px';
-    img.style.position = 'absolute';
-    img.style.left   = '0';
-    img.style.top    = '0';
+    // Center image inside wrap
     img.style.width  = dw + 'px';
     img.style.height = dh + 'px';
+    img.style.left   = Math.round((availW - dw) / 2) + 'px';
+    img.style.top    = Math.round((availH - dh) / 2) + 'px';
 
-    cropState.imgEl = img;
-    cropState.wrap  = wrap;
+    // Store for clamp reference
+    wrap._imgX = parseFloat(img.style.left);
+    wrap._imgY = parseFloat(img.style.top);
+    wrap._imgW = dw;
+    wrap._imgH = dh;
 
-    // Initial crop box: 80% centred
+    // Initial box: 80% centered over the image
     var bw = dw * 0.8, bh = dh * 0.8;
-    var bx = (dw - bw) / 2, by = (dh - bh) / 2;
-    setCropBox(bx, by, bw, bh, dw, dh);
+    var bx = wrap._imgX + (dw - bw) / 2;
+    var by = wrap._imgY + (dh - bh) / 2;
+    setCropBox(bx, by, bw, bh);
   }
 
   if (img.src === dataUrl && img.complete && img.naturalWidth) {
-    // Image already loaded (re-edit case) — wait one frame for modal layout
     requestAnimationFrame(initBox);
   } else {
     img.onload = function() { requestAnimationFrame(initBox); };
@@ -1083,93 +1073,114 @@ function openCropModal(dataUrl) {
 }
 
 function closeCropModal() {
-  document.getElementById('cropModal').classList.remove('show');
+  document.getElementById('cropModal').style.display = 'none';
 }
 
-function setCropBox(x, y, w, h, maxW, maxH) {
-  var box = document.getElementById('cropBox');
-  // clamp
+function setCropBox(x, y, w, h) {
+  var wrap = document.getElementById('cropWrap');
+  var minX = wrap._imgX || 0, minY = wrap._imgY || 0;
+  var maxW = wrap._imgW || wrap.clientWidth;
+  var maxH = wrap._imgH || wrap.clientHeight;
+  var maxX = minX + maxW, maxY = minY + maxH;
+
   if (w < 20) w = 20;
   if (h < 20) h = 20;
-  if (x < 0) x = 0;
-  if (y < 0) y = 0;
-  if (x + w > maxW) { if (x > 0) x = maxW - w; else w = maxW; }
-  if (y + h > maxH) { if (y > 0) y = maxH - h; else h = maxH; }
-  box.style.left = x + 'px';
-  box.style.top = y + 'px';
-  box.style.width = w + 'px';
+  if (x < minX) x = minX;
+  if (y < minY) y = minY;
+  if (x + w > maxX) { x = maxX - w; if (x < minX) { x = minX; w = maxX - minX; } }
+  if (y + h > maxY) { y = maxY - h; if (y < minY) { y = minY; h = maxY - minY; } }
+
+  var box = document.getElementById('cropBox');
+  box.style.left   = x + 'px';
+  box.style.top    = y + 'px';
+  box.style.width  = w + 'px';
   box.style.height = h + 'px';
-  cropState.bx = x; cropState.by = y; cropState.bw = w; cropState.bh = h;
+  CS.bx = x; CS.by = y; CS.bw = w; CS.bh = h;
 }
 
-function getMaxDims() {
-  var wrap = cropState.wrap || document.getElementById('cropWrap');
-  return {
-    w: parseFloat(wrap.style.width)  || wrap.clientWidth,
-    h: parseFloat(wrap.style.height) || wrap.clientHeight
-  };
-}
-
-// ── CROP DRAG & RESIZE — pointer events (covers mouse + touch + pen) ──
+// ── Pointer Events (mouse + touch + pen unified) ──
 (function() {
-  var box  = document.getElementById('cropBox');
   var wrap = document.getElementById('cropWrap');
+  var box  = document.getElementById('cropBox');
 
-  function applyMove(clientX, clientY) {
-    var dx = clientX - cropState.startX;
-    var dy = clientY - cropState.startY;
-    var d  = getMaxDims();
-    if (cropState.dragging) {
-      setCropBox(cropState.startBx + dx, cropState.startBy + dy,
-                 cropState.bw, cropState.bh, d.w, d.h);
-    } else if (cropState.resizing) {
-      var c  = cropState.corner;
-      var nx = cropState.startBx, ny = cropState.startBy;
-      var nw = cropState.startBw, nh = cropState.startBh;
-      if (c === 'tl') { nx += dx; ny += dy; nw -= dx; nh -= dy; }
-      else if (c === 'tr') {          ny += dy; nw += dx; nh -= dy; }
-      else if (c === 'bl') { nx += dx;          nw -= dx; nh += dy; }
-      else if (c === 'br') {                     nw += dx; nh += dy; }
-      setCropBox(nx, ny, nw, nh, d.w, d.h);
+  function onMove(cx, cy) {
+    var dx = cx - CS.startX, dy = cy - CS.startY;
+    if (CS.dragging) {
+      setCropBox(CS.startBx + dx, CS.startBy + dy, CS.bw, CS.bh);
+    } else if (CS.resizing) {
+      var c = CS.corner;
+      var nx = CS.startBx, ny = CS.startBy, nw = CS.startBw, nh = CS.startBh;
+      if (c==='tl'){ nx+=dx; ny+=dy; nw-=dx; nh-=dy; }
+      else if (c==='tr'){       ny+=dy; nw+=dx; nh-=dy; }
+      else if (c==='bl'){ nx+=dx;      nw-=dx; nh+=dy; }
+      else if (c==='br'){              nw+=dx; nh+=dy; }
+      setCropBox(nx, ny, nw, nh);
     }
   }
 
-  // Box drag — pointerdown on the box itself (not on handles)
+  function endDrag() { CS.dragging = false; CS.resizing = false; }
+
+  // Box drag
   box.addEventListener('pointerdown', function(e) {
-    if (e.target.classList.contains('crop-handle')) return;
+    if (e.target !== box) return;
     e.preventDefault();
     box.setPointerCapture(e.pointerId);
-    cropState.dragging = true;
-    cropState.startX = e.clientX; cropState.startY = e.clientY;
-    cropState.startBx = cropState.bx; cropState.startBy = cropState.by;
+    CS.dragging = true;
+    CS.startX = e.clientX; CS.startY = e.clientY;
+    CS.startBx = CS.bx;   CS.startBy = CS.by;
   });
 
-  // Handle resize — pointerdown on each corner handle
-  document.querySelectorAll('.crop-handle').forEach(function(h) {
+  // Handle resize
+  document.querySelectorAll('#cropBox .ch').forEach(function(h) {
     h.addEventListener('pointerdown', function(e) {
       e.preventDefault(); e.stopPropagation();
       h.setPointerCapture(e.pointerId);
-      cropState.resizing = true;
-      cropState.corner   = h.dataset.corner;
-      cropState.startX   = e.clientX; cropState.startY = e.clientY;
-      cropState.startBx  = cropState.bx; cropState.startBy = cropState.by;
-      cropState.startBw  = cropState.bw; cropState.startBh = cropState.bh;
+      CS.resizing = true;
+      CS.corner   = h.dataset.c;
+      CS.startX   = e.clientX; CS.startY = e.clientY;
+      CS.startBx  = CS.bx; CS.startBy = CS.by;
+      CS.startBw  = CS.bw; CS.startBh = CS.bh;
     });
+    h.addEventListener('pointermove', function(e) {
+      if (!CS.resizing) return;
+      e.preventDefault();
+      onMove(e.clientX, e.clientY);
+    });
+    h.addEventListener('pointerup', endDrag);
   });
 
-  // Shared pointermove on the wrap (capture ensures moves outside stay tracked)
-  wrap.addEventListener('pointermove', function(e) {
-    if (!cropState.dragging && !cropState.resizing) return;
+  box.addEventListener('pointermove', function(e) {
+    if (!CS.dragging) return;
     e.preventDefault();
-    applyMove(e.clientX, e.clientY);
+    onMove(e.clientX, e.clientY);
   });
-
-  // End on pointerup / pointercancel anywhere
-  function endCrop() { cropState.dragging = false; cropState.resizing = false; }
-  wrap.addEventListener('pointerup',     endCrop);
-  wrap.addEventListener('pointercancel', endCrop);
-  document.addEventListener('pointerup', endCrop);
+  box.addEventListener('pointerup', endDrag);
+  box.addEventListener('pointercancel', endDrag);
 })();
+
+function applyCrop() {
+  var img  = document.getElementById('cropImg');
+  var wrap = document.getElementById('cropWrap');
+  var imgX = wrap._imgX || 0, imgY = wrap._imgY || 0;
+  var dispW = wrap._imgW || parseFloat(img.style.width);
+  var dispH = wrap._imgH || parseFloat(img.style.height);
+  var scaleX = img.naturalWidth  / dispW;
+  var scaleY = img.naturalHeight / dispH;
+  var cx = (CS.bx - imgX) * scaleX;
+  var cy = (CS.by - imgY) * scaleY;
+  var cw = CS.bw * scaleX;
+  var ch = CS.bh * scaleY;
+  // clamp to natural size
+  if (cx < 0) cx = 0; if (cy < 0) cy = 0;
+  if (cx + cw > img.naturalWidth)  cw = img.naturalWidth  - cx;
+  if (cy + ch > img.naturalHeight) ch = img.naturalHeight - cy;
+  var canvas = document.createElement('canvas');
+  canvas.width = Math.round(cw); canvas.height = Math.round(ch);
+  canvas.getContext('2d').drawImage(img, cx, cy, cw, ch, 0, 0, cw, ch);
+  setPreviewImage(canvas.toDataURL('image/jpeg', 0.88));
+  closeCropModal();
+  showToast('✅ Gambar berhasil di-crop & disimpan');
+}
 
 function applyCrop() {
   var img = cropState.imgEl;
