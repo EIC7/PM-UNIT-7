@@ -59,6 +59,26 @@ body{
   background:#1d74c722;color:#1e3a5f;border:1px solid #1d74c744;
   margin-right:6px;margin-bottom:4px;
 }
+
+/* Drop unit tag — gaya ph */
+.dcs-unit-tag{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 12px;border-radius:6px;
+  border:1.5px solid var(--border);background:#fff;
+  font-size:12px;font-weight:600;color:var(--steel);
+  cursor:pointer;transition:all 0.15s;user-select:none;
+}
+.dcs-unit-tag.active{background:var(--ok);color:#fff;border-color:var(--ok);}
+.dcs-unit-tag input[type=checkbox]{accent-color:#fff;width:13px;height:13px;cursor:pointer;}
+.dcs-units-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+
+/* Table header for drop col */
+.dcs-drop-th{
+  font-size:11px;font-weight:700;text-align:center;
+  padding:8px 10px;background:#e8f2ff;color:#1e3a5f;
+  border-bottom:2px solid #1d74c744;min-width:70px;
+}
+.dcs-drop-th small{display:block;font-size:9px;font-weight:400;color:#6f879c;margin-top:2px;white-space:normal;}
 </style>
 </head>
 <body>
@@ -113,28 +133,21 @@ body{
     </div>
   </div>
 
+  <!-- PILIH DROP ASSET -->
+  <div class="panel">
+    <div class="section-label">Pilih Drop Asset yang Dikerjakan</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Centang drop asset yang akan diisi. Hanya yang dipilih yang akan muncul di kolom tabel dan tercetak di PDF.</div>
+    <div class="dcs-units-bar" id="dcsUnitBar"></div>
+  </div>
+
   <!-- CHECKLIST TABLE -->
   <div class="panel">
     <div class="section-label">Step of Work — Inspection &amp; Cleaning DCS HMI/OIS</div>
-    <p class="scroll-hint">&#8617; Geser kanan untuk melihat semua kolom Drop</p>
+    <p class="scroll-hint">&#8617; Geser kanan untuk melihat semua kolom</p>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table class="manual-table" id="dcsCheckTable" style="min-width:900px">
-        <thead>
-          <tr>
-            <th style="width:36px;text-align:center">No.</th>
-            <th style="min-width:220px">Step of Work</th>
-            <th style="width:130px">Criteria</th>
-            <th style="width:38px;text-align:center">&#10003;</th>
-            <!-- Drop columns diisi JS -->
-          </tr>
-          <tr id="dcsDropHeader">
-            <td colspan="4" style="background:#e8f2ff;font-size:11px;color:#1e3a5f;font-weight:700;padding:6px 12px;letter-spacing:1px">
-              ▸ DROP ASSETS — Centang kolom sesuai unit yang dikerjakan
-            </td>
-            <!-- Drop headers diisi JS -->
-          </tr>
-        </thead>
-        <tbody id="dcsCheckBody"></tbody>
+      <table class="manual-table" id="dcsMainTable" style="min-width:600px">
+        <thead id="dcsTableHead"></thead>
+        <tbody id="dcsTableBody"></tbody>
       </table>
     </div>
   </div>
@@ -203,177 +216,231 @@ body{
 
 </div>
 
+<!-- CROP MODAL — required by shared.js imgOpenCropper -->
+<div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#172536;border:1px solid #243b55;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="background:#243b55;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:14px;color:#e8f2ff;letter-spacing:1px">&#9986;&#65039; Crop Gambar</div>
+      <div id="cropNatSize" style="font-size:11px;color:#8fb7dc">— x — px</div>
+    </div>
+    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none">
+      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
+      <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;left:-7px;cursor:nw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;right:-7px;cursor:ne-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;left:-7px;cursor:sw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;right:-7px;cursor:se-resize;touch-action:none"></div>
+      </div>
+    </div>
+    <div style="padding:8px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:11px;color:#8fb7dc;display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="cropLock" checked style="accent-color:#3498db"> Lock ratio
+      </label>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+        <span style="font-size:11px;color:#8fb7dc">W:</span>
+        <input type="number" id="cropOutW" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('w')">
+        <span style="font-size:11px;color:#8fb7dc">H:</span>
+        <input type="number" id="cropOutH" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('h')">
+        <span style="font-size:10px;color:#6a8faa">px</span>
+      </div>
+    </div>
+    <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">&#8634; Reset</button>
+      <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Lewati</button>
+      <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">&#10003; Simpan</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ══════════════════════════════════════════════
    DATA — Dari Excel P7EIC Program Maintenance DCS
 ══════════════════════════════════════════════ */
 var DCS_CHECKS = [
-  {no:1,  label:'Make sure PTW already issue.',                                                                                             criteria:'PTW Issued'},
-  {no:2,  label:'Prepare tool & material required.',                                                                                        criteria:'Tool Ready'},
-  {no:3,  label:'Stop & Close Any Program Running.',                                                                                        criteria:'No Program Running'},
-  {no:4,  label:'Shutdown computer unit and disconnect all cable.',                                                                         criteria:'System Off'},
-  {no:5,  label:'Cleaning Console, Cubicle, Card and Accessories using Vacuum and Wiper.',                                                  criteria:'Cleanliness'},
-  {no:6,  label:'Cleaning CPU Fan sink using anti-static vacuum cleaner.',                                                                  criteria:'Cleanliness'},
-  {no:7,  label:'Cleaning GPU Fan sink using anti-static vacuum cleaner.',                                                                  criteria:'Cleanliness'},
-  {no:8,  label:'Cleaning Monitor.',                                                                                                        criteria:'Cleanliness'},
-  {no:9,  label:'Cleaning external Fan with anti-static vacuum cleaner.',                                                                   criteria:'Cleanliness'},
+  {no:1,  label:'Make sure PTW already issue.',                                                    criteria:'PTW Issued'},
+  {no:2,  label:'Prepare tool & material required.',                                               criteria:'Tool Ready'},
+  {no:3,  label:'Stop & Close Any Program Running.',                                               criteria:'No Program Running'},
+  {no:4,  label:'Shutdown computer unit and disconnect all cable.',                                criteria:'System Off'},
+  {no:5,  label:'Cleaning Console, Cubicle, Card and Accessories using Vacuum and Wiper.',         criteria:'Cleanliness'},
+  {no:6,  label:'Cleaning CPU Fan sink using anti-static vacuum cleaner.',                         criteria:'Cleanliness'},
+  {no:7,  label:'Cleaning GPU Fan sink using anti-static vacuum cleaner.',                         criteria:'Cleanliness'},
+  {no:8,  label:'Cleaning Monitor.',                                                               criteria:'Cleanliness'},
+  {no:9,  label:'Cleaning external Fan with anti-static vacuum cleaner.',                          criteria:'Cleanliness'},
   {no:10, label:'Cleaning socket cable power CPU, LAN cable, cable socket mouse and keyboard, cable socket monitor and other cable connected with CPU.', criteria:'Cleanliness'},
-  {no:11, label:'Make sure all cables connected correctly to the ports.',                                                                   criteria:'All Cable Connected / LAN Port Status Ok'},
-  {no:12, label:'Turn On CPU Power.',                                                                                                       criteria:'System On'},
-  {no:13, label:'Open Program and clear any OPS alarm, in service.',                                                                        criteria:'Program Running'},
+  {no:11, label:'Make sure all cables connected correctly to the ports.',                          criteria:'All Cable Connected / LAN Port Status Ok'},
+  {no:12, label:'Turn On CPU Power.',                                                              criteria:'System On'},
+  {no:13, label:'Open Program and clear any OPS alarm, in service.',                              criteria:'Program Running'},
 ];
 
-/* Drop Assets dari Excel */
 var DCS_DROPS = [
-  {id:'drop200', label:'Drop 200',  desc:'EWS, engineering workstation'},
-  {id:'drop210', label:'Drop 210',  desc:'OPT/OPC, operator workstation'},
-  {id:'drop211', label:'Drop 211',  desc:'OPT/OPC, operator workstation'},
-  {id:'drop212', label:'Drop 212',  desc:'OPT/OPC, operator workstation'},
-  {id:'drop213', label:'Drop 213',  desc:'OPT/OPC, operator workstation'},
-  {id:'drop214', label:'Drop 214',  desc:'OPR, operation and as EDS server'},
-  {id:'ceccons', label:'CEC-CONS-WW',  desc:'WWT Area DCS Operator Control'},
-  {id:'cecch1',  label:'CEC-CONS-CH1', desc:'Common Coal Handling Operator'},
-  {id:'cecch2',  label:'CEC-CONS-CH2', desc:'Common Coal Handling Operator'},
+  {id:'drop200', label:'Drop 200',    desc:'EWS Engineering Workstation'},
+  {id:'drop210', label:'Drop 210',    desc:'OPT/OPC Operator Workstation'},
+  {id:'drop211', label:'Drop 211',    desc:'OPT/OPC Operator Workstation'},
+  {id:'drop212', label:'Drop 212',    desc:'OPT/OPC Operator Workstation'},
+  {id:'drop213', label:'Drop 213',    desc:'OPT/OPC Operator Workstation'},
+  {id:'drop214', label:'Drop 214',    desc:'OPR Operation & EDS Server'},
+  {id:'ceccons', label:'CEC-CONS-WW', desc:'WWT Area DCS Operator Control'},
+  {id:'cecch1',  label:'CEC-CONS-CH1',desc:'Common Coal Handling Operator'},
+  {id:'cecch2',  label:'CEC-CONS-CH2',desc:'Common Coal Handling Operator'},
 ];
 
-var dcsImages   = {general:[], defect:[]};
-var dcsTableBuilt = false;
+var dcsImages = {general:[], defect:[]};
+var dcsActiveDrops = {};
+DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = true; }); /* default: semua aktif */
 
 /* ══════════════════════════════════════════════
-   REPORT BACKGROUND — pola sama dengan opacity/beltscale
+   UNIT BAR — gaya ph_analyzer
 ══════════════════════════════════════════════ */
-var dcsReportBgImg = null;
-var dcsReportBgReady = false;
-var dcsReportBgCallbacks = [];
-
-function initReportBackground() {
-  if (dcsReportBgImg) return;
-  dcsReportBgImg = new Image();
-  dcsReportBgImg.onload = function() {
-    dcsReportBgReady = true;
-    dcsReportBgCallbacks.forEach(function(cb){ cb(); });
-    dcsReportBgCallbacks = [];
-  };
-  dcsReportBgImg.onerror = function() {
-    dcsReportBgReady = true;
-    dcsReportBgCallbacks.forEach(function(cb){ cb(); });
-    dcsReportBgCallbacks = [];
-  };
-  dcsReportBgImg.src = 'DRAFT PM KOSONG.jpg';
+function dcsBuildUnitBar() {
+  var bar = document.getElementById('dcsUnitBar');
+  bar.innerHTML = '';
+  DCS_DROPS.forEach(function(d) {
+    var tag = document.createElement('label');
+    tag.className = 'dcs-unit-tag' + (dcsActiveDrops[d.id] ? ' active' : '');
+    tag.title = d.desc;
+    tag.innerHTML = '<input type="checkbox"' + (dcsActiveDrops[d.id] ? ' checked' : '') + '>' +
+      d.label + '<span style="font-size:9px;opacity:0.7;margin-left:3px;font-weight:400">' + d.desc.split(' ').slice(0,2).join(' ') + '</span>';
+    tag.querySelector('input').onchange = function(e) {
+      dcsActiveDrops[d.id] = e.target.checked;
+      tag.classList.toggle('active', e.target.checked);
+      dcsBuildTable();
+    };
+    bar.appendChild(tag);
+  });
 }
 
-function ensureReportBackground(callback) {
-  if (!dcsReportBgImg) { dcsReportBgCallbacks.push(callback); initReportBackground(); return; }
-  if (dcsReportBgReady) { callback(); return; }
-  dcsReportBgCallbacks.push(callback);
-}
-
-function drawBg(doc, pw, ph) {
-  if (!dcsReportBgImg || !dcsReportBgImg.naturalWidth) return;
-  try { doc.addImage(dcsReportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+function dcsGetActiveDrops() {
+  return DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; });
 }
 
 /* ══════════════════════════════════════════════
-   BUILD TABLE
+   BUILD TABLE — dynamic, gaya ph_analyzer
 ══════════════════════════════════════════════ */
 function dcsBuildTable() {
-  if (dcsTableBuilt) return; dcsTableBuilt = true;
+  var activeDrops = dcsGetActiveDrops();
+  var thead = document.getElementById('dcsTableHead');
+  var tbody = document.getElementById('dcsTableBody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
 
-  /* Drop column headers */
-  var headerRow = document.getElementById('dcsDropHeader');
-  DCS_DROPS.forEach(function(drop) {
+  /* Header row */
+  var trH = document.createElement('tr');
+  [{label:'No.',style:'width:36px;text-align:center'},
+   {label:'Step of Work',style:'min-width:220px'},
+   {label:'Criteria',style:'width:130px'},
+   {label:'✓',style:'width:40px;text-align:center'}
+  ].forEach(function(h){
     var th = document.createElement('th');
-    th.className = 'drop-col-header';
-    th.style.width = '72px';
-    th.innerHTML = drop.label + '<span class="drop-asset-label">' + drop.desc + '</span>';
-    headerRow.appendChild(th);
+    th.setAttribute('style', h.style);
+    th.innerHTML = h.label;
+    trH.appendChild(th);
   });
+  activeDrops.forEach(function(d){
+    var th = document.createElement('th');
+    th.className = 'dcs-drop-th';
+    th.innerHTML = d.label + '<small>' + d.desc + '</small>';
+    trH.appendChild(th);
+  });
+  var thRes = document.createElement('th');
+  thRes.style.cssText = 'min-width:90px;text-align:center';
+  thRes.textContent = 'Result';
+  trH.appendChild(thRes);
+  thead.appendChild(trH);
 
-  var thRem = document.createElement('th');
-  thRem.style.cssText = 'min-width:120px;background:#e8f2ff;color:#1e3a5f;font-size:11px;font-weight:700;padding:8px;';
-  thRem.textContent = 'Result / Remark';
-  headerRow.appendChild(thRem);
-
-  var tbody = document.getElementById('dcsCheckBody');
-
-  /* Row: Centang Semua */
+  /* Centang Semua row */
   var trAll = document.createElement('tr');
-  trAll.style.cssText = 'background:#e8f2ff;border-left:4px solid #1d74c7;';
-  var allCells = '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#1d74c7;font-weight:600">&#10003; Centang Semua</td>' +
-    '<td style="text-align:center"><input type="checkbox" id="dcsAllCheck" onchange="dcsCheckAll(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>';
-  DCS_DROPS.forEach(function(drop) {
-    allCells += '<td style="text-align:center"><input type="checkbox" id="dcsAllDrop_'+drop.id+'" onchange="dcsCheckAllDrop(\''+drop.id+'\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>';
+  trAll.style.cssText = 'background:#e8f2ff;font-style:italic;';
+  var tdL = document.createElement('td');
+  tdL.colSpan = 3;
+  tdL.style.cssText = 'padding:7px 14px;font-size:11px;color:var(--ok);font-weight:600';
+  tdL.textContent = '✓ Centang Semua';
+  trAll.appendChild(tdL);
+  var tdGAll = document.createElement('td');
+  tdGAll.style.textAlign = 'center';
+  var chkGA = document.createElement('input');
+  chkGA.type='checkbox'; chkGA.id='dcsAllCheck';
+  chkGA.style.cssText='width:16px;height:16px;cursor:pointer;accent-color:var(--ok)';
+  chkGA.onchange=function(){ dcsCheckAll(this.checked); };
+  tdGAll.appendChild(chkGA); trAll.appendChild(tdGAll);
+  activeDrops.forEach(function(d){
+    var td = document.createElement('td');
+    td.style.textAlign='center';
+    var chk = document.createElement('input');
+    chk.type='checkbox'; chk.id='dcsAllDrop_'+d.id;
+    chk.style.cssText='width:16px;height:16px;cursor:pointer;accent-color:var(--ok)';
+    chk.onchange=(function(did){ return function(){ dcsCheckAllDrop(did,this.checked); }; })(d.id);
+    td.appendChild(chk); trAll.appendChild(td);
   });
-  allCells += '<td style="font-size:11px;color:#1d74c7;font-style:italic;padding-left:8px">semua OK</td>';
-  trAll.innerHTML = allCells;
+  var tdResAll = document.createElement('td');
+  tdResAll.style.cssText='font-size:11px;color:var(--ok);font-style:italic;text-align:center';
+  tdResAll.textContent='semua OK';
+  trAll.appendChild(tdResAll);
   tbody.appendChild(trAll);
 
   /* Step rows */
   DCS_CHECKS.forEach(function(item, idx) {
     var tr = document.createElement('tr');
-    var cells =
-      '<td style="text-align:center;font-size:12px;color:var(--text3);white-space:nowrap">' + item.no + '</td>' +
-      '<td style="font-size:13px;padding:8px 12px">' + item.label + '</td>' +
-      '<td style="font-size:11px;color:var(--text3);font-style:italic;white-space:nowrap">' + (item.criteria||'') + '</td>' +
-      '<td style="text-align:center"><input type="checkbox" id="dcsChk_'+idx+'" onchange="dcsChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>';
-
-    DCS_DROPS.forEach(function(drop) {
-      cells += '<td class="check-cell"><input type="checkbox" id="dcsDrop_'+drop.id+'_'+idx+'" onchange="dcsChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>';
+    var tdNo=document.createElement('td'); tdNo.style.cssText='text-align:center;font-size:12px;color:var(--text3)'; tdNo.textContent=item.no; tr.appendChild(tdNo);
+    var tdLbl=document.createElement('td'); tdLbl.style.cssText='font-size:13px;padding:8px 12px'; tdLbl.textContent=item.label; tr.appendChild(tdLbl);
+    var tdCr=document.createElement('td'); tdCr.style.cssText='font-size:11px;color:var(--text3);font-style:italic'; tdCr.textContent=item.criteria||''; tr.appendChild(tdCr);
+    var tdG=document.createElement('td'); tdG.style.textAlign='center';
+    var chkG=document.createElement('input'); chkG.type='checkbox'; chkG.id='dcsChk_'+idx;
+    chkG.style.cssText='width:16px;height:16px;cursor:pointer;accent-color:var(--ok)';
+    chkG.onchange=(function(i){ return function(){ dcsUpdateResult(i); }; })(idx);
+    tdG.appendChild(chkG); tr.appendChild(tdG);
+    activeDrops.forEach(function(d){
+      var td=document.createElement('td'); td.style.textAlign='center';
+      var chk=document.createElement('input'); chk.type='checkbox'; chk.id='dcsDrop_'+d.id+'_'+idx;
+      chk.style.cssText='width:16px;height:16px;cursor:pointer;accent-color:var(--ok)';
+      chk.onchange=(function(i){ return function(){ dcsUpdateResult(i); }; })(idx);
+      td.appendChild(chk); tr.appendChild(td);
     });
-
-    cells += '<td id="dcsRec_'+idx+'" style="font-size:12px;font-family:\'Courier New\',monospace;color:var(--ok);font-weight:600;padding-left:8px"></td>';
-
-    tr.innerHTML = cells;
+    var tdRes=document.createElement('td'); tdRes.id='dcsRec_'+idx;
+    tdRes.style.cssText='text-align:center;font-size:12px;font-family:"Courier New",monospace;color:var(--ok);font-weight:600';
+    tdRes.innerHTML='<span style="color:#94a3b8">—</span>';
+    tr.appendChild(tdRes);
     tbody.appendChild(tr);
   });
+
+  dcsRefreshAll();
 }
 
-function dcsChk(idx) {
-  var chk = document.getElementById('dcsChk_'+idx);
-  var anyChecked = chk && chk.checked;
-  if (!anyChecked) {
-    DCS_DROPS.forEach(function(drop){
-      var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
-      if (el && el.checked) anyChecked = true;
-    });
-  }
+function dcsUpdateResult(idx) {
+  var chkG = document.getElementById('dcsChk_'+idx);
+  var any = chkG && chkG.checked;
+  if (!any) { dcsGetActiveDrops().forEach(function(d){ var e=document.getElementById('dcsDrop_'+d.id+'_'+idx); if(e&&e.checked) any=true; }); }
   var rec = document.getElementById('dcsRec_'+idx);
-  if (rec) rec.textContent = anyChecked ? 'ok' : '';
+  if (rec) rec.innerHTML = any
+    ? '<span style="background:#d1fae5;color:#065f46;border-radius:4px;padding:2px 8px;font-size:11px">ok</span>'
+    : '<span style="color:#94a3b8">—</span>';
 }
 
 function dcsCheckAll(checked) {
-  DCS_CHECKS.forEach(function(item, idx) {
-    var el = document.getElementById('dcsChk_'+idx);
-    if (el) el.checked = checked;
-    dcsChk(idx);
+  DCS_CHECKS.forEach(function(item, idx){
+    var el=document.getElementById('dcsChk_'+idx); if(el) el.checked=checked;
+    dcsUpdateResult(idx);
   });
 }
 
 function dcsCheckAllDrop(dropId, checked) {
-  DCS_CHECKS.forEach(function(item, idx) {
-    var el = document.getElementById('dcsDrop_'+dropId+'_'+idx);
-    if (el) el.checked = checked;
-    dcsChk(idx);
+  DCS_CHECKS.forEach(function(item, idx){
+    var el=document.getElementById('dcsDrop_'+dropId+'_'+idx); if(el) el.checked=checked;
+    dcsUpdateResult(idx);
   });
 }
 
 function dcsRefreshAll() {
-  DCS_CHECKS.forEach(function(item, idx){ dcsChk(idx); });
-  /* Refresh all-drop checkboxes */
-  DCS_DROPS.forEach(function(drop){
-    var allChecked = true;
-    DCS_CHECKS.forEach(function(item, idx){
-      var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
-      if (el && !el.checked) allChecked = false;
-    });
-    var allEl = document.getElementById('dcsAllDrop_'+drop.id);
-    if (allEl) allEl.checked = allChecked;
+  DCS_CHECKS.forEach(function(item, idx){ dcsUpdateResult(idx); });
+  dcsGetActiveDrops().forEach(function(d){
+    var all=true;
+    DCS_CHECKS.forEach(function(item,idx){ var e=document.getElementById('dcsDrop_'+d.id+'_'+idx); if(!e||!e.checked) all=false; });
+    var el=document.getElementById('dcsAllDrop_'+d.id); if(el) el.checked=all;
   });
-  var allCheck = true;
-  DCS_CHECKS.forEach(function(item,idx){ var e=document.getElementById('dcsChk_'+idx); if(!e||!e.checked) allCheck=false; });
-  var allEl = document.getElementById('dcsAllCheck');
-  if (allEl) allEl.checked = allCheck;
+  var allG=true;
+  DCS_CHECKS.forEach(function(item,idx){ var e=document.getElementById('dcsChk_'+idx); if(!e||!e.checked) allG=false; });
+  var el=document.getElementById('dcsAllCheck'); if(el) el.checked=allG;
 }
+
 
 /* ══════════════════════════════════════════════
    IMAGES — pakai imgOpenCropper dari shared.js (sama seperti ph/opacity)
@@ -628,6 +695,7 @@ function dbCollectData(modul) {
     unit:       gv('dcsUnit'),
     data: {
       program:  gv('dcsProgram'),
+      activeDrops: DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; }).map(function(d){ return d.id; }),
       checks:   checks,
       notes:    { general: gv('dcsNoteGeneral'), defect: gv('dcsNoteDefect') },
       images:   { general: dcsImages.general.map(ki), defect: dcsImages.defect.map(ki) }
@@ -661,6 +729,13 @@ function dbCollectData(modul) {
         dcsImages.defect  = (data.images.defect||[]).map(function(i){  return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||''}; });
         dcsRenderPreviews('general'); dcsRenderPreviews('defect');
       }
+      /* Restore active drops — rebuild unit bar + table */
+      if (data.activeDrops) {
+        DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = false; });
+        (data.activeDrops || []).forEach(function(did){ if (dcsActiveDrops.hasOwnProperty(did)) dcsActiveDrops[did] = true; });
+        dcsBuildUnitBar();
+        dcsBuildTable();
+      }
       if (data.checks){
         Object.keys(data.checks).forEach(function(i){
           var c = data.checks[i];
@@ -672,7 +747,7 @@ function dbCollectData(modul) {
               if (el) el.checked = !!c.drops[drop.id];
             });
           }
-          dcsChk(i);
+          dcsUpdateResult(parseInt(i));
         });
         dcsRefreshAll();
       }
@@ -737,8 +812,8 @@ setInterval(function(){
   if (el) el.textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }, 1000);
 
+dcsBuildUnitBar();
 dcsBuildTable();
-initReportBackground();
 initReportBackground();
 
 (function(){
