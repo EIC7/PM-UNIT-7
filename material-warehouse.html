@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Material Warehouse — PLTU Paiton Unit 7</title>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --bg2: #ffffff;
+    --border: #e2e8f0;
+    --steel: #1e3a5f;
+    --steel-light: #2d4a6a;
+    --accent: #0f766e;
+    --accent2: #0d9488;
+    --ok: #16a34a;
+    --fail: #dc2626;
+    --warn: #d97706;
+    --text-dark: #0f172a;
+    --text-mid: #475569;
+    --text-light: #94a3b8;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6a 60%, #1e3a5f 100%);
+    padding: 0 clamp(10px,3vw,32px);
+    display: flex;
+    align-items: center;
+    gap: clamp(6px,1.2vw,20px);
+    min-height: clamp(44px,5vh,54px);
+    border-bottom: 2px solid #0f766e44;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-back {
+    padding: clamp(4px,0.5vh,6px) clamp(8px,1vw,14px);
+    border: 1px solid #2a4a7a;
+    border-radius: 4px;
+    background: rgba(15,118,110,0.06);
+    color: #7ab8c8;
+    font-size: clamp(9px,1vw,11px);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .topbar-back:hover { color: #a8d4b8; border-color: #0f766e; background: rgba(15,118,110,0.12); }
+  .topbar-sep { width: 1px; height: 26px; background: #2a4a7a; flex-shrink: 0; }
+  .topbar-logo {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(12px,1.8vw,18px);
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #a8d4c8;
+    flex-shrink: 0;
+  }
+  .topbar-sub {
+    font-size: clamp(10px,1.2vw,13px);
+    color: #7ab8c8;
+    letter-spacing: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #0f766e;
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .topbar-time {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(9px,1.1vw,12px);
+    color: #7ab8c8;
+  }
+
+  /* ── WRAPPER ── */
+  .wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: clamp(12px,2vh,24px) clamp(10px,2.5vw,24px) 60px;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: clamp(14px,2vh,24px);
+    flex-wrap: wrap;
+  }
+  .page-header-sub {
+    font-size: clamp(9px,1vw,12px);
+    color: var(--text-light);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .page-header-title {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(22px,3.5vw,38px);
+    font-weight: 700;
+    color: var(--steel);
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+  .page-header-title span { color: var(--accent); }
+
+  /* ── TABS ── */
+  .tab-nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 0;
+  }
+  .tab-nav-btn {
+    padding: 11px 22px;
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(12px,1.3vw,14px);
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: -2px;
+  }
+  .tab-nav-btn:hover { color: var(--accent); }
+  .tab-nav-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: rgba(15,118,110,0.04);
+  }
+  .tab-badge {
+    background: var(--steel);
+    color: #a8d4c8;
+    font-size: 10px;
+    font-family: 'Courier New', monospace;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+  .tab-nav-btn.active .tab-badge { background: var(--accent); color: #fff; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── PANEL ── */
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 0 10px 10px 10px;
+    padding: clamp(16px,2vw,28px) clamp(14px,2.5vw,28px);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 16px;
+  }
+
+  .section-label {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(10px,1.1vw,12px);
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: clamp(12px,1.8vh,20px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── FORM GRID ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(10px,1.5vw,18px);
+  }
+  @media (max-width: 680px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label.field-label {
+    font-size: clamp(10px,1.1vw,12px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-mid);
+  }
+  label.field-label .req { color: var(--fail); margin-left: 2px; }
+
+  input.field, select.field, textarea.field {
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input.field:focus, select.field:focus, textarea.field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(15,118,110,0.1);
+  }
+  textarea.field { resize: vertical; min-height: 72px; }
+
+  /* ── IMAGE UPLOAD ── */
+  .img-upload-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 28px 16px;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .img-upload-area:hover { border-color: var(--accent); background: #f0fdf9; }
+  .img-upload-area.has-image { border-style: solid; border-color: var(--accent); background: #fff; padding: 10px; }
+  .img-upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .img-upload-text { font-size: 13px; font-weight: 600; color: var(--text-mid); }
+  .img-upload-sub { font-size: 11px; color: var(--text-light); margin-top: 4px; font-family: 'Courier New', monospace; }
+  .img-preview-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .img-preview {
+    max-width: 100%;
+    max-height: 180px;
+    border-radius: 7px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+  }
+  .img-remove-btn {
+    position: absolute;
+    top: 4px; right: 4px;
+    background: rgba(220,38,38,0.85);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 24px; height: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 24px;
+    text-align: center;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: clamp(7px,0.9vh,10px) clamp(12px,1.6vw,20px);
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    font-size: clamp(11px,1.2vw,13px);
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .btn-secondary { background: var(--steel); color: #fff; }
+  .btn-secondary:hover { background: var(--steel-light); transform: translateY(-1px); }
+  .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn-outline:hover { background: var(--accent); color: #fff; }
+  .btn-danger-soft { background: #fef2f2; color: var(--fail); border: 1.5px solid #fecaca; }
+  .btn-danger-soft:hover { background: var(--fail); color: #fff; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-icon { padding: 5px 8px; font-size: 13px; }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* ── SEARCH BAR ── */
+  .search-bar-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .search-input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+  }
+  .search-input-wrap svg {
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    pointer-events: none;
+  }
+  input.search-input {
+    width: 100%;
+    padding: 9px 12px 9px 36px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(15,118,110,0.1); }
+
+  /* ── TABLE ── */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: clamp(11px,1.2vw,13px); min-width: 700px; }
+  thead tr { background: linear-gradient(90deg, #1e3a5f, #2d4a6a); }
+  thead th {
+    padding: clamp(8px,1vh,12px) clamp(8px,1vw,14px);
+    text-align: left;
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: clamp(9px,1vw,11px);
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #a8d4c8;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  thead th:last-child { border-right: none; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody td {
+    padding: clamp(7px,0.9vh,11px) clamp(8px,1vw,14px);
+    vertical-align: middle;
+    border-right: 1px solid #f1f5f9;
+    color: var(--text-dark);
+  }
+  tbody td:last-child { border-right: none; }
+  td.col-no { text-align: center; font-family: 'Courier New', monospace; font-size: 11px; color: var(--text-light); width: 40px; }
+  td.col-action { white-space: nowrap; width: 120px; text-align: center; }
+  .action-btns { display: flex; gap: 5px; justify-content: center; align-items: center; }
+
+  .thumb-img {
+    width: 44px; height: 44px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .thumb-img:hover { transform: scale(1.1); border-color: var(--accent); }
+  .no-img-cell {
+    width: 44px; height: 44px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--text-light);
+  }
+
+  .badge-jenis {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-family: 'Courier New', monospace;
+    background: #e0f2fe;
+    color: #0369a1;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--text-light);
+  }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state .title { font-size: 15px; font-weight: 600; color: var(--text-mid); margin-bottom: 4px; }
+  .empty-state .msg { font-family: 'Courier New', monospace; font-size: 11px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    background: #1e3a5f;
+    color: #fff;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+    max-width: 90vw;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  /* ── MODAL BASE ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+
+  /* ── CONFIRM MODAL ── */
+  .modal-box {
+    background: var(--bg2);
+    border-radius: 12px;
+    padding: 26px;
+    width: min(420px, 96vw);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.22);
+  }
+  .modal-title { font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 10px; }
+  .modal-desc { font-size: 13px; color: var(--text-mid); margin-bottom: 20px; line-height: 1.6; }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ── PREVIEW MODAL ── */
+  .preview-modal-box {
+    background: var(--bg2);
+    border-radius: 12px;
+    width: min(640px, 96vw);
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+  }
+  .preview-modal-header {
+    background: linear-gradient(90deg, #1e3a5f, #2d4a6a);
+    padding: 18px 22px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .preview-modal-header .title {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a8d4c8;
+  }
+  .preview-modal-header .subtitle {
+    font-size: 11px;
+    color: #7ab8c8;
+    font-family: 'Courier New', monospace;
+    margin-top: 2px;
+  }
+  .preview-close-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #a8d4c8;
+    border-radius: 6px;
+    width: 32px; height: 32px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .preview-close-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+  .preview-modal-body { padding: 22px; }
+
+  .preview-image-block {
+    width: 100%;
+    background: #f8fafc;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    text-align: center;
+    padding: 12px;
+  }
+  .preview-image-block img {
+    max-width: 100%;
+    max-height: 260px;
+    object-fit: contain;
+    border-radius: 6px;
+  }
+  .preview-no-image {
+    padding: 32px;
+    color: var(--text-light);
+    font-size: 13px;
+  }
+  .preview-no-image .icon { font-size: 40px; margin-bottom: 8px; }
+
+  .preview-fields { display: flex; flex-direction: column; gap: 0; }
+  .preview-row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    gap: 12px;
+  }
+  .preview-row:last-child { border-bottom: none; }
+  .preview-key {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-light);
+    padding-top: 1px;
+  }
+  .preview-val {
+    font-size: 13px;
+    color: var(--text-dark);
+    line-height: 1.6;
+    word-break: break-word;
+  }
+  .preview-val.empty { color: var(--text-light); font-style: italic; }
+  .preview-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── CROP MODAL ── */
+  .crop-modal-box {
+    background: var(--bg2);
+    border-radius: 12px;
+    width: min(600px, 96vw);
+    max-height: 92vh;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+  }
+  .crop-modal-header {
+    background: linear-gradient(90deg, #1e3a5f, #2d4a6a);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .crop-modal-header .title {
+    font-family: 'Arial Narrow', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #a8d4c8;
+  }
+  .crop-modal-body { padding: 16px; flex: 1; overflow: auto; }
+  .crop-canvas-wrap {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #111;
+    margin-bottom: 14px;
+    user-select: none;
+    touch-action: none;
+  }
+  #cropSourceImg {
+    display: block;
+    max-width: 100%;
+    max-height: 360px;
+    margin: 0 auto;
+  }
+  .crop-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .crop-box {
+    position: absolute;
+    border: 2px solid #0f766e;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+    cursor: move;
+    pointer-events: all;
+  }
+  .crop-handle {
+    position: absolute;
+    width: 10px; height: 10px;
+    background: #0f766e;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    pointer-events: all;
+  }
+  .crop-handle.tl { top: -5px; left: -5px; cursor: nwse-resize; }
+  .crop-handle.tr { top: -5px; right: -5px; cursor: nesw-resize; }
+  .crop-handle.bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+  .crop-handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+  .crop-controls { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .stat-chip {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-chip.total { background: #f0f4f8; border-color: var(--border); color: var(--steel); }
+
+  @media (max-width: 600px) {
+    .btn { padding: 7px 12px; font-size: 11px; }
+    .preview-row { grid-template-columns: 110px 1fr; }
+  }
+
+  /* ── OPT ADD ── */
+  option.opt-add { color: var(--accent); font-weight: 700; }
+
+  /* ── ADD JENIS MODAL ── */
+  .modal-box-sm {
+    background: var(--bg2);
+    border-radius: 12px;
+    padding: 26px;
+    width: min(380px, 96vw);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.22);
+  }
+  .jenis-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 16px;
+    min-height: 32px;
+  }
+  .jenis-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: rgba(15,118,110,0.08);
+    border: 1px solid rgba(15,118,110,0.22);
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: 'Courier New', monospace;
+  }
+  .jenis-chip-del {
+    background: none;
+    border: none;
+    color: var(--fail);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+  }
+  .jenis-chip-del:hover { color: #b91c1c; }
+  .jenis-chips-empty { font-size: 11px; color: var(--text-light); font-style: italic; padding: 4px 0; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="topbar-back" onclick="history.back()">← BACK</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">POMI</div>
+  <div class="topbar-sub">PLTU PAITON UNIT 7</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="wrapper">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Warehouse Management</div>
+      <div class="page-header-title">Data Material <span>Warehouse</span></div>
+    </div>
+  </div>
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-nav-btn active" onclick="switchTab('input')" id="tabBtn-input">
+      ➕ Input Asset Material
+    </button>
+    <button class="tab-nav-btn" onclick="switchTab('list')" id="tabBtn-list">
+      📦 List Material Tersimpan
+      <span class="tab-badge" id="listBadge">0</span>
+    </button>
+  </div>
+
+  <!-- TAB: INPUT -->
+  <div class="tab-content active" id="tab-input">
+    <div class="panel">
+      <div class="section-label" id="formSectionLabel">📋 Form Input Asset Baru</div>
+
+      <div class="form-grid">
+        <!-- Nomor Asset -->
+        <div class="form-group">
+          <label class="field-label">Nomor Asset (ST)<span class="req">*</span></label>
+          <input class="field" type="text" id="f_nomor" placeholder="Contoh: ST-0001" />
+        </div>
+        <!-- Nama Asset -->
+        <div class="form-group">
+          <label class="field-label">Nama Asset<span class="req">*</span></label>
+          <input class="field" type="text" id="f_nama" placeholder="Nama asset..." />
+        </div>
+        <!-- Deskripsi -->
+        <div class="form-group full">
+          <label class="field-label">Deskripsi</label>
+          <textarea class="field" id="f_deskripsi" placeholder="Deskripsi singkat tentang asset..."></textarea>
+        </div>
+        <!-- Jenis Asset -->
+        <div class="form-group">
+          <label class="field-label">Jenis Asset</label>
+          <select class="field" id="f_jenis" onchange="onJenisChange(this)">
+            <option value="">— Pilih Jenis —</option>
+            <option>Control Valve / Positioner</option>
+            <option>Transmitter</option>
+            <option>Limit Switch</option>
+            <option>Level Switch</option>
+            <option>Temperature</option>
+            <option>Consumable Spare Part</option>
+            <option value="__add__" class="opt-add">➕ Tambah Jenis Asset...</option>
+          </select>
+        </div>
+        <!-- Lokasi -->
+        <div class="form-group">
+          <label class="field-label">Lokasi / Digunakan Untuk</label>
+          <input class="field" type="text" id="f_lokasi" placeholder="Contoh: Turbin, Boiler, Control Room..." />
+        </div>
+        <!-- Gambar Asset -->
+        <div class="form-group full">
+          <label class="field-label">Gambar Asset</label>
+          <div class="img-upload-area" id="imgUploadArea" onclick="triggerImagePick()">
+            <div id="imgUploadPlaceholder">
+              <div class="img-upload-icon">📷</div>
+              <div class="img-upload-text">Klik untuk Upload Gambar</div>
+              <div class="img-upload-sub">Pilih dari Kamera atau Penyimpanan → Crop → Simpan</div>
+            </div>
+            <div id="imgPreviewWrap" class="img-preview-wrap" style="display:none;">
+              <img id="imgPreview" class="img-preview" src="" alt="Preview" />
+              <button class="img-remove-btn" onclick="removeImage(event)" title="Hapus Gambar">×</button>
+            </div>
+          </div>
+          <input type="file" id="imgFileInput" accept="image/*" capture="environment" style="display:none;" onchange="onImageSelected(event)">
+        </div>
+        <!-- Keterangan Lainnya -->
+        <div class="form-group full">
+          <label class="field-label">Keterangan Lainnya</label>
+          <textarea class="field" id="f_keterangan" placeholder="Keterangan tambahan, kondisi, catatan khusus, dll..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="resetForm()">🔄 Reset</button>
+        <button class="btn btn-primary" onclick="saveAsset()">💾 Simpan Asset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: LIST -->
+  <div class="tab-content" id="tab-list">
+    <div class="panel">
+      <div class="stats-row">
+        <div class="stat-chip total">📦 Total: <strong id="statTotal">0</strong> Asset</div>
+      </div>
+
+      <div class="search-bar-wrap">
+        <div class="search-input-wrap">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input class="search-input" type="text" id="searchInput" placeholder="Cari nomor, nama, jenis, lokasi..." oninput="renderTable()" />
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('searchInput').value=''; renderTable();">✕ Clear</button>
+      </div>
+
+      <div class="table-scroll">
+        <table id="assetTable">
+          <thead>
+            <tr>
+              <th style="width:40px">No</th>
+              <th>No. Asset (ST)</th>
+              <th>Nama Asset</th>
+              <th>Jenis</th>
+              <th>Lokasi</th>
+              <th>Gambar</th>
+              <th style="width:130px">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <div class="icon">📦</div>
+                  <div class="title">Belum ada data asset</div>
+                  <div class="msg">Tambahkan asset melalui tab "Input Asset Material"</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ── CROP MODAL ── -->
+<div class="modal-overlay" id="cropModal">
+  <div class="crop-modal-box">
+    <div class="crop-modal-header">
+      <div class="title">✂️ Crop Gambar</div>
+      <button class="preview-close-btn" onclick="closeCropModal()">×</button>
+    </div>
+    <div class="crop-modal-body">
+      <div class="crop-canvas-wrap" id="cropWrap">
+        <img id="cropSourceImg" src="" alt="" draggable="false" />
+        <div class="crop-box" id="cropBox">
+          <div class="crop-handle tl" data-corner="tl"></div>
+          <div class="crop-handle tr" data-corner="tr"></div>
+          <div class="crop-handle bl" data-corner="bl"></div>
+          <div class="crop-handle br" data-corner="br"></div>
+        </div>
+      </div>
+      <div class="crop-controls">
+        <button class="btn btn-outline btn-sm" onclick="closeCropModal()">Batal</button>
+        <button class="btn btn-primary btn-sm" onclick="applyCrop()">✅ Simpan Crop</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PREVIEW MODAL ── -->
+<div class="modal-overlay" id="previewModal">
+  <div class="preview-modal-box">
+    <div class="preview-modal-header">
+      <div>
+        <div class="title" id="previewTitle">Detail Asset</div>
+        <div class="subtitle" id="previewSubtitle">—</div>
+      </div>
+      <button class="preview-close-btn" onclick="closePreviewModal()">×</button>
+    </div>
+    <div class="preview-modal-body">
+      <div class="preview-image-block" id="previewImageBlock">
+        <div class="preview-no-image"><div class="icon">🖼️</div><div>Tidak ada gambar</div></div>
+      </div>
+      <div class="preview-fields" id="previewFields"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DELETE CONFIRM MODAL ── -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box">
+    <div class="modal-title">🗑️ Hapus Asset?</div>
+    <div class="modal-desc" id="deleteModalDesc">Asset ini akan dihapus secara permanen.</div>
+    <div class="modal-btns">
+      <button class="btn btn-outline btn-sm" onclick="closeDeleteModal()">Batal</button>
+      <button class="btn btn-danger-soft btn-sm" onclick="confirmDelete()">Ya, Hapus</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   CLOCK
+══════════════════════════════════════════════ */
+function updateClock() {
+  var now = new Date();
+  var h = String(now.getHours()).padStart(2,'0');
+  var m = String(now.getMinutes()).padStart(2,'0');
+  var s = String(now.getSeconds()).padStart(2,'0');
+  var el = document.getElementById('clock');
+  if (el) el.textContent = h+':'+m+':'+s;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ══════════════════════════════════════════════
+   TAB SWITCH
+══════════════════════════════════════════════ */
+function switchTab(id) {
+  document.querySelectorAll('.tab-nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+  document.getElementById('tabBtn-'+id).classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+  if (id === 'list') renderTable();
+}
+
+/* ══════════════════════════════════════════════
+   DATA STORE (localStorage)
+══════════════════════════════════════════════ */
+var STORE_KEY = 'pomi_material_warehouse_v1';
+var assets = [];
+var editingId = null;
+
+function loadAssets() {
+  try { assets = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch(e) { assets = []; }
+  updateBadge();
+}
+
+function saveAssets() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(assets)); } catch(e) { showToast('⚠️ Gagal simpan ke lokal storage'); }
+  updateBadge();
+}
+
+function updateBadge() {
+  var el = document.getElementById('listBadge');
+  if (el) el.textContent = assets.length;
+  var st = document.getElementById('statTotal');
+  if (st) st.textContent = assets.length;
+}
+
+function genId() {
+  return 'ast_' + Date.now() + '_' + Math.random().toString(36).substr(2,5);
+}
+
+/* ══════════════════════════════════════════════
+   IMAGE UPLOAD & CROP
+══════════════════════════════════════════════ */
+var currentImageDataUrl = null; // final cropped/selected image
+
+function triggerImagePick() {
+  if (document.getElementById('imgPreviewWrap').style.display !== 'none') return; // already has image
+  document.getElementById('imgFileInput').click();
+}
+
+function onImageSelected(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    openCropModal(ev.target.result);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = ''; // reset input
+}
+
+function removeImage(e) {
+  e.stopPropagation();
+  currentImageDataUrl = null;
+  document.getElementById('imgPreviewWrap').style.display = 'none';
+  document.getElementById('imgUploadPlaceholder').style.display = 'block';
+  document.getElementById('imgUploadArea').classList.remove('has-image');
+}
+
+function setPreviewImage(dataUrl) {
+  currentImageDataUrl = dataUrl;
+  var img = document.getElementById('imgPreview');
+  img.src = dataUrl;
+  document.getElementById('imgPreviewWrap').style.display = 'block';
+  document.getElementById('imgUploadPlaceholder').style.display = 'none';
+  document.getElementById('imgUploadArea').classList.add('has-image');
+}
+
+/* ── CROP LOGIC ── */
+var cropState = {
+  srcDataUrl: null,
+  imgEl: null,
+  wrap: null,
+  box: null,
+  // box coords in display px
+  bx: 0, by: 0, bw: 0, bh: 0,
+  dragging: false, resizing: false,
+  corner: null,
+  startX: 0, startY: 0,
+  startBx: 0, startBy: 0, startBw: 0, startBh: 0
+};
+
+function openCropModal(dataUrl) {
+  cropState.srcDataUrl = dataUrl;
+  var img = document.getElementById('cropSourceImg');
+  img.src = dataUrl;
+  img.onload = function() {
+    var wrap = document.getElementById('cropWrap');
+    var w = wrap.offsetWidth;
+    var scale = Math.min(w / img.naturalWidth, 360 / img.naturalHeight, 1);
+    var dw = img.naturalWidth * scale;
+    var dh = img.naturalHeight * scale;
+    wrap.style.height = dh + 'px';
+    img.style.width = dw + 'px';
+    img.style.height = dh + 'px';
+    // initial crop box = 80% centered
+    var bw = dw * 0.8, bh = dh * 0.8;
+    var bx = (dw - bw) / 2, by = (dh - bh) / 2;
+    setCropBox(bx, by, bw, bh, dw, dh);
+    cropState.imgEl = img;
+    cropState.wrap = wrap;
+  };
+  document.getElementById('cropModal').classList.add('show');
+}
+
+function closeCropModal() {
+  document.getElementById('cropModal').classList.remove('show');
+}
+
+function setCropBox(x, y, w, h, maxW, maxH) {
+  var box = document.getElementById('cropBox');
+  // clamp
+  if (w < 20) w = 20;
+  if (h < 20) h = 20;
+  if (x < 0) x = 0;
+  if (y < 0) y = 0;
+  if (x + w > maxW) { if (x > 0) x = maxW - w; else w = maxW; }
+  if (y + h > maxH) { if (y > 0) y = maxH - h; else h = maxH; }
+  box.style.left = x + 'px';
+  box.style.top = y + 'px';
+  box.style.width = w + 'px';
+  box.style.height = h + 'px';
+  cropState.bx = x; cropState.by = y; cropState.bw = w; cropState.bh = h;
+}
+
+function getMaxDims() {
+  var img = cropState.imgEl;
+  return { w: parseFloat(img.style.width), h: parseFloat(img.style.height) };
+}
+
+// Move box
+var cropBox = document.getElementById('cropBox');
+cropBox.addEventListener('mousedown', function(e) {
+  if (e.target !== cropBox) return;
+  e.preventDefault();
+  cropState.dragging = true;
+  cropState.startX = e.clientX; cropState.startY = e.clientY;
+  cropState.startBx = cropState.bx; cropState.startBy = cropState.by;
+});
+
+// Resize handles
+document.querySelectorAll('.crop-handle').forEach(function(h) {
+  h.addEventListener('mousedown', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    cropState.resizing = true;
+    cropState.corner = h.dataset.corner;
+    cropState.startX = e.clientX; cropState.startY = e.clientY;
+    cropState.startBx = cropState.bx; cropState.startBy = cropState.by;
+    cropState.startBw = cropState.bw; cropState.startBh = cropState.bh;
+  });
+});
+
+document.addEventListener('mousemove', function(e) {
+  if (!cropState.dragging && !cropState.resizing) return;
+  var dx = e.clientX - cropState.startX;
+  var dy = e.clientY - cropState.startY;
+  var d = getMaxDims();
+  if (cropState.dragging) {
+    setCropBox(cropState.startBx + dx, cropState.startBy + dy, cropState.bw, cropState.bh, d.w, d.h);
+  } else if (cropState.resizing) {
+    var c = cropState.corner;
+    var nx = cropState.startBx, ny = cropState.startBy, nw = cropState.startBw, nh = cropState.startBh;
+    if (c === 'tl') { nx += dx; ny += dy; nw -= dx; nh -= dy; }
+    else if (c === 'tr') { nw += dx; ny += dy; nh -= dy; }
+    else if (c === 'bl') { nx += dx; nw -= dx; nh += dy; }
+    else if (c === 'br') { nw += dx; nh += dy; }
+    setCropBox(nx, ny, nw, nh, d.w, d.h);
+  }
+});
+
+document.addEventListener('mouseup', function() {
+  cropState.dragging = false;
+  cropState.resizing = false;
+});
+
+// Touch support
+cropBox.addEventListener('touchstart', function(e) {
+  if (e.target !== cropBox) return;
+  var t = e.touches[0];
+  cropState.dragging = true;
+  cropState.startX = t.clientX; cropState.startY = t.clientY;
+  cropState.startBx = cropState.bx; cropState.startBy = cropState.by;
+}, {passive: true});
+
+document.addEventListener('touchmove', function(e) {
+  if (!cropState.dragging && !cropState.resizing) return;
+  var t = e.touches[0];
+  var dx = t.clientX - cropState.startX;
+  var dy = t.clientY - cropState.startY;
+  var d = getMaxDims();
+  if (cropState.dragging) setCropBox(cropState.startBx+dx, cropState.startBy+dy, cropState.bw, cropState.bh, d.w, d.h);
+}, {passive: true});
+
+document.addEventListener('touchend', function() {
+  cropState.dragging = false;
+  cropState.resizing = false;
+});
+
+function applyCrop() {
+  var img = cropState.imgEl;
+  var dispW = parseFloat(img.style.width);
+  var dispH = parseFloat(img.style.height);
+  var scaleX = img.naturalWidth / dispW;
+  var scaleY = img.naturalHeight / dispH;
+  var cx = cropState.bx * scaleX;
+  var cy = cropState.by * scaleY;
+  var cw = cropState.bw * scaleX;
+  var ch = cropState.bh * scaleY;
+  var canvas = document.createElement('canvas');
+  canvas.width = cw; canvas.height = ch;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(img, cx, cy, cw, ch, 0, 0, cw, ch);
+  var dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+  setPreviewImage(dataUrl);
+  closeCropModal();
+  showToast('✅ Gambar berhasil di-crop & disimpan');
+}
+
+/* ══════════════════════════════════════════════
+   FORM SAVE / EDIT
+══════════════════════════════════════════════ */
+function getFormData() {
+  return {
+    nomor: document.getElementById('f_nomor').value.trim(),
+    nama: document.getElementById('f_nama').value.trim(),
+    deskripsi: document.getElementById('f_deskripsi').value.trim(),
+    jenis: document.getElementById('f_jenis').value,
+    lokasi: document.getElementById('f_lokasi').value.trim(),
+    gambar: currentImageDataUrl || null,
+    keterangan: document.getElementById('f_keterangan').value.trim()
+  };
+}
+
+function fillForm(asset) {
+  document.getElementById('f_nomor').value = asset.nomor || '';
+  document.getElementById('f_nama').value = asset.nama || '';
+  document.getElementById('f_deskripsi').value = asset.deskripsi || '';
+  rebuildJenisSelect(asset.jenis || '');
+  document.getElementById('f_lokasi').value = asset.lokasi || '';
+  document.getElementById('f_keterangan').value = asset.keterangan || '';
+  if (asset.gambar) {
+    setPreviewImage(asset.gambar);
+  } else {
+    currentImageDataUrl = null;
+    document.getElementById('imgPreviewWrap').style.display = 'none';
+    document.getElementById('imgUploadPlaceholder').style.display = 'block';
+    document.getElementById('imgUploadArea').classList.remove('has-image');
+  }
+}
+
+function resetForm() {
+  editingId = null;
+  document.getElementById('f_nomor').value = '';
+  document.getElementById('f_nama').value = '';
+  document.getElementById('f_deskripsi').value = '';
+  document.getElementById('f_jenis').value = '';
+  document.getElementById('f_lokasi').value = '';
+  document.getElementById('f_keterangan').value = '';
+  currentImageDataUrl = null;
+  document.getElementById('imgPreviewWrap').style.display = 'none';
+  document.getElementById('imgUploadPlaceholder').style.display = 'block';
+  document.getElementById('imgUploadArea').classList.remove('has-image');
+  document.getElementById('formSectionLabel').textContent = '📋 Form Input Asset Baru';
+  document.getElementById('imgFileInput').value = '';
+}
+
+function saveAsset() {
+  var d = getFormData();
+  if (!d.nomor) { showToast('⚠️ Nomor Asset (ST) wajib diisi'); document.getElementById('f_nomor').focus(); return; }
+  if (!d.nama) { showToast('⚠️ Nama Asset wajib diisi'); document.getElementById('f_nama').focus(); return; }
+
+  if (editingId) {
+    var idx = assets.findIndex(function(a){ return a.id === editingId; });
+    if (idx !== -1) {
+      assets[idx] = Object.assign(assets[idx], d, { updatedAt: new Date().toISOString() });
+    }
+    saveAssets();
+    showToast('✅ Asset berhasil diperbarui');
+    resetForm();
+  } else {
+    // Check duplicate nomor
+    var dup = assets.find(function(a){ return a.nomor.toLowerCase() === d.nomor.toLowerCase(); });
+    if (dup) { showToast('⚠️ Nomor Asset "'+d.nomor+'" sudah ada'); return; }
+    d.id = genId();
+    d.createdAt = new Date().toISOString();
+    d.updatedAt = d.createdAt;
+    assets.push(d);
+    saveAssets();
+    showToast('✅ Asset berhasil disimpan!');
+    resetForm();
+  }
+}
+
+/* ══════════════════════════════════════════════
+   TABLE RENDER
+══════════════════════════════════════════════ */
+function renderTable() {
+  var q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  var filtered = assets.filter(function(a) {
+    if (!q) return true;
+    return (a.nomor+' '+a.nama+' '+a.jenis+' '+a.lokasi+' '+a.deskripsi).toLowerCase().indexOf(q) !== -1;
+  });
+
+  var tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+
+  if (filtered.length === 0) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="7"><div class="empty-state">' +
+      '<div class="icon">🔍</div>' +
+      '<div class="title">'+(q ? 'Tidak ada hasil untuk "'+escHtml(q)+'"' : 'Belum ada data asset')+'</div>' +
+      '<div class="msg">'+(q ? 'Coba kata kunci lain' : 'Tambahkan asset melalui tab "Input Asset Material"')+'</div>' +
+      '</div></td>';
+    tbody.appendChild(tr);
+    return;
+  }
+
+  filtered.forEach(function(a, i) {
+    var tr = document.createElement('tr');
+    var imgCell = a.gambar
+      ? '<img class="thumb-img" src="'+a.gambar+'" alt="gambar" onclick="openPreviewModal(\''+a.id+'\')" title="Lihat gambar">'
+      : '<div class="no-img-cell">🖼️</div>';
+
+    tr.innerHTML = '<td class="col-no">'+(i+1)+'</td>' +
+      '<td><strong style="font-family:\'Courier New\',monospace;font-size:12px;color:var(--steel)">'+escHtml(a.nomor)+'</strong></td>' +
+      '<td>'+escHtml(a.nama)+'</td>' +
+      '<td>'+(a.jenis ? '<span class="badge-jenis">'+escHtml(a.jenis)+'</span>' : '<span style="color:var(--text-light);font-size:11px">—</span>')+'</td>' +
+      '<td style="color:var(--text-mid);font-size:12px">'+escHtml(a.lokasi||'—')+'</td>' +
+      '<td>'+imgCell+'</td>' +
+      '<td class="col-action"><div class="action-btns">' +
+        '<button class="btn btn-icon btn-outline btn-sm" title="Preview" onclick="openPreviewModal(\''+a.id+'\')">👁</button>' +
+        '<button class="btn btn-icon btn-secondary btn-sm" title="Edit" onclick="editAsset(\''+a.id+'\')">✏️</button>' +
+        '<button class="btn btn-icon btn-danger-soft btn-sm" title="Hapus" onclick="openDeleteModal(\''+a.id+'\')">🗑</button>' +
+      '</div></td>';
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('statTotal').textContent = assets.length;
+}
+
+/* ══════════════════════════════════════════════
+   EDIT
+══════════════════════════════════════════════ */
+function editAsset(id) {
+  var asset = assets.find(function(a){ return a.id === id; });
+  if (!asset) return;
+  editingId = id;
+  fillForm(asset);
+  document.getElementById('formSectionLabel').textContent = '✏️ Edit Asset: ' + asset.nomor;
+  switchTab('input');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('Mode edit: '+asset.nomor);
+}
+
+/* ══════════════════════════════════════════════
+   PREVIEW MODAL
+══════════════════════════════════════════════ */
+function openPreviewModal(id) {
+  var a = assets.find(function(x){ return x.id === id; });
+  if (!a) return;
+
+  document.getElementById('previewTitle').textContent = a.nama || 'Detail Asset';
+  document.getElementById('previewSubtitle').textContent = a.nomor || '—';
+
+  // Image
+  var imgBlock = document.getElementById('previewImageBlock');
+  if (a.gambar) {
+    imgBlock.innerHTML = '<img src="'+a.gambar+'" alt="gambar asset" style="max-width:100%;max-height:260px;object-fit:contain;border-radius:8px;">';
+  } else {
+    imgBlock.innerHTML = '<div class="preview-no-image"><div class="icon">🖼️</div><div>Tidak ada gambar</div></div>';
+  }
+
+  // Fields
+  var fields = [
+    { k: 'Nomor Asset (ST)', v: a.nomor, mono: true },
+    { k: 'Nama Asset', v: a.nama },
+    { k: 'Jenis Asset', v: a.jenis, tag: true },
+    { k: 'Lokasi / Digunakan Untuk', v: a.lokasi },
+    { k: 'Deskripsi', v: a.deskripsi },
+    { k: 'Keterangan Lainnya', v: a.keterangan },
+    { k: 'Dibuat', v: a.createdAt ? new Date(a.createdAt).toLocaleString('id-ID') : null },
+    { k: 'Terakhir Diupdate', v: a.updatedAt ? new Date(a.updatedAt).toLocaleString('id-ID') : null },
+  ];
+
+  var html = '';
+  fields.forEach(function(f) {
+    var val = f.v ? escHtml(f.v) : null;
+    var valHtml;
+    if (!val) {
+      valHtml = '<span class="preview-val empty">—</span>';
+    } else if (f.tag) {
+      valHtml = '<span class="preview-tag">'+val+'</span>';
+    } else if (f.mono) {
+      valHtml = '<span class="preview-val" style="font-family:\'Courier New\',monospace;font-weight:700;color:var(--steel)">'+val+'</span>';
+    } else {
+      valHtml = '<span class="preview-val">'+val+'</span>';
+    }
+    html += '<div class="preview-row"><div class="preview-key">'+escHtml(f.k)+'</div>'+valHtml+'</div>';
+  });
+
+  document.getElementById('previewFields').innerHTML = html;
+  document.getElementById('previewModal').classList.add('show');
+}
+
+function closePreviewModal() {
+  document.getElementById('previewModal').classList.remove('show');
+}
+
+/* ══════════════════════════════════════════════
+   DELETE
+══════════════════════════════════════════════ */
+var pendingDeleteId = null;
+
+function openDeleteModal(id) {
+  var a = assets.find(function(x){ return x.id === id; });
+  pendingDeleteId = id;
+  document.getElementById('deleteModalDesc').textContent =
+    'Asset "' + (a ? a.nama : '') + '" (' + (a ? a.nomor : '') + ') akan dihapus secara permanen.';
+  document.getElementById('deleteModal').classList.add('show');
+}
+
+function closeDeleteModal() {
+  pendingDeleteId = null;
+  document.getElementById('deleteModal').classList.remove('show');
+}
+
+function confirmDelete() {
+  if (!pendingDeleteId) return;
+  assets = assets.filter(function(a){ return a.id !== pendingDeleteId; });
+  saveAssets();
+  closeDeleteModal();
+  renderTable();
+  showToast('🗑️ Asset berhasil dihapus');
+}
+
+/* ══════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════ */
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(function(){ t.style.opacity = '0'; }, 3000);
+}
+
+// Close modals on overlay click
+['cropModal','previewModal','deleteModal'].forEach(function(id){
+  var el = document.getElementById(id);
+  if (el) el.addEventListener('click', function(e){ if (e.target === this) this.classList.remove('show'); });
+});
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+loadAssets();
+rebuildJenisSelect('');
+renderTable();
+</script>
+
+<!-- ADD JENIS MODAL -->
+<div class="modal-overlay" id="addJenisModal">
+  <div class="modal-box-sm">
+    <div class="modal-title">➕ Tambah Jenis Asset</div>
+    <div style="font-size:12px;color:var(--text-mid);margin-bottom:14px;">Jenis yang ditambahkan akan tersimpan permanen dan muncul di dropdown.</div>
+    <div class="jenis-chips" id="customJenisChips"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <input class="modal-input" type="text" id="newJenisInput" placeholder="Nama jenis baru..." style="margin-bottom:0;flex:1;" onkeydown="if(event.key==='Enter')addCustomJenis()">
+      <button class="btn btn-primary btn-sm" onclick="addCustomJenis()">Tambah</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline btn-sm" onclick="closeAddJenisModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
