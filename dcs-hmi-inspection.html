@@ -287,10 +287,10 @@ var DCS_DROPS = [
 var dcsImages = {general:[], defect:[]};
 var dcsActiveDrops = {};
 DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = true; }); /* default: semua aktif */
-  
-   ══════════════════════════════════════════════
+
+/* ══════════════════════════════════════════════
    BACKGROUND (same as opacity)
-   ══════════════════════════════════════════════ */
+══════════════════════════════════════════════ */
 var reportBgImg = null, reportBgReady = false, reportBgCallbacks = [];
 function initReportBackground() {
   if (reportBgImg) return;
