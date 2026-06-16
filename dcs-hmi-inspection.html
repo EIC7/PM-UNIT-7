@@ -287,6 +287,26 @@ var DCS_DROPS = [
 var dcsImages = {general:[], defect:[]};
 var dcsActiveDrops = {};
 DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = true; }); /* default: semua aktif */
+  
+   ══════════════════════════════════════════════
+   BACKGROUND (same as opacity)
+   ══════════════════════════════════════════════ */
+var reportBgImg = null, reportBgReady = false, reportBgCallbacks = [];
+function initReportBackground() {
+  if (reportBgImg) return;
+  reportBgImg = new Image();
+  reportBgImg.onload = function(){ reportBgReady=true; var cbs=reportBgCallbacks.splice(0); for(var i=0;i<cbs.length;i++) cbs[i](); };
+  reportBgImg.onerror = function(){ reportBgReady=false; var cbs=reportBgCallbacks.splice(0); for(var i=0;i<cbs.length;i++) cbs[i](); };
+  reportBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+function ensureReportBackground(cb){
+  if(!reportBgImg){reportBgCallbacks.push(cb);initReportBackground();return;}
+  if(reportBgReady){cb();return;}
+  if(reportBgImg.complete&&reportBgImg.naturalWidth>0){reportBgReady=true;cb();return;}
+  reportBgCallbacks.push(cb);
+}
+function drawBg(doc,pw,ph){ if(!reportBgImg||!reportBgImg.naturalWidth)return; try{doc.addImage(reportBgImg,'JPEG',0,0,pw,ph);}catch(e){} }
+
 
 /* ══════════════════════════════════════════════
    UNIT BAR — gaya ph_analyzer
