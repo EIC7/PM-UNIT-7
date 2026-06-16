@@ -719,7 +719,7 @@
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <button class="topbar-back" onclick="outage-index.html()">← OUTAGE MANAGEMENT</button>
+  <button class="topbar-back" onclick="history.back()">← BACK</button>
   <div class="topbar-sep"></div>
   <div class="topbar-logo">POMI</div>
   <div class="topbar-sub">PLTU PAITON UNIT 7</div>
@@ -1082,73 +1082,66 @@ function getMaxDims() {
   return { w: parseFloat(img.style.width), h: parseFloat(img.style.height) };
 }
 
-// Move box
-var cropBox = document.getElementById('cropBox');
-cropBox.addEventListener('mousedown', function(e) {
-  if (e.target !== cropBox) return;
-  e.preventDefault();
-  cropState.dragging = true;
-  cropState.startX = e.clientX; cropState.startY = e.clientY;
-  cropState.startBx = cropState.bx; cropState.startBy = cropState.by;
-});
+// ── CROP DRAG & RESIZE — pointer events (covers mouse + touch + pen) ──
+(function() {
+  var box  = document.getElementById('cropBox');
+  var wrap = document.getElementById('cropWrap');
 
-// Resize handles
-document.querySelectorAll('.crop-handle').forEach(function(h) {
-  h.addEventListener('mousedown', function(e) {
-    e.preventDefault(); e.stopPropagation();
-    cropState.resizing = true;
-    cropState.corner = h.dataset.corner;
+  function applyMove(clientX, clientY) {
+    var dx = clientX - cropState.startX;
+    var dy = clientY - cropState.startY;
+    var d  = getMaxDims();
+    if (cropState.dragging) {
+      setCropBox(cropState.startBx + dx, cropState.startBy + dy,
+                 cropState.bw, cropState.bh, d.w, d.h);
+    } else if (cropState.resizing) {
+      var c  = cropState.corner;
+      var nx = cropState.startBx, ny = cropState.startBy;
+      var nw = cropState.startBw, nh = cropState.startBh;
+      if (c === 'tl') { nx += dx; ny += dy; nw -= dx; nh -= dy; }
+      else if (c === 'tr') {          ny += dy; nw += dx; nh -= dy; }
+      else if (c === 'bl') { nx += dx;          nw -= dx; nh += dy; }
+      else if (c === 'br') {                     nw += dx; nh += dy; }
+      setCropBox(nx, ny, nw, nh, d.w, d.h);
+    }
+  }
+
+  // Box drag — pointerdown on the box itself (not on handles)
+  box.addEventListener('pointerdown', function(e) {
+    if (e.target.classList.contains('crop-handle')) return;
+    e.preventDefault();
+    box.setPointerCapture(e.pointerId);
+    cropState.dragging = true;
     cropState.startX = e.clientX; cropState.startY = e.clientY;
     cropState.startBx = cropState.bx; cropState.startBy = cropState.by;
-    cropState.startBw = cropState.bw; cropState.startBh = cropState.bh;
   });
-});
 
-document.addEventListener('mousemove', function(e) {
-  if (!cropState.dragging && !cropState.resizing) return;
-  var dx = e.clientX - cropState.startX;
-  var dy = e.clientY - cropState.startY;
-  var d = getMaxDims();
-  if (cropState.dragging) {
-    setCropBox(cropState.startBx + dx, cropState.startBy + dy, cropState.bw, cropState.bh, d.w, d.h);
-  } else if (cropState.resizing) {
-    var c = cropState.corner;
-    var nx = cropState.startBx, ny = cropState.startBy, nw = cropState.startBw, nh = cropState.startBh;
-    if (c === 'tl') { nx += dx; ny += dy; nw -= dx; nh -= dy; }
-    else if (c === 'tr') { nw += dx; ny += dy; nh -= dy; }
-    else if (c === 'bl') { nx += dx; nw -= dx; nh += dy; }
-    else if (c === 'br') { nw += dx; nh += dy; }
-    setCropBox(nx, ny, nw, nh, d.w, d.h);
-  }
-});
+  // Handle resize — pointerdown on each corner handle
+  document.querySelectorAll('.crop-handle').forEach(function(h) {
+    h.addEventListener('pointerdown', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      h.setPointerCapture(e.pointerId);
+      cropState.resizing = true;
+      cropState.corner   = h.dataset.corner;
+      cropState.startX   = e.clientX; cropState.startY = e.clientY;
+      cropState.startBx  = cropState.bx; cropState.startBy = cropState.by;
+      cropState.startBw  = cropState.bw; cropState.startBh = cropState.bh;
+    });
+  });
 
-document.addEventListener('mouseup', function() {
-  cropState.dragging = false;
-  cropState.resizing = false;
-});
+  // Shared pointermove on the wrap (capture ensures moves outside stay tracked)
+  wrap.addEventListener('pointermove', function(e) {
+    if (!cropState.dragging && !cropState.resizing) return;
+    e.preventDefault();
+    applyMove(e.clientX, e.clientY);
+  });
 
-// Touch support
-cropBox.addEventListener('touchstart', function(e) {
-  if (e.target !== cropBox) return;
-  var t = e.touches[0];
-  cropState.dragging = true;
-  cropState.startX = t.clientX; cropState.startY = t.clientY;
-  cropState.startBx = cropState.bx; cropState.startBy = cropState.by;
-}, {passive: true});
-
-document.addEventListener('touchmove', function(e) {
-  if (!cropState.dragging && !cropState.resizing) return;
-  var t = e.touches[0];
-  var dx = t.clientX - cropState.startX;
-  var dy = t.clientY - cropState.startY;
-  var d = getMaxDims();
-  if (cropState.dragging) setCropBox(cropState.startBx+dx, cropState.startBy+dy, cropState.bw, cropState.bh, d.w, d.h);
-}, {passive: true});
-
-document.addEventListener('touchend', function() {
-  cropState.dragging = false;
-  cropState.resizing = false;
-});
+  // End on pointerup / pointercancel anywhere
+  function endCrop() { cropState.dragging = false; cropState.resizing = false; }
+  wrap.addEventListener('pointerup',     endCrop);
+  wrap.addEventListener('pointercancel', endCrop);
+  document.addEventListener('pointerup', endCrop);
+})();
 
 function applyCrop() {
   var img = cropState.imgEl;
