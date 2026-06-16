@@ -240,9 +240,9 @@ var dcsImages   = {general:[], defect:[]};
 var dcsTableBuilt = false;
 
 /* ══════════════════════════════════════════════
-   REPORT BACKGROUND (sama pola dengan opacity/beltscale)
+   REPORT BACKGROUND — pola sama dengan opacity/beltscale
 ══════════════════════════════════════════════ */
-var dcsReportBgImg  = null;
+var dcsReportBgImg = null;
 var dcsReportBgReady = false;
 var dcsReportBgCallbacks = [];
 
@@ -376,11 +376,8 @@ function dcsRefreshAll() {
 }
 
 /* ══════════════════════════════════════════════
-   IMAGES — self-contained, tidak pakai imgOpenCropper
+   IMAGES — pakai imgOpenCropper dari shared.js (sama seperti ph/opacity)
 ══════════════════════════════════════════════ */
-
-
-
 function dcsHandleDrop(e, side) { e.preventDefault(); dcsHandleFiles(e.dataTransfer.files, side); }
 
 function dcsHandleFiles(files, side) {
@@ -394,7 +391,7 @@ function dcsHandleFiles(files, side) {
       r.readAsDataURL(file);
       return;
     }
-    /* Gambar — pakai fileToJpegDataUrl + imgOpenCropper (sama seperti ph/opacity) */
+    /* Gambar — fileToJpegDataUrl lalu buka crop modal dari shared.js */
     fileToJpegDataUrl(file, function(dataUrl) {
       if (!dataUrl) return;
       imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/, '.jpg'), 'image/jpeg', dcsImages[side], side, 'dcs', -1);
@@ -402,49 +399,37 @@ function dcsHandleFiles(files, side) {
   });
 }
 
-
-
-
 function dcsRenderPreviews(side) {
   dcsSyncCaptions();
   var container = document.getElementById('dcsImgPreview' + side);
   if (!container) return;
   container.innerHTML = '';
-
   dcsImages[side].forEach(function(img, idx) {
     if (!img || !img.name) return;
     var safe = function(s){ return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); };
-    var isImg = (typeof isImageFile === 'function')
-      ? isImageFile({name: img.name, type: img.type||''})
-      : /\.(jpe?g|png|gif|webp|bmp|tiff?|heic|heif|avif|svg)$/i.test(img.name) || (img.type && img.type.startsWith('image/'));
-
+    var isImg = isImageFile({name: img.name, type: img.type||''});
     var wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px;vertical-align:top';
-
+    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px;vertical-align:top;margin:4px';
     var thumb = isImg
       ? '<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f0f7ff">' +
           '<img src="'+safe(img.dataUrl)+'" style="max-width:100%;max-height:100%;object-fit:contain;cursor:pointer" onclick="dcsReEdit(\''+side+'\','+idx+')" title="Klik crop ulang">' +
         '</div>'
       : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">📄</div>';
-
     var cropBtn = isImg
       ? '<button onclick="dcsReEdit(\''+side+'\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">✂ Crop</button>'
       : '';
-
     wrap.innerHTML = thumb + cropBtn +
-      '<button onclick="dcsRemoveImg(\''+side+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>' +
+      '<button onclick="dcsRemoveImg(\''+side+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>' +
       '<div style="font-size:9px;color:var(--text3);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:112px">'+safe(img.name)+'</div>' +
       '<input id="dcsCap_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" ' +
         'oninput="dcsImages[\''+side+'\']['+idx+'].caption=this.value" ' +
         'style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
-
-  /* Update size indicator */
   var total = dcsImages[side].reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); },0);
-  var kb    = (total/1024).toFixed(0);
+  var kb = (total/1024).toFixed(0);
   var color = total>900*1024?'#e74c3c':total>700*1024?'#f39c12':'var(--text3)';
-  var el    = document.getElementById('dcsSizeInfo'+side);
+  var el = document.getElementById('dcsSizeInfo'+side);
   if (el){ el.textContent = kb+' KB / 1024 KB'; el.style.color = color; }
 }
 
@@ -697,6 +682,56 @@ function dbCollectData(modul) {
   });
 })();
 
+/* ══════════════════════════════════════════════
+   PATCH shared.js — tambah support prefix 'dcs'
+══════════════════════════════════════════════ */
+(function patchShared() {
+  /* Tunggu shared.js selesai load */
+  var _origCropSave = null;
+  var _origSizeInd  = null;
+
+  function applyPatch() {
+    /* Patch updateSizeIndicator */
+    if (typeof updateSizeIndicator === 'function' && !updateSizeIndicator._dcsPatch) {
+      var _orig = updateSizeIndicator;
+      updateSizeIndicator = function(prefix, side) {
+        if (prefix === 'dcs') {
+          var arr = dcsImages[side] || [];
+          var total = arr.reduce(function(acc,im){ return acc+(im.dataUrl?im.dataUrl.length*0.75:0); },0);
+          var kb    = (total/1024).toFixed(0);
+          var color = total > 900*1024 ? '#e74c3c' : total > 700*1024 ? '#f39c12' : 'var(--text3)';
+          var el    = document.getElementById('dcsSizeInfo'+(side||''));
+          if (el) { el.textContent = kb+' KB / 1024 KB'; el.style.color = color; }
+          return;
+        }
+        _orig(prefix, side);
+      };
+      updateSizeIndicator._dcsPatch = true;
+    }
+
+    /* Patch imgOpenCropper — tambah handler 'dcs' di callback akhir */
+    if (typeof imgOpenCropper === 'function' && !imgOpenCropper._dcsPatch) {
+      var _origCrop = imgOpenCropper;
+      imgOpenCropper = function(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
+        if (modulePrefix !== 'dcs') {
+          return _origCrop(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx);
+        }
+        /* Untuk dcs: gunakan crop modal yang sama dari shared.js
+           tapi callback setelah crop kita inject */
+        _origCrop(dataUrl, name, type, imgArr, side, 'dcs_internal', replaceIdx);
+      };
+      imgOpenCropper._dcsPatch = true;
+    }
+  }
+
+  /* shared.js sudah di-load sebelum script ini karena urutan tag,
+     tapi kita defer sedikit agar DOM ready */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyPatch);
+  } else {
+    applyPatch();
+  }
+})();
 
 /* ══════════════════════════════════════════════
    INIT
@@ -707,6 +742,7 @@ setInterval(function(){
 }, 1000);
 
 dcsBuildTable();
+initReportBackground();
 initReportBackground();
 
 (function(){
