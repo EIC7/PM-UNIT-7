@@ -686,17 +686,14 @@ function dbCollectData(modul) {
    PATCH shared.js — tambah support prefix 'dcs'
 ══════════════════════════════════════════════ */
 (function patchShared() {
-  /* Tunggu shared.js selesai load */
-  var _origCropSave = null;
-  var _origSizeInd  = null;
 
   function applyPatch() {
-    /* Patch updateSizeIndicator */
+    /* Patch updateSizeIndicator — support prefix 'dcs' */
     if (typeof updateSizeIndicator === 'function' && !updateSizeIndicator._dcsPatch) {
       var _orig = updateSizeIndicator;
       updateSizeIndicator = function(prefix, side) {
         if (prefix === 'dcs') {
-          var arr = dcsImages[side] || [];
+          var arr   = dcsImages[side] || [];
           var total = arr.reduce(function(acc,im){ return acc+(im.dataUrl?im.dataUrl.length*0.75:0); },0);
           var kb    = (total/1024).toFixed(0);
           var color = total > 900*1024 ? '#e74c3c' : total > 700*1024 ? '#f39c12' : 'var(--text3)';
@@ -709,27 +706,26 @@ function dbCollectData(modul) {
       updateSizeIndicator._dcsPatch = true;
     }
 
-    /* Patch imgOpenCropper — tambah handler 'dcs' di callback akhir */
-    if (typeof imgOpenCropper === 'function' && !imgOpenCropper._dcsPatch) {
-      var _origCrop = imgOpenCropper;
-      imgOpenCropper = function(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
-        if (modulePrefix !== 'dcs') {
-          return _origCrop(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx);
+    /* Patch imgCompressAndStore — support prefix 'dcs'
+       shared.js memanggil imgCompressAndStore(canvas, name, imgArr, side, prefix, rawDataUrl, caption)
+       Kita hanya perlu render ulang preview DCS setelah gambar ditambahkan */
+    if (typeof imgCompressAndStore === 'function' && !imgCompressAndStore._dcsPatch) {
+      var _origStore = imgCompressAndStore;
+      imgCompressAndStore = function(canvas, name, imgArr, side, prefix, rawDataUrl, caption) {
+        _origStore(canvas, name, imgArr, side, prefix, rawDataUrl, caption);
+        if (prefix === 'dcs') {
+          /* imgArr adalah dcsImages[side] — render ulang preview */
+          setTimeout(function(){ dcsRenderPreviews(side); }, 50);
         }
-        /* Untuk dcs: gunakan crop modal yang sama dari shared.js
-           tapi callback setelah crop kita inject */
-        _origCrop(dataUrl, name, type, imgArr, side, 'dcs_internal', replaceIdx);
       };
-      imgOpenCropper._dcsPatch = true;
+      imgCompressAndStore._dcsPatch = true;
     }
   }
 
-  /* shared.js sudah di-load sebelum script ini karena urutan tag,
-     tapi kita defer sedikit agar DOM ready */
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', applyPatch);
   } else {
-    applyPatch();
+    setTimeout(applyPatch, 100);
   }
 })();
 
