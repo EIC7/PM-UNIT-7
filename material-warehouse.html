@@ -1036,25 +1036,50 @@ var cropState = {
 
 function openCropModal(dataUrl) {
   cropState.srcDataUrl = dataUrl;
-  var img = document.getElementById('cropSourceImg');
-  img.src = dataUrl;
-  img.onload = function() {
-    var wrap = document.getElementById('cropWrap');
-    var w = wrap.offsetWidth;
-    var scale = Math.min(w / img.naturalWidth, 360 / img.naturalHeight, 1);
-    var dw = img.naturalWidth * scale;
-    var dh = img.naturalHeight * scale;
+  // 1. Show modal FIRST so the wrap has real layout dimensions
+  document.getElementById('cropModal').classList.add('show');
+
+  var img  = document.getElementById('cropSourceImg');
+  var wrap = document.getElementById('cropWrap');
+
+  function initBox() {
+    // Use clientWidth (layout width after modal is visible)
+    var availW = wrap.clientWidth  || wrap.offsetWidth  || 400;
+    var availH = 360; // max height cap
+
+    // Scale image to fit, never upscale
+    var scaleW = availW / img.naturalWidth;
+    var scaleH = availH / img.naturalHeight;
+    var scale  = Math.min(scaleW, scaleH, 1);
+
+    var dw = Math.round(img.naturalWidth  * scale);
+    var dh = Math.round(img.naturalHeight * scale);
+
+    // Size the wrap and the image explicitly
+    wrap.style.width  = dw + 'px';
     wrap.style.height = dh + 'px';
-    img.style.width = dw + 'px';
+    img.style.position = 'absolute';
+    img.style.left   = '0';
+    img.style.top    = '0';
+    img.style.width  = dw + 'px';
     img.style.height = dh + 'px';
-    // initial crop box = 80% centered
+
+    cropState.imgEl = img;
+    cropState.wrap  = wrap;
+
+    // Initial crop box: 80% centred
     var bw = dw * 0.8, bh = dh * 0.8;
     var bx = (dw - bw) / 2, by = (dh - bh) / 2;
     setCropBox(bx, by, bw, bh, dw, dh);
-    cropState.imgEl = img;
-    cropState.wrap = wrap;
-  };
-  document.getElementById('cropModal').classList.add('show');
+  }
+
+  if (img.src === dataUrl && img.complete && img.naturalWidth) {
+    // Image already loaded (re-edit case) — wait one frame for modal layout
+    requestAnimationFrame(initBox);
+  } else {
+    img.onload = function() { requestAnimationFrame(initBox); };
+    img.src = dataUrl;
+  }
 }
 
 function closeCropModal() {
@@ -1078,8 +1103,11 @@ function setCropBox(x, y, w, h, maxW, maxH) {
 }
 
 function getMaxDims() {
-  var img = cropState.imgEl;
-  return { w: parseFloat(img.style.width), h: parseFloat(img.style.height) };
+  var wrap = cropState.wrap || document.getElementById('cropWrap');
+  return {
+    w: parseFloat(wrap.style.width)  || wrap.clientWidth,
+    h: parseFloat(wrap.style.height) || wrap.clientHeight
+  };
 }
 
 // ── CROP DRAG & RESIZE — pointer events (covers mouse + touch + pen) ──
