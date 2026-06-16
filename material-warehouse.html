@@ -1409,6 +1409,116 @@ function showToast(msg) {
   if (el) el.addEventListener('click', function(e){ if (e.target === this) this.classList.remove('show'); });
 });
 
+
+/* ══════════════════════════════════════════════
+   JENIS ASSET — custom types stored in localStorage
+══════════════════════════════════════════════ */
+var JENIS_KEY = 'pomi_material_jenis_v1';
+var DEFAULT_JENIS = [
+  'Control Valve / Positioner',
+  'Transmitter',
+  'Limit Switch',
+  'Level Switch',
+  'Temperature',
+  'Consumable Spare Part'
+];
+
+function loadCustomJenis() {
+  try { return JSON.parse(localStorage.getItem(JENIS_KEY)) || []; } catch(e) { return []; }
+}
+
+function saveCustomJenis(list) {
+  try { localStorage.setItem(JENIS_KEY, JSON.stringify(list)); } catch(e) {}
+}
+
+function getAllJenis() {
+  var custom = loadCustomJenis();
+  var all = DEFAULT_JENIS.slice();
+  custom.forEach(function(j) { if (all.indexOf(j) === -1) all.push(j); });
+  return all;
+}
+
+function rebuildJenisSelect(selectedValue) {
+  var sel = document.getElementById('f_jenis');
+  if (!sel) return;
+  var all = getAllJenis();
+  // Preserve all options except dynamic ones (keep first blank + last __add__)
+  sel.innerHTML = '<option value="">— Pilih Jenis —</option>';
+  all.forEach(function(j) {
+    var opt = document.createElement('option');
+    opt.value = j;
+    opt.textContent = j;
+    if (j === selectedValue) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  var addOpt = document.createElement('option');
+  addOpt.value = '__add__';
+  addOpt.className = 'opt-add';
+  addOpt.textContent = '➕ Tambah Jenis Asset...';
+  sel.appendChild(addOpt);
+}
+
+function onJenisChange(sel) {
+  if (sel.value === '__add__') {
+    sel.value = sel.dataset.prev || '';  // revert visual selection
+    openAddJenisModal();
+  } else {
+    sel.dataset.prev = sel.value;
+  }
+}
+
+function openAddJenisModal() {
+  renderJenisChips();
+  document.getElementById('newJenisInput').value = '';
+  document.getElementById('addJenisModal').classList.add('show');
+}
+
+function closeAddJenisModal() {
+  document.getElementById('addJenisModal').classList.remove('show');
+}
+
+function renderJenisChips() {
+  var custom = loadCustomJenis();
+  var container = document.getElementById('customJenisChips');
+  if (!container) return;
+  if (custom.length === 0) {
+    container.innerHTML = '<div class="jenis-chips-empty">Belum ada jenis kustom.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  custom.forEach(function(j) {
+    var chip = document.createElement('div');
+    chip.className = 'jenis-chip';
+    chip.innerHTML = escHtml(j) + '<span class="jenis-chip-del" onclick="deleteCustomJenis('' + escHtml(j).replace(/'/g,"\'") + '')">×</span>';
+    container.appendChild(chip);
+  });
+}
+
+function addCustomJenis() {
+  var input = document.getElementById('newJenisInput');
+  var val = input.value.trim();
+  if (!val) { input.focus(); return; }
+  var custom = loadCustomJenis();
+  if (getAllJenis().indexOf(val) !== -1) {
+    showToast('⚠️ Jenis sudah ada: ' + val);
+    return;
+  }
+  custom.push(val);
+  saveCustomJenis(custom);
+  input.value = '';
+  renderJenisChips();
+  rebuildJenisSelect(val);
+  showToast('✅ Jenis ditambahkan: ' + val);
+}
+
+function deleteCustomJenis(jenis) {
+  var custom = loadCustomJenis().filter(function(j){ return j !== jenis; });
+  saveCustomJenis(custom);
+  renderJenisChips();
+  rebuildJenisSelect('');
+  showToast('🗑️ Jenis dihapus: ' + jenis);
+}
+
 /* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
