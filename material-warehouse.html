@@ -1182,25 +1182,7 @@ function applyCrop() {
   showToast('✅ Gambar berhasil di-crop & disimpan');
 }
 
-function applyCrop() {
-  var img = cropState.imgEl;
-  var dispW = parseFloat(img.style.width);
-  var dispH = parseFloat(img.style.height);
-  var scaleX = img.naturalWidth / dispW;
-  var scaleY = img.naturalHeight / dispH;
-  var cx = cropState.bx * scaleX;
-  var cy = cropState.by * scaleY;
-  var cw = cropState.bw * scaleX;
-  var ch = cropState.bh * scaleY;
-  var canvas = document.createElement('canvas');
-  canvas.width = cw; canvas.height = ch;
-  var ctx = canvas.getContext('2d');
-  ctx.drawImage(img, cx, cy, cw, ch, 0, 0, cw, ch);
-  var dataUrl = canvas.toDataURL('image/jpeg', 0.88);
-  setPreviewImage(dataUrl);
-  closeCropModal();
-  showToast('✅ Gambar berhasil di-crop & disimpan');
-}
+
 
 /* ══════════════════════════════════════════════
    FORM SAVE / EDIT
