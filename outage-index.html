@@ -297,6 +297,7 @@
   .module-card:nth-child(1) { animation-delay: 0.05s; }
   .module-card:nth-child(2) { animation-delay: 0.12s; }
   .module-card:nth-child(3) { animation-delay: 0.19s; }
+  .module-card:nth-child(4) { animation-delay: 0.26s; }
 
   @keyframes slideUp {
     from { opacity: 0; transform: translateY(18px); }
@@ -324,9 +325,10 @@
   }
 
   /* Card variants */
-  .card-input   { --card-accent: #0f766e; }
-  .card-check   { --card-accent: #1d4ed8; }
-  .card-history { --card-accent: #7c3aed; }
+  .card-input     { --card-accent: #0f766e; }
+  .card-check     { --card-accent: #1d4ed8; }
+  .card-history   { --card-accent: #7c3aed; }
+  .card-warehouse { --card-accent: #b45309; }
 
   .card-num {
     font-family: 'Courier New', monospace;
@@ -356,9 +358,10 @@
     transform: scale(1.08) rotate(4deg);
   }
 
-  .card-input   .card-icon-wrap { --card-icon-bg: rgba(15,118,110,0.1); }
-  .card-check   .card-icon-wrap { --card-icon-bg: rgba(29,78,216,0.1); }
-  .card-history .card-icon-wrap { --card-icon-bg: rgba(124,58,237,0.1); }
+  .card-input     .card-icon-wrap { --card-icon-bg: rgba(15,118,110,0.1); }
+  .card-check     .card-icon-wrap { --card-icon-bg: rgba(29,78,216,0.1); }
+  .card-history   .card-icon-wrap { --card-icon-bg: rgba(124,58,237,0.1); }
+  .card-warehouse .card-icon-wrap { --card-icon-bg: rgba(180,83,9,0.1); }
 
   .card-title {
     font-size: 17px;
@@ -414,9 +417,10 @@
     border-color: var(--card-accent, var(--accent));
   }
 
-  .card-input   .ctag { --tag-bg: rgba(15,118,110,0.08);  --tag-bg-hover: rgba(15,118,110,0.14); }
-  .card-check   .ctag { --tag-bg: rgba(29,78,216,0.08);   --tag-bg-hover: rgba(29,78,216,0.14); }
-  .card-history .ctag { --tag-bg: rgba(124,58,237,0.08);  --tag-bg-hover: rgba(124,58,237,0.14); }
+  .card-input     .ctag { --tag-bg: rgba(15,118,110,0.08);  --tag-bg-hover: rgba(15,118,110,0.14); }
+  .card-check     .ctag { --tag-bg: rgba(29,78,216,0.08);   --tag-bg-hover: rgba(29,78,216,0.14); }
+  .card-history   .ctag { --tag-bg: rgba(124,58,237,0.08);  --tag-bg-hover: rgba(124,58,237,0.14); }
+  .card-warehouse .ctag { --tag-bg: rgba(180,83,9,0.08);    --tag-bg-hover: rgba(180,83,9,0.14); }
 
   .card-arrow {
     position: absolute;
@@ -640,6 +644,22 @@
         <span class="ctag">RIWAYAT</span>
         <span class="ctag">FILTER</span>
         <span class="ctag">PRINT</span>
+      </div>
+      <div class="card-arrow">↗</div>
+    </a>
+
+    <!-- 4. Data Material Warehouse -->
+    <a class="module-card card-warehouse" href="material-warehouse.html">
+      <div class="card-num">MOD — 04</div>
+      <div class="card-icon-wrap">📦</div>
+      <div class="card-title">Data Material<br>Warehouse</div>
+      <div class="card-desc">
+        Manajemen data asset material gudang. Input, cari, preview, dan kelola asset dengan dukungan foto dan informasi lengkap per item.
+      </div>
+      <div class="card-tags">
+        <span class="ctag">MATERIAL</span>
+        <span class="ctag">FOTO ASSET</span>
+        <span class="ctag">WAREHOUSE</span>
       </div>
       <div class="card-arrow">↗</div>
     </a>
