@@ -599,23 +599,45 @@ function dcsDownloadPdf() {
       doc.setFont('helvetica','bold'); doc.text('Program: ', pw/2+4, y+12); doc.setFont('helvetica','normal'); doc.text(prog||'-', pw/2+22, y+12);
       y += 26;
 
-      /* Checklist table */
-      var head = [['No.','Step of Work','Criteria','✓'].concat(DCS_DROPS.map(function(d){ return d.label; })).concat(['Result'])];
-      var body = DCS_CHECKS.map(function(item, idx){
-        var chk = document.getElementById('dcsChk_'+idx);
-        var row = [String(item.no), item.label, item.criteria||'', (chk&&chk.checked)?'✓':''];
-        DCS_DROPS.forEach(function(drop){
+      /* Checklist table — hanya drop aktif, hanya baris yang ada centang */
+      var activeDrops = dcsGetActiveDrops();
+
+      var head = [['No.','Step of Work','Criteria','✓']
+        .concat(activeDrops.map(function(d){ return d.label; }))
+        .concat(['Result'])];
+
+      var body = [];
+      DCS_CHECKS.forEach(function(item, idx){
+        var chkEl  = document.getElementById('dcsChk_'+idx);
+        var chked  = chkEl && chkEl.checked;
+        var anyDrop = activeDrops.some(function(drop){
           var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
-          row.push((el&&el.checked)?'✓':'');
+          return el && el.checked;
+        });
+        if (!chked && !anyDrop) return; /* skip baris tidak dicentang */
+
+        var row = [String(item.no), item.label, item.criteria||'', chked ? '✓' : ''];
+        activeDrops.forEach(function(drop){
+          var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
+          row.push((el&&el.checked) ? '✓' : '');
         });
         var rec = document.getElementById('dcsRec_'+idx);
-        row.push(rec&&rec.textContent?'OK':'');
-        return row;
+        row.push(rec && rec.textContent ? 'OK' : '');
+        body.push(row);
       });
 
-      var colStyles = {0:{cellWidth:8},1:{cellWidth:55},2:{cellWidth:28},3:{cellWidth:8}};
-      DCS_DROPS.forEach(function(d, i){ colStyles[4+i] = {cellWidth:16, halign:'center'}; });
-      colStyles[4+DCS_DROPS.length] = {cellWidth:14, halign:'center'};
+      if (body.length === 0) {
+        alert('Tidak ada baris yang dicentang. Centang minimal satu step sebelum download PDF.');
+        return;
+      }
+
+      /* Lebar kolom otomatis berdasarkan jumlah drop aktif */
+      var dropColW = activeDrops.length > 0
+        ? Math.min(16, Math.max(10, Math.floor((contentW - 8 - 55 - 28 - 8 - 14) / activeDrops.length)))
+        : 16;
+      var colStyles = {0:{cellWidth:8},1:{cellWidth:55},2:{cellWidth:28},3:{cellWidth:8, halign:'center'}};
+      activeDrops.forEach(function(d, i){ colStyles[4+i] = {cellWidth:dropColW, halign:'center'}; });
+      colStyles[4+activeDrops.length] = {cellWidth:14, halign:'center'};
 
       doc.autoTable({
         startY: y,
