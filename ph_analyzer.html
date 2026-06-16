@@ -808,12 +808,14 @@ function phDownloadPdf(){
   var id=params.get('id'), doPrint=params.get('print')==='1';
   if(!id) return;
   dbLoad(id,function(rec){
+    /* Supabase JSONB sudah parsed, tapi defensif jika string */
     var data=rec.data||{};
+    if(typeof data==='string'){ try{data=JSON.parse(data);}catch(e){data={};} }
     window._editingId=id;
     var sv=function(eid,val){var e=document.getElementById(eid);if(e)e.value=val||'';};
     setTimeout(function(){
-      sv('phDate', rec.tanggal    || data.tanggal    || '');
-      sv('phPIC',  rec.pic        || data.pic        || '');
+      sv('phDate', rec.tanggal || data.tanggal || '');
+      sv('phPIC',  rec.pic     || data.pic     || '');
       sv('phWO',   rec.work_order || data.work_order || '');
       if(data.docNo) sv('phDocNo',data.docNo);
 
