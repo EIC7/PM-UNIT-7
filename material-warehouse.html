@@ -519,19 +519,58 @@
 
   .preview-image-block {
     width: 100%;
-    background: #f8fafc;
+    background: #0f172a;
     border-radius: 10px;
     overflow: hidden;
     margin-bottom: 20px;
     border: 1px solid var(--border);
-    text-align: center;
-    padding: 12px;
+    position: relative;
+    height: 300px;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
   }
+  .preview-image-block.grabbing { cursor: grabbing; }
   .preview-image-block img {
-    max-width: 100%;
-    max-height: 260px;
-    object-fit: contain;
-    border-radius: 6px;
+    position: absolute;
+    transform-origin: 0 0;
+    pointer-events: none;
+    border-radius: 4px;
+    display: block;
+  }
+  .pv-zoom-bar {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.60);
+    backdrop-filter: blur(4px);
+    border-radius: 20px;
+    padding: 5px 10px;
+    z-index: 10;
+  }
+  .pv-zoom-btn {
+    width: 28px; height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    line-height: 1;
+    transition: background 0.15s;
+  }
+  .pv-zoom-btn:hover { background: rgba(255,255,255,0.30); }
+  .pv-zoom-label {
+    font-size: 11px;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    min-width: 36px;
+    text-align: center;
   }
   .preview-no-image {
     padding: 32px;
@@ -1330,10 +1369,21 @@ function openPreviewModal(id) {
   document.getElementById('previewTitle').textContent = a.nama || 'Detail Asset';
   document.getElementById('previewSubtitle').textContent = a.nomor || '—';
 
-  // Image
+  // Image with zoom+pan viewer
   var imgBlock = document.getElementById('previewImageBlock');
   if (a.gambar) {
-    imgBlock.innerHTML = '<img src="'+a.gambar+'" alt="gambar asset" style="max-width:100%;max-height:260px;object-fit:contain;border-radius:8px;">';
+    imgBlock.innerHTML =
+      '<img id="pvImg" src="'+a.gambar+'" alt="gambar asset" draggable="false">'+
+      '<div class="pv-zoom-bar">'+
+        '<button class="pv-zoom-btn" onclick="pvZoom(-0.25)" title="Zoom out">−</button>'+
+        '<span class="pv-zoom-label" id="pvZoomLabel">100%</span>'+
+        '<button class="pv-zoom-btn" onclick="pvZoom(+0.25)" title="Zoom in">+</button>'+
+        '<button class="pv-zoom-btn" onclick="pvReset()" title="Reset" style="font-size:12px">⟳</button>'+
+      '</div>';
+    // init after img loads
+    var pvI = document.getElementById('pvImg');
+    pvI.onload = function(){ pvInit(imgBlock, pvI); };
+    if (pvI.complete && pvI.naturalWidth) pvInit(imgBlock, pvI);
   } else {
     imgBlock.innerHTML = '<div class="preview-no-image"><div class="icon">🖼️</div><div>Tidak ada gambar</div></div>';
   }
@@ -1370,8 +1420,133 @@ function openPreviewModal(id) {
   document.getElementById('previewModal').classList.add('show');
 }
 
+/* ── PREVIEW ZOOM + PAN ── */
+var PV = { scale: 1, minScale: 0.2, maxScale: 5, tx: 0, ty: 0, block: null, img: null };
+
+function pvInit(block, img) {
+  PV.block = block;
+  PV.img   = img;
+  pvReset();
+  pvBindEvents(block, img);
+}
+
+function pvApply() {
+  if (!PV.img) return;
+  PV.img.style.transform = 'translate('+PV.tx+'px,'+PV.ty+'px) scale('+PV.scale+')';
+  var el = document.getElementById('pvZoomLabel');
+  if (el) el.textContent = Math.round(PV.scale * 100) + '%';
+}
+
+function pvReset() {
+  if (!PV.block || !PV.img) return;
+  var bw = PV.block.clientWidth  || 400;
+  var bh = PV.block.clientHeight || 300;
+  var iw = PV.img.naturalWidth   || PV.img.clientWidth  || bw;
+  var ih = PV.img.naturalHeight  || PV.img.clientHeight || bh;
+  // fit inside block
+  PV.scale = Math.min(bw / iw, bh / ih, 1);
+  PV.tx = (bw - iw * PV.scale) / 2;
+  PV.ty = (bh - ih * PV.scale) / 2;
+  pvApply();
+}
+
+function pvZoom(delta) {
+  if (!PV.block || !PV.img) return;
+  var bw = PV.block.clientWidth  || 400;
+  var bh = PV.block.clientHeight || 300;
+  var cx = bw / 2, cy = bh / 2; // zoom toward center
+  var oldScale = PV.scale;
+  PV.scale = Math.min(PV.maxScale, Math.max(PV.minScale, PV.scale + delta));
+  var ratio = PV.scale / oldScale;
+  PV.tx = cx - ratio * (cx - PV.tx);
+  PV.ty = cy - ratio * (cy - PV.ty);
+  pvApply();
+}
+
+function pvClampPan() {
+  if (!PV.block || !PV.img) return;
+  var bw = PV.block.clientWidth  || 400;
+  var bh = PV.block.clientHeight || 300;
+  var iw = (PV.img.naturalWidth  || PV.img.clientWidth  || bw) * PV.scale;
+  var ih = (PV.img.naturalHeight || PV.img.clientHeight || bh) * PV.scale;
+  // allow some over-pan so image edge can reach block edge
+  var padX = Math.max(bw * 0.1, 40);
+  var padY = Math.max(bh * 0.1, 40);
+  PV.tx = Math.min(padX, Math.max(bw - iw - padX, PV.tx));
+  PV.ty = Math.min(padY, Math.max(bh - ih - padY, PV.ty));
+}
+
+function pvBindEvents(block, img) {
+  var startX, startY, startTx, startTy, panning = false;
+
+  // ── Pointer drag ──
+  block.addEventListener('pointerdown', function(e) {
+    if (e.target.classList.contains('pv-zoom-btn')) return;
+    e.preventDefault();
+    block.setPointerCapture(e.pointerId);
+    panning = true;
+    startX = e.clientX; startY = e.clientY;
+    startTx = PV.tx;    startTy = PV.ty;
+    block.classList.add('grabbing');
+  });
+  block.addEventListener('pointermove', function(e) {
+    if (!panning) return;
+    PV.tx = startTx + (e.clientX - startX);
+    PV.ty = startTy + (e.clientY - startY);
+    pvClampPan();
+    pvApply();
+  });
+  function endPan() { panning = false; block.classList.remove('grabbing'); }
+  block.addEventListener('pointerup',     endPan);
+  block.addEventListener('pointercancel', endPan);
+
+  // ── Wheel zoom ──
+  block.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var rect  = block.getBoundingClientRect();
+    var cx    = e.clientX - rect.left;
+    var cy    = e.clientY - rect.top;
+    var delta = e.deltaY < 0 ? 0.15 : -0.15;
+    var oldScale = PV.scale;
+    PV.scale = Math.min(PV.maxScale, Math.max(PV.minScale, PV.scale + delta));
+    var ratio = PV.scale / oldScale;
+    PV.tx = cx - ratio * (cx - PV.tx);
+    PV.ty = cy - ratio * (cy - PV.ty);
+    pvClampPan();
+    pvApply();
+  }, { passive: false });
+
+  // ── Pinch zoom (touch) ──
+  var lastDist = null;
+  block.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 2) lastDist = null;
+  }, { passive: true });
+  block.addEventListener('touchmove', function(e) {
+    if (e.touches.length !== 2) return;
+    e.preventDefault();
+    var t0 = e.touches[0], t1 = e.touches[1];
+    var dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+    if (lastDist) {
+      var rect = block.getBoundingClientRect();
+      var cx = ((t0.clientX + t1.clientX) / 2) - rect.left;
+      var cy = ((t0.clientY + t1.clientY) / 2) - rect.top;
+      var delta = (dist - lastDist) * 0.01;
+      var oldScale = PV.scale;
+      PV.scale = Math.min(PV.maxScale, Math.max(PV.minScale, PV.scale + delta));
+      var ratio = PV.scale / oldScale;
+      PV.tx = cx - ratio * (cx - PV.tx);
+      PV.ty = cy - ratio * (cy - PV.ty);
+      pvClampPan();
+      pvApply();
+    }
+    lastDist = dist;
+  }, { passive: false });
+  block.addEventListener('touchend', function() { lastDist = null; }, { passive: true });
+}
+
 function closePreviewModal() {
   document.getElementById('previewModal').classList.remove('show');
+  PV.block = null; PV.img = null;
 }
 
 /* ══════════════════════════════════════════════
