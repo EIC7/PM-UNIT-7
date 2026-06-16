@@ -701,15 +701,17 @@ var SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 var OUTAGE_TABLE = 'outage_records';
 
 function supaFetch(method, path, body) {
-  var opts = {
-    method: method,
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    }
+  var headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json'
   };
+  // 'Prefer: return=representation' is only valid on write operations (POST/PATCH/PUT/DELETE).
+  // Sending it on GET causes a 400 Bad Request from PostgREST/Supabase.
+  if (method !== 'GET') {
+    headers['Prefer'] = 'return=representation';
+  }
+  var opts = { method: method, headers: headers };
   if (body) opts.body = JSON.stringify(body);
   return fetch(SUPA_URL + '/rest/v1/' + path, opts)
     .then(function(res) {
