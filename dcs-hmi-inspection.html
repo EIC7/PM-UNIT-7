@@ -599,6 +599,20 @@ function dcsDownloadPdf() {
       doc.setFont('helvetica','bold'); doc.text('Program: ', pw/2+4, y+12); doc.setFont('helvetica','normal'); doc.text(prog||'-', pw/2+22, y+12);
       y += 26;
 
+      /* ── fungsi gambar kotak centang (sama persis pola beltscale) ── */
+      function drawCheckboxDcs(cx, cy, checked) {
+        var size = 3.5;
+        doc.setDrawColor(80, 80, 80);
+        doc.setLineWidth(0.3);
+        doc.rect(cx - size/2, cy - size/2, size, size, 'S');
+        if (checked) {
+          doc.setDrawColor(26, 107, 58);
+          doc.setLineWidth(0.5);
+          doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.5);
+          doc.line(cx-size/2+size*0.38, cy+size/2-0.5, cx+size/2-0.3, cy-size/2+0.5);
+        }
+      }
+
       /* Checklist table — hanya drop aktif, hanya baris yang ada centang */
       var activeDrops = dcsGetActiveDrops();
 
@@ -616,10 +630,10 @@ function dcsDownloadPdf() {
         });
         if (!chked && !anyDrop) return;
 
-        var row = [String(item.no), item.label, item.criteria||'', chked ? '✓' : ''];
+        var row = [String(item.no), item.label, item.criteria||'', chked ? '__CHK__' : '__BOX__'];
         activeDrops.forEach(function(drop){
           var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
-          row.push((el&&el.checked) ? '✓' : '');
+          row.push((el&&el.checked) ? '__CHK__' : '__BOX__');
         });
         var rec = document.getElementById('dcsRec_'+idx);
         row.push(rec && rec.textContent ? 'OK' : '');
@@ -631,32 +645,26 @@ function dcsDownloadPdf() {
         return;
       }
 
-      /* Hitung lebar kolom agar pas di contentW:
-         - Kolom tetap: No(7), ✓(7), tiap-drop(min 9), Result(10)
-         - Sisa dibagi ke Criteria, sisanya ke Step of Work (auto wrap) */
+      /* Hitung lebar kolom agar selalu pas di contentW */
       var nDrops    = activeDrops.length;
       var wNo       = 7;
       var wChk      = 7;
       var wResult   = 10;
-      var wCriteria = Math.max(22, Math.min(30, 28));
-      /* Lebar per drop: minimal 9mm, maksimal 18mm, proporsional */
-      var wDropFixed = wNo + wChk + wResult + wCriteria;
-      var wDropTotal = contentW - wDropFixed;
-      var wDrop = nDrops > 0
-        ? Math.max(9, Math.min(18, Math.floor(wDropTotal / (nDrops + 1.8))))
+      var wCriteria = 26;
+      var wDropEach = nDrops > 0
+        ? Math.max(9, Math.min(18, Math.floor((contentW - wNo - wChk - wResult - wCriteria) / (nDrops + 1.8))))
         : 0;
-      /* Step of Work = sisa setelah semua kolom lain */
-      var wStep = contentW - wNo - wChk - wResult - wCriteria - (wDrop * nDrops);
-      wStep = Math.max(28, wStep); /* minimal 28mm agar teks masih terbaca */
+      var wStep = contentW - wNo - wChk - wResult - wCriteria - (wDropEach * nDrops);
+      wStep = Math.max(28, wStep);
 
       var colStyles = {
-        0: {cellWidth: wNo},
+        0: {cellWidth: wNo,       halign:'center'},
         1: {cellWidth: wStep},
         2: {cellWidth: wCriteria},
-        3: {cellWidth: wChk, halign:'center'}
+        3: {cellWidth: wChk,      halign:'center'}
       };
       activeDrops.forEach(function(d, i){
-        colStyles[4+i] = {cellWidth: wDrop, halign:'center'};
+        colStyles[4+i] = {cellWidth: wDropEach, halign:'center'};
       });
       colStyles[4+nDrops] = {cellWidth: wResult, halign:'center'};
 
@@ -665,11 +673,20 @@ function dcsDownloadPdf() {
         head: head,
         body: body,
         margin: {left:marginX, right:marginX},
-        styles: {fontSize:7, cellPadding:2.5, lineColor:[180,200,220], lineWidth:0.3},
-        headStyles: {fillColor:[30,58,95], textColor:255, fontStyle:'bold', fontSize:7, halign:'center'},
+        styles: {fontSize:7, cellPadding:2.5, lineColor:[180,200,220], lineWidth:0.3, overflow:'linebreak'},
+        headStyles: {fillColor:[30,58,95], textColor:255, fontStyle:'bold', fontSize:6.5, halign:'center', font:'helvetica'},
         alternateRowStyles: {fillColor:[240,247,255]},
         columnStyles: colStyles,
-        willDrawPage: function(data){ if(data.pageNumber>1){ drawBg(doc,pw,ph); } }
+        willDrawPage: function(data){ if(data.pageNumber>1){ drawBg(doc,pw,ph); } },
+        didDrawCell: function(data) {
+          if (data.section !== 'body') return;
+          var val = data.cell.raw;
+          if (val !== '__CHK__' && val !== '__BOX__') return;
+          /* Kosongkan teks default jsPDF lalu gambar kotak */
+          var cx = data.cell.x + data.cell.width / 2;
+          var cy = data.cell.y + data.cell.height / 2;
+          drawCheckboxDcs(cx, cy, val === '__CHK__');
+        }
       });
 
       y = doc.lastAutoTable.finalY + 8;
