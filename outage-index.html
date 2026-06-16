@@ -741,7 +741,7 @@ setInterval(tick, 1000);
 function loadRecent() {
   var container = document.getElementById('recentList');
 
-  supaFetch('GET', OUTAGE_TABLE + '?select=id,modul,tanggal,asset_tag,pic,created_at&order=created_at.desc&limit=5')
+  supaFetch('GET', OUTAGE_TABLE + '?select=*&order=created_at.desc&limit=5')
     .then(function(rows) {
       if (!rows || rows.length === 0) {
         container.innerHTML =
@@ -768,7 +768,8 @@ function loadRecent() {
         container.appendChild(item);
       });
     })
-    .catch(function() {
+    .catch(function(err) {
+      console.error('Supabase loadRecent error:', err && err.message ? err.message : err);
       container.innerHTML =
         '<div style="text-align:center;padding:20px;color:var(--text-light);font-size:12px">' +
         'Gagal memuat data — tabel outage_records belum tersedia atau koneksi bermasalah.</div>';
