@@ -608,13 +608,13 @@ function dcsDownloadPdf() {
 
       var body = [];
       DCS_CHECKS.forEach(function(item, idx){
-        var chkEl  = document.getElementById('dcsChk_'+idx);
-        var chked  = chkEl && chkEl.checked;
+        var chkEl   = document.getElementById('dcsChk_'+idx);
+        var chked   = chkEl && chkEl.checked;
         var anyDrop = activeDrops.some(function(drop){
           var el = document.getElementById('dcsDrop_'+drop.id+'_'+idx);
           return el && el.checked;
         });
-        if (!chked && !anyDrop) return; /* skip baris tidak dicentang */
+        if (!chked && !anyDrop) return;
 
         var row = [String(item.no), item.label, item.criteria||'', chked ? '✓' : ''];
         activeDrops.forEach(function(drop){
@@ -631,13 +631,34 @@ function dcsDownloadPdf() {
         return;
       }
 
-      /* Lebar kolom otomatis berdasarkan jumlah drop aktif */
-      var dropColW = activeDrops.length > 0
-        ? Math.min(16, Math.max(10, Math.floor((contentW - 8 - 55 - 28 - 8 - 14) / activeDrops.length)))
-        : 16;
-      var colStyles = {0:{cellWidth:8},1:{cellWidth:55},2:{cellWidth:28},3:{cellWidth:8, halign:'center'}};
-      activeDrops.forEach(function(d, i){ colStyles[4+i] = {cellWidth:dropColW, halign:'center'}; });
-      colStyles[4+activeDrops.length] = {cellWidth:14, halign:'center'};
+      /* Hitung lebar kolom agar pas di contentW:
+         - Kolom tetap: No(7), ✓(7), tiap-drop(min 9), Result(10)
+         - Sisa dibagi ke Criteria, sisanya ke Step of Work (auto wrap) */
+      var nDrops    = activeDrops.length;
+      var wNo       = 7;
+      var wChk      = 7;
+      var wResult   = 10;
+      var wCriteria = Math.max(22, Math.min(30, 28));
+      /* Lebar per drop: minimal 9mm, maksimal 18mm, proporsional */
+      var wDropFixed = wNo + wChk + wResult + wCriteria;
+      var wDropTotal = contentW - wDropFixed;
+      var wDrop = nDrops > 0
+        ? Math.max(9, Math.min(18, Math.floor(wDropTotal / (nDrops + 1.8))))
+        : 0;
+      /* Step of Work = sisa setelah semua kolom lain */
+      var wStep = contentW - wNo - wChk - wResult - wCriteria - (wDrop * nDrops);
+      wStep = Math.max(28, wStep); /* minimal 28mm agar teks masih terbaca */
+
+      var colStyles = {
+        0: {cellWidth: wNo},
+        1: {cellWidth: wStep},
+        2: {cellWidth: wCriteria},
+        3: {cellWidth: wChk, halign:'center'}
+      };
+      activeDrops.forEach(function(d, i){
+        colStyles[4+i] = {cellWidth: wDrop, halign:'center'};
+      });
+      colStyles[4+nDrops] = {cellWidth: wResult, halign:'center'};
 
       doc.autoTable({
         startY: y,
