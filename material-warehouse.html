@@ -1489,7 +1489,7 @@ function renderJenisChips() {
   custom.forEach(function(j) {
     var chip = document.createElement('div');
     chip.className = 'jenis-chip';
-    chip.innerHTML = escHtml(j) + '<span class="jenis-chip-del" onclick="deleteCustomJenis('' + escHtml(j).replace(/'/g,"\'") + '')">×</span>';
+    chip.innerHTML = escHtml(j) + '<span class="jenis-chip-del" onclick="deleteCustomJenis(&quot;' + escHtml(j).replace(/"/g, '&quot;') + '&quot;)">×</span>';
     container.appendChild(chip);
   });
 }
