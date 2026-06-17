@@ -490,12 +490,21 @@ var reportBgImg = null, reportBgReady = false, reportBgCallbacks = [];
 function initReportBackground() {
   if (reportBgImg) return;
   reportBgImg = new Image();
-  reportBgImg.onload = function(){ reportBgReady=true; var cbs=reportBgCallbacks.splice(0); for(var i=0;i<cbs.length;i++) cbs[i](); };
-  reportBgImg.onerror = function(){ reportBgReady=false; var cbs=reportBgCallbacks.splice(0); for(var i=0;i<cbs.length;i++) cbs[i](); };
-  /* Timeout fallback: jika 3 detik belum load, lanjutkan saja */
+  reportBgImg.onload = function(){
+    reportBgReady = true;
+    var cbs = reportBgCallbacks.splice(0);
+    for(var i=0;i<cbs.length;i++) cbs[i]();
+  };
+  reportBgImg.onerror = function(){
+    reportBgReady = false;
+    var cbs = reportBgCallbacks.splice(0);
+    for(var i=0;i<cbs.length;i++) cbs[i]();
+  };
+  /* Timeout 3 detik — sama persis pola b12 */
   setTimeout(function(){
     if(!reportBgReady && reportBgCallbacks.length){
-      var cbs=reportBgCallbacks.splice(0); for(var i=0;i<cbs.length;i++) cbs[i]();
+      var cbs = reportBgCallbacks.splice(0);
+      for(var i=0;i<cbs.length;i++) cbs[i]();
     }
   }, 3000);
   reportBgImg.src = 'DRAFT PM KOSONG.jpg';
@@ -504,8 +513,16 @@ function ensureReportBackground(cb){
   if(!reportBgImg){reportBgCallbacks.push(cb);initReportBackground();return;}
   if(reportBgReady){cb();return;}
   if(reportBgImg.complete&&reportBgImg.naturalWidth>0){reportBgReady=true;cb();return;}
-  if(reportBgImg.complete&&reportBgImg.naturalWidth===0){cb();return;} /* gagal load - langsung proceed */
+  if(reportBgImg.complete&&reportBgImg.naturalWidth===0){cb();return;}
+  /* Gambar masih loading — daftarkan callback + safety timeout 2 detik */
   reportBgCallbacks.push(cb);
+  setTimeout(function(){
+    var idx = reportBgCallbacks.indexOf(cb);
+    if(idx !== -1){
+      reportBgCallbacks.splice(idx, 1);
+      cb(); /* timeout — langsung jalankan tanpa background */
+    }
+  }, 2000);
 }
 function drawBg(doc,pw,ph){
   try {
@@ -1098,7 +1115,7 @@ function dbCollectData(modul) {
         dcsRefreshAll();
       }
       dbShowToast('Data dimuat dari riwayat ✓');
-      if (doPrint){ ensureReportBackground(function(){ setTimeout(dcsDownloadPdf, 300); }); }
+      if (doPrint){ setTimeout(dcsDownloadPdf, 400); }
     }, 600);
   });
 })();

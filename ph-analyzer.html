@@ -571,11 +571,11 @@ function phDownloadPdf(){
       activeUnits.forEach(function(u){ phSyncCaptions(u.id); });
 
       var jsPDF=window.jspdf.jsPDF;
-      var doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-      var pw=doc.internal.pageSize.getWidth();   // 297mm
-      var ph=doc.internal.pageSize.getHeight();  // 210mm
-      var marginX=15, marginTop=18, marginBottom=15;
-      var contentW=pw-marginX*2;
+      var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+      var pw=doc.internal.pageSize.getWidth();   // 210mm
+      var ph=doc.internal.pageSize.getHeight();  // 297mm
+      var marginX=10, marginTop=18, marginBottom=15;
+      var contentW=pw-marginX*2;  // 190mm
 
       var now=new Date();
       var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -592,13 +592,13 @@ function phDownloadPdf(){
       drawBg(doc,pw,ph);
 
       // ── HEADER ──
-      doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(20,40,100);
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,40,100);
       doc.text('Analyzer Calibration And Maintenance', marginX, y); y+=7;
       doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,60,60);
       doc.text(safe(gv('phDocNo')), marginX, y);
 
       // Top-right info
-      var infoX=pw-marginX-120;
+      var infoX=pw-marginX-95;
       doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(55,80,140);
       doc.text('Date:', infoX, marginTop); doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.text(safe(gv('phDate')), infoX+15, marginTop);
       doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140); doc.text('PIC:', infoX, marginTop+5.5); doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.text(safe(gv('phPIC')), infoX+15, marginTop+5.5);
@@ -631,13 +631,21 @@ function phDownloadPdf(){
         if(checked){ doc.setDrawColor(26,107,58); doc.setLineWidth(0.4); doc.line(cx-size/2+0.3,cy,cx-size/2+size*0.38,cy+size/2-0.4); doc.line(cx-size/2+size*0.38,cy+size/2-0.4,cx+size/2-0.2,cy-size/2+0.4); }
       }
 
-      // Compute column widths
-      // Fixed: No(8) + Step(60) + Criteria(25) + Check(8) = 101mm
-      // Remaining: contentW-101 split equally among activeUnits + 1 Result col
-      var fixedW=101, remW=contentW-fixedW;
-      var unitColW=Math.max(25, Math.floor((remW-20)/(activeUnits.length)));
-      var resultColW=remW-unitColW*activeUnits.length;
-      if(resultColW<15){resultColW=15;}
+      // Compute column widths — adaptif portrait A4 (contentW~190mm)
+      // Kolom tetap: No(7) + Criteria(22) + Check(7) + Result(12) = 48mm
+      // Sisa dibagi: Step of Work + unit columns
+      // Min unitColW = 18mm, max = 30mm
+      var nUnits = activeUnits.length;
+      var fixedNoW=7, fixedCritW=22, fixedChkW=7, fixedResW=12;
+      var fixedTotal=fixedNoW+fixedCritW+fixedChkW+fixedResW; // 48mm
+      var remaining=contentW-fixedTotal; // ~142mm
+
+      // Hitung unitColW — min 18mm, max 28mm
+      var unitColW=Math.min(28, Math.max(18, Math.floor((remaining*0.55)/nUnits)));
+      // Step of Work dapat sisa
+      var stepW=remaining-unitColW*nUnits;
+      if(stepW<30){stepW=30; unitColW=Math.floor((remaining-stepW)/nUnits);}
+      var resultColW=fixedResW;
 
       // Build table rows
       var tableHead=[['No','Step of Work','Criteria','✓'].concat(activeUnits.map(function(u){return u.label;})).concat(['Result'])];
@@ -697,7 +705,7 @@ function phDownloadPdf(){
         2:{cellWidth:25},
         3:{cellWidth:8,halign:'center'},
       };
-      activeUnits.forEach(function(_,i){ colStyles[4+i]={cellWidth:unitColW,halign:'center'}; });
+      activeUnits.forEach(function(_,i){ colStyles[4+i]={cellWidth:unitColW,halign:'center',overflow:'linebreak'}; });
       colStyles[4+activeUnits.length]={cellWidth:resultColW,halign:'center'};
 
       doc.autoTable({
