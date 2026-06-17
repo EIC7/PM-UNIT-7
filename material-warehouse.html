@@ -1755,7 +1755,8 @@ function renderJenisChips() {
   customJenisList.forEach(function(j) {
     var chip = document.createElement('div');
     chip.className = 'jenis-chip';
-    chip.innerHTML = escHtml(j) + '<span class="jenis-chip-del" onclick="deleteCustomJenis('' + escHtml(j).replace(/'/g, "\'") + '')">×</span>';
+    var safeJ = escHtml(j).replace(/'/g, '&#39;');
+    chip.innerHTML = escHtml(j) + '<span class="jenis-chip-del" onclick="deleteCustomJenis(&#39;' + safeJ + '&#39;)">×</span>';
     container.appendChild(chip);
   });
 }
