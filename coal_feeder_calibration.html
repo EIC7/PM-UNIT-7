@@ -1313,7 +1313,16 @@ function cfDownloadPdf() {
         DW[DW.length-1] += (contentW - dSum);
 
         var DHEADS = ['%Ma','mA Source','AI3 (mA)','AO1 (mA)','AO2 (mA)','Actual FR on Display (t/h)','Feed Rate Demand/ Setpoint','Motor Speed (rpm)','FREQ (Hz) P527','LOAD (%) P507','VOLT (VAC) P506','CURR (A) P508','Bel Load (kg/m) A01'];
-        var DHEAD_H = 16;
+
+        // ── Auto-wrap header: hitung tinggi header dari baris terpanjang ──
+        doc.setFont('helvetica','bold'); doc.setFontSize(5.8);
+        var lineH = 3.2;
+        var wrappedHeads = DHEADS.map(function(h, i){
+          return doc.splitTextToSize(h, DW[i] - 1.5);
+        });
+        var maxLines = wrappedHeads.reduce(function(mx, lines){ return Math.max(mx, lines.length); }, 1);
+        var DHEAD_H = Math.max(12, maxLines * lineH + 4);
+
         checkPage(DHEAD_H + 5*9 + 4);
 
         // draw header background
@@ -1325,9 +1334,7 @@ function cfDownloadPdf() {
         DHEADS.forEach(function(h, i){ doc.rect(dhx, y, DW[i], DHEAD_H, 'S'); dhx += DW[i]; });
         doc.setFont('helvetica','bold'); doc.setFontSize(5.8); doc.setTextColor(255,255,255);
         dhx = marginX;
-        DHEADS.forEach(function(h, i) {
-          var lines = h.split('\n');
-          var lineH = 3.2;
+        wrappedHeads.forEach(function(lines, i) {
           var totalH = lines.length * lineH;
           var ty = y + (DHEAD_H - totalH) / 2 + lineH;
           lines.forEach(function(line, li) {
