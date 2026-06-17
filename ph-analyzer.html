@@ -574,9 +574,9 @@ function phDownloadPdf(){
       var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
       var pw=doc.internal.pageSize.getWidth();   // 210mm
       var ph=doc.internal.pageSize.getHeight();  // 297mm
-      var marginX=25, marginTop=25, marginTop2=25, marginBottom=20;
+      var marginX=15, marginTop=25, marginTop2=25, marginBottom=20;
       var bgFooterH=marginBottom;
-      var contentW=pw-marginX*2;  // 160mm
+      var contentW=pw-marginX*2;  // 180mm
 
       var now=new Date();
       var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -597,11 +597,12 @@ function phDownloadPdf(){
         }
       }
 
-      // Halaman pertama — background lalu white overlay full width
+      // Halaman pertama — background lalu white overlay
+      // Overlay mulai dari y=16 (bawah logo header template), cover sampai footer
       drawBg(doc,pw,ph);
       doc.setFillColor(255,255,255);
-      doc.setGState && doc.setGState(new doc.GState({opacity:0.88}));
-      doc.rect(0,marginTop,pw,ph-marginTop-bgFooterH,'F');
+      doc.setGState && doc.setGState(new doc.GState({opacity:0.92}));
+      doc.rect(0, 16, pw, ph-16-bgFooterH, 'F');
       if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
 
       // ── HEADER TITLE ──
