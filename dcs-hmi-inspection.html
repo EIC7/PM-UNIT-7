@@ -815,7 +815,7 @@ function dcsDownloadPdf() {
       function safe(s){ return String(s||''); }
       function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
 
-      var marginTop = 20, bgFooterH = 22;
+      var marginTop = 20, marginTop2 = 25, bgFooterH = 22;
       var y = marginTop;
 
       function checkPage(need){
@@ -823,8 +823,8 @@ function dcsDownloadPdf() {
           doc.addPage();
           drawBg(doc,pw,ph);
           doc.setFillColor(255,255,255);
-          doc.rect(marginX, marginTop, contentW, ph-marginTop-bgFooterH, 'F');
-          y=marginTop;
+          doc.rect(marginX, marginTop2, contentW, ph-marginTop2-bgFooterH, 'F');
+          y=marginTop2;
         }
       }
 
@@ -960,8 +960,10 @@ function dcsDownloadPdf() {
         willDrawPage: function(data) {
           if (data.pageNumber > 1) {
             drawBg(doc, pw, ph);
+            doc.setFillColor(255,255,255);
+            doc.rect(marginX, marginTop2, contentW, ph-marginTop2-bgFooterH, 'F');
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
-            doc.text('INSPECTION & CLEANING DCS HMI/OIS — (lanjutan)', pw/2, marginTop - 3, {align:'center'});
+            doc.text('INSPECTION & CLEANING DCS HMI/OIS — (lanjutan)', pw/2, marginTop2 - 3, {align:'center'});
           }
         },
         didDrawCell: function(data) {
@@ -1005,7 +1007,7 @@ function dcsDownloadPdf() {
           if (imgs.length) {
             var imgW=54, imgH=42, gap=4, perRow=3, x=marginX+3;
             imgs.forEach(function(img, i){
-              if (y+imgH+12>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); y=marginTop; x=marginX+3; }
+              if (y+imgH+12>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F'); y=marginTop2; x=marginX+3; }
               try { doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH); } catch(e){}
               var cap = safe(img.caption||'');
               if (cap){ doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW),x,y+imgH+3); }

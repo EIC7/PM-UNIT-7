@@ -574,7 +574,8 @@ function phDownloadPdf(){
       var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
       var pw=doc.internal.pageSize.getWidth();   // 210mm
       var ph=doc.internal.pageSize.getHeight();  // 297mm
-      var marginX=10, marginTop=18, marginBottom=15;
+      var marginX=10, marginTop=18, marginTop2=25, marginBottom=15;
+      var bgFooterH=marginBottom;
       var contentW=pw-marginX*2;  // 190mm
 
       var now=new Date();
@@ -586,10 +587,20 @@ function phDownloadPdf(){
       function safe(s){return String(s||'').replace(/[^\x00-\xFF]/g,'?');}
       var y=marginTop;
       function checkPage(need){
-        if(y+need>ph-marginBottom){doc.addPage();drawBg(doc,pw,ph);y=marginTop;}
+        if(y+need>ph-bgFooterH){
+          doc.addPage(); drawBg(doc,pw,ph);
+          doc.setFillColor(255,255,255);
+          doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F');
+          y=marginTop2;
+        }
       }
 
+      // Halaman pertama — background lalu white overlay
       drawBg(doc,pw,ph);
+      doc.setFillColor(255,255,255);
+      doc.setGState && doc.setGState(new doc.GState({opacity:0.88}));
+      doc.rect(marginX,marginTop,contentW,ph-marginTop-bgFooterH,'F');
+      if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
 
       // ── HEADER ──
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,40,100);
@@ -597,16 +608,30 @@ function phDownloadPdf(){
       doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,60,60);
       doc.text(safe(gv('phDocNo')), marginX, y);
 
-      // Top-right info
+      // Top-right info block
       var infoX=pw-marginX-95;
       doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(55,80,140);
-      doc.text('Date:', infoX, marginTop); doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.text(safe(gv('phDate')), infoX+15, marginTop);
-      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140); doc.text('PIC:', infoX, marginTop+5.5); doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.text(safe(gv('phPIC')), infoX+15, marginTop+5.5);
-      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140); doc.text('WO:', infoX+45, marginTop); doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.text(safe(gv('phWO')), infoX+55, marginTop);
-      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140); doc.text('Print:', infoX+45, marginTop+5.5); doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20); doc.text(safe(nowStr), infoX+55, marginTop+5.5);
+      doc.text('Date:', infoX, marginTop);
+      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
+      doc.text(safe(gv('phDate')), infoX+15, marginTop);
+
+      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
+      doc.text('PIC:', infoX, marginTop+5.5);
+      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
+      doc.text(safe(gv('phPIC')), infoX+15, marginTop+5.5);
+
+      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
+      doc.text('WO:', infoX+45, marginTop);
+      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
+      doc.text(safe(gv('phWO')), infoX+55, marginTop);
+
+      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
+      doc.text('Print:', infoX+45, marginTop+5.5);
+      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
+      doc.text(safe(nowStr), infoX+55, marginTop+5.5);
       y+=10;
 
-      // Unit checkboxes line (U8/U7/CWT)
+      // Units line
       doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(60,60,60);
       var unitLine='Units: '+activeUnits.map(function(u){return u.label;}).join(' | ');
       doc.text(safe(unitLine), marginX, y); y+=7;
@@ -631,42 +656,27 @@ function phDownloadPdf(){
         if(checked){ doc.setDrawColor(26,107,58); doc.setLineWidth(0.4); doc.line(cx-size/2+0.3,cy,cx-size/2+size*0.38,cy+size/2-0.4); doc.line(cx-size/2+size*0.38,cy+size/2-0.4,cx+size/2-0.2,cy-size/2+0.4); }
       }
 
-      // Compute column widths — fully adaptive portrait A4 (contentW~190mm)
+      // ── Hitung lebar kolom — fully adaptive, total HARUS = contentW ──
       var nUnits = activeUnits.length;
-      var tableFontSize = nUnits <= 3 ? 8 : nUnits <= 5 ? 7 : nUnits <= 7 ? 6.5 : 6;
+      // Font size adaptif berdasar jumlah unit
+      var tableFontSize = nUnits <= 3 ? 7.5 : nUnits <= 5 ? 7 : nUnits <= 7 ? 6.5 : 6;
 
-      // Target lebar per kolom (ideal)
-      var wNo   = 8;
-      var wCrit = 24;
+      // Kolom tetap (mm)
+      var wNo   = 7;
       var wChk  = 7;
       var wRes  = 12;
-      var wUnit = 22; // per unit, ideal
-
-      // Total ideal
-      var totalIdeal = wNo + wCrit + wChk + wRes + (wUnit * nUnits);
-      // Sisa untuk Step of Work
-      var wStep = contentW - totalIdeal;
-
-      // Jika melebihi halaman, scale down proporsional
-      if (wStep < 30) {
-        // Kurangi unit col dulu sampai min 12mm
-        wUnit = Math.max(12, Math.floor((contentW - wNo - wCrit - wChk - wRes - 25) / nUnits));
-        wStep = contentW - wNo - wCrit - wChk - wRes - (wUnit * nUnits);
-        wStep = Math.max(25, wStep);
-        // Jika masih tidak muat, kurangi criteria dan No
-        if (wStep < 25) {
-          wCrit = Math.max(14, Math.floor(wCrit * 0.75));
-          wNo = 6;
-          wStep = contentW - wNo - wCrit - wChk - wRes - (wUnit * nUnits);
-          wStep = Math.max(22, wStep);
-        }
-      }
-
-      var unitColW  = wUnit;
-      var resultColW = wRes;
-      var fixedNoW  = wNo;
-      var fixedCritW = wCrit;
-      var fixedChkW = wChk;
+      // Kriteria: kurangi kalau unit banyak
+      var wCrit = nUnits <= 3 ? 28 : nUnits <= 5 ? 24 : nUnits <= 7 ? 18 : 14;
+      // Lebar per unit: sisa dibagi (nUnits + porsi step)
+      // Step of Work mendapat 2x porsi unit untuk teks panjang
+      // total = wNo + wChk + wRes + wCrit + wStep + (nUnits * wUnit)
+      // wStep = 2 * wUnit  →  total = fixed + wUnit*(nUnits+2)
+      var wFixed = wNo + wChk + wRes + wCrit;
+      var wUnit  = Math.floor((contentW - wFixed) / (nUnits + 2));
+      wUnit = Math.max(10, wUnit);
+      // wStep = sisa setelah semua kolom — agar total tepat contentW
+      var wStep = contentW - wFixed - (wUnit * nUnits);
+      wStep = Math.max(20, wStep);
 
       // Build table rows
       var tableHead=[['No','Step of Work','Criteria','✓'].concat(activeUnits.map(function(u){return u.label;})).concat(['Result'])];
@@ -718,16 +728,14 @@ function phDownloadPdf(){
         tableRows.push(row);
       });
 
-      var CHK_COLS={3:true};
-
       var colStyles={
-        0:{cellWidth:8,halign:'center'},
-        1:{cellWidth:60},
-        2:{cellWidth:25},
-        3:{cellWidth:8,halign:'center'},
+        0:{cellWidth:wNo,  halign:'center'},
+        1:{cellWidth:wStep, overflow:'linebreak'},
+        2:{cellWidth:wCrit, overflow:'linebreak'},
+        3:{cellWidth:wChk, halign:'center'},
       };
-      activeUnits.forEach(function(_,i){ colStyles[4+i]={cellWidth:unitColW,halign:'center',overflow:'linebreak'}; });
-      colStyles[4+activeUnits.length]={cellWidth:resultColW,halign:'center'};
+      activeUnits.forEach(function(_,i){ colStyles[4+i]={cellWidth:wUnit,halign:'center',overflow:'linebreak'}; });
+      colStyles[4+nUnits]={cellWidth:wRes,halign:'center'};
 
       doc.autoTable({
         startY:y,
@@ -735,7 +743,7 @@ function phDownloadPdf(){
         body:tableRows,
         theme:'grid',
         tableWidth: contentW,
-        margin:{left:marginX,right:marginX},
+        margin:{left:marginX, right:marginX},
         headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:tableFontSize,halign:'center',font:'helvetica',cellPadding:1.5},
         bodyStyles:{fontSize:tableFontSize,textColor:[20,30,25],font:'helvetica',cellPadding:1.5},
         columnStyles:colStyles,
@@ -752,7 +760,13 @@ function phDownloadPdf(){
           }
         },
         willDrawPage:function(data){
-          if(data.pageNumber>1){ drawBg(doc,pw,ph); }
+          if(data.pageNumber>1){
+            drawBg(doc,pw,ph);
+            doc.setFillColor(255,255,255);
+            doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
+            doc.text('Analyzer Indicator Transmitter (pH) — (lanjutan)', pw/2, marginTop2-3, {align:'center'});
+          }
         }
       });
 
@@ -786,7 +800,7 @@ function phDownloadPdf(){
           if(imgs.length){
             var imgW=50,imgH=38,gap=4,perRow=4,x=marginX+3;
             imgs.forEach(function(img,i){
-              if(y+imgH+12>ph-marginBottom){ doc.addPage(); drawBg(doc,pw,ph); y=marginTop; x=marginX+3; }
+              if(y+imgH+12>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F'); y=marginTop2; x=marginX+3; }
               try{ doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH); } catch(e){}
               var cap=safe(img.caption||'');
               if(cap){ doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW),x,y+imgH+3); }
