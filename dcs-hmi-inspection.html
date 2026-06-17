@@ -768,31 +768,64 @@ function dcsDownloadPdf() {
       var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
       var pw = doc.internal.pageSize.getWidth();
       var ph = doc.internal.pageSize.getHeight();
-      var marginX=12, marginTop=18, marginBottom=18, contentW=pw-marginX*2;
-      var y = marginTop;
+      var marginX=12, contentW=pw-marginX*2;
 
       function safe(s){ return String(s||''); }
       function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
-      function checkPage(need){ if(y+need>ph-marginBottom){ doc.addPage(); drawBg(doc,pw,ph); y=marginTop; } }
 
+      // ── Draw background first ──
       drawBg(doc, pw, ph);
 
-      /* Title */
-      doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(30,58,95);
-      doc.text('INSPECTION & CLEANING DCS HMI/OIS', pw/2, y, {align:'center'}); y+=7;
-      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(80,100,130);
-      doc.text('PLTU Paiton Unit 7  ·  1 Yearly Inspection  ·  MOD-12', pw/2, y, {align:'center'}); y+=8;
+      // ── Ukur tinggi header background dari so2 pattern ──
+      // Background 'DRAFT PM KOSONG.jpg' punya header logo ~47mm dari atas
+      // Konten mulai setelah area tersebut
+      var bgHeaderH = 47; // mm — area header background yang tidak boleh ditimpa teks
+      var bgFooterH = 20; // mm — area footer background
+      var marginTop  = bgHeaderH + 2;
+      var y = marginTop;
 
-      /* Info box */
-      doc.setFillColor(235,243,252); doc.roundedRect(marginX,y,contentW,22,2,2,'F');
-      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
+      function checkPage(need){
+        if(y+need>ph-bgFooterH){
+          doc.addPage();
+          drawBg(doc,pw,ph);
+          y=marginTop;
+        }
+      }
+
+      /* ── JUDUL — persis pola so2, digambar di atas background ── */
+      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(30,58,95);
+      doc.text('INSPECTION & CLEANING DCS HMI/OIS', pw/2, y, {align:'center'}); y+=6;
+      doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(80,100,130);
+      doc.text('PLTU Paiton Unit 7  ·  1 Yearly Inspection  ·  MOD-12', pw/2, y, {align:'center'}); y+=7;
+
+      /* ── INFO BOX — persis pola so2 ── */
       var unit=gv('dcsUnit'), date=gv('dcsDate'), pic=gv('dcsPIC'), wo=gv('dcsWO'), prog=gv('dcsProgram');
-      doc.text('Tanggal: ', marginX+4, y+6); doc.setFont('helvetica','normal'); doc.text(date||'-', marginX+22, y+6);
-      doc.setFont('helvetica','bold'); doc.text('PIC: ', marginX+4, y+12); doc.setFont('helvetica','normal'); doc.text(pic||'-', marginX+14, y+12);
-      doc.setFont('helvetica','bold'); doc.text('Work Order: ', marginX+4, y+18); doc.setFont('helvetica','normal'); doc.text(wo||'-', marginX+26, y+18);
-      doc.setFont('helvetica','bold'); doc.text('Unit: ', pw/2+4, y+6); doc.setFont('helvetica','normal'); doc.text(unit||'-', pw/2+14, y+6);
-      doc.setFont('helvetica','bold'); doc.text('Program: ', pw/2+4, y+12); doc.setFont('helvetica','normal'); doc.text(prog||'-', pw/2+22, y+12);
-      y += 26;
+      var now2=new Date(), nowStr2=String(now2.getDate()).padStart(2,'0')+'/'+String(now2.getMonth()+1).padStart(2,'0')+'/'+now2.getFullYear()+' '+String(now2.getHours()).padStart(2,'0')+':'+String(now2.getMinutes()).padStart(2,'0');
+
+      // Outline box seperti so2 (bukan filled)
+      doc.setDrawColor(180,210,220); doc.setLineWidth(0.3);
+      doc.rect(marginX, y, contentW, 30, 'S');
+
+      var cw3 = contentW / 2;
+      var fields = [
+        ['Tanggal', date||'-',  'Unit',      unit||'-'],
+        ['PIC',     pic||'-',   'Program',   prog||'-'],
+        ['Work Order', wo||'-', 'Dicetak',   nowStr2  ]
+      ];
+      fields.forEach(function(row, ri){
+        var iy = y + 8 + ri * 8;
+        // Kiri
+        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+        doc.text(row[0]+':', marginX+3, iy);
+        doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+        doc.text(safe(row[1]).substring(0,30), marginX+3+24, iy);
+        // Kanan
+        doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
+        doc.text(row[2]+':', marginX+cw3+3, iy);
+        doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+        doc.text(safe(row[3]).substring(0,28), marginX+cw3+3+22, iy);
+      });
+      y += 34;
 
       /* ── gambar checkbox manual — persis pola so2.html ── */
       function drawCheckbox(doc, x, y, w, h, checked) {
@@ -871,12 +904,21 @@ function dcsDownloadPdf() {
         startY: y,
         head: head,
         body: body,
-        margin: {left:marginX, right:marginX},
+        // margin.top = bgHeaderH agar di halaman 2+ tabel mulai setelah area header background
+        margin: {left:marginX, right:marginX, top:marginTop, bottom:bgFooterH},
         styles: {fontSize:7, cellPadding:2.5, lineColor:[180,200,220], lineWidth:0.3, overflow:'linebreak'},
         headStyles: {fillColor:[30,58,95], textColor:255, fontStyle:'bold', fontSize:6.5, halign:'center', font:'helvetica'},
         alternateRowStyles: {fillColor:[240,247,255]},
         columnStyles: colStyles,
-        willDrawPage: function(data){ drawBg(doc,pw,ph); },
+        // willDrawPage: background dulu sebelum konten tabel dimulai di halaman baru
+        willDrawPage: function(data) {
+          drawBg(doc, pw, ph);
+          // Gambar ulang header kolom info di halaman 2+
+          if (data.pageNumber > 1) {
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
+            doc.text('INSPECTION & CLEANING DCS HMI/OIS — (lanjutan)', pw/2, marginTop - 4, {align:'center'});
+          }
+        },
         didDrawCell: function(data) {
           if (data.section !== 'body') return;
           var val = data.cell.raw;
@@ -918,7 +960,7 @@ function dcsDownloadPdf() {
           if (imgs.length) {
             var imgW=54, imgH=42, gap=4, perRow=3, x=marginX+3;
             imgs.forEach(function(img, i){
-              if (y+imgH+12>ph-marginBottom){ doc.addPage(); drawBg(doc,pw,ph); y=marginTop; x=marginX+3; }
+              if (y+imgH+12>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); y=marginTop; x=marginX+3; }
               try { doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH); } catch(e){}
               var cap = safe(img.caption||'');
               if (cap){ doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW),x,y+imgH+3); }
