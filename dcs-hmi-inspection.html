@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DCS HMI/OIS Inspection — Unit 7</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="shared.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
@@ -492,15 +492,39 @@ function initReportBackground() {
   reportBgImg = new Image();
   reportBgImg.onload = function(){ reportBgReady=true; var cbs=reportBgCallbacks.splice(0); for(var i=0;i<cbs.length;i++) cbs[i](); };
   reportBgImg.onerror = function(){ reportBgReady=false; var cbs=reportBgCallbacks.splice(0); for(var i=0;i<cbs.length;i++) cbs[i](); };
+  /* Timeout fallback: jika 3 detik belum load, lanjutkan saja */
+  setTimeout(function(){
+    if(!reportBgReady && reportBgCallbacks.length){
+      var cbs=reportBgCallbacks.splice(0); for(var i=0;i<cbs.length;i++) cbs[i]();
+    }
+  }, 3000);
   reportBgImg.src = 'DRAFT PM KOSONG.jpg';
 }
 function ensureReportBackground(cb){
   if(!reportBgImg){reportBgCallbacks.push(cb);initReportBackground();return;}
   if(reportBgReady){cb();return;}
   if(reportBgImg.complete&&reportBgImg.naturalWidth>0){reportBgReady=true;cb();return;}
+  if(reportBgImg.complete&&reportBgImg.naturalWidth===0){cb();return;} /* gagal load - langsung proceed */
   reportBgCallbacks.push(cb);
 }
-function drawBg(doc,pw,ph){ if(!reportBgImg||!reportBgImg.naturalWidth)return; try{doc.addImage(reportBgImg,'JPEG',0,0,pw,ph);}catch(e){} }
+function drawBg(doc,pw,ph){
+  try {
+    if(reportBgImg && reportBgImg.naturalWidth > 0){
+      doc.addImage(reportBgImg,'JPEG',0,0,pw,ph);
+    } else {
+      /* Fallback: background putih bersih dengan garis tipis di atas */
+      doc.setFillColor(255,255,255);
+      doc.rect(0,0,pw,ph,'F');
+      doc.setFillColor(30,58,95);
+      doc.rect(0,0,pw,4,'F');
+      doc.setFillColor(240,245,252);
+      doc.rect(0,ph-8,pw,8,'F');
+    }
+  } catch(e) {
+    doc.setFillColor(255,255,255);
+    doc.rect(0,0,pw,ph,'F');
+  }
+}
 
 
 /* ══════════════════════════════════════════════
