@@ -708,6 +708,23 @@
     .preview-row { grid-template-columns: 110px 1fr; }
   }
 
+
+  /* ── MODAL INPUT ── */
+  .modal-input {
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .modal-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(15,118,110,0.1);
+  }
   /* ── OPT ADD ── */
   option.opt-add { color: var(--accent); font-weight: 700; }
 
@@ -1645,7 +1662,7 @@ function showToast(msg) {
 }
 
 // Close modals on overlay click
-['cropModal','previewModal','deleteModal'].forEach(function(id){
+['cropModal','previewModal','deleteModal','addJenisModal'].forEach(function(id){
   var el = document.getElementById(id);
   if (el) el.addEventListener('click', function(e){ if (e.target === this) this.classList.remove('show'); });
 });
@@ -1711,9 +1728,15 @@ function onJenisChange(sel) {
 }
 
 function openAddJenisModal() {
-  renderJenisChips();
+  // Refresh dulu data dari Supabase, lalu render chips dan buka modal
+  document.getElementById('customJenisChips').innerHTML =
+    '<div class="jenis-chips-empty">Memuat data...</div>';
   document.getElementById('newJenisInput').value = '';
   document.getElementById('addJenisModal').classList.add('show');
+  setTimeout(function(){ document.getElementById('newJenisInput').focus(); }, 150);
+  loadCustomJenis(function() {
+    renderJenisChips();
+  });
 }
 
 function closeAddJenisModal() {
@@ -1721,18 +1744,18 @@ function closeAddJenisModal() {
 }
 
 function renderJenisChips() {
-  var custom = loadCustomJenis();
   var container = document.getElementById('customJenisChips');
   if (!container) return;
-  if (custom.length === 0) {
+  // customJenisList sudah di-load async dari Supabase, gunakan langsung
+  if (!customJenisList || customJenisList.length === 0) {
     container.innerHTML = '<div class="jenis-chips-empty">Belum ada jenis kustom.</div>';
     return;
   }
   container.innerHTML = '';
-  custom.forEach(function(j) {
+  customJenisList.forEach(function(j) {
     var chip = document.createElement('div');
     chip.className = 'jenis-chip';
-    chip.innerHTML = escHtml(j) + '<span class="jenis-chip-del" onclick="deleteCustomJenis(&quot;' + escHtml(j).replace(/"/g, '&quot;') + '&quot;)">×</span>';
+    chip.innerHTML = escHtml(j) + '<span class="jenis-chip-del" onclick="deleteCustomJenis('' + escHtml(j).replace(/'/g, "\'") + '')">×</span>';
     container.appendChild(chip);
   });
 }
