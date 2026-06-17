@@ -633,6 +633,7 @@ function phDownloadPdf(){
 
       // Compute column widths — fully adaptive portrait A4 (contentW~190mm)
       var nUnits = activeUnits.length;
+      var tableFontSize = nUnits <= 3 ? 8 : nUnits <= 5 ? 7 : nUnits <= 7 ? 6.5 : 6;
 
       // Target lebar per kolom (ideal)
       var wNo   = 8;
