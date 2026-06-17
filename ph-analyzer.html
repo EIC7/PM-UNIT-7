@@ -523,11 +523,13 @@ function dbCollectData(modul){
   var steps={};
   PH_STEPS.forEach(function(step,idx){
     var uid2s={};
+    // Global check disimpan sekali, bukan per-unit
+    var chkG=document.getElementById('phChk_'+idx);
+    uid2s.__globalChk = !!(chkG&&chkG.checked);
     activeUnits.forEach(function(u){
       var uid2=u.id.replace(/-/g,'_');
       var cell={};
       if(step.type==='check'){
-        var chkG=document.getElementById('phChk_'+idx); cell.chk=!!(chkG&&chkG.checked);
         var chkU=document.getElementById('phU_'+uid2+'_'+idx); cell.unitChk=!!(chkU&&chkU.checked);
       } else {
         var fields=['phBuf_'+uid2+'_'+idx,'phSlope_'+uid2,'phOffset_'+uid2,'phTemp_'+uid2,'phLocalpH_'+uid2,'phLocalmA_'+uid2,'phDCSpH_'+uid2,'phDCSmA_'+uid2];
@@ -590,20 +592,16 @@ function phDownloadPdf(){
         if(y+need>ph-bgFooterH){
           doc.addPage(); drawBg(doc,pw,ph);
           doc.setFillColor(255,255,255);
-          doc.setGState && doc.setGState(new doc.GState({opacity:0.92}));
-          doc.rect(0,marginTop2,pw,ph-marginTop2-bgFooterH,'F');
-          if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
+          doc.rect(0,14,pw,ph-14-bgFooterH,'F');
           y=marginTop2;
         }
       }
 
-      // Halaman pertama — background lalu white overlay
-      // Overlay mulai dari y=16 (bawah logo header template), cover sampai footer
+      // Halaman pertama — background lalu white overlay solid full page
       drawBg(doc,pw,ph);
+      // Cover area tengah (antara header template dan footer template) dengan putih solid
       doc.setFillColor(255,255,255);
-      doc.setGState && doc.setGState(new doc.GState({opacity:0.92}));
-      doc.rect(0, 16, pw, ph-16-bgFooterH, 'F');
-      if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
+      doc.rect(0, 14, pw, ph-14-bgFooterH, 'F');
 
       // ── HEADER TITLE ──
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,40,100);
@@ -766,11 +764,8 @@ function phDownloadPdf(){
         willDrawPage:function(data){
           if(data.pageNumber>1){
             drawBg(doc,pw,ph);
-            // White overlay full lebar, cover area konten tengah
             doc.setFillColor(255,255,255);
-            doc.setGState && doc.setGState(new doc.GState({opacity:0.92}));
-            doc.rect(0, marginTop2, pw, ph-marginTop2-bgFooterH, 'F');
-            if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
+            doc.rect(0, 14, pw, ph-14-bgFooterH, 'F');
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
             doc.text('Analyzer Indicator Transmitter (pH) — (lanjutan)', pw/2, marginTop2-3, {align:'center'});
           }
@@ -807,7 +802,7 @@ function phDownloadPdf(){
           if(imgs.length){
             var imgW=50,imgH=38,gap=4,perRow=4,x=marginX+3;
             imgs.forEach(function(img,i){
-              if(y+imgH+12>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.setGState&&doc.setGState(new doc.GState({opacity:0.92})); doc.rect(0,marginTop2,pw,ph-marginTop2-bgFooterH,'F'); if(doc.setGState)doc.setGState(new doc.GState({opacity:1})); y=marginTop2; x=marginX+3; }
+              if(y+imgH+12>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.rect(0,14,pw,ph-14-bgFooterH,'F'); y=marginTop2; x=marginX+3; }
               try{ doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH); } catch(e){}
               var cap=safe(img.caption||'');
               if(cap){ doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW),x,y+imgH+3); }
@@ -866,11 +861,24 @@ function phDownloadPdf(){
         Object.keys(data.steps).forEach(function(idx){
           var stepData=data.steps[idx];
           var step=PH_STEPS[parseInt(idx)]; if(!step) return;
+          // Restore global checkbox — dari __globalChk (baru) atau cell.chk pertama (lama)
+          var chkG=document.getElementById('phChk_'+idx);
+          if(chkG){
+            if(stepData.__globalChk !== undefined){
+              chkG.checked = !!stepData.__globalChk;
+            } else {
+              // fallback format lama: ambil dari unit pertama
+              var firstUnit = activeUnits[0];
+              if(firstUnit){
+                var firstCell = stepData[firstUnit.id]||{};
+                chkG.checked = !!firstCell.chk;
+              }
+            }
+          }
           activeUnits.forEach(function(u){
             var uid2=u.id.replace(/-/g,'_');
             var cell=stepData[u.id]||{};
             if(step.type==='check'){
-              var chkG=document.getElementById('phChk_'+idx); if(chkG) chkG.checked=!!cell.chk;
               var chkU=document.getElementById('phU_'+uid2+'_'+idx); if(chkU) chkU.checked=!!cell.unitChk;
             } else {
               Object.keys(cell).forEach(function(fid){
