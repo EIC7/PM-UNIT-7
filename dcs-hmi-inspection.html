@@ -952,15 +952,14 @@ function dcsDownloadPdf() {
         startY: y,
         head: head,
         body: body,
-        // margin.top = bgHeaderH agar di halaman 2+ tabel mulai setelah area header background
-        margin: {left:marginX, right:marginX, top:marginTop, bottom:bgFooterH},
+        margin: {left:marginX, right:marginX},
         styles: {fontSize:7, cellPadding:2.5, lineColor:[180,200,220], lineWidth:0.3, overflow:'linebreak'},
         headStyles: {fillColor:[30,58,95], textColor:255, fontStyle:'bold', fontSize:6.5, halign:'center', font:'helvetica'},
         alternateRowStyles: {fillColor:[240,247,255]},
         columnStyles: colStyles,
         willDrawPage: function(data) {
-          drawBg(doc, pw, ph);
           if (data.pageNumber > 1) {
+            drawBg(doc, pw, ph);
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
             doc.text('INSPECTION & CLEANING DCS HMI/OIS — (lanjutan)', pw/2, marginTop - 3, {align:'center'});
           }
