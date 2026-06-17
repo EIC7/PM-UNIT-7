@@ -1054,7 +1054,7 @@ function loadAssets() {
           jenis:      r.jenis      || '',
           lokasi:     r.lokasi     || '',
           deskripsi:  r.deskripsi  || '',
-          keterangan: r.keterangan || '',
+          keterangan: r.deskripsi  || '',
           image_data: r.image_data || '',
           gambar:     r.image_data || '',
           createdAt:  r.created_at || '',
@@ -1349,14 +1349,16 @@ function saveAsset() {
   if (!d.nama)  { showToast('⚠️ Nama Asset wajib diisi');       document.getElementById('f_nama').focus();  return; }
 
   // Mapping field form ke kolom Supabase
+  // Kolom tersedia: id, nomor, nama, jenis, lokasi, kondisi, jumlah, satuan, deskripsi, image_data
+  // Field keterangan digabung ke deskripsi karena tidak ada kolom terpisah
+  var gabungDesc = [d.deskripsi, d.keterangan].filter(Boolean).join('\n\n') || null;
   var payload = {
     nomor:      d.nomor,
     nama:       d.nama,
-    deskripsi:  d.deskripsi  || null,
+    deskripsi:  gabungDesc,
     jenis:      d.jenis      || null,
     lokasi:     d.lokasi     || null,
-    image_data: d.gambar     || null,
-    keterangan: d.keterangan || null
+    image_data: d.gambar     || null
   };
 
   if (editingId) {
