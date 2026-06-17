@@ -992,19 +992,73 @@ function switchTab(id) {
 }
 
 /* ══════════════════════════════════════════════
-   DATA STORE (localStorage)
+   SUPABASE CONFIG
 ══════════════════════════════════════════════ */
-var STORE_KEY = 'pomi_material_warehouse_v1';
+var SUPA_URL  = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var ASSET_TABLE = 'material_warehouse';
+var JENIS_TABLE = 'material_jenis';
+
+function supaFetch(method, path, body) {
+  var url = SUPA_URL + '/rest/v1/' + path;
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : (method === 'PATCH' ? 'return=representation' : '')
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts).then(function(r) {
+    if (!r.ok) return r.text().then(function(t){ throw new Error(t); });
+    return r.text().then(function(t){ try{ return t ? JSON.parse(t) : null; } catch(e){ return null; } });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   DATA STORE — Supabase
+══════════════════════════════════════════════ */
 var assets = [];
 var editingId = null;
 
 function loadAssets() {
-  try { assets = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch(e) { assets = []; }
-  updateBadge();
+  showToast('⏳ Memuat data...');
+  supaFetch('GET', ASSET_TABLE + '?select=*&order=created_at.desc')
+    .then(function(data) {
+      assets = (data || []).map(function(r) {
+        /* Flatten: data kolom Supabase → format lokal */
+        var a = r.data || {};
+        return {
+          id:          r.id,
+          nomor:       r.nomor       || a.nomor       || '',
+          nama:        r.nama        || a.nama         || '',
+          jenis:       r.jenis       || a.jenis        || '',
+          lokasi:      r.lokasi      || a.lokasi       || '',
+          kondisi:     r.kondisi     || a.kondisi      || '',
+          jumlah:      r.jumlah      || a.jumlah       || '',
+          satuan:      r.satuan      || a.satuan       || '',
+          deskripsi:   r.deskripsi   || a.deskripsi    || '',
+          imageData:   r.image_data  || a.imageData    || '',
+          createdAt:   r.created_at  || a.createdAt    || '',
+          updatedAt:   r.updated_at  || a.updatedAt    || '',
+        };
+      });
+      updateBadge();
+      renderTable();
+      showToast('✅ Data dimuat (' + assets.length + ' asset)');
+    })
+    .catch(function(err) {
+      showToast('⚠️ Gagal memuat data: ' + err.message);
+      assets = [];
+      updateBadge();
+    });
 }
 
 function saveAssets() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(assets)); } catch(e) { showToast('⚠️ Gagal simpan ke lokal storage'); }
+  /* saveAssets() lama dipanggil di beberapa tempat —
+     sekarang hanya update badge karena simpan per-record */
   updateBadge();
 }
 
@@ -1569,11 +1623,9 @@ function closeDeleteModal() {
 
 function confirmDelete() {
   if (!pendingDeleteId) return;
-  assets = assets.filter(function(a){ return a.id !== pendingDeleteId; });
-  saveAssets();
-  closeDeleteModal();
-  renderTable();
-  showToast('🗑️ Asset berhasil dihapus');
+  supaFetch('DELETE', ASSET_TABLE + '?id=eq.' + pendingDeleteId)
+    .then(function(){ showToast('🗑️ Asset berhasil dihapus'); closeDeleteModal(); loadAssets(); })
+    .catch(function(err){ showToast('⚠️ Gagal hapus: ' + err.message); closeDeleteModal(); });
 }
 
 /* ══════════════════════════════════════════════
@@ -1600,9 +1652,8 @@ function showToast(msg) {
 
 
 /* ══════════════════════════════════════════════
-   JENIS ASSET — custom types stored in localStorage
+   JENIS ASSET — Supabase persistent
 ══════════════════════════════════════════════ */
-var JENIS_KEY = 'pomi_material_jenis_v1';
 var DEFAULT_JENIS = [
   'Control Valve / Positioner',
   'Transmitter',
@@ -1611,19 +1662,22 @@ var DEFAULT_JENIS = [
   'Temperature',
   'Consumable Spare Part'
 ];
+var customJenisList = [];
 
-function loadCustomJenis() {
-  try { return JSON.parse(localStorage.getItem(JENIS_KEY)) || []; } catch(e) { return []; }
+function loadCustomJenis(cb) {
+  supaFetch('GET', JENIS_TABLE + '?select=name&order=name.asc')
+    .then(function(data){
+      customJenisList = (data||[]).map(function(r){ return r.name; });
+      if (cb) cb();
+    })
+    .catch(function(){ customJenisList = []; if(cb) cb(); });
 }
 
-function saveCustomJenis(list) {
-  try { localStorage.setItem(JENIS_KEY, JSON.stringify(list)); } catch(e) {}
-}
+function saveCustomJenis() { /* handled per-item via Supabase */ }
 
 function getAllJenis() {
-  var custom = loadCustomJenis();
   var all = DEFAULT_JENIS.slice();
-  custom.forEach(function(j) { if (all.indexOf(j) === -1) all.push(j); });
+  customJenisList.forEach(function(j){ if(all.indexOf(j)===-1) all.push(j); });
   return all;
 }
 
@@ -1687,33 +1741,36 @@ function addCustomJenis() {
   var input = document.getElementById('newJenisInput');
   var val = input.value.trim();
   if (!val) { input.focus(); return; }
-  var custom = loadCustomJenis();
-  if (getAllJenis().indexOf(val) !== -1) {
-    showToast('⚠️ Jenis sudah ada: ' + val);
-    return;
-  }
-  custom.push(val);
-  saveCustomJenis(custom);
-  input.value = '';
-  renderJenisChips();
-  rebuildJenisSelect(val);
-  showToast('✅ Jenis ditambahkan: ' + val);
+  if (getAllJenis().indexOf(val) !== -1) { showToast('⚠️ Jenis sudah ada: ' + val); return; }
+  supaFetch('POST', JENIS_TABLE, { name: val })
+    .then(function(){
+      customJenisList.push(val);
+      input.value = '';
+      renderJenisChips();
+      rebuildJenisSelect(val);
+      showToast('✅ Jenis ditambahkan: ' + val);
+    })
+    .catch(function(err){ showToast('⚠️ Gagal tambah jenis: ' + err.message); });
 }
 
 function deleteCustomJenis(jenis) {
-  var custom = loadCustomJenis().filter(function(j){ return j !== jenis; });
-  saveCustomJenis(custom);
-  renderJenisChips();
-  rebuildJenisSelect('');
-  showToast('🗑️ Jenis dihapus: ' + jenis);
+  supaFetch('DELETE', JENIS_TABLE + '?name=eq.' + encodeURIComponent(jenis))
+    .then(function(){
+      customJenisList = customJenisList.filter(function(j){ return j !== jenis; });
+      renderJenisChips();
+      rebuildJenisSelect('');
+      showToast('🗑️ Jenis dihapus: ' + jenis);
+    })
+    .catch(function(err){ showToast('⚠️ Gagal hapus jenis: ' + err.message); });
 }
 
 /* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
-loadAssets();
-rebuildJenisSelect('');
-renderTable();
+loadCustomJenis(function(){
+  rebuildJenisSelect('');
+  loadAssets();
+});
 </script>
 
 <!-- ADD JENIS MODAL -->
