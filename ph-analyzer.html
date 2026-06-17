@@ -590,16 +590,18 @@ function phDownloadPdf(){
         if(y+need>ph-bgFooterH){
           doc.addPage(); drawBg(doc,pw,ph);
           doc.setFillColor(255,255,255);
-          doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F');
+          doc.setGState && doc.setGState(new doc.GState({opacity:0.92}));
+          doc.rect(0,marginTop2,pw,ph-marginTop2-bgFooterH,'F');
+          if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
           y=marginTop2;
         }
       }
 
-      // Halaman pertama — background lalu white overlay
+      // Halaman pertama — background lalu white overlay full width
       drawBg(doc,pw,ph);
       doc.setFillColor(255,255,255);
       doc.setGState && doc.setGState(new doc.GState({opacity:0.88}));
-      doc.rect(marginX,marginTop,contentW,ph-marginTop-bgFooterH,'F');
+      doc.rect(0,marginTop,pw,ph-marginTop-bgFooterH,'F');
       if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
 
       // ── HEADER TITLE ──
@@ -763,8 +765,11 @@ function phDownloadPdf(){
         willDrawPage:function(data){
           if(data.pageNumber>1){
             drawBg(doc,pw,ph);
+            // White overlay full lebar, cover area konten tengah
             doc.setFillColor(255,255,255);
-            doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F');
+            doc.setGState && doc.setGState(new doc.GState({opacity:0.92}));
+            doc.rect(0, marginTop2, pw, ph-marginTop2-bgFooterH, 'F');
+            if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
             doc.text('Analyzer Indicator Transmitter (pH) — (lanjutan)', pw/2, marginTop2-3, {align:'center'});
           }
@@ -801,7 +806,7 @@ function phDownloadPdf(){
           if(imgs.length){
             var imgW=50,imgH=38,gap=4,perRow=4,x=marginX+3;
             imgs.forEach(function(img,i){
-              if(y+imgH+12>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F'); y=marginTop2; x=marginX+3; }
+              if(y+imgH+12>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.setGState&&doc.setGState(new doc.GState({opacity:0.92})); doc.rect(0,marginTop2,pw,ph-marginTop2-bgFooterH,'F'); if(doc.setGState)doc.setGState(new doc.GState({opacity:1})); y=marginTop2; x=marginX+3; }
               try{ doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH); } catch(e){}
               var cap=safe(img.caption||'');
               if(cap){ doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW),x,y+imgH+3); }
