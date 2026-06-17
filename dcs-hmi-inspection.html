@@ -815,8 +815,8 @@ function dcsDownloadPdf() {
       function safe(s){ return String(s||''); }
       function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
 
-      // ── Persis pola b12: marginTop=20, drawBg, info box, lalu title bar ──
-      var marginTop = 20, bgFooterH = 22;
+      // marginTop=58 agar info box di bawah area logo background (~55mm)
+      var marginTop = 58, bgFooterH = 22;
       var y = marginTop;
 
       function checkPage(need){

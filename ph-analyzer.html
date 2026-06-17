@@ -647,15 +647,17 @@ function phDownloadPdf(){
       var wStep = contentW - totalIdeal;
 
       // Jika melebihi halaman, scale down proporsional
-      if (wStep < 28) {
-        // Kurangi unit col dulu
-        wUnit = Math.max(13, Math.floor((contentW - wNo - wCrit - wChk - wRes - 28) / nUnits));
+      if (wStep < 30) {
+        // Kurangi unit col dulu sampai min 12mm
+        wUnit = Math.max(12, Math.floor((contentW - wNo - wCrit - wChk - wRes - 25) / nUnits));
         wStep = contentW - wNo - wCrit - wChk - wRes - (wUnit * nUnits);
-        wStep = Math.max(28, wStep);
-        // Jika masih tidak muat, kurangi criteria
-        if (wStep < 28) {
-          wCrit = Math.max(16, wCrit - (28 - wStep));
-          wStep = 28;
+        wStep = Math.max(25, wStep);
+        // Jika masih tidak muat, kurangi criteria dan No
+        if (wStep < 25) {
+          wCrit = Math.max(14, Math.floor(wCrit * 0.75));
+          wNo = 6;
+          wStep = contentW - wNo - wCrit - wChk - wRes - (wUnit * nUnits);
+          wStep = Math.max(22, wStep);
         }
       }
 
@@ -731,9 +733,10 @@ function phDownloadPdf(){
         head:tableHead,
         body:tableRows,
         theme:'grid',
+        tableWidth: contentW,
         margin:{left:marginX,right:marginX},
-        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7,halign:'center',font:'helvetica'},
-        bodyStyles:{fontSize:6.5,textColor:[20,30,25],font:'helvetica',cellPadding:1.5},
+        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:tableFontSize,halign:'center',font:'helvetica',cellPadding:1.5},
+        bodyStyles:{fontSize:tableFontSize,textColor:[20,30,25],font:'helvetica',cellPadding:1.5},
         columnStyles:colStyles,
         alternateRowStyles:{fillColor:[246,249,252]},
         didDrawCell:function(data){
