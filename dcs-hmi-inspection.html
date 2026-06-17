@@ -802,7 +802,8 @@ function dcsReset() {
    PDF
 ══════════════════════════════════════════════ */
 function dcsDownloadPdf() {
-  ensureReportBackground(function() {
+  /* Langsung generate PDF tanpa tunggu background */
+  function _doPdf() {
     try {
       dcsSyncCaptions();
       var jsPDF = window.jspdf.jsPDF;
@@ -1027,7 +1028,13 @@ function dcsDownloadPdf() {
       doc.save('DCS_HMI_OIS_Inspection_'+dateStr+'.pdf');
 
     } catch(err) { alert('PDF Error: '+err.message); console.error(err); }
-  });
+  }
+  /* Coba load background, timeout 1.5s langsung generate */
+  if (reportBgReady) { _doPdf(); return; }
+  var _done = false;
+  function _go(){ if(!_done){ _done=true; _doPdf(); } }
+  ensureReportBackground(_go);
+  setTimeout(_go, 1500);
 }
 
 /* ══════════════════════════════════════════════

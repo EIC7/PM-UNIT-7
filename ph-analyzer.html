@@ -631,21 +631,39 @@ function phDownloadPdf(){
         if(checked){ doc.setDrawColor(26,107,58); doc.setLineWidth(0.4); doc.line(cx-size/2+0.3,cy,cx-size/2+size*0.38,cy+size/2-0.4); doc.line(cx-size/2+size*0.38,cy+size/2-0.4,cx+size/2-0.2,cy-size/2+0.4); }
       }
 
-      // Compute column widths — adaptif portrait A4 (contentW~190mm)
-      // Kolom tetap: No(7) + Criteria(22) + Check(7) + Result(12) = 48mm
-      // Sisa dibagi: Step of Work + unit columns
-      // Min unitColW = 18mm, max = 30mm
+      // Compute column widths — fully adaptive portrait A4 (contentW~190mm)
       var nUnits = activeUnits.length;
-      var fixedNoW=7, fixedCritW=22, fixedChkW=7, fixedResW=12;
-      var fixedTotal=fixedNoW+fixedCritW+fixedChkW+fixedResW; // 48mm
-      var remaining=contentW-fixedTotal; // ~142mm
 
-      // Hitung unitColW — min 18mm, max 28mm
-      var unitColW=Math.min(28, Math.max(18, Math.floor((remaining*0.55)/nUnits)));
-      // Step of Work dapat sisa
-      var stepW=remaining-unitColW*nUnits;
-      if(stepW<30){stepW=30; unitColW=Math.floor((remaining-stepW)/nUnits);}
-      var resultColW=fixedResW;
+      // Target lebar per kolom (ideal)
+      var wNo   = 8;
+      var wCrit = 24;
+      var wChk  = 7;
+      var wRes  = 12;
+      var wUnit = 22; // per unit, ideal
+
+      // Total ideal
+      var totalIdeal = wNo + wCrit + wChk + wRes + (wUnit * nUnits);
+      // Sisa untuk Step of Work
+      var wStep = contentW - totalIdeal;
+
+      // Jika melebihi halaman, scale down proporsional
+      if (wStep < 28) {
+        // Kurangi unit col dulu
+        wUnit = Math.max(13, Math.floor((contentW - wNo - wCrit - wChk - wRes - 28) / nUnits));
+        wStep = contentW - wNo - wCrit - wChk - wRes - (wUnit * nUnits);
+        wStep = Math.max(28, wStep);
+        // Jika masih tidak muat, kurangi criteria
+        if (wStep < 28) {
+          wCrit = Math.max(16, wCrit - (28 - wStep));
+          wStep = 28;
+        }
+      }
+
+      var unitColW  = wUnit;
+      var resultColW = wRes;
+      var fixedNoW  = wNo;
+      var fixedCritW = wCrit;
+      var fixedChkW = wChk;
 
       // Build table rows
       var tableHead=[['No','Step of Work','Criteria','✓'].concat(activeUnits.map(function(u){return u.label;})).concat(['Result'])];
