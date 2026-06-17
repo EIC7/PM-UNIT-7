@@ -574,9 +574,9 @@ function phDownloadPdf(){
       var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
       var pw=doc.internal.pageSize.getWidth();   // 210mm
       var ph=doc.internal.pageSize.getHeight();  // 297mm
-      var marginX=10, marginTop=18, marginTop2=25, marginBottom=15;
+      var marginX=25, marginTop=25, marginTop2=25, marginBottom=20;
       var bgFooterH=marginBottom;
-      var contentW=pw-marginX*2;  // 190mm
+      var contentW=pw-marginX*2;  // 160mm
 
       var now=new Date();
       var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -602,34 +602,35 @@ function phDownloadPdf(){
       doc.rect(marginX,marginTop,contentW,ph-marginTop-bgFooterH,'F');
       if(doc.setGState) doc.setGState(new doc.GState({opacity:1}));
 
-      // ── HEADER ──
+      // ── HEADER TITLE ──
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,40,100);
-      doc.text('Analyzer Calibration And Maintenance', marginX, y); y+=7;
+      doc.text('Analyzer Calibration And Maintenance', marginX, y); y+=6;
       doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,60,60);
-      doc.text(safe(gv('phDocNo')), marginX, y);
+      doc.text(safe(gv('phDocNo')), marginX, y); y+=6;
 
-      // Top-right info block
-      var infoX=pw-marginX-95;
-      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(55,80,140);
-      doc.text('Date:', infoX, marginTop);
-      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
-      doc.text(safe(gv('phDate')), infoX+15, marginTop);
+      // ── INFO BOX — kotak border 2 kolom, pola DCS/opacity ──
+      var boxH = 22;
+      doc.setDrawColor(180,210,220); doc.setLineWidth(0.3);
+      doc.rect(marginX, y, contentW, boxH, 'S');
+      var cw2 = contentW / 2;
+      var pairs = [
+        [marginX+3, [['Tanggal', safe(gv('phDate'))], ['PIC', safe(gv('phPIC'))]]],
+        [marginX+cw2+3, [['Work Order', safe(gv('phWO'))], ['Program', safe(gv('phDocNo'))]]]
+      ];
+      pairs.forEach(function(pair){
+        pair[1].forEach(function(it, i){
+          var iy = y + 7 + i*7;
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+          doc.text(it[0]+':', pair[0], iy);
+          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+          doc.text(it[1].substring(0,38), pair[0]+28, iy);
+        });
+      });
+      y += boxH + 3;
 
-      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
-      doc.text('PIC:', infoX, marginTop+5.5);
-      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
-      doc.text(safe(gv('phPIC')), infoX+15, marginTop+5.5);
-
-      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
-      doc.text('WO:', infoX+45, marginTop);
-      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
-      doc.text(safe(gv('phWO')), infoX+55, marginTop);
-
-      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
-      doc.text('Print:', infoX+45, marginTop+5.5);
-      doc.setFont('helvetica','normal'); doc.setTextColor(20,20,20);
-      doc.text(safe(nowStr), infoX+55, marginTop+5.5);
-      y+=10;
+      // Print & WO line kecil
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(50,70,130);
+      doc.text('Print: '+safe(nowStr), marginX+3, y); y+=6;
 
       // Units line
       doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(60,60,60);
