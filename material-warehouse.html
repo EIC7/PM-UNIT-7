@@ -1024,7 +1024,7 @@ function supaFetch(method, path, body) {
       'apikey': SUPA_KEY,
       'Authorization': 'Bearer ' + SUPA_KEY,
       'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : (method === 'PATCH' ? 'return=representation' : '')
+      'Prefer': (method === 'POST' || method === 'PATCH') ? 'return=representation' : ''
     }
   };
   if (body) opts.body = JSON.stringify(body);
@@ -1048,18 +1048,17 @@ function loadAssets() {
         /* Flatten: data kolom Supabase → format lokal */
         var a = r.data || {};
         return {
-          id:          r.id,
-          nomor:       r.nomor       || a.nomor       || '',
-          nama:        r.nama        || a.nama         || '',
-          jenis:       r.jenis       || a.jenis        || '',
-          lokasi:      r.lokasi      || a.lokasi       || '',
-          kondisi:     r.kondisi     || a.kondisi      || '',
-          jumlah:      r.jumlah      || a.jumlah       || '',
-          satuan:      r.satuan      || a.satuan       || '',
-          deskripsi:   r.deskripsi   || a.deskripsi    || '',
-          imageData:   r.image_data  || a.imageData    || '',
-          createdAt:   r.created_at  || a.createdAt    || '',
-          updatedAt:   r.updated_at  || a.updatedAt    || '',
+          id:         r.id,
+          nomor:      r.nomor      || '',
+          nama:       r.nama       || '',
+          jenis:      r.jenis      || '',
+          lokasi:     r.lokasi     || '',
+          deskripsi:  r.deskripsi  || '',
+          keterangan: r.keterangan || '',
+          image_data: r.image_data || '',
+          gambar:     r.image_data || '',
+          createdAt:  r.created_at || '',
+          updatedAt:  r.updated_at || '',
         };
       });
       updateBadge();
@@ -1316,8 +1315,10 @@ function fillForm(asset) {
   rebuildJenisSelect(asset.jenis || '');
   document.getElementById('f_lokasi').value = asset.lokasi || '';
   document.getElementById('f_keterangan').value = asset.keterangan || '';
-  if (asset.gambar) {
-    setPreviewImage(asset.gambar);
+  // image_data = kolom Supabase, gambar = field lokal
+  var img = asset.image_data || asset.gambar || null;
+  if (img) {
+    setPreviewImage(img);
   } else {
     currentImageDataUrl = null;
     document.getElementById('imgPreviewWrap').style.display = 'none';
@@ -1345,27 +1346,44 @@ function resetForm() {
 function saveAsset() {
   var d = getFormData();
   if (!d.nomor) { showToast('⚠️ Nomor Asset (ST) wajib diisi'); document.getElementById('f_nomor').focus(); return; }
-  if (!d.nama) { showToast('⚠️ Nama Asset wajib diisi'); document.getElementById('f_nama').focus(); return; }
+  if (!d.nama)  { showToast('⚠️ Nama Asset wajib diisi');       document.getElementById('f_nama').focus();  return; }
+
+  // Mapping field form ke kolom Supabase
+  var payload = {
+    nomor:      d.nomor,
+    nama:       d.nama,
+    deskripsi:  d.deskripsi  || null,
+    jenis:      d.jenis      || null,
+    lokasi:     d.lokasi     || null,
+    image_data: d.gambar     || null,
+    keterangan: d.keterangan || null
+  };
 
   if (editingId) {
-    var idx = assets.findIndex(function(a){ return a.id === editingId; });
-    if (idx !== -1) {
-      assets[idx] = Object.assign(assets[idx], d, { updatedAt: new Date().toISOString() });
-    }
-    saveAssets();
-    showToast('✅ Asset berhasil diperbarui');
-    resetForm();
+    showToast('⏳ Menyimpan perubahan...');
+    supaFetch('PATCH', ASSET_TABLE + '?id=eq.' + editingId, payload)
+      .then(function() {
+        showToast('✅ Asset berhasil diperbarui');
+        resetForm();
+        loadAssets();
+      })
+      .catch(function(err) {
+        showToast('⚠️ Gagal update: ' + err.message);
+      });
   } else {
-    // Check duplicate nomor
     var dup = assets.find(function(a){ return a.nomor.toLowerCase() === d.nomor.toLowerCase(); });
     if (dup) { showToast('⚠️ Nomor Asset "'+d.nomor+'" sudah ada'); return; }
-    d.id = genId();
-    d.createdAt = new Date().toISOString();
-    d.updatedAt = d.createdAt;
-    assets.push(d);
-    saveAssets();
-    showToast('✅ Asset berhasil disimpan!');
-    resetForm();
+
+    showToast('⏳ Menyimpan asset...');
+    supaFetch('POST', ASSET_TABLE, payload)
+      .then(function() {
+        showToast('✅ Asset berhasil disimpan!');
+        resetForm();
+        loadAssets();
+      })
+      .catch(function(err) {
+        showToast('⚠️ Gagal simpan: ' + err.message);
+      });
   }
 }
 
@@ -1395,8 +1413,9 @@ function renderTable() {
 
   filtered.forEach(function(a, i) {
     var tr = document.createElement('tr');
-    var imgCell = a.gambar
-      ? '<img class="thumb-img" src="'+a.gambar+'" alt="gambar" onclick="openPreviewModal(\''+a.id+'\')" title="Lihat gambar">'
+    var imgSrc = a.image_data || a.gambar || '';
+    var imgCell = imgSrc
+      ? '<img class="thumb-img" src="'+imgSrc+'" alt="gambar" onclick="openPreviewModal(\''+a.id+'\')" title="Lihat gambar">'
       : '<div class="no-img-cell">🖼️</div>';
 
     tr.innerHTML = '<td class="col-no">'+(i+1)+'</td>' +
@@ -1442,9 +1461,10 @@ function openPreviewModal(id) {
 
   // Image with zoom+pan viewer
   var imgBlock = document.getElementById('previewImageBlock');
-  if (a.gambar) {
+  var pvSrc = a.image_data || a.gambar || '';
+  if (pvSrc) {
     imgBlock.innerHTML =
-      '<img id="pvImg" src="'+a.gambar+'" alt="gambar asset" draggable="false">'+
+      '<img id="pvImg" src="'+pvSrc+'" alt="gambar asset" draggable="false">'+
       '<div class="pv-zoom-bar">'+
         '<button class="pv-zoom-btn" onclick="pvZoom(-0.25)" title="Zoom out">−</button>'+
         '<span class="pv-zoom-label" id="pvZoomLabel">100%</span>'+
