@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checksheet Level Switch — PLTU Paiton Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --border: #d1dce8;
+    --primary: #1e3a5f;
+    --accent: #0f766e;
+    --accent2: #7c3aed;
+    --text: #1a2535;
+    --text-light: #64748b;
+    --red: #dc2626;
+    --yellow: #d97706;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(30,58,95,0.09);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); font-family: 'Segoe UI', Arial, sans-serif; color: var(--text); font-size: 14px; }
+
+  /* ── TOPBAR ── */
+  .topbar { background: #0f1e33; display: flex; align-items: center; gap: 6px; padding: 0 16px; height: 44px; position: sticky; top: 0; z-index: 100; }
+  .topbar-back { background: transparent; border: 1px solid #1e3a5f; border-radius: 6px; color: #93b4d4; font-size: 12px; padding: 5px 12px; cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .topbar-back:hover { color: #bfdbfe; border-color: #1d4ed8; background: rgba(29,78,216,.14); }
+  .topbar-sep { width: 1px; height: 26px; background: #2a4a7a; flex-shrink: 0; }
+  .topbar-logo { font-family: 'Arial Narrow', Arial, sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 2px; color: #e2eaf5; text-transform: uppercase; }
+  .topbar-sub { font-size: 11px; color: #5a7fa8; letter-spacing: .5px; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .topbar-time { font-family: 'Courier New', monospace; font-size: 12px; color: #4a7a9b; }
+  .btn-pdf { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; letter-spacing: .5px; transition: background .15s; }
+  .btn-pdf:hover { background: #0d6560; }
+  @media(max-width:600px){ .topbar-sub, .topbar-sep { display:none; } }
+
+  /* ── WRAPPER ── */
+  .wrapper { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  /* ── HERO ── */
+  .hero { margin-bottom: 24px; }
+  .hero-eyebrow { font-size: 11px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .hero-eyebrow::before { content:''; display:block; width:28px; height:2px; background:var(--accent); }
+  .hero-title { font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1.1; }
+  .hero-title span { color: var(--accent); }
+  .hero-sub { margin-top: 8px; color: var(--text-light); font-size: 13px; }
+
+  /* ── PANEL ── */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 18px; }
+  .panel-title { font-size: 11px; letter-spacing: 2px; font-weight: 700; text-transform: uppercase; color: var(--primary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .panel-title::before { content:''; display:block; width:3px; height:16px; background:var(--accent); border-radius:2px; }
+
+  /* ── ASSET SEARCH ── */
+  .search-wrap { display: flex; gap: 10px; align-items: stretch; }
+  .search-input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--text); background: #f8fafc; outline: none; transition: border .15s; }
+  .search-input:focus { border-color: var(--accent); background: #fff; }
+  .btn-search { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 0 20px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .btn-search:hover { background: #162d4a; }
+
+  .dropdown-list { border: 1px solid var(--border); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.1); margin-top: 6px; max-height: 260px; overflow-y: auto; display: none; }
+  .dropdown-list.show { display: block; }
+  .dropdown-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f0f4f8; transition: background .1s; }
+  .dropdown-item:hover { background: #edf5ff; }
+  .dropdown-item .tag { font-weight: 700; color: var(--primary); font-size: 13px; }
+  .dropdown-item .desc { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+  .dropdown-item .wo { font-size: 10px; color: var(--accent); margin-top: 1px; }
+  .dropdown-no-result { padding: 16px 14px; color: var(--text-light); font-size: 13px; text-align: center; }
+
+  /* ── CONFIRM BANNER ── */
+  .confirm-banner { background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .confirm-asset-info { flex: 1; }
+  .confirm-asset-info .tag { font-size: 17px; font-weight: 800; color: var(--primary); }
+  .confirm-asset-info .desc-text { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+  .confirm-btns { display: flex; gap: 8px; }
+  .btn-confirm { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 9px 22px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .btn-cancel { background: transparent; color: var(--text-light); border: 1px solid var(--border); border-radius: 7px; padding: 9px 16px; font-size: 13px; cursor: pointer; }
+
+  /* ── INFO TABLE ── */
+  .info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .info-table td { padding: 7px 10px; border: 1px solid var(--border); vertical-align: middle; }
+  .info-table td:first-child { font-weight: 600; color: var(--primary); background: #f1f7ff; width: 140px; }
+  .info-table td input, .info-table td select {
+    width: 100%; border: none; background: transparent; font-size: 13px; color: var(--text); outline: none; font-family: inherit;
+  }
+
+  /* ── APPLICATION CHECKBOXES ── */
+  .app-row { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .app-check { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 13px; }
+  .app-check input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+
+  /* ── IMAGE PICKER ── */
+  .img-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .img-card { border: 2px solid var(--border); border-radius: 8px; padding: 10px; cursor: pointer; text-align: center; transition: all .15s; background: #fafcff; }
+  .img-card:hover { border-color: var(--accent); background: #f0fdf9; }
+  .img-card.selected { border-color: var(--accent); background: #e6fdf9; box-shadow: 0 0 0 3px rgba(15,118,110,.15); }
+  .img-card svg { display: block; margin: 0 auto 8px; }
+  .img-card .img-label { font-size: 11px; font-weight: 600; color: var(--primary); }
+
+  /* ── CHECKLIST TABLE ── */
+  .cs-table-wrap { overflow-x: auto; }
+  table.cs-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.cs-table th { background: var(--primary); color: #fff; padding: 8px 10px; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .5px; border: 1px solid #162d4a; }
+  table.cs-table td { padding: 7px 10px; border: 1px solid var(--border); vertical-align: middle; }
+  table.cs-table tbody tr:nth-child(even) td { background: #f5f9ff; }
+  table.cs-table td.no { text-align: center; font-weight: 700; color: var(--primary); width: 34px; }
+  table.cs-table td.chk-cell { text-align: center; width: 42px; }
+  table.cs-table td.chk-cell input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  table.cs-table td.remark { min-width: 200px; }
+  table.cs-table td.remark input { width: 100%; border: none; border-bottom: 1px dashed var(--border); background: transparent; font-size: 12px; outline: none; padding: 2px 0; }
+  .cs-section-header td { background: #e8f0fc !important; font-weight: 700; color: var(--primary); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 6px 10px !important; }
+
+  /* ── RESULT TABLE ── */
+  .result-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .result-table th { background: #1e3a5f; color: #fff; padding: 8px 10px; text-align: center; border: 1px solid #162d4a; font-size: 11px; font-weight: 700; }
+  .result-table td { border: 1px solid var(--border); padding: 8px 10px; vertical-align: middle; }
+  .result-table td input { width: 100%; border: none; background: transparent; font-size: 13px; outline: none; }
+  .result-table td:nth-child(1) { background: #f1f7ff; font-weight: 600; color: var(--primary); font-size: 12px; }
+
+  /* ── SIGN TABLE ── */
+  .sign-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sign-table th { background: var(--primary); color: #fff; padding: 7px 10px; text-align: center; border: 1px solid #162d4a; font-size: 11px; }
+  .sign-table td { border: 1px solid var(--border); padding: 8px 10px; text-align: center; vertical-align: middle; }
+  .sign-table td:first-child { text-align: left; background: #f1f7ff; font-weight: 600; color: var(--primary); }
+  .sign-table td input { width: 100%; border: none; background: transparent; font-size: 12px; outline: none; text-align: center; }
+  .sign-box { min-height: 40px; }
+
+  /* ── NOTE ── */
+  .note-box { background: #fffbeb; border-left: 3px solid var(--yellow); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 12px; color: #78350f; line-height: 1.6; }
+
+  /* ── TEXTAREA ── */
+  textarea.field { width: 100%; border: 1.5px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; color: var(--text); }
+  textarea.field:focus { border-color: var(--accent); }
+
+  /* ── HIDDEN UNTIL ASSET CONFIRMED ── */
+  #checksheetBody { display: none; }
+  #confirmSection { display: none; }
+
+  /* ── STATUS CHIP ── */
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: .5px; }
+  .chip-green { background: #dcfce7; color: #15803d; }
+  .chip-red { background: #fee2e2; color: #dc2626; }
+
+  /* ══════════════════════════════════════════════
+     PRINT STYLES
+  ══════════════════════════════════════════════ */
+  @media print {
+    @page { size: A4 portrait; margin: 12mm 10mm; }
+    *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #fff !important; font-size: 10px !important; }
+    .topbar, .btn-pdf, .search-wrap, .dropdown-list, #assetSearchSection, #confirmSection,
+    .img-picker, .panel-title::before, .hero { display: none !important; }
+    .wrapper { max-width: 100% !important; padding: 0 !important; }
+    .panel { box-shadow: none !important; border: 1px solid #ccc !important; border-radius: 0 !important; padding: 8px !important; margin-bottom: 6px !important; break-inside: avoid; }
+    .panel-title { font-size: 9px !important; }
+    table.cs-table, .result-table, .sign-table, .info-table { font-size: 9px !important; }
+    table.cs-table th, .result-table th, .sign-table th { font-size: 9px !important; padding: 5px 6px !important; }
+    table.cs-table td, .result-table td, .sign-table td, .info-table td { padding: 5px 6px !important; }
+    /* Checkbox print */
+    table.cs-table td.chk-cell input[type=checkbox] { display: none !important; }
+    .print-chk { display: inline-flex !important; align-items: center !important; justify-content: center !important;
+      width: 13px !important; height: 13px !important; border: 1.5px solid #555 !important;
+      border-radius: 2px !important; font-size: 10px !important; font-weight: 900 !important; color: transparent !important; }
+    .print-chk.checked { background: #0f766e !important; border-color: #0f766e !important; color: #fff !important; }
+    /* Application checkboxes print */
+    .app-check input[type=checkbox] { display: none !important; }
+    .app-print-box { display: inline-block !important; width: 12px; height: 12px; border: 1.5px solid #555; border-radius: 2px; vertical-align: middle; margin-right: 4px; font-size: 10px; text-align: center; line-height: 12px; }
+    .app-print-box.checked { background: #0f766e; color: #fff; }
+    /* Print header */
+    .print-header { display: block !important; text-align: center; margin-bottom: 10px; }
+    .print-header .ph-title { font-size: 14px; font-weight: 900; border: 2px solid #000; padding: 5px 10px; display: inline-block; letter-spacing: 1px; }
+    .print-header .ph-sub { font-size: 9px; color: #555; margin-top: 4px; }
+    #checksheetBody { display: block !important; }
+  }
+  .print-header { display: none; }
+  .app-print-box { display: none; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='outage-index.html'">← Outage</button>
+  <button class="topbar-back" onclick="window.location.href='outage-history.html'" style="margin-left:2px">🗂 History</button>
+  <button class="topbar-back" onclick="window.location.href='index.html'" style="margin-left:2px">⌂ PM Dashboard</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">CHECKSHEET</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">Level Switch · Maintenance Plan</div>
+  <div class="topbar-right">
+    <div class="topbar-time" id="clockCS">--:--:--</div>
+    <button class="btn-pdf" id="btnPdf" onclick="downloadPdf()" style="display:none">⬇ Download PDF</button>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">OUTAGE MANAGEMENT · CS-03</div>
+    <div class="hero-title">Level <span>Switch</span><br>Maintenance Plan</div>
+    <div class="hero-sub">Checksheet pengujian dan kalibrasi level switch — PLTU Paiton Unit 7</div>
+  </div>
+
+  <!-- ASSET SEARCH SECTION -->
+  <div class="panel" id="assetSearchSection">
+    <div class="panel-title">Cari Asset</div>
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="assetSearchInput" placeholder="Ketik Asset Tag atau deskripsi... (contoh: 7HD-LSHH atau FEEDWATER)" autocomplete="off" oninput="onSearchInput(this.value)">
+      <button class="btn-search" onclick="doSearch()">🔍 Cari</button>
+    </div>
+    <div class="dropdown-list" id="dropdownList"></div>
+  </div>
+
+  <!-- CONFIRM SECTION -->
+  <div class="panel" id="confirmSection">
+    <div class="panel-title">Konfirmasi Asset</div>
+    <div class="confirm-banner">
+      <div class="confirm-asset-info">
+        <div class="tag" id="confirmTag">—</div>
+        <div class="desc-text" id="confirmDesc">—</div>
+        <div style="margin-top:4px"><span class="chip chip-green" id="confirmWO">—</span></div>
+      </div>
+      <div class="confirm-btns">
+        <button class="btn-cancel" onclick="cancelConfirm()">✕ Batal</button>
+        <button class="btn-confirm" onclick="confirmAsset()">✓ Ya, Gunakan Asset Ini</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKSHEET BODY — hidden until asset confirmed -->
+  <div id="checksheetBody">
+
+    <!-- PRINT HEADER (print only) -->
+    <div class="print-header">
+      <div class="ph-title">LEVEL SWITCH MAINTENANCE PLAN — UNIT 7</div>
+      <div class="ph-sub">PLTU Paiton · PT POMI · 2 Yearly Instrumentation Calibration</div>
+    </div>
+
+    <!-- INFO PANEL -->
+    <div class="panel">
+      <div class="panel-title">Informasi Asset</div>
+      <table class="info-table">
+        <tr>
+          <td>Asset Number</td>
+          <td><input type="text" id="f_asset_number" placeholder="Auto dari Supabase"></td>
+          <td style="font-weight:600;color:var(--primary);background:#f1f7ff;width:140px">Date / Time</td>
+          <td><input type="datetime-local" id="f_datetime"></td>
+        </tr>
+        <tr>
+          <td>Asset Description</td>
+          <td colspan="3"><input type="text" id="f_asset_desc" placeholder="—"></td>
+        </tr>
+        <tr>
+          <td>Manufacturer (Mnf)</td>
+          <td><input type="text" id="f_mnf" placeholder="—"></td>
+          <td style="font-weight:600;color:var(--primary);background:#f1f7ff">Location</td>
+          <td><input type="text" id="f_location" placeholder="—"></td>
+        </tr>
+        <tr>
+          <td>Serial Number (SN)</td>
+          <td><input type="text" id="f_sn" placeholder="—"></td>
+          <td style="font-weight:600;color:var(--primary);background:#f1f7ff">Work Order Ref.</td>
+          <td><input type="text" id="f_wo" placeholder="—"></td>
+        </tr>
+        <tr>
+          <td>Application</td>
+          <td colspan="3">
+            <div class="app-row">
+              <label class="app-check">
+                <input type="checkbox" id="app_steam"> <span>Steam</span>
+                <span class="app-print-box" id="app_steam_box"></span>
+              </label>
+              <label class="app-check">
+                <input type="checkbox" id="app_water"> <span>Water</span>
+                <span class="app-print-box" id="app_water_box"></span>
+              </label>
+              <label class="app-check">
+                <input type="checkbox" id="app_oil"> <span>Oil</span>
+                <span class="app-print-box" id="app_oil_box"></span>
+              </label>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>PIC</td>
+          <td><input type="text" id="f_pic" placeholder="—"></td>
+          <td style="font-weight:600;color:var(--primary);background:#f1f7ff">PTW No.</td>
+          <td><input type="text" id="f_ptw" placeholder="—"></td>
+        </tr>
+        <tr>
+          <td>Doc No.</td>
+          <td><input type="text" id="f_docno" placeholder="—"></td>
+          <td style="font-weight:600;color:var(--primary);background:#f1f7ff">Work Order No.</td>
+          <td><input type="text" id="f_wono" placeholder="—"></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- TYPE PICKER -->
+    <div class="panel">
+      <div class="panel-title">Tipe Limit Switch</div>
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:12px">Pilih tipe limit switch yang digunakan pada asset ini:</p>
+      <div class="img-picker" id="imgPicker">
+        <!-- Generated by JS -->
+      </div>
+      <div id="selectedTypeLabel" style="margin-top:12px;font-size:12px;color:var(--accent);font-weight:700;display:none">
+        ✓ Terpilih: <span id="selectedTypeName"></span>
+      </div>
+    </div>
+
+    <!-- CHECKLIST TABLE -->
+    <div class="panel">
+      <div class="panel-title">Job Plan Inspection</div>
+      <div class="cs-table-wrap">
+        <table class="cs-table" id="checklistTable">
+          <thead>
+            <tr>
+              <th style="width:36px">No</th>
+              <th style="text-align:left">Job Plan Inspection</th>
+              <th style="width:44px">Y</th>
+              <th style="width:44px">N</th>
+              <th style="text-align:left">Remarks / Note</th>
+            </tr>
+          </thead>
+          <tbody id="checklistBody">
+            <!-- Generated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MEASUREMENT RESULT -->
+    <div class="panel">
+      <div class="panel-title">Hasil Pengukuran</div>
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;width:260px">Measurement</th>
+            <th>As Found</th>
+            <th>OEM / Acceptance Criteria</th>
+            <th>As Left</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Micro-switch contact resistance</td>
+            <td><input type="text" placeholder="Ohm"></td>
+            <td style="text-align:center;color:var(--text-light)">&lt; 10 Ω</td>
+            <td><input type="text" placeholder="Ohm"></td>
+            <td><input type="text" placeholder="—"></td>
+          </tr>
+          <tr>
+            <td>Signal / Power voltage</td>
+            <td><input type="text" placeholder="Vdc / Vac"></td>
+            <td style="text-align:center;color:var(--text-light)">Sesuai nameplate</td>
+            <td><input type="text" placeholder="Vdc / Vac"></td>
+            <td><input type="text" placeholder="—"></td>
+          </tr>
+          <tr>
+            <td>Magnetic carriage movement</td>
+            <td><input type="text" placeholder="Free / Tight"></td>
+            <td style="text-align:center;color:var(--text-light)">Free movement</td>
+            <td><input type="text" placeholder="Free / Tight"></td>
+            <td><input type="text" placeholder="—"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PARTS USED -->
+    <div class="panel">
+      <div class="panel-title">Part & Consumables</div>
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Description</th>
+            <th style="width:60px">Qty</th>
+            <th style="width:110px">Stock No.</th>
+            <th style="width:90px">Cost ($)</th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody id="partsBody">
+          <tr><td>WD Lubrication</td><td><input type="text" placeholder="1"></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td></tr>
+          <tr><td>Rubber tape & insulation 3M</td><td><input type="text" placeholder="1"></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td></tr>
+          <tr><td>Silicon seal</td><td><input type="text" placeholder="As req"></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td></tr>
+          <tr><td><input type="text" placeholder="Tambah item..."></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td><td><input type="text" placeholder="—"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FURTHER ACTION -->
+    <div class="panel">
+      <div class="panel-title">Further Action / Suggestion</div>
+      <textarea class="field" id="f_further" rows="3" placeholder="Tuliskan tindak lanjut atau saran..."></textarea>
+    </div>
+
+    <!-- NOTE -->
+    <div class="panel">
+      <div class="note-box">
+        <strong>Catatan:</strong> Semua referensi informasi teknis seperti: clearances, gaps, tolerances, setting values, engineering drawings, dan dokumen pendukung lainnya harus dilampirkan dalam paket QCP ini sebagai langkah kontrol.
+      </div>
+    </div>
+
+    <!-- SIGN OFF -->
+    <div class="panel">
+      <div class="panel-title">Sign Off</div>
+      <table class="sign-table">
+        <thead>
+          <tr><th style="text-align:left;width:180px">Peran</th><th>Nama</th><th>Jabatan</th><th>Dept / Company</th><th style="width:100px">Tanda Tangan</th><th style="width:80px">Tanggal</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Performed By<br><small style="font-weight:400;color:var(--text-light)">(Technician/Contractor)</small></td>
+            <td><input type="text" placeholder="Nama"></td>
+            <td>Technician</td>
+            <td>Maintenance / IPMOMI</td>
+            <td class="sign-box"></td>
+            <td><input type="text" placeholder="dd/mm/yyyy"></td>
+          </tr>
+          <tr>
+            <td>Checked By<br><small style="font-weight:400;color:var(--text-light)">(Supervisor/Engineer)</small></td>
+            <td><input type="text" placeholder="Nama"></td>
+            <td>Supervisor</td>
+            <td>Maintenance / IPMOMI</td>
+            <td class="sign-box"></td>
+            <td><input type="text" placeholder="dd/mm/yyyy"></td>
+          </tr>
+          <tr>
+            <td>Verified By<br><small style="font-weight:400;color:var(--text-light)">(Plant Engineer)</small></td>
+            <td><input type="text" placeholder="Nama"></td>
+            <td>Plant Engineer</td>
+            <td>Engineering / IPMOMI</td>
+            <td class="sign-box"></td>
+            <td><input type="text" placeholder="dd/mm/yyyy"></td>
+          </tr>
+          <tr>
+            <td>Approved By<br><small style="font-weight:400;color:var(--text-light)">(Project Engineer)</small></td>
+            <td><input type="text" placeholder="Nama"></td>
+            <td>Project Engineer</td>
+            <td>Engineering / IPMOMI</td>
+            <td class="sign-box"></td>
+            <td><input type="text" placeholder="dd/mm/yyyy"></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="display:flex;gap:24px;margin-top:12px;font-size:12px;color:var(--text-light)">
+        <div>Job Start: <input type="datetime-local" id="f_job_start" style="border:none;border-bottom:1px solid var(--border);outline:none;font-size:12px"></div>
+        <div>Job Complete: <input type="datetime-local" id="f_job_end" style="border:none;border-bottom:1px solid var(--border);outline:none;font-size:12px"></div>
+      </div>
+    </div>
+
+  </div><!-- /checksheetBody -->
+</div><!-- /wrapper -->
+
+<script>
+/* ══════════════════════════════════════════════
+   SUPABASE CONFIG
+══════════════════════════════════════════════ */
+var SUPA_URL  = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var ASSET_TABLE = 'outage_assets';
+
+function supaFetch(method, path, body) {
+  var headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json'
+  };
+  if (method !== 'GET') headers['Prefer'] = 'return=representation';
+  var opts = { method: method, headers: headers };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(SUPA_URL + '/rest/v1/' + path, opts)
+    .then(function(res) {
+      if (!res.ok) return res.text().then(function(t){ throw new Error(t); });
+      return res.text().then(function(t){ return t ? JSON.parse(t) : []; });
+    });
+}
+
+/* ══════════════════════════════════════════════
+   CLOCK
+══════════════════════════════════════════════ */
+function tickClock() {
+  var now = new Date();
+  var h = String(now.getHours()).padStart(2,'0');
+  var m = String(now.getMinutes()).padStart(2,'0');
+  var s = String(now.getSeconds()).padStart(2,'0');
+  var el = document.getElementById('clockCS');
+  if (el) el.textContent = h+':'+m+':'+s;
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ══════════════════════════════════════════════
+   CHECKLIST DATA
+══════════════════════════════════════════════ */
+var CHECKLIST_ITEMS = [
+  { no:1, task:'Visually inspect panel for any obvious signs of damage', remark:'' },
+  { no:2, task:'Cleaning instrumentation, flushing-purging-draining impulse line if required. Check level switch magnetic carriage for free movement, repair if necessary.', remark:'' },
+  { no:3, task:'Check for micro-switch contact, repair/replace if contact >10 Ohm', remark:'R = ……………… Ohm' },
+  { no:4, task:'Check sealing/covering of instrument & junction boxes, conduits. Apply sealant/duct seal to prevent water/oil vapor ingress. Replace conduit/cable if required.', remark:'' },
+  { no:5, task:'Check instrument signal/power availability at end of maintenance activities', remark:'Voltage: ………… Vdc   Voltage: ………… Vac' },
+  { no:6, task:'Keep Overall Equipment Cleanliness & Appearance', remark:'' },
+  { no:7, task:'Record all defects found and result of work carried out as work history', remark:'' }
+];
+
+function buildChecklist() {
+  var tbody = document.getElementById('checklistBody');
+  tbody.innerHTML = '';
+  CHECKLIST_ITEMS.forEach(function(item) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="no">'+item.no+'</td>'+
+      '<td>'+item.task+'</td>'+
+      '<td class="chk-cell"><input type="checkbox" id="chk_y_'+item.no+'" onchange="onChkY('+item.no+',this)"></td>'+
+      '<td class="chk-cell"><input type="checkbox" id="chk_n_'+item.no+'" onchange="onChkN('+item.no+',this)"></td>'+
+      '<td class="remark"><input type="text" id="remark_'+item.no+'" placeholder="'+item.remark+'"></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function onChkY(no, el) {
+  if (el.checked) document.getElementById('chk_n_'+no).checked = false;
+}
+function onChkN(no, el) {
+  if (el.checked) document.getElementById('chk_y_'+no).checked = false;
+}
+
+/* ══════════════════════════════════════════════
+   TYPE PICKER — SVG illustrations of limit switch types
+══════════════════════════════════════════════ */
+var LS_TYPES = [
+  {
+    id: 'float',
+    label: 'Float Type',
+    svg: '<svg width="80" height="70" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><rect x="28" y="5" width="24" height="16" rx="3" fill="#1e3a5f" stroke="#0f766e" stroke-width="1.5"/><line x1="40" y1="21" x2="40" y2="42" stroke="#64748b" stroke-width="2"/><ellipse cx="40" cy="50" rx="16" ry="10" fill="#bfdbfe" stroke="#1e3a5f" stroke-width="1.5"/><line x1="56" y1="50" x2="72" y2="50" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2"/><text x="40" y="68" text-anchor="middle" font-size="7" fill="#64748b">Float</text></svg>'
+  },
+  {
+    id: 'magnetic',
+    label: 'Magnetic Type',
+    svg: '<svg width="80" height="70" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="10" width="14" height="46" rx="3" fill="#1e3a5f" stroke="#0f766e" stroke-width="1.5"/><rect x="22" y="28" width="36" height="10" rx="2" fill="#bfdbfe" stroke="#1e3a5f" stroke-width="1.5"/><circle cx="58" cy="33" r="10" fill="none" stroke="#0f766e" stroke-width="2"/><line x1="53" y1="28" x2="63" y2="38" stroke="#0f766e" stroke-width="1.5"/><line x1="63" y1="28" x2="53" y2="38" stroke="#0f766e" stroke-width="1.5"/><text x="40" y="67" text-anchor="middle" font-size="7" fill="#64748b">Magnetic</text></svg>'
+  },
+  {
+    id: 'displacer',
+    label: 'Displacer Type',
+    svg: '<svg width="80" height="70" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="4" width="20" height="14" rx="3" fill="#1e3a5f" stroke="#0f766e" stroke-width="1.5"/><line x1="40" y1="18" x2="40" y2="30" stroke="#64748b" stroke-width="2"/><rect x="24" y="30" width="32" height="26" rx="4" fill="#dbeafe" stroke="#1e3a5f" stroke-width="1.5"/><line x1="40" y1="56" x2="40" y2="64" stroke="#64748b" stroke-width="2"/><circle cx="40" cy="62" r="4" fill="#0f766e"/><text x="40" y="70" text-anchor="middle" font-size="7" fill="#64748b">Displacer</text></svg>'
+  },
+  {
+    id: 'conductance',
+    label: 'Conductance Type',
+    svg: '<svg width="80" height="70" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><rect x="28" y="4" width="24" height="14" rx="3" fill="#1e3a5f" stroke="#0f766e" stroke-width="1.5"/><line x1="34" y1="18" x2="34" y2="58" stroke="#0f766e" stroke-width="2"/><line x1="40" y1="18" x2="40" y2="52" stroke="#94a3b8" stroke-width="2"/><line x1="46" y1="18" x2="46" y2="46" stroke="#bfdbfe" stroke-width="2"/><circle cx="34" cy="59" r="3" fill="#0f766e"/><circle cx="40" cy="53" r="3" fill="#94a3b8"/><circle cx="46" cy="47" r="3" fill="#bfdbfe" stroke="#1e3a5f" stroke-width="1"/><text x="40" y="70" text-anchor="middle" font-size="7" fill="#64748b">Conductance</text></svg>'
+  },
+  {
+    id: 'vibrating',
+    label: 'Vibrating Fork',
+    svg: '<svg width="80" height="70" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><rect x="28" y="4" width="24" height="14" rx="3" fill="#1e3a5f" stroke="#0f766e" stroke-width="1.5"/><line x1="40" y1="18" x2="40" y2="36" stroke="#64748b" stroke-width="2"/><path d="M30 36 Q26 46 30 56" stroke="#0f766e" stroke-width="2" fill="none"/><path d="M50 36 Q54 46 50 56" stroke="#0f766e" stroke-width="2" fill="none"/><line x1="30" y1="36" x2="50" y2="36" stroke="#1e3a5f" stroke-width="2"/><text x="40" y="70" text-anchor="middle" font-size="7" fill="#64748b">Vibrating Fork</text></svg>'
+  },
+  {
+    id: 'ultrasonic',
+    label: 'Ultrasonic Type',
+    svg: '<svg width="80" height="70" viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg"><rect x="28" y="4" width="24" height="14" rx="3" fill="#1e3a5f" stroke="#0f766e" stroke-width="1.5"/><rect x="32" y="18" width="16" height="20" rx="3" fill="#bfdbfe" stroke="#1e3a5f" stroke-width="1.5"/><path d="M20 48 Q30 42 30 54 Q30 62 20 58" stroke="#0f766e" stroke-width="1.5" fill="none" stroke-dasharray="3,2"/><path d="M60 48 Q50 42 50 54 Q50 62 60 58" stroke="#0f766e" stroke-width="1.5" fill="none" stroke-dasharray="3,2"/><line x1="40" y1="38" x2="40" y2="62" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="2,3"/><text x="40" y="70" text-anchor="middle" font-size="7" fill="#64748b">Ultrasonic</text></svg>'
+  }
+];
+
+var selectedType = null;
+
+function buildTypePicker() {
+  var container = document.getElementById('imgPicker');
+  container.innerHTML = '';
+  LS_TYPES.forEach(function(t) {
+    var div = document.createElement('div');
+    div.className = 'img-card';
+    div.id = 'type_'+t.id;
+    div.innerHTML = t.svg + '<div class="img-label">'+t.label+'</div>';
+    div.onclick = function() { selectType(t.id, t.label); };
+    container.appendChild(div);
+  });
+}
+
+function selectType(id, label) {
+  document.querySelectorAll('.img-card').forEach(function(c){ c.classList.remove('selected'); });
+  document.getElementById('type_'+id).classList.add('selected');
+  selectedType = id;
+  document.getElementById('selectedTypeLabel').style.display = 'block';
+  document.getElementById('selectedTypeName').textContent = label;
+}
+
+/* ══════════════════════════════════════════════
+   ASSET SEARCH — Supabase
+══════════════════════════════════════════════ */
+var allAssets = [];
+var pendingAsset = null;
+var searchTimer = null;
+
+function onSearchInput(val) {
+  clearTimeout(searchTimer);
+  if (val.length < 2) { document.getElementById('dropdownList').classList.remove('show'); return; }
+  searchTimer = setTimeout(function(){ doSearch(); }, 350);
+}
+
+function doSearch() {
+  var q = document.getElementById('assetSearchInput').value.trim();
+  if (!q) return;
+  var list = document.getElementById('dropdownList');
+  list.innerHTML = '<div class="dropdown-item"><span style="color:var(--text-light)">Mencari...</span></div>';
+  list.classList.add('show');
+
+  // Search by asset_tag OR asset_desc, filter Level Switch category
+  var path = ASSET_TABLE + '?select=*&or=(asset_tag.ilike.*'+encodeURIComponent(q)+'*,asset_desc.ilike.*'+encodeURIComponent(q)+'*)&limit=30';
+  supaFetch('GET', path)
+    .then(function(rows) {
+      // Also include hardcoded LS data from Excel as fallback
+      var merged = mergeWithLocalLS(rows, q);
+      renderDropdown(merged);
+    })
+    .catch(function(err) {
+      console.warn('Supabase search error:', err.message);
+      // Fallback to local Excel data
+      var filtered = LS_LOCAL_DATA.filter(function(r) {
+        return r.asset_tag.toLowerCase().includes(q.toLowerCase()) ||
+               r.asset_desc.toLowerCase().includes(q.toLowerCase());
+      });
+      renderDropdown(filtered.slice(0, 20));
+    });
+}
+
+function mergeWithLocalLS(supaRows, q) {
+  var tags = {};
+  var result = supaRows.slice();
+  supaRows.forEach(function(r){ tags[r.asset_tag] = true; });
+  LS_LOCAL_DATA.forEach(function(r) {
+    if (!tags[r.asset_tag] &&
+        (r.asset_tag.toLowerCase().includes(q.toLowerCase()) ||
+         r.asset_desc.toLowerCase().includes(q.toLowerCase()))) {
+      result.push(r);
+    }
+  });
+  return result.slice(0, 30);
+}
+
+function renderDropdown(rows) {
+  var list = document.getElementById('dropdownList');
+  if (!rows.length) {
+    list.innerHTML = '<div class="dropdown-no-result">Tidak ada hasil untuk pencarian ini.</div>';
+    list.classList.add('show');
+    return;
+  }
+  list.innerHTML = '';
+  rows.forEach(function(r) {
+    var div = document.createElement('div');
+    div.className = 'dropdown-item';
+    div.innerHTML =
+      '<div class="tag">'+escHtml(r.asset_tag||'')+'</div>'+
+      '<div class="desc">'+escHtml(r.asset_desc||r.description||'')+'</div>'+
+      (r.wo||r.extra_data&&r.extra_data.wo ? '<div class="wo">WO: '+(r.wo||r.extra_data.wo)+'</div>' : '');
+    div.onclick = function() { showConfirm(r); };
+    list.appendChild(div);
+  });
+  list.classList.add('show');
+}
+
+function showConfirm(asset) {
+  pendingAsset = asset;
+  document.getElementById('dropdownList').classList.remove('show');
+  document.getElementById('confirmTag').textContent = asset.asset_tag || '—';
+  document.getElementById('confirmDesc').textContent = asset.asset_desc || asset.description || '—';
+  var wo = asset.wo || (asset.extra_data && asset.extra_data.wo) || '—';
+  document.getElementById('confirmWO').textContent = 'WO: '+wo;
+  document.getElementById('confirmSection').style.display = 'block';
+  document.getElementById('confirmSection').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function cancelConfirm() {
+  pendingAsset = null;
+  document.getElementById('confirmSection').style.display = 'none';
+}
+
+function confirmAsset() {
+  if (!pendingAsset) return;
+  fillForm(pendingAsset);
+  document.getElementById('confirmSection').style.display = 'none';
+  document.getElementById('assetSearchSection').style.display = 'none';
+  document.getElementById('checksheetBody').style.display = 'block';
+  document.getElementById('btnPdf').style.display = 'inline-block';
+  document.getElementById('checksheetBody').scrollIntoView({behavior:'smooth'});
+}
+
+function fillForm(a) {
+  var now = new Date();
+  var dtStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+'T'+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+  document.getElementById('f_asset_number').value = a.asset_tag || '';
+  document.getElementById('f_asset_desc').value   = a.asset_desc || a.description || '';
+  document.getElementById('f_datetime').value      = dtStr;
+
+  // From Supabase or extra_data
+  var ex = a.extra_data || {};
+  document.getElementById('f_mnf').value      = a.manufacturer || ex.manufacturer || ex.mnf || '';
+  document.getElementById('f_location').value = a.lokasi || ex.location || a.location || '';
+  document.getElementById('f_sn').value        = a.serial_number || ex.sn || ex.serial_number || '';
+  document.getElementById('f_wo').value        = a.wo || ex.wo || a.work_order || '';
+  document.getElementById('f_pic').value        = a.pic || ex.pic || '';
+  document.getElementById('f_wono').value       = a.wo || ex.wo || '';
+
+  // Application — from asset_desc guess
+  var desc = (a.asset_desc || '').toUpperCase();
+  if (desc.includes('STEAM') || desc.includes('HEATER') || desc.includes('FEEDWATER')) {
+    document.getElementById('app_steam').checked = true;
+  }
+  if (desc.includes('WATER') || desc.includes('BFP') || desc.includes('STATOR')) {
+    document.getElementById('app_water').checked = true;
+  }
+  if (desc.includes('OIL') || desc.includes('LUBE') || desc.includes('EHC')) {
+    document.getElementById('app_oil').checked = true;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   LOCAL DATA (dari Excel LS sheet) — fallback jika Supabase kosong
+══════════════════════════════════════════════ */
+var LS_LOCAL_DATA = [
+  {asset_tag:'7HD-LSHH-653A', asset_desc:'FEEDWATER HEATER 1A OUTLET LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSHH-653B', asset_desc:'FEEDWATER HEATER 1B OUTLET LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSHH-645',  asset_desc:'FEEDWATER HEATER 2 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSHH-646',  asset_desc:'FEEDWATER HEATER 2 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSH-643',   asset_desc:'FEEDWATER HEATER 2 OUTLET LEVEL SWITCH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSL-644',   asset_desc:'FEEDWATER HEATER 2 LEVEL SWITCH LOW', wo:'2504101111'},
+  {asset_tag:'7HD-LSHH-637',  asset_desc:'FEEDWATER HEATER 3 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSHH-638',  asset_desc:'FEEDWATER HEATER 3 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSH-635',   asset_desc:'FEEDWATER HEATER 3 LEVEL SWITCH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSL-636',   asset_desc:'FEEDWATER HEATER 3 LEVEL SWITCH LOW', wo:'2504101111'},
+  {asset_tag:'7HD-LSHH-629',  asset_desc:'FEEDWATER HEATER 4 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSHH-630',  asset_desc:'FEEDWATER HEATER 4 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSH-627',   asset_desc:'FEEDWATER HEATER 4 OUTLET LEVEL SWITCH HIGH', wo:'2504101111'},
+  {asset_tag:'7HD-LSL-628',   asset_desc:'FEEDWATER HEATER 4 OUTLET LEVEL SWITCH LOW', wo:'2504101111'},
+  {asset_tag:'7HD-LSHH-621A', asset_desc:'FEEDWATER HEATER 6A LEVEL SWITCH HIGH HIGH', wo:'2504101106'},
+  {asset_tag:'7HD-LSHH-621B', asset_desc:'FEEDWATER HEATER 6B LEVEL SWITCH HIGH HIGH', wo:'2504101106'},
+  {asset_tag:'7HD-LSH-619A',  asset_desc:'FEEDWATER HEATER 6A LEVEL SWITCH HIGH', wo:'2504101106'},
+  {asset_tag:'7HD-LSL-620A',  asset_desc:'FEEDWATER HEATER 6A LEVEL SWITCH LOW', wo:'2304201027'},
+  {asset_tag:'7HD-LSHH-613A', asset_desc:'FEEDWATER HEATER 7A LEVEL SWITCH HIGH HIGH', wo:'2504101106'},
+  {asset_tag:'7HD-LSHH-614A', asset_desc:'FEEDWATER HEATER 7A LEVEL SWITCH HIGH HIGH', wo:'2504101106'},
+  {asset_tag:'7BS-LSH-134A',  asset_desc:'COLD REHEAT 7A DRAIN POT 1 LEVEL SWITCH HIGH', wo:'2504101088'},
+  {asset_tag:'7BS-LSHH-134A', asset_desc:'COLD REHEAT 7A DRAIN POT 1 LEVEL SWITCH HIGH HIGH', wo:'2504101088'},
+  {asset_tag:'7LT-LSH-500A',  asset_desc:'BFPT LUBE OIL RESERVOIR 7A LEVEL SWITCH HIGH', wo:'2411302264'},
+  {asset_tag:'7LT-LSL-500A',  asset_desc:'BFPT LUBE OIL RESERVOIR 7A LEVEL SWITCH LOW', wo:''},
+  {asset_tag:'7LT-LSH-500B',  asset_desc:'BFPT LUBE OIL RESERVOIR 7B LEVEL SWITCH HIGH', wo:'2411302248'},
+  {asset_tag:'7FW-LSHL-266',  asset_desc:'MD BFP 7 OIL TANK LEVEL SWITCH HIGH LOW', wo:'2411302249'},
+  {asset_tag:'7LT-LSH-400',   asset_desc:'EHC FLUID TANK 8 LEVEL SWITCH HIGH', wo:'2411302270'},
+  {asset_tag:'7LT-LSL-400',   asset_desc:'EHC FLUID TANK 8 LEVEL SWITCH LOW', wo:'2411302270'},
+  {asset_tag:'7SC-LSH-305',   asset_desc:'#7 STATOR COOLING WATER TANK LEVEL SWITCH HIGH', wo:'2411302250'}
+];
+
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function gv(id) { var e=document.getElementById(id); return e ? e.value : ''; }
+function safe(s) { return String(s||''); }
+
+/* ══════════════════════════════════════════════
+   PRINT CHECKBOX HELPER
+══════════════════════════════════════════════ */
+window.addEventListener('beforeprint', function() {
+  // Checklist checkboxes
+  document.querySelectorAll('.chk-cell input[type=checkbox]').forEach(function(chk) {
+    var span = document.createElement('span');
+    span.className = 'print-chk' + (chk.checked ? ' checked' : '');
+    span.textContent = chk.checked ? '✓' : '';
+    span.setAttribute('data-print-chk','1');
+    chk.parentNode.insertBefore(span, chk.nextSibling);
+  });
+  // Application checkboxes
+  ['app_steam','app_water','app_oil'].forEach(function(id) {
+    var box = document.getElementById(id+'_box');
+    if (box) {
+      box.style.display = 'inline-block';
+      var chk = document.getElementById(id);
+      box.className = 'app-print-box' + (chk && chk.checked ? ' checked' : '');
+      box.textContent = (chk && chk.checked) ? '✓' : '';
+    }
+  });
+});
+window.addEventListener('afterprint', function() {
+  document.querySelectorAll('[data-print-chk]').forEach(function(el){ el.remove(); });
+  ['app_steam_box','app_water_box','app_oil_box'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+});
+
+/* ══════════════════════════════════════════════
+   PDF GENERATION — jsPDF persis pola so2/beltscale
+══════════════════════════════════════════════ */
+function drawCheckbox(doc, x, y, w, h, checked) {
+  var size = 3.2;
+  var cx = x + w/2, cy = y + h/2;
+  doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+  doc.rect(cx-size/2, cy-size/2, size, size, 'S');
+  if (checked) {
+    doc.setDrawColor(15,118,110); doc.setLineWidth(0.5);
+    doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.4);
+    doc.line(cx-size/2+size*0.38, cy+size/2-0.4, cx+size/2-0.3, cy-size/2+0.4);
+  }
+}
+
+function downloadPdf() {
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  var pw = 210, ph = 297;
+  var marginX = 12, marginTop = 14, marginBottom = 14;
+  var contentW = pw - marginX*2;
+  var y = marginTop;
+
+  function checkPage(need) {
+    if (y+need > ph-marginBottom) { doc.addPage(); y = marginTop; }
+  }
+
+  // ── POMI LOGO header ──
+  doc.setFillColor(30,58,95);
+  doc.rect(marginX, y, contentW, 12, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
+  doc.text('LEVEL SWITCH MAINTENANCE PLAN — UNIT 7', pw/2, y+8, {align:'center'});
+  y += 16;
+
+  // Subtitle
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(80,100,130);
+  doc.text('PLTU Paiton  ·  PT POMI  ·  2 Yearly Instrumentation Calibration  ·  MOD-02', pw/2, y, {align:'center'});
+  y += 8;
+
+  // ── INFO TABLE ──
+  var now = new Date();
+  var dtNow = String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  doc.setDrawColor(180,210,220); doc.setLineWidth(0.3);
+  doc.rect(marginX, y, contentW, 38, 'S');
+  var cw2 = contentW/2;
+  var infoFields = [
+    ['Asset Number', gv('f_asset_number'), 'Date / Time', gv('f_datetime')||dtNow],
+    ['Asset Description', gv('f_asset_desc'), '', ''],
+    ['Manufacturer (Mnf)', gv('f_mnf'), 'Location', gv('f_location')],
+    ['Serial Number (SN)', gv('f_sn'), 'Work Order Ref.', gv('f_wo')],
+    ['PIC', gv('f_pic'), 'PTW No.', gv('f_ptw')]
+  ];
+  doc.setFontSize(8);
+  infoFields.forEach(function(row, ri) {
+    var iy = y + 7 + ri*6.8;
+    doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
+    doc.text(row[0]+':', marginX+3, iy);
+    doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+    if (ri===1) {
+      doc.text(safe(row[1]).substring(0,55), marginX+32, iy);
+    } else {
+      doc.text(safe(row[1]).substring(0,28), marginX+32, iy);
+      doc.setFont('helvetica','bold'); doc.setTextColor(55,80,140);
+      doc.text(row[2]+':', marginX+cw2+3, iy);
+      doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+      doc.text(safe(row[3]).substring(0,22), marginX+cw2+28, iy);
+    }
+  });
+  // Application
+  var appY = y + 7 + 5*6.8;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+  doc.text('Application:', marginX+3, appY);
+  var apps = [
+    {id:'app_steam', label:'Steam'},
+    {id:'app_water', label:'Water'},
+    {id:'app_oil',   label:'Oil'}
+  ];
+  var ax = marginX+32;
+  apps.forEach(function(a) {
+    var chk = document.getElementById(a.id);
+    drawCheckbox(doc, ax, appY-4, 5, 5, chk&&chk.checked);
+    doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+    doc.text(a.label, ax+6, appY);
+    ax += 22;
+  });
+  y += 44;
+
+  // ── SELECTED TYPE ──
+  if (selectedType) {
+    checkPage(10);
+    var typeLabel = '';
+    LS_TYPES.forEach(function(t){ if(t.id===selectedType) typeLabel=t.label; });
+    doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95);
+    doc.text('Tipe Limit Switch: ', marginX+3, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(15,118,110);
+    doc.text(typeLabel, marginX+38, y);
+    y += 8;
+  }
+
+  // ── CHECKLIST TABLE ──
+  checkPage(20);
+  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95);
+  doc.text('JOB PLAN INSPECTION', marginX+3, y); y += 6;
+
+  var csHead = [['No', 'Job Plan Inspection', 'Y', 'N', 'Remarks / Note']];
+  var csBody = CHECKLIST_ITEMS.map(function(item) {
+    var yChk = document.getElementById('chk_y_'+item.no);
+    var nChk = document.getElementById('chk_n_'+item.no);
+    var rem  = document.getElementById('remark_'+item.no);
+    return [
+      String(item.no),
+      item.task,
+      (yChk&&yChk.checked) ? '__CHK__' : '__BOX__',
+      (nChk&&nChk.checked) ? '__CHK__' : '__BOX__',
+      rem ? rem.value || item.remark : item.remark
+    ];
+  });
+
+  doc.autoTable({
+    startY: y,
+    head: csHead,
+    body: csBody,
+    margin: {left:marginX, right:marginX, bottom:marginBottom},
+    styles: {fontSize:7.5, cellPadding:2.5, lineColor:[180,200,220], lineWidth:0.3, overflow:'linebreak'},
+    headStyles: {fillColor:[30,58,95], textColor:255, fontStyle:'bold', fontSize:7, halign:'center'},
+    alternateRowStyles: {fillColor:[240,247,255]},
+    columnStyles: {
+      0: {halign:'center', cellWidth:12},
+      2: {halign:'center', cellWidth:14},
+      3: {halign:'center', cellWidth:14},
+      4: {cellWidth:50}
+    },
+    didDrawCell: function(data) {
+      if (data.section !== 'body') return;
+      var val = data.cell.raw;
+      if (val !== '__CHK__' && val !== '__BOX__') return;
+      var bg = (data.row.index%2===0) ? [255,255,255] : [240,247,255];
+      doc.setFillColor(bg[0],bg[1],bg[2]);
+      doc.rect(data.cell.x+0.2, data.cell.y+0.2, data.cell.width-0.4, data.cell.height-0.4, 'F');
+      drawCheckbox(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val==='__CHK__');
+    }
+  });
+  y = doc.lastAutoTable.finalY + 6;
+
+  // ── MEASUREMENT RESULT ──
+  checkPage(20);
+  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95);
+  doc.text('HASIL PENGUKURAN', marginX+3, y); y+=6;
+  doc.autoTable({
+    startY: y,
+    head: [['Measurement','As Found','OEM / Acceptance Criteria','As Left','Remark']],
+    body: [
+      ['Micro-switch contact resistance','','>10 Ω → replace','',''],
+      ['Signal / Power voltage','','Sesuai nameplate','',''],
+      ['Magnetic carriage movement','','Free movement','','']
+    ],
+    margin: {left:marginX, right:marginX, bottom:marginBottom},
+    styles: {fontSize:7.5, cellPadding:2.5, lineColor:[180,200,220], lineWidth:0.3},
+    headStyles: {fillColor:[30,58,95], textColor:255, fontStyle:'bold', fontSize:7, halign:'center'},
+    alternateRowStyles: {fillColor:[240,247,255]},
+    columnStyles: {2:{halign:'center', fontStyle:'italic'}}
+  });
+  y = doc.lastAutoTable.finalY + 6;
+
+  // ── FURTHER ACTION ──
+  var further = gv('f_further');
+  if (further) {
+    checkPage(16);
+    doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95);
+    doc.text('FURTHER ACTION / SUGGESTION', marginX+3, y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(40,40,40);
+    var lines = doc.splitTextToSize(further, contentW-6);
+    doc.text(lines, marginX+3, y); y += lines.length*4+4;
+  }
+
+  // ── SIGN OFF ──
+  checkPage(36);
+  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95);
+  doc.text('SIGN OFF', marginX+3, y); y+=6;
+  doc.autoTable({
+    startY: y,
+    head: [['Peran','Nama','Jabatan','Dept/Company','Tanda Tangan','Tanggal']],
+    body: [
+      ['Performed By\n(Technician)','','Technician','Maintenance/IPMOMI','',''],
+      ['Checked By\n(Supervisor)','','Supervisor','Maintenance/IPMOMI','',''],
+      ['Verified By\n(Plant Engineer)','','Plant Engineer','Engineering/IPMOMI','',''],
+      ['Approved By\n(Project Engineer)','','Project Engineer','Engineering/IPMOMI','','']
+    ],
+    margin: {left:marginX, right:marginX, bottom:marginBottom},
+    styles: {fontSize:7, cellPadding:3, lineColor:[180,200,220], lineWidth:0.3, minCellHeight:14},
+    headStyles: {fillColor:[30,58,95], textColor:255, fontStyle:'bold', fontSize:7, halign:'center'},
+    columnStyles: {0:{cellWidth:36, fontStyle:'bold'}, 4:{cellWidth:28}, 5:{cellWidth:22}}
+  });
+
+  // ── PAGE NUMBERS ──
+  var totalPages = doc.internal.getNumberOfPages();
+  for (var i=1; i<=totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150);
+    doc.text('PLTU Paiton Unit 7 · Level Switch Maintenance Plan · PT POMI', marginX, ph-6);
+    doc.text('Hal '+i+' / '+totalPages, pw-marginX, ph-6, {align:'right'});
+  }
+
+  var tag = gv('f_asset_number') || 'level-switch';
+  doc.save('checksheet-ls-'+tag+'.pdf');
+}
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+buildChecklist();
+buildTypePicker();
+
+// Set default datetime
+var now0 = new Date();
+var dtStr0 = now0.getFullYear()+'-'+String(now0.getMonth()+1).padStart(2,'0')+'-'+String(now0.getDate()).padStart(2,'0')+'T'+String(now0.getHours()).padStart(2,'0')+':'+String(now0.getMinutes()).padStart(2,'0');
+document.getElementById('f_datetime').value = dtStr0;
+
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#assetSearchSection')) {
+    document.getElementById('dropdownList').classList.remove('show');
+  }
+});
+</script>
+</body>
+</html>
