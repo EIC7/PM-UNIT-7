@@ -367,7 +367,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
     <!-- ACTION BAR -->
     <div class="action-bar">
       <button class="btn btn-primary" onclick="tsDownloadPdf()">⬇ Download PDF</button>
-      <button class="btn btn-save" onclick="dbSave('temp_switch')">💾 Simpan ke Database</button>
+      <button class="btn btn-save" onclick="tsSave()" id="btnSave">💾 Simpan ke Database</button>
       <button class="btn btn-outline" onclick="resetForm()">✕ Reset</button>
     </div>
 
@@ -405,25 +405,27 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
 
 <script>
 /* ══════════════════════════════════════
-   SUPABASE
+   SUPABASE CONFIG
+   Tabel khusus: ts_checksheet
+   Asset dari: outage_assets
 ══════════════════════════════════════ */
-var SUPA_URL  = 'https://ruvvximnnacpvvoogbzs.supabase.co';
-var SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
-var ASSET_TBL = 'outage_assets';
-var CS_TBL    = 'temp_switch_checksheet';
+var TS_SUPA_URL  = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var TS_SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var ASSET_TBL    = 'outage_assets';
+var TS_TABLE     = 'ts_checksheet';
 
-function supaFetch(method, path, body) {
+function tsSupaFetch(method, path, body) {
   var opts = {
     method: method,
     headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
+      'apikey': TS_SUPA_KEY,
+      'Authorization': 'Bearer ' + TS_SUPA_KEY,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation'
     }
   };
   if (body) opts.body = JSON.stringify(body);
-  return fetch(SUPA_URL + '/rest/v1/' + path, opts)
+  return fetch(TS_SUPA_URL + '/rest/v1/' + path, opts)
     .then(function(r){
       if (!r.ok) return r.text().then(function(t){ throw new Error(t); });
       return r.text().then(function(t){ return t ? JSON.parse(t) : []; });
@@ -474,7 +476,7 @@ function loadAssets() {
   document.getElementById('assetLoading').style.display = 'block';
   document.getElementById('assetPrompt').style.display  = 'none';
 
-  supaFetch('GET', ASSET_TBL + '?select=*&input_category=eq.Temperature&order=asset_tag.asc&limit=500')
+  tsSupaFetch('GET', ASSET_TBL + '?select=*&input_category=eq.Temperature&order=asset_tag.asc&limit=500')
     .then(function(data) {
       allAssets = data || [];
       tsAssets  = allAssets;
@@ -681,32 +683,26 @@ function updateTsSizeInfo() {
 /* ══════════════════════════════════════
    DB COLLECT
 ══════════════════════════════════════ */
-function dbCollectData(modul) {
-  if (modul !== 'temp_switch') return null;
+function tsCollectData() {
   function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
   function gc(id){ var e=document.getElementById(id); return !!(e&&e.checked); }
   return {
-    asset_id:   selectedAsset ? selectedAsset.id : null,
-    asset_tag:  gv('tsAssetTag'),
-    asset_desc: gv('tsAssetDesc'),
-    lokasi:     gv('tsLokasi'),
-    date:       gv('tsDate'),
-    work_order: gv('tsWO'),
-    pic:        gv('tsPIC'),
-    qcp_ref:    gv('tsQCP'),
-    activity:   gv('tsActivity'),
-    manufacturer: gv('tsMnf'),
+    asset_id:      selectedAsset ? selectedAsset.id : null,
+    asset_tag:     gv('tsAssetTag'),
+    asset_desc:    gv('tsAssetDesc'),
+    lokasi:        gv('tsLokasi'),
+    tanggal:       gv('tsDate') || null,
+    work_order:    gv('tsWO') || null,
+    pic:           gv('tsPIC') || null,
+    qcp_ref:       gv('tsQCP'),
+    activity:      gv('tsActivity'),
+    manufacturer:  gv('tsMnf'),
     serial_number: gv('tsSN'),
-    model:      gv('tsModel'),
-    set_point:  gv('tsSetPoint'),
+    model:         gv('tsModel'),
+    set_point:     gv('tsSetPoint'),
     inspection: {
       items: [1,2,3,4,5,6,7,8,9].map(function(n){
-        return {
-          no: n,
-          ok: gc('chk'+n+'ok'),
-          na: gc('chk'+n+'na'),
-          remark: gv('rem'+n)
-        };
+        return { no:n, ok:gc('chk'+n+'ok'), na:gc('chk'+n+'na'), remark:gv('rem'+n) };
       }),
       rem3_ohm:  gv('rem3ohm'),
       rem5_volt: gv('rem5volt'),
@@ -714,13 +710,50 @@ function dbCollectData(modul) {
                    ? document.querySelector('input[name="voltType"]:checked').value : ''
     },
     measurement: {
-      set_point: { found: gv('mSetFound'), accept: gv('mSetAccept'), left: gv('mSetLeft'), remark: gv('mSetRem') },
-      switch_action: { found: gv('mSwFound'), left: gv('mSwLeft'), remark: gv('mSwRem') },
-      deviation: { found: gv('mDevFound'), left: gv('mDevLeft'), remark: gv('mDevRem') }
+      set_point:     { found:gv('mSetFound'), accept:gv('mSetAccept'), left:gv('mSetLeft'), remark:gv('mSetRem') },
+      switch_action: { found:gv('mSwFound'), left:gv('mSwLeft'), remark:gv('mSwRem') },
+      deviation:     { found:gv('mDevFound'), left:gv('mDevLeft'), remark:gv('mDevRem') }
     },
-    note: gv('tsNote'),
-    images: tsImages.map(function(img){ return { dataUrl: img.dataUrl, caption: img.caption }; })
+    note:        gv('tsNote'),
+    images:      tsImages.map(function(img){ return { dataUrl:img.dataUrl, caption:img.caption }; }),
+    created_at:  new Date().toISOString(),
+    updated_at:  new Date().toISOString()
   };
+}
+
+/* dbCollectData diperlukan shared.js tapi kita tidak pakai dbSave dari shared */
+function dbCollectData(modul){ return null; }
+
+function tsSave() {
+  var rec = tsCollectData();
+  if (!rec.asset_tag) { showToast('Pilih asset terlebih dahulu!'); return; }
+
+  var btn = document.getElementById('btnSave');
+  if (btn) btn.innerHTML = '⏳ Menyimpan...';
+
+  var method = window._tsEditId ? 'PATCH' : 'POST';
+  var path   = window._tsEditId
+    ? TS_TABLE + '?id=eq.' + window._tsEditId
+    : TS_TABLE;
+
+  if (!window._tsEditId) {
+    delete rec.updated_at;
+  } else {
+    delete rec.created_at;
+  }
+
+  tsSupaFetch(method, path, rec)
+    .then(function(rows){
+      if (btn) btn.innerHTML = '💾 Simpan ke Database';
+      if (!window._tsEditId && rows && rows[0]) {
+        window._tsEditId = rows[0].id;
+      }
+      showToast(window._tsEditId ? '✓ Data diperbarui!' : '✓ Data tersimpan!');
+    })
+    .catch(function(err){
+      if (btn) btn.innerHTML = '💾 Simpan ke Database';
+      showToast('✗ Gagal simpan: ' + (err.message || err));
+    });
 }
 
 /* ══════════════════════════════════════
@@ -965,6 +998,7 @@ function tsDrawBg(doc,pw,ph){
 function resetForm(){
   selectedAsset = null;
   tsImages = [];
+  window._tsEditId = null;
   document.getElementById('mainForm').style.display    = 'none';
   document.getElementById('assetPrompt').style.display = 'block';
   document.getElementById('assetSelectedBadge').style.display = 'none';
