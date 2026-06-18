@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checksheet Level Switch — PLTU Paiton Unit 7</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --bg: #f0f4f8;
@@ -228,6 +228,38 @@
   }
   .print-header { display: none; }
   .app-print-box { display: none; }
+
+  /* ── ASSET PICKER MODAL ── */
+  .picker-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px}
+  .picker-overlay.show{display:flex}
+  .picker-box{background:#fff;border-radius:12px;padding:24px;width:min(480px,96vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+  .picker-title{font-size:15px;font-weight:700;color:var(--primary);margin-bottom:12px}
+  .picker-search{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;margin-bottom:10px}
+  .picker-search:focus{border-color:var(--accent)}
+  .picker-list{overflow-y:auto;flex:1;border:1px solid var(--border);border-radius:6px}
+  .picker-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s}
+  .picker-item:last-child{border-bottom:none}
+  .picker-item:hover{background:#f0fdf9}
+  .picker-item-tag{font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:var(--primary)}
+  .picker-item-desc{font-size:12px;color:var(--text-light);margin-top:2px}
+  .picker-item-cat{font-size:10px;color:var(--accent);font-weight:600;letter-spacing:.5px;margin-top:1px}
+  .picker-empty{padding:30px;text-align:center;color:var(--text-light);font-size:13px}
+  .picker-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+  .btn-picker-cancel{padding:8px 16px;border-radius:6px;border:1.5px solid var(--border);background:#fff;color:var(--text-light);font-size:13px;cursor:pointer;font-family:inherit}
+  /* Confirm modal */
+  .confirm-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:16px}
+  .confirm-modal-overlay.show{display:flex}
+  .confirm-modal-box{background:#fff;border-radius:10px;padding:24px;width:min(420px,96vw);box-shadow:0 20px 50px rgba(0,0,0,.2)}
+  .confirm-modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px}
+  .confirm-modal-desc{font-size:13px;color:var(--text-light);margin-bottom:18px;line-height:1.6}
+  /* Asset selected badge */
+  .asset-selected-badge{display:inline-flex;align-items:center;gap:10px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin-bottom:14px;flex-wrap:wrap;width:100%}
+  .asset-badge-tag{font-family:'Courier New',monospace;font-weight:700;color:var(--primary);font-size:13px}
+  .asset-badge-desc{font-size:12px;color:var(--text-light)}
+  .asset-badge-change{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:underline;margin-left:auto}
+  /* Toast */
+  #lsToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e3a5f;color:#fff;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.25);opacity:0;transition:opacity .3s;white-space:nowrap;max-width:90vw;text-align:center}
+
 </style>
 </head>
 <body>
@@ -256,41 +288,21 @@
     <div class="hero-sub">Checksheet pengujian dan kalibrasi level switch — PLTU Paiton Unit 7</div>
   </div>
 
-  <!-- ASSET SEARCH SECTION -->
-  <!-- ASSET SEARCH SECTION -->
+  <!-- ASSET SELECTOR PANEL -->
   <div class="panel" id="assetSearchSection">
-    <div class="panel-title">Cari Asset</div>
-    <div class="search-wrap">
-      <input type="text" class="search-input" id="assetSearchInput"
-        placeholder="Ketik Asset Tag atau deskripsi... (contoh: 7HD-LSHH atau FEEDWATER)"
-        autocomplete="off"
-        oninput="onSearchInput(this.value)"
-        onkeydown="if(event.key==='Enter') doSearch()">
-      <button class="btn-search" onclick="doSearch()">&#128269; Cari</button>
+    <div class="panel-title">Pilih Asset Level Switch</div>
+    <div id="lsAssetBadge" style="display:none"></div>
+    <div id="lsAssetPrompt" style="text-align:center;padding:32px 20px;color:var(--text-light)">
+      <div style="font-size:36px;margin-bottom:10px">📡</div>
+      <div style="font-size:14px;margin-bottom:16px">Pilih asset Level Switch dari database Outage Input</div>
+      <button onclick="lsOpenPicker()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer">🔍 Pilih Asset</button>
     </div>
-    <div style="margin-top:8px">
-      <button onclick="showAllAssets()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 14px;font-size:12px;color:var(--text-light);cursor:pointer;margin-top:4px">
-        &#128203; Tampilkan semua 29 asset Level Switch
-      </button>
-    </div>
-    <div class="dropdown-list" id="dropdownList"></div>
-  </div>
-
-  <!-- CONFIRM SECTION -->
-  <div class="panel" id="confirmSection">
-    <div class="panel-title">Konfirmasi Asset</div>
-    <div class="confirm-banner">
-      <div class="confirm-asset-info">
-        <div class="tag" id="confirmTag">—</div>
-        <div class="desc-text" id="confirmDesc">—</div>
-        <div style="margin-top:4px"><span class="chip chip-green" id="confirmWO">—</span></div>
-      </div>
-      <div class="confirm-btns">
-        <button class="btn-cancel" onclick="cancelConfirm()">✕ Batal</button>
-        <button class="btn-confirm" onclick="confirmAsset()">✓ Ya, Gunakan Asset Ini</button>
-      </div>
+    <div id="lsAssetLoading" style="display:none;text-align:center;padding:32px;color:var(--text-light);font-size:13px">
+      <div style="width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:lsSpin .8s linear infinite;display:inline-block;margin-bottom:10px"></div>
+      <div>Memuat data asset...</div>
     </div>
   </div>
+  <style>@keyframes lsSpin{to{transform:rotate(360deg)}}</style>
 
   <!-- CHECKSHEET BODY — hidden until asset confirmed -->
   <div id="checksheetBody">
@@ -501,8 +513,8 @@
 /* ══════════════════════════════════════════════
    SUPABASE CONFIG
 ══════════════════════════════════════════════ */
-var SUPA_URL  = 'https://ruvvximnnacpvvoogbzs.supabase.co';
-var SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var SUPA_URL    = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
 var ASSET_TABLE = 'outage_assets';
 
 function supaFetch(method, path, body) {
@@ -520,6 +532,186 @@ function supaFetch(method, path, body) {
       return res.text().then(function(t){ return t ? JSON.parse(t) : []; });
     });
 }
+
+/* ══════════════════════════════════════════════
+   ASSET PICKER — Load dari outage_assets
+══════════════════════════════════════════════ */
+var lsAllAssets  = [];
+var lsPending    = null;
+var lsSelected   = null;
+
+/* Field mapping: key database → id input form */
+var LS_FIELD_MAP = {
+  'asset_tag':    'f_asset_number',
+  'asset_desc':   'f_asset_desc',
+  'lokasi':       'f_location',
+  'pic':          'f_pic',
+  'manufacturer': 'f_mnf',
+  'serial_number':'f_sn',
+  'work_order':   'f_wo'
+};
+
+window.addEventListener('DOMContentLoaded', function(){
+  lsLoadAssets();
+  buildChecklist();
+});
+
+function lsLoadAssets() {
+  document.getElementById('lsAssetLoading').style.display = 'block';
+  document.getElementById('lsAssetPrompt').style.display  = 'none';
+
+  supaFetch('GET', ASSET_TABLE + '?select=*&input_category=eq.Level%20Switch&order=asset_tag.asc&limit=500')
+    .then(function(data) {
+      lsAllAssets = data || [];
+      /* Merge dengan local data jika belum ada di Supabase */
+      var tags = {};
+      lsAllAssets.forEach(function(r){ tags[r.asset_tag] = true; });
+      LS_LOCAL_DATA.forEach(function(r){
+        if (!tags[r.asset_tag]) lsAllAssets.push(r);
+      });
+      document.getElementById('lsAssetLoading').style.display = 'none';
+      document.getElementById('lsAssetPrompt').style.display  = 'block';
+      lsShowToast('Data dimuat: ' + lsAllAssets.length + ' asset ✓');
+    })
+    .catch(function(){
+      /* Fallback local data */
+      lsAllAssets = LS_LOCAL_DATA.slice();
+      document.getElementById('lsAssetLoading').style.display = 'none';
+      document.getElementById('lsAssetPrompt').style.display  = 'block';
+      lsShowToast('Menggunakan data lokal');
+    });
+}
+
+function lsOpenPicker() {
+  document.getElementById('lsPickerSearch').value = '';
+  lsRenderPickerList(lsAllAssets);
+  document.getElementById('lsPickerOverlay').classList.add('show');
+  setTimeout(function(){ document.getElementById('lsPickerSearch').focus(); }, 100);
+}
+
+function lsClosePicker() {
+  document.getElementById('lsPickerOverlay').classList.remove('show');
+}
+
+function lsFilterPicker() {
+  var q = document.getElementById('lsPickerSearch').value.toLowerCase().trim();
+  var list = q ? lsAllAssets.filter(function(a){
+    return (a.asset_tag||'').toLowerCase().includes(q) ||
+           (a.asset_desc||a.description||'').toLowerCase().includes(q) ||
+           (a.lokasi||'').toLowerCase().includes(q);
+  }) : lsAllAssets;
+  lsRenderPickerList(list);
+}
+
+function lsRenderPickerList(list) {
+  var el = document.getElementById('lsPickerList');
+  if (!list.length) {
+    el.innerHTML = '<div class="picker-empty">Tidak ada asset ditemukan</div>';
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  list.forEach(function(a){
+    var div = document.createElement('div');
+    div.className = 'picker-item';
+    div.setAttribute('data-tag', a.asset_tag||'');
+    div.innerHTML =
+      '<div class="picker-item-tag">' + escHtml(a.asset_tag||'—') + '</div>' +
+      '<div class="picker-item-desc">' + escHtml(a.asset_desc||a.description||'') + '</div>' +
+      '<div class="picker-item-cat">📍 ' + escHtml(a.lokasi||a.location||'Level Switch') + '</div>';
+    div.onclick = function(){ lsSelectItem(this.getAttribute('data-tag')); };
+    frag.appendChild(div);
+  });
+  el.innerHTML = '';
+  el.appendChild(frag);
+}
+
+function lsSelectItem(tag) {
+  var asset = lsAllAssets.find(function(a){ return (a.asset_tag||'') === tag; });
+  if (!asset) return;
+  lsPending = asset;
+  lsClosePicker();
+  var ex = asset.extra_data || {};
+  document.getElementById('lsConfirmDesc').innerHTML =
+    '<strong>Asset Tag:</strong> ' + escHtml(asset.asset_tag||'—') + '<br>' +
+    '<strong>Deskripsi:</strong> ' + escHtml(asset.asset_desc||asset.description||'—') + '<br>' +
+    '<strong>Lokasi:</strong> ' + escHtml(asset.lokasi||ex.location||'—') + '<br>' +
+    '<br>Lanjutkan dengan asset ini?';
+  document.getElementById('lsConfirmOverlay').classList.add('show');
+}
+
+function lsCloseConfirm() {
+  lsPending = null;
+  document.getElementById('lsConfirmOverlay').classList.remove('show');
+}
+
+function lsApplyAsset() {
+  lsSelected = lsPending; lsPending = null;
+  document.getElementById('lsConfirmOverlay').classList.remove('show');
+  lsFillForm(lsSelected);
+  /* Show badge */
+  var badge = document.getElementById('lsAssetBadge');
+  badge.style.display = 'block';
+  badge.innerHTML = '<div class="asset-selected-badge">' +
+    '<span class="asset-badge-tag">📡 ' + escHtml(lsSelected.asset_tag||'—') + '</span>' +
+    '<span class="asset-badge-desc">' + escHtml(lsSelected.asset_desc||lsSelected.description||'') + '</span>' +
+    '<span class="asset-badge-change" onclick="lsOpenPicker()">Ganti Asset</span>' +
+    '</div>';
+  document.getElementById('lsAssetPrompt').style.display = 'none';
+  /* Show checksheet */
+  document.getElementById('checksheetBody').style.display = 'block';
+  document.getElementById('btnPdf').style.display = 'inline-block';
+  document.getElementById('checksheetBody').scrollIntoView({behavior:'smooth'});
+  lsShowToast('Asset dipilih: ' + (lsSelected.asset_tag||'—') + ' ✓');
+}
+
+function lsFillForm(a) {
+  var ex = a.extra_data || {};
+  /* Field tetap */
+  var fv = function(id, val){ var e=document.getElementById(id); if(e&&val) e.value=val; };
+  fv('f_asset_number', a.asset_tag);
+  fv('f_asset_desc',   a.asset_desc || a.description);
+  fv('f_location',     a.lokasi || ex.location || a.location);
+  fv('f_pic',          a.pic || ex.pic);
+  fv('f_mnf',          a.manufacturer || ex.manufacturer || ex.mnf);
+  fv('f_sn',           a.serial_number || ex.sn || ex.serial_number);
+  fv('f_wo',           a.work_order || ex.work_order || ex.wo || a.wo);
+
+  /* Set datetime now */
+  var now = new Date();
+  var dtStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+
+    String(now.getDate()).padStart(2,'0')+'T'+String(now.getHours()).padStart(2,'0')+':'+
+    String(now.getMinutes()).padStart(2,'0');
+  fv('f_datetime', dtStr);
+
+  /* Extra data — match ke field form jika nama sama */
+  Object.keys(ex).forEach(function(k){
+    var kl = k.toLowerCase().replace(/\s+/g,'_');
+    var mapped = LS_FIELD_MAP[kl] || LS_FIELD_MAP[k.toLowerCase()];
+    if (mapped) fv(mapped, ex[k]);
+  });
+
+  /* Application guess dari asset_desc */
+  var desc = (a.asset_desc||'').toUpperCase();
+  if (desc.includes('STEAM')||desc.includes('HEATER')||desc.includes('FEEDWATER')) {
+    var e=document.getElementById('app_steam'); if(e) e.checked=true;
+  }
+  if (desc.includes('WATER')||desc.includes('BFP')||desc.includes('STATOR')) {
+    var e=document.getElementById('app_water'); if(e) e.checked=true;
+  }
+  if (desc.includes('OIL')||desc.includes('LUBE')||desc.includes('EHC')) {
+    var e=document.getElementById('app_oil'); if(e) e.checked=true;
+  }
+}
+
+function lsShowToast(msg) {
+  var t = document.getElementById('lsToast'); if(!t) return;
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._to); t._to = setTimeout(function(){ t.style.opacity='0'; }, 3000);
+}
+
+/* Close on overlay click */
+document.getElementById('lsPickerOverlay').addEventListener('click', function(e){ if(e.target===this) lsClosePicker(); });
+document.getElementById('lsConfirmOverlay').addEventListener('click', function(e){ if(e.target===this) lsCloseConfirm(); });
 
 /* ══════════════════════════════════════════════
    CLOCK
@@ -613,142 +805,6 @@ function selectSeries(id, label) {
 
 function buildTypePicker() { /* handled inline in HTML */ }
 
-/* ══════════════════════════════════════════════
-   ASSET SEARCH — Supabase
-══════════════════════════════════════════════ */
-var allAssets = [];
-var pendingAsset = null;
-var searchTimer = null;
-
-function onSearchInput(val) {
-  clearTimeout(searchTimer);
-  if (val.length < 2) { document.getElementById('dropdownList').classList.remove('show'); return; }
-  searchTimer = setTimeout(function(){ doSearch(); }, 350);
-}
-
-function doSearch() {
-  var q = document.getElementById('assetSearchInput').value.trim();
-  if (!q) return;
-  var list = document.getElementById('dropdownList');
-
-  // ── 1. Tampilkan local data DULU (instant, no network wait) ──
-  var localResults = LS_LOCAL_DATA.filter(function(r) {
-    var ql = q.toLowerCase();
-    return r.asset_tag.toLowerCase().includes(ql) ||
-           r.asset_desc.toLowerCase().includes(ql);
-  }).slice(0, 30);
-  renderDropdown(localResults);
-
-  // ── 2. Coba Supabase di background untuk enrich data ──
-  var path = ASSET_TABLE + '?select=*&or=(asset_tag.ilike.*'+encodeURIComponent(q)+'*,asset_desc.ilike.*'+encodeURIComponent(q)+'*)&limit=30';
-  supaFetch('GET', path)
-    .then(function(rows) {
-      if (rows && rows.length > 0) {
-        var merged = mergeWithLocalLS(rows, q);
-        renderDropdown(merged);
-      }
-    })
-    .catch(function(err) {
-      // Local data already shown — silently ignore Supabase error
-      console.warn('Supabase enrich error (using local data):', err.message);
-    });
-}
-
-function showAllAssets() {
-  document.getElementById('assetSearchInput').value = '';
-  renderDropdown(LS_LOCAL_DATA.slice());
-}
-
-function mergeWithLocalLS(supaRows, q) {
-  var tags = {};
-  var result = supaRows.slice();
-  supaRows.forEach(function(r){ tags[r.asset_tag] = true; });
-  LS_LOCAL_DATA.forEach(function(r) {
-    if (!tags[r.asset_tag] &&
-        (r.asset_tag.toLowerCase().includes(q.toLowerCase()) ||
-         r.asset_desc.toLowerCase().includes(q.toLowerCase()))) {
-      result.push(r);
-    }
-  });
-  return result.slice(0, 30);
-}
-
-function renderDropdown(rows) {
-  var list = document.getElementById('dropdownList');
-  if (!rows.length) {
-    list.innerHTML = '<div class="dropdown-no-result">Tidak ada hasil untuk pencarian ini.</div>';
-    list.classList.add('show');
-    return;
-  }
-  list.innerHTML = '';
-  rows.forEach(function(r) {
-    var div = document.createElement('div');
-    div.className = 'dropdown-item';
-    div.innerHTML =
-      '<div class="tag">'+escHtml(r.asset_tag||'')+'</div>'+
-      '<div class="desc">'+escHtml(r.asset_desc||r.description||'')+'</div>'+
-      (r.wo||r.extra_data&&r.extra_data.wo ? '<div class="wo">WO: '+(r.wo||r.extra_data.wo)+'</div>' : '');
-    div.onclick = function() { showConfirm(r); };
-    list.appendChild(div);
-  });
-  list.classList.add('show');
-}
-
-function showConfirm(asset) {
-  pendingAsset = asset;
-  document.getElementById('dropdownList').classList.remove('show');
-  document.getElementById('confirmTag').textContent = asset.asset_tag || '—';
-  document.getElementById('confirmDesc').textContent = asset.asset_desc || asset.description || '—';
-  var wo = asset.wo || (asset.extra_data && asset.extra_data.wo) || '—';
-  document.getElementById('confirmWO').textContent = 'WO: '+wo;
-  document.getElementById('confirmSection').style.display = 'block';
-  document.getElementById('confirmSection').scrollIntoView({behavior:'smooth', block:'nearest'});
-}
-
-function cancelConfirm() {
-  pendingAsset = null;
-  document.getElementById('confirmSection').style.display = 'none';
-}
-
-function confirmAsset() {
-  if (!pendingAsset) return;
-  fillForm(pendingAsset);
-  document.getElementById('confirmSection').style.display = 'none';
-  document.getElementById('assetSearchSection').style.display = 'none';
-  document.getElementById('checksheetBody').style.display = 'block';
-  document.getElementById('btnPdf').style.display = 'inline-block';
-  document.getElementById('checksheetBody').scrollIntoView({behavior:'smooth'});
-}
-
-function fillForm(a) {
-  var now = new Date();
-  var dtStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+'T'+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-
-  document.getElementById('f_asset_number').value = a.asset_tag || '';
-  document.getElementById('f_asset_desc').value   = a.asset_desc || a.description || '';
-  document.getElementById('f_datetime').value      = dtStr;
-
-  // From Supabase or extra_data
-  var ex = a.extra_data || {};
-  document.getElementById('f_mnf').value      = a.manufacturer || ex.manufacturer || ex.mnf || '';
-  document.getElementById('f_location').value = a.lokasi || ex.location || a.location || '';
-  document.getElementById('f_sn').value        = a.serial_number || ex.sn || ex.serial_number || '';
-  document.getElementById('f_wo').value        = a.wo || ex.wo || a.work_order || '';
-  document.getElementById('f_pic').value        = a.pic || ex.pic || '';
-  document.getElementById('f_docno2').value     = a.doc_no || ex.doc_no || '';
-
-  // Application — from asset_desc guess
-  var desc = (a.asset_desc || '').toUpperCase();
-  if (desc.includes('STEAM') || desc.includes('HEATER') || desc.includes('FEEDWATER')) {
-    document.getElementById('app_steam').checked = true;
-  }
-  if (desc.includes('WATER') || desc.includes('BFP') || desc.includes('STATOR')) {
-    document.getElementById('app_water').checked = true;
-  }
-  if (desc.includes('OIL') || desc.includes('LUBE') || desc.includes('EHC')) {
-    document.getElementById('app_oil').checked = true;
-  }
-}
 
 /* ══════════════════════════════════════════════
    LOCAL DATA (dari Excel LS sheet) — fallback jika Supabase kosong
@@ -1049,5 +1105,34 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
+<!-- PICKER MODAL -->
+<div class="picker-overlay" id="lsPickerOverlay">
+  <div class="picker-box">
+    <div class="picker-title">📡 Pilih Asset Level Switch</div>
+    <input type="text" class="picker-search" id="lsPickerSearch" placeholder="Cari asset tag atau deskripsi..." oninput="lsFilterPicker()">
+    <div class="picker-list" id="lsPickerList">
+      <div class="picker-empty">Memuat data...</div>
+    </div>
+    <div class="picker-btns">
+      <button class="btn-picker-cancel" onclick="lsClosePicker()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-modal-overlay" id="lsConfirmOverlay">
+  <div class="confirm-modal-box">
+    <div class="confirm-modal-title">✅ Konfirmasi Asset</div>
+    <div class="confirm-modal-desc" id="lsConfirmDesc">—</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="lsCloseConfirm()" style="padding:8px 16px;border-radius:6px;border:1.5px solid var(--border);background:#fff;color:var(--text-light);font-size:13px;cursor:pointer;font-family:inherit">Batal</button>
+      <button onclick="lsApplyAsset()" style="padding:8px 18px;border-radius:6px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Pilih Asset Ini</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="lsToast"></div>
+
 </body>
 </html>
