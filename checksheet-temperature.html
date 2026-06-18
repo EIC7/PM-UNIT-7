@@ -643,9 +643,22 @@ function handleTsImgFile(file) {
   if (!file) return;
   var reader = new FileReader();
   reader.onload = function(e) {
-    tsImages.push({ dataUrl: e.target.result, name: file.name, caption: '' });
-    renderTsImgPreview();
-    updateTsSizeInfo();
+    /* Kompres gambar via canvas sebelum simpan */
+    var img = new Image();
+    img.onload = function() {
+      var MAX_W = 1200, MAX_H = 900, QUALITY = 0.75;
+      var w = img.width, h = img.height;
+      if (w > MAX_W) { h = Math.round(h * MAX_W / w); w = MAX_W; }
+      if (h > MAX_H) { w = Math.round(w * MAX_H / h); h = MAX_H; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      var dataUrl = canvas.toDataURL('image/jpeg', QUALITY);
+      tsImages.push({ dataUrl: dataUrl, name: file.name, caption: '' });
+      renderTsImgPreview();
+      updateTsSizeInfo();
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -677,7 +690,10 @@ function updateTsSizeInfo() {
   var total = tsImages.reduce(function(a,img){ return a + (img.dataUrl ? img.dataUrl.length*0.75 : 0); }, 0);
   var kb = (total/1024).toFixed(0);
   var el = document.getElementById('tsSizeInfo');
-  if (el) el.textContent = kb + ' KB / 1024 KB';
+  if (el) {
+    el.textContent = kb + ' KB / 5000 KB';
+    el.style.color = total > 4*1024*1024 ? '#dc2626' : total > 2*1024*1024 ? '#d97706' : '#94a3b8';
+  }
 }
 
 /* ══════════════════════════════════════
