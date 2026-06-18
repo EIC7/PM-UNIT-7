@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Temperature Switch Checksheet — Outage</title>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root {
+  --steel:#1e3a5f; --accent:#0f766e; --accent2:#0d9488;
+  --ok:#16a34a; --fail:#dc2626; --warn:#d97706;
+  --bg:#f0f4f8; --bg2:#fff; --border:#e2e8f0;
+  --text:#0f172a; --text2:#475569; --text3:#94a3b8;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ASSET PICKER */
+.picker-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:16px}
+.picker-overlay.show{display:flex}
+.picker-box{background:#fff;border-radius:12px;padding:24px;width:min(480px,96vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+.picker-title{font-size:15px;font-weight:700;color:var(--steel);margin-bottom:12px}
+.picker-search{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;margin-bottom:10px}
+.picker-search:focus{border-color:var(--accent)}
+.picker-list{overflow-y:auto;flex:1;border:1px solid var(--border);border-radius:6px}
+.picker-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s}
+.picker-item:last-child{border-bottom:none}
+.picker-item:hover{background:#f0f9f8}
+.picker-item-tag{font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:var(--steel)}
+.picker-item-desc{font-size:12px;color:var(--text2);margin-top:2px}
+.picker-item-cat{font-size:10px;color:var(--accent);font-weight:600;letter-spacing:.5px;margin-top:1px}
+.picker-empty{padding:30px;text-align:center;color:var(--text3);font-size:13px}
+.picker-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+
+/* CONFIRM MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:10px;padding:24px;width:min(420px,96vw);box-shadow:0 20px 50px rgba(0,0,0,.2)}
+.modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px}
+.modal-desc{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+
+/* PANEL */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:clamp(12px,2vw,20px);margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.section-label{font-family:'Arial Narrow',sans-serif;font-size:11px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* META GRID */
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.meta-field label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;letter-spacing:.5px}
+.meta-field input,.meta-field select{width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;outline:none;transition:border-color .2s}
+.meta-field input:focus,.meta-field select:focus{border-color:var(--accent)}
+.meta-field input[readonly]{background:#f8fafc;color:var(--text2)}
+
+/* ASSET BADGE */
+.asset-badge{display:inline-flex;align-items:center;gap:10px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin-bottom:14px;flex-wrap:wrap}
+.asset-badge-tag{font-family:'Courier New',monospace;font-weight:700;color:var(--steel);font-size:13px}
+.asset-badge-desc{font-size:12px;color:var(--text2)}
+.asset-badge-change{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:underline;margin-left:auto}
+
+/* TABLE */
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:500px}
+thead tr{background:linear-gradient(90deg,#1e3a5f,#2d4a6a)}
+thead th{padding:9px 10px;text-align:left;font-family:'Arial Narrow',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#a8d4c8;border-right:1px solid rgba(255,255,255,.06)}
+thead th:last-child{border-right:none}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+tbody td{padding:8px 10px;vertical-align:middle;border-right:1px solid #f1f5f9}
+tbody td:last-child{border-right:none}
+td.center{text-align:center}
+
+/* CHECKBOX */
+.chk-wrap{display:flex;align-items:center;justify-content:center;gap:4px}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.chk-lbl{font-size:11px;color:var(--text2)}
+
+/* REMARK CELL */
+.remark-cell{display:flex;flex-direction:column;gap:4px}
+.remark-input{width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:inherit;outline:none;resize:none}
+.remark-input:focus{border-color:var(--accent)}
+.voltage-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.voltage-group input[type=text]{width:70px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px}
+.voltage-group label{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text2);cursor:pointer}
+
+/* CENTANG SEMUA */
+.check-all-row{background:#f0fdf4!important}
+.check-all-row td{padding:6px 10px!important;font-size:11px;font-style:italic;color:var(--ok);font-weight:600}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-secondary{background:var(--steel);color:#fff}
+.btn-secondary:hover{background:#2d4a6a}
+.btn-danger{background:var(--fail);color:#fff}
+.btn-save{background:#2563eb;color:#fff}
+.btn-outline{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn-outline:hover{background:var(--accent);color:#fff}
+.action-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e3a5f;color:#fff;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.25);opacity:0;transition:opacity .3s;white-space:nowrap;max-width:90vw;text-align:center}
+
+/* LOADING */
+.loading-state{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+.spinner{display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SELECT ASSET PROMPT */
+.select-prompt{text-align:center;padding:48px 20px;color:var(--text3)}
+.select-prompt .icon{font-size:40px;margin-bottom:12px}
+.select-prompt .msg{font-size:14px;margin-bottom:18px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='outage-index.html'">← Outage</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='index.html'">⌂ Dashboard</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">TEMP SWITCH</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">Outage · Temperature Switch Checksheet</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="tsClock">--:--:--</div>
+  </div>
+</div>
+
+<div class="wrapper">
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">QCP & Work Completion Report</div>
+      <div class="page-header-title">Temperature <span>Switch</span></div>
+    </div>
+    <div style="margin-bottom:8px">
+      <span class="badge">Checksheet Outage</span>
+    </div>
+  </div>
+
+  <!-- ASSET SELECTOR -->
+  <div class="panel" id="assetSelectorPanel">
+    <div class="section-label">Pilih Asset Temperature Switch</div>
+    <div id="assetSelectedBadge" style="display:none"></div>
+    <div id="assetPrompt" class="select-prompt">
+      <div class="icon">🌡️</div>
+      <div class="msg">Pilih asset Temperature Switch dari database Outage Input</div>
+      <button class="btn btn-primary" onclick="openPicker()">🔍 Pilih Asset</button>
+    </div>
+    <div id="assetLoading" class="loading-state" style="display:none">
+      <div class="spinner"></div>
+      <div>Memuat data asset...</div>
+    </div>
+  </div>
+
+  <!-- FORM (hidden until asset selected) -->
+  <div id="mainForm" style="display:none">
+
+    <!-- INFO PEKERJAAN -->
+    <div class="panel">
+      <div class="section-label">Informasi Pekerjaan</div>
+      <div class="meta-grid">
+        <div class="meta-field"><label>Asset Number / Tag</label><input type="text" id="tsAssetTag" readonly></div>
+        <div class="meta-field"><label>Asset Description</label><input type="text" id="tsAssetDesc" readonly></div>
+        <div class="meta-field"><label>Lokasi</label><input type="text" id="tsLokasi" readonly></div>
+        <div class="meta-field"><label>Date</label><input type="date" id="tsDate"></div>
+        <div class="meta-field"><label>Work Order</label><input type="text" id="tsWO" placeholder="Work Order..."></div>
+        <div class="meta-field"><label>PIC / Technician</label><input type="text" id="tsPIC"></div>
+        <div class="meta-field"><label>QCP Reference No</label><input type="text" id="tsQCP" placeholder="QCP-..."></div>
+        <div class="meta-field"><label>Activity</label><input type="text" id="tsActivity" value="2 YEARLY - INSTRUMENTATION CALIBRATION"></div>
+        <div class="meta-field"><label>Manufacturer</label><input type="text" id="tsMnf" placeholder="Manufacturer..."></div>
+        <div class="meta-field"><label>Serial Number</label><input type="text" id="tsSN" placeholder="Serial No..."></div>
+        <div class="meta-field"><label>Model / Type</label><input type="text" id="tsModel" placeholder="Model..."></div>
+        <div class="meta-field"><label>Set Point (°C)</label><input type="number" id="tsSetPoint" placeholder="0"></div>
+      </div>
+      <!-- Extra data dari database (auto-fill) -->
+      <div id="extraDataFields" style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px"></div>
+    </div>
+
+    <!-- INSPECTION CHECKLIST -->
+    <div class="panel">
+      <div class="section-label">Inspection Checklist — Shutdown Work</div>
+      <div class="table-scroll">
+        <table id="inspectionTable">
+          <thead>
+            <tr>
+              <th style="width:40px">No</th>
+              <th>Task Description</th>
+              <th style="width:60px;text-align:center">OK ✓</th>
+              <th style="width:60px;text-align:center">N/A</th>
+              <th>Remark / Note</th>
+            </tr>
+          </thead>
+          <tbody id="inspectionBody">
+            <!-- Centang semua -->
+            <tr class="check-all-row">
+              <td colspan="2">✓ Centang Semua</td>
+              <td class="center"><input type="checkbox" id="checkAllOK" onchange="checkAll('ok',this.checked)"></td>
+              <td class="center"><input type="checkbox" id="checkAllNA" onchange="checkAll('na',this.checked)"></td>
+              <td></td>
+            </tr>
+            <!-- Item 1 -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">1</td>
+              <td>Apply PTW & Check isolation point</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk1ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk1na"></td>
+              <td><input class="remark-input" type="text" id="rem1" placeholder="Remark..."></td>
+            </tr>
+            <!-- Item 2 -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">2</td>
+              <td>Visual inspection — check for obvious signs of damage, corrosion, loose connections</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk2ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk2na"></td>
+              <td><input class="remark-input" type="text" id="rem2" placeholder="Remark..."></td>
+            </tr>
+            <!-- Item 3 — R = Ohm remark -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">3</td>
+              <td>Cleaning instrumentation, flushing/purging with low air instrument / ultra dryer</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk3ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk3na"></td>
+              <td>
+                <div class="remark-cell">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span style="font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap">R =</span>
+                    <input class="remark-input" type="text" id="rem3ohm" placeholder="..." style="width:80px">
+                    <span style="font-size:11px;color:var(--text2)">Ω (Ohm)</span>
+                  </div>
+                  <input class="remark-input" type="text" id="rem3" placeholder="Note tambahan...">
+                </div>
+              </td>
+            </tr>
+            <!-- Item 4 -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">4</td>
+              <td>Check for switch contact condition — repair / replace if necessary</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk4ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk4na"></td>
+              <td><input class="remark-input" type="text" id="rem4" placeholder="Remark..."></td>
+            </tr>
+            <!-- Item 5 — Voltage -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">5</td>
+              <td>Check sealing / covering of instrument & junction box</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk5ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk5na"></td>
+              <td>
+                <div class="remark-cell">
+                  <div class="voltage-group">
+                    <span style="font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap">Voltage =</span>
+                    <input type="text" id="rem5volt" placeholder="..." style="width:65px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px">
+                    <label><input type="radio" name="voltType" id="voltVdc" value="Vdc"> <span>Vdc</span></label>
+                    <label><input type="radio" name="voltType" id="voltVac" value="Vac"> <span>Vac</span></label>
+                  </div>
+                  <input class="remark-input" type="text" id="rem5" placeholder="Note tambahan...">
+                </div>
+              </td>
+            </tr>
+            <!-- Item 6 -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">6</td>
+              <td>Check instrument signal / power availability</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk6ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk6na"></td>
+              <td><input class="remark-input" type="text" id="rem6" placeholder="Remark..."></td>
+            </tr>
+            <!-- Item 7 -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">7</td>
+              <td>Keep overall equipment cleanness & appearance</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk7ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk7na"></td>
+              <td><input class="remark-input" type="text" id="rem7" placeholder="Remark..."></td>
+            </tr>
+            <!-- Item 8 -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">8</td>
+              <td>Record all defect found and result of work</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk8ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk8na"></td>
+              <td><input class="remark-input" type="text" id="rem8" placeholder="Remark..."></td>
+            </tr>
+            <!-- Item 9 -->
+            <tr>
+              <td class="center" style="font-family:'Courier New',monospace;font-weight:700">9</td>
+              <td>Clear PTW</td>
+              <td class="center"><input type="checkbox" class="chk-ok" id="chk9ok"></td>
+              <td class="center"><input type="checkbox" class="chk-na" id="chk9na"></td>
+              <td><input class="remark-input" type="text" id="rem9" placeholder="Remark..."></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MEASUREMENT RESULT -->
+    <div class="panel">
+      <div class="section-label">Measurement Result</div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Measurement</th>
+              <th style="text-align:center">As Found</th>
+              <th style="text-align:center">OEM / Acceptance</th>
+              <th style="text-align:center">As Left</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Set Point (°C)</td>
+              <td class="center"><input type="number" id="mSetFound" placeholder="0" style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:12px"></td>
+              <td class="center" style="font-size:11px;color:var(--text2)"><input type="text" id="mSetAccept" placeholder="e.g. ±2°C" style="width:90px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px"></td>
+              <td class="center"><input type="number" id="mSetLeft" placeholder="0" style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:12px"></td>
+              <td><input type="text" id="mSetRem" placeholder="Remark..." style="width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-size:11px"></td>
+            </tr>
+            <tr>
+              <td>Switch Action (Trip/Reset)</td>
+              <td class="center"><input type="text" id="mSwFound" placeholder="e.g. OK" style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px"></td>
+              <td class="center" style="font-size:11px;color:var(--text2)">Trip &amp; Reset</td>
+              <td class="center"><input type="text" id="mSwLeft" placeholder="e.g. OK" style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px"></td>
+              <td><input type="text" id="mSwRem" placeholder="Remark..." style="width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-size:11px"></td>
+            </tr>
+            <tr>
+              <td>Analog Transmitter Deviation</td>
+              <td class="center"><input type="text" id="mDevFound" placeholder="%" style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px"></td>
+              <td class="center" style="font-size:11px;color:var(--text2)">±0.25%</td>
+              <td class="center"><input type="text" id="mDevLeft" placeholder="%" style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:11px"></td>
+              <td><input type="text" id="mDevRem" placeholder="Remark..." style="width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:4px;font-size:11px"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CATATAN & EVIDENCE -->
+    <div class="panel">
+      <div class="section-label">Catatan &amp; Evidence Photo</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">📸 Evidence Photo</label>
+        <div id="tsImgPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
+        <div id="tsImgDropzone" style="border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;color:var(--text3);font-size:13px;transition:border-color .2s"
+          onclick="openFileInputSource('tsImgInput','storage')"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+          ondragleave="this.style.borderColor=''"
+          ondrop="event.preventDefault();this.style.borderColor='';handleTsImgDrop(event)">
+          🖼 Klik untuk pilih sumber atau drag file untuk upload
+        </div>
+        <input type="file" id="tsImgInput" accept="image/*" style="display:none" onchange="handleTsImgFile(this.files[0])">
+        <div id="tsSizeInfo" style="font-size:11px;color:var(--text3);margin-top:4px">0 KB / 1024 KB</div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px">📝 Catatan</label>
+        <textarea id="tsNote" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;resize:vertical;outline:none" placeholder="Catatan kondisi, temuan, rekomendasi..."></textarea>
+      </div>
+    </div>
+
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="tsDownloadPdf()">⬇ Download PDF</button>
+      <button class="btn btn-save" onclick="dbSave('temp_switch')">💾 Simpan ke Database</button>
+      <button class="btn btn-outline" onclick="resetForm()">✕ Reset</button>
+    </div>
+
+  </div><!-- end mainForm -->
+</div><!-- end wrapper -->
+
+<!-- ASSET PICKER MODAL -->
+<div class="picker-overlay" id="pickerOverlay">
+  <div class="picker-box">
+    <div class="picker-title">🌡️ Pilih Asset Temperature Switch</div>
+    <input type="text" class="picker-search" id="pickerSearch" placeholder="Cari asset tag atau deskripsi..." oninput="filterPicker()">
+    <div class="picker-list" id="pickerList">
+      <div class="picker-empty">Memuat data...</div>
+    </div>
+    <div class="picker-btns">
+      <button class="btn btn-outline" onclick="closePicker()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-title">✅ Konfirmasi Asset</div>
+    <div class="modal-desc" id="confirmDesc">—</div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeConfirm()">Batal</button>
+      <button class="btn btn-primary" onclick="applyAsset()">Pilih Asset Ini</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════
+   SUPABASE
+══════════════════════════════════════ */
+var SUPA_URL  = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var ASSET_TBL = 'outage_assets';
+var CS_TBL    = 'temp_switch_checksheet';
+
+function supaFetch(method, path, body) {
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(SUPA_URL + '/rest/v1/' + path, opts)
+    .then(function(r){
+      if (!r.ok) return r.text().then(function(t){ throw new Error(t); });
+      return r.text().then(function(t){ return t ? JSON.parse(t) : []; });
+    });
+}
+
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
+var allAssets  = [];  // semua asset dari Supabase
+var tsAssets   = [];  // hanya Temperature Switch
+var selectedAsset = null;
+var pendingAsset  = null;
+var tsImages = [];
+
+/* Field mapping: nama kolom di database → id input di form */
+var FIELD_MAP = {
+  'asset_tag':   'tsAssetTag',
+  'asset_desc':  'tsAssetDesc',
+  'lokasi':      'tsLokasi',
+  'pic':         'tsPIC',
+  'manufacturer':'tsMnf',
+  'serial_number':'tsSN',
+  'model':       'tsModel',
+  'set_point':   'tsSetPoint',
+  'work_order':  'tsWO',
+  'qcp_ref':     'tsQCP',
+  'activity':    'tsActivity'
+};
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', function(){
+  setInterval(function(){
+    var el = document.getElementById('tsClock');
+    if (el) el.textContent = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }, 1000);
+
+  document.getElementById('tsDate').value = new Date().toISOString().slice(0,10);
+  loadAssets();
+});
+
+/* ══════════════════════════════════════
+   LOAD ASSETS
+══════════════════════════════════════ */
+function loadAssets() {
+  document.getElementById('assetLoading').style.display = 'block';
+  document.getElementById('assetPrompt').style.display  = 'none';
+
+  supaFetch('GET', ASSET_TBL + '?select=*&input_category=eq.Temperature&order=asset_tag.asc&limit=500')
+    .then(function(data) {
+      allAssets = data || [];
+      tsAssets  = allAssets;
+      document.getElementById('assetLoading').style.display = 'none';
+      document.getElementById('assetPrompt').style.display  = 'block';
+      showToast('Data dimuat: ' + tsAssets.length + ' asset ✓');
+    })
+    .catch(function(err){
+      document.getElementById('assetLoading').style.display = 'none';
+      document.getElementById('assetPrompt').style.display  = 'block';
+      showToast('Gagal muat asset: ' + err.message);
+    });
+}
+
+/* ══════════════════════════════════════
+   PICKER
+══════════════════════════════════════ */
+function openPicker() {
+  document.getElementById('pickerSearch').value = '';
+  renderPickerList(tsAssets);
+  document.getElementById('pickerOverlay').classList.add('show');
+  setTimeout(function(){ document.getElementById('pickerSearch').focus(); }, 100);
+}
+
+function closePicker() {
+  document.getElementById('pickerOverlay').classList.remove('show');
+}
+
+function filterPicker() {
+  var q = document.getElementById('pickerSearch').value.toLowerCase().trim();
+  var filtered = q
+    ? tsAssets.filter(function(a){
+        return (a.asset_tag||'').toLowerCase().includes(q) ||
+               (a.asset_desc||'').toLowerCase().includes(q) ||
+               (a.lokasi||'').toLowerCase().includes(q);
+      })
+    : tsAssets;
+  renderPickerList(filtered);
+}
+
+function renderPickerList(list) {
+  var el = document.getElementById('pickerList');
+  if (!list.length) {
+    el.innerHTML = '<div class="picker-empty">Tidak ada asset ditemukan</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(a) {
+    return '<div class="picker-item" onclick="selectPickerItem(\'' + escAttr(a.id) + '\')">' +
+      '<div class="picker-item-tag">' + escHtml(a.asset_tag || '—') + '</div>' +
+      '<div class="picker-item-desc">' + escHtml(a.asset_desc || '') + '</div>' +
+      '<div class="picker-item-cat">📍 ' + escHtml(a.lokasi || '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function selectPickerItem(id) {
+  var asset = tsAssets.find(function(a){ return a.id === id; });
+  if (!asset) return;
+  pendingAsset = asset;
+  closePicker();
+
+  /* Tampilkan konfirmasi */
+  var extra = asset.extra_data || {};
+  var extraStr = Object.keys(extra).map(function(k){ return k + ': ' + extra[k]; }).join(' | ');
+  document.getElementById('confirmDesc').innerHTML =
+    '<strong>Asset Tag:</strong> ' + escHtml(asset.asset_tag || '—') + '<br>' +
+    '<strong>Deskripsi:</strong> ' + escHtml(asset.asset_desc || '—') + '<br>' +
+    '<strong>Lokasi:</strong> ' + escHtml(asset.lokasi || '—') + '<br>' +
+    (extraStr ? '<strong>Data:</strong> ' + escHtml(extraStr) : '') +
+    '<br><br>Lanjutkan dengan asset ini?';
+  document.getElementById('confirmModal').classList.add('show');
+}
+
+function closeConfirm() {
+  pendingAsset = null;
+  document.getElementById('confirmModal').classList.remove('show');
+}
+
+function applyAsset() {
+  selectedAsset = pendingAsset;
+  pendingAsset  = null;
+  document.getElementById('confirmModal').classList.remove('show');
+  fillForm(selectedAsset);
+}
+
+/* ══════════════════════════════════════
+   FILL FORM
+══════════════════════════════════════ */
+function fillForm(asset) {
+  /* Set field tetap */
+  sv('tsAssetTag',  asset.asset_tag  || '');
+  sv('tsAssetDesc', asset.asset_desc || '');
+  sv('tsLokasi',    asset.lokasi     || '');
+  if (asset.pic) sv('tsPIC', asset.pic);
+
+  /* Extra data — coba match ke field form, sisanya jadi dynamic fields */
+  var extra = asset.extra_data || {};
+  var unmatched = {};
+  Object.keys(extra).forEach(function(k) {
+    var kl = k.toLowerCase().replace(/\s+/g,'_');
+    var mapped = FIELD_MAP[kl] || FIELD_MAP[k.toLowerCase()];
+    if (mapped && document.getElementById(mapped)) {
+      sv(mapped, extra[k]);
+    } else {
+      unmatched[k] = extra[k];
+    }
+  });
+
+  /* Render dynamic fields */
+  var container = document.getElementById('extraDataFields');
+  container.innerHTML = '';
+  Object.keys(unmatched).forEach(function(k) {
+    var div = document.createElement('div');
+    div.className = 'meta-field';
+    var label = document.createElement('label');
+    label.textContent = k;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.id   = 'extra_' + k.replace(/\s+/g,'_');
+    input.value = unmatched[k];
+    div.appendChild(label);
+    div.appendChild(input);
+    container.appendChild(div);
+  });
+
+  /* Show badge & form */
+  var badge = document.getElementById('assetSelectedBadge');
+  badge.style.display = 'block';
+  badge.innerHTML =
+    '<div class="asset-badge">' +
+      '<span class="asset-badge-tag">🌡️ ' + escHtml(asset.asset_tag || '—') + '</span>' +
+      '<span class="asset-badge-desc">' + escHtml(asset.asset_desc || '') + '</span>' +
+      '<span class="asset-badge-change" onclick="openPicker()">Ganti Asset</span>' +
+    '</div>';
+
+  document.getElementById('assetPrompt').style.display = 'none';
+  document.getElementById('mainForm').style.display    = 'block';
+  showToast('Asset dipilih: ' + (asset.asset_tag || '—') + ' ✓');
+  document.getElementById('mainForm').scrollIntoView({behavior:'smooth'});
+}
+
+function sv(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+/* ══════════════════════════════════════
+   CHECK ALL
+══════════════════════════════════════ */
+function checkAll(type, checked) {
+  var cls = type === 'ok' ? 'chk-ok' : 'chk-na';
+  document.querySelectorAll('.' + cls).forEach(function(el){ el.checked = checked; });
+}
+
+/* ══════════════════════════════════════
+   IMAGE UPLOAD
+══════════════════════════════════════ */
+function handleTsImgDrop(e) {
+  var file = e.dataTransfer.files[0];
+  if (file) handleTsImgFile(file);
+}
+
+function handleTsImgFile(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    tsImages.push({ dataUrl: e.target.result, name: file.name, caption: '' });
+    renderTsImgPreview();
+    updateTsSizeInfo();
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderTsImgPreview() {
+  var el = document.getElementById('tsImgPreview');
+  el.innerHTML = '';
+  tsImages.forEach(function(img, i) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;border-radius:6px;overflow:hidden;border:1px solid var(--border)';
+    var im = document.createElement('img');
+    im.src = img.dataUrl;
+    im.style.cssText = 'width:100px;height:80px;object-fit:cover;display:block';
+    var del = document.createElement('button');
+    del.textContent = '×';
+    del.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:14px;line-height:1';
+    del.onclick = function(){ tsImages.splice(i,1); renderTsImgPreview(); updateTsSizeInfo(); };
+    var cap = document.createElement('input');
+    cap.placeholder = 'Caption...';
+    cap.value = img.caption;
+    cap.style.cssText = 'width:100px;font-size:10px;padding:2px 4px;border:none;border-top:1px solid var(--border);font-family:inherit';
+    cap.oninput = function(){ tsImages[i].caption = cap.value; };
+    wrap.appendChild(im); wrap.appendChild(del); wrap.appendChild(cap);
+    el.appendChild(wrap);
+  });
+}
+
+function updateTsSizeInfo() {
+  var total = tsImages.reduce(function(a,img){ return a + (img.dataUrl ? img.dataUrl.length*0.75 : 0); }, 0);
+  var kb = (total/1024).toFixed(0);
+  var el = document.getElementById('tsSizeInfo');
+  if (el) el.textContent = kb + ' KB / 1024 KB';
+}
+
+/* ══════════════════════════════════════
+   DB COLLECT
+══════════════════════════════════════ */
+function dbCollectData(modul) {
+  if (modul !== 'temp_switch') return null;
+  function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
+  function gc(id){ var e=document.getElementById(id); return !!(e&&e.checked); }
+  return {
+    asset_id:   selectedAsset ? selectedAsset.id : null,
+    asset_tag:  gv('tsAssetTag'),
+    asset_desc: gv('tsAssetDesc'),
+    lokasi:     gv('tsLokasi'),
+    date:       gv('tsDate'),
+    work_order: gv('tsWO'),
+    pic:        gv('tsPIC'),
+    qcp_ref:    gv('tsQCP'),
+    activity:   gv('tsActivity'),
+    manufacturer: gv('tsMnf'),
+    serial_number: gv('tsSN'),
+    model:      gv('tsModel'),
+    set_point:  gv('tsSetPoint'),
+    inspection: {
+      items: [1,2,3,4,5,6,7,8,9].map(function(n){
+        return {
+          no: n,
+          ok: gc('chk'+n+'ok'),
+          na: gc('chk'+n+'na'),
+          remark: gv('rem'+n)
+        };
+      }),
+      rem3_ohm:  gv('rem3ohm'),
+      rem5_volt: gv('rem5volt'),
+      volt_type: document.querySelector('input[name="voltType"]:checked')
+                   ? document.querySelector('input[name="voltType"]:checked').value : ''
+    },
+    measurement: {
+      set_point: { found: gv('mSetFound'), accept: gv('mSetAccept'), left: gv('mSetLeft'), remark: gv('mSetRem') },
+      switch_action: { found: gv('mSwFound'), left: gv('mSwLeft'), remark: gv('mSwRem') },
+      deviation: { found: gv('mDevFound'), left: gv('mDevLeft'), remark: gv('mDevRem') }
+    },
+    note: gv('tsNote'),
+    images: tsImages.map(function(img){ return { dataUrl: img.dataUrl, caption: img.caption }; })
+  };
+}
+
+/* ══════════════════════════════════════
+   PDF
+══════════════════════════════════════ */
+function tsDownloadPdf() {
+  tsEnsureBackground(function(){
+    try {
+      var jsPDF = window.jspdf.jsPDF;
+      var doc   = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+      var pw = doc.internal.pageSize.getWidth();
+      var ph = doc.internal.pageSize.getHeight();
+      var mx = 15, mt = 20, mb = 18, cw = pw - mx*2;
+      var y  = mt;
+
+      function safe(v){ return String(v||''); }
+      function gv(id){ var e=document.getElementById(id); return e?safe(e.value):''; }
+      function gc(id){ var e=document.getElementById(id); return !!(e&&e.checked); }
+
+      var now   = new Date();
+      var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      var dd    = String(now.getDate()).padStart(2,'0');
+      var nowStr= dd+' '+BULAN[now.getMonth()]+' '+now.getFullYear()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+      function checkPage(need){
+        if(y+need>ph-mb){ doc.addPage(); tsDrawBg(doc,pw,ph); y=mt; }
+      }
+
+      function secHeader(title){
+        checkPage(12);
+        doc.setFillColor(230,240,253);
+        doc.rect(mx,y,cw,8,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(30,64,175);
+        doc.text(title, mx+3, y+5.5);
+        y+=11;
+      }
+
+      function drawCheckbox(doc,x,cy,w,h,checked){
+        var sz=3.5, cx2=x+w/2, cy2=cy+h/2;
+        doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+        doc.rect(cx2-sz/2,cy2-sz/2,sz,sz,'S');
+        if(checked){
+          doc.setDrawColor(26,107,58); doc.setLineWidth(0.5);
+          doc.line(cx2-sz/2+0.4,cy2,cx2-sz/2+sz*0.38,cy2+sz/2-0.5);
+          doc.line(cx2-sz/2+sz*0.38,cy2+sz/2-0.5,cx2+sz/2-0.3,cy2-sz/2+0.5);
+        }
+      }
+
+      /* ── BACKGROUND ── */
+      tsDrawBg(doc, pw, ph);
+
+      /* ── INFO BOX ── */
+      doc.setDrawColor(180,210,220); doc.setLineWidth(0.3);
+      doc.rect(mx, y, cw, 30, 'S');
+      var infoFields = [
+        ['Asset Tag', gv('tsAssetTag')], ['Date', gv('tsDate')],      ['QCP Ref', gv('tsQCP')],
+        ['Description', gv('tsAssetDesc')], ['Work Order', gv('tsWO')], ['PIC', gv('tsPIC')],
+        ['Lokasi', gv('tsLokasi')], ['Manufacturer', gv('tsMnf')],   ['Model', gv('tsModel')]
+      ];
+      var cw3 = cw/3;
+      [0,1,2].forEach(function(row){
+        infoFields.slice(row*3, row*3+3).forEach(function(it,col){
+          var ix=mx+3+col*cw3, iy=y+8+row*9;
+          doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(55,80,140);
+          doc.text(it[0]+':', ix, iy);
+          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+          doc.text(safe(it[1]).substring(0,28), ix+22, iy);
+        });
+      });
+      y += 34;
+
+      /* Title */
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,40,100);
+      doc.text('QCP & WORK COMPLETION REPORT', mx, y); y+=6;
+      doc.setFontSize(9); doc.setTextColor(30,64,175);
+      doc.text('TEMPERATURE SWITCH — 2 YEARLY INSTRUMENTATION CALIBRATION', mx, y); y+=10;
+
+      /* ── INSPECTION ── */
+      secHeader('INSPECTION CHECKLIST — SHUTDOWN WORK');
+
+      var ITEMS = [
+        {no:'1', label:'Apply PTW & Check isolation point'},
+        {no:'2', label:'Visual inspection — check for obvious signs of damage, corrosion, loose connections'},
+        {no:'3', label:'Cleaning instrumentation, flushing/purging with low air instrument / ultra dryer'},
+        {no:'4', label:'Check for switch contact condition — repair/replace if necessary'},
+        {no:'5', label:'Check sealing/covering of instrument & junction box'},
+        {no:'6', label:'Check instrument signal/power availability'},
+        {no:'7', label:'Keep overall equipment cleanness & appearance'},
+        {no:'8', label:'Record all defect found and result of work'},
+        {no:'9', label:'Clear PTW'}
+      ];
+
+      var REMARKS_SPECIAL = {
+        3: 'R = ' + gv('rem3ohm') + ' Ω (Ohm)' + (gv('rem3') ? ' | ' + gv('rem3') : ''),
+        5: 'Voltage = ' + gv('rem5volt') + ' ' +
+           (document.querySelector('input[name="voltType"]:checked') ? document.querySelector('input[name="voltType"]:checked').value : '') +
+           (gv('rem5') ? ' | ' + gv('rem5') : '')
+      };
+
+      var inspRows = ITEMS.map(function(item){
+        var n = parseInt(item.no);
+        var rem = REMARKS_SPECIAL[n] || gv('rem'+n);
+        return [item.no, item.label, gc('chk'+n+'ok')?'__CHK__':'__BOX__', gc('chk'+n+'na')?'__CHK__':'__BOX__', rem];
+      });
+
+      doc.autoTable({
+        startY: y,
+        head:[['No','Task Description','OK ✓','N/A','Remark / Note']],
+        body: inspRows,
+        theme:'grid',
+        margin:{left:mx,right:mx,top:mt},
+        tableWidth: cw,
+        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},
+        bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
+        columnStyles:{
+          0:{cellWidth:10,halign:'center'},
+          1:{cellWidth:85,overflow:'linebreak'},
+          2:{cellWidth:14,halign:'center'},
+          3:{cellWidth:14,halign:'center'},
+          4:{cellWidth:cw-123,overflow:'linebreak'}
+        },
+        alternateRowStyles:{fillColor:[246,249,252]},
+        willDrawPage:function(data){ if(data.pageNumber>1){ tsDrawBg(doc,pw,ph); }},
+        didDrawCell:function(data){
+          if(data.section!=='body') return;
+          if(data.column.index!==2&&data.column.index!==3) return;
+          var val=data.cell.raw;
+          if(val!=='__CHK__'&&val!=='__BOX__') return;
+          var bg=(data.row.index%2===0)?[255,255,255]:[246,249,252];
+          doc.setFillColor(bg[0],bg[1],bg[2]);
+          doc.rect(data.cell.x+0.2,data.cell.y+0.2,data.cell.width-0.4,data.cell.height-0.4,'F');
+          drawCheckbox(doc,data.cell.x,data.cell.y,data.cell.width,data.cell.height,val==='__CHK__');
+        }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      /* ── MEASUREMENT ── */
+      secHeader('MEASUREMENT RESULT');
+      var measRows = [
+        ['Set Point (°C)', gv('mSetFound'), gv('mSetAccept')||'—', gv('mSetLeft'), gv('mSetRem')],
+        ['Switch Action (Trip/Reset)', gv('mSwFound'), 'Trip & Reset', gv('mSwLeft'), gv('mSwRem')],
+        ['Analog Transmitter Deviation', gv('mDevFound'), '±0.25%', gv('mDevLeft'), gv('mDevRem')]
+      ];
+      doc.autoTable({
+        startY:y,
+        head:[['Measurement','As Found','OEM/Acceptance','As Left','Remark']],
+        body:measRows,
+        theme:'grid',
+        margin:{left:mx,right:mx,top:mt},
+        tableWidth:cw,
+        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},
+        bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
+        columnStyles:{
+          0:{cellWidth:55},
+          1:{cellWidth:22,halign:'center'},
+          2:{cellWidth:32,halign:'center'},
+          3:{cellWidth:22,halign:'center'},
+          4:{cellWidth:cw-131}
+        },
+        willDrawPage:function(data){ if(data.pageNumber>1){ tsDrawBg(doc,pw,ph); }}
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      /* ── NOTE ── */
+      var note = gv('tsNote');
+      if(note){
+        secHeader('CATATAN');
+        var ls = doc.splitTextToSize(note, cw-6);
+        ls.forEach(function(l){ checkPage(5); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30); doc.text(l,mx+3,y); y+=4.5; });
+        y+=4;
+      }
+
+      /* ── EVIDENCE PHOTO ── */
+      if(tsImages.length){
+        secHeader('EVIDENCE PHOTO');
+        var imgW=55, imgH=42, gap=5;
+        var ix=mx, maxPerRow=Math.floor((cw+gap)/(imgW+gap));
+        tsImages.forEach(function(img, i){
+          if(i%maxPerRow===0 && i>0){ ix=mx; y+=imgH+12; }
+          if(i===0 || i%maxPerRow===0) checkPage(imgH+14);
+          try{ doc.addImage(img.dataUrl,'JPEG',ix,y,imgW,imgH); }catch(e){}
+          if(img.caption){
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(80,80,80);
+            doc.text(safe(img.caption).substring(0,28), ix, y+imgH+4);
+          }
+          ix+=imgW+gap;
+        });
+        y+=imgH+14;
+      }
+
+      /* ── DICETAK ── */
+      checkPage(10);
+      doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+      doc.text('Dicetak: '+nowStr, mx, y); y+=4;
+
+      var dateStr = (gv('tsDate')||'').replace(/-/g,'')||String(now.getFullYear())+String(now.getMonth()+1).padStart(2,'0')+dd;
+      var tag     = (gv('tsAssetTag')||'TS').replace(/[^a-zA-Z0-9_-]/g,'_');
+      doc.save('TS_Checksheet_'+tag+'_'+dateStr+'.pdf');
+
+    } catch(err){ alert('PDF Error: '+err.message); console.error(err); }
+  });
+}
+
+/* ══════════════════════════════════════
+   BACKGROUND (pola so2)
+══════════════════════════════════════ */
+var tsBgImg = null, tsBgReady = false, tsBgCbs = [];
+
+function tsEnsureBackground(cb){
+  if(tsBgReady){ cb(); return; }
+  tsBgCbs.push(cb);
+  if(!tsBgImg){ tsInitBg(); }
+  var done = false;
+  function go(){ if(!done){ done=true; var i=tsBgCbs.indexOf(cb); if(i!==-1) tsBgCbs.splice(i,1); cb(); } }
+  setTimeout(go, 1500);
+}
+
+function tsInitBg(){
+  tsBgImg = new Image();
+  tsBgImg.crossOrigin = 'anonymous';
+  tsBgImg.onload = function(){ tsBgReady=true; var cbs=tsBgCbs.splice(0); cbs.forEach(function(c){ c(); }); };
+  tsBgImg.onerror = function(){ var cbs=tsBgCbs.splice(0); cbs.forEach(function(c){ c(); }); };
+  tsBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+
+function tsDrawBg(doc,pw,ph){
+  try{
+    if(tsBgImg && tsBgImg.naturalWidth>0){ doc.addImage(tsBgImg,'JPEG',0,0,pw,ph); }
+    else{
+      doc.setFillColor(255,255,255); doc.rect(0,0,pw,ph,'F');
+      doc.setFillColor(30,58,95); doc.rect(0,0,pw,4,'F');
+      doc.setFillColor(240,245,252); doc.rect(0,ph-6,pw,6,'F');
+    }
+  }catch(e){
+    doc.setFillColor(255,255,255); doc.rect(0,0,pw,ph,'F');
+  }
+}
+
+/* ══════════════════════════════════════
+   RESET
+══════════════════════════════════════ */
+function resetForm(){
+  selectedAsset = null;
+  tsImages = [];
+  document.getElementById('mainForm').style.display    = 'none';
+  document.getElementById('assetPrompt').style.display = 'block';
+  document.getElementById('assetSelectedBadge').style.display = 'none';
+  document.getElementById('tsImgPreview').innerHTML = '';
+  showToast('Form direset ✓');
+}
+
+/* ══════════════════════════════════════
+   HELPERS
+══════════════════════════════════════ */
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return escHtml(s); }
+function showToast(msg){
+  var t=document.getElementById('toast'); if(!t) return;
+  t.textContent=msg; t.style.opacity='1';
+  clearTimeout(t._to); t._to=setTimeout(function(){ t.style.opacity='0'; },3000);
+}
+
+/* Close overlay on bg click */
+document.getElementById('pickerOverlay').addEventListener('click', function(e){ if(e.target===this) closePicker(); });
+document.getElementById('confirmModal').addEventListener('click',  function(e){ if(e.target===this) closeConfirm(); });
+</script>
+</body>
+</html>
