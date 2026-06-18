@@ -45,6 +45,7 @@
   .hero-eyebrow { font-size: 11px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
   .hero-eyebrow::before { content:''; display:block; width:28px; height:2px; background:var(--accent); }
   .hero-title { font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1.1; }
+  @media (max-width: 500px) { .hero-title { font-size: 22px; } }
   .hero-title span { color: var(--accent); }
   .hero-sub { margin-top: 8px; color: var(--text-light); font-size: 13px; }
 
@@ -80,10 +81,14 @@
 
   /* ── INFO TABLE ── */
   .info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .info-table td { padding: 7px 10px; border: 1px solid var(--border); vertical-align: middle; }
-  .info-table td:first-child { font-weight: 600; color: var(--primary); background: #f1f7ff; width: 140px; }
+  .info-table td { padding: 6px 8px; border: 1px solid var(--border); vertical-align: middle; }
+  .info-table td:first-child { font-weight: 600; color: var(--primary); background: #f1f7ff; width: 120px; font-size: 12px; white-space: nowrap; }
   .info-table td input, .info-table td select {
     width: 100%; border: none; background: transparent; font-size: 13px; color: var(--text); outline: none; font-family: inherit;
+  }
+  @media (max-width: 600px) {
+    .info-table td:first-child { width: 90px; font-size: 11px; white-space: normal; }
+    .info-table td { font-size: 12px; padding: 5px 6px; }
   }
 
   /* ── APPLICATION CHECKBOXES ── */
@@ -101,21 +106,50 @@
   .img-card .img-sub { font-size: 10px; color: var(--text-light); padding: 0 4px 6px; }
 
   /* Principle of Operation panel */
-  .principle-wrap { display: flex; gap: 20px; align-items: flex-start; }
-  .principle-left { flex: 1.1; min-width: 0; }
-  .principle-left h4 { font-size: 11px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; margin-bottom: 10px; }
-  .principle-left img { width: 100%; max-width: 280px; display:block; margin-bottom:8px; }
-  .principle-left p { font-size: 11px; color: var(--text-light); line-height: 1.6; margin-bottom: 8px; }
-  .principle-right { flex: 1; min-width: 0; }
-  .principle-right .type-row { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom: 1px solid var(--border); cursor:pointer; transition: background .1s; border-radius: 6px; padding: 8px; }
-  .principle-right .type-row:hover { background: #f0fdf9; }
-  .principle-right .type-row.selected { background: #e6fdf9; border: 1px solid var(--accent); }
-  .principle-right .type-row img { width: 90px; height: 70px; object-fit:contain; border:1px solid var(--border); border-radius:4px; background:#f8faff; flex-shrink:0; }
-  .principle-right .type-text { flex:1; }
-  .principle-right .type-text .series { font-weight: 700; font-size: 12px; color: var(--primary); margin-bottom: 4px; }
-  .principle-right .type-text .series-desc { font-size: 11px; color: var(--text-light); line-height: 1.5; }
-  .type-chk { width: 16px; height: 16px; border: 1.5px solid var(--border); border-radius: 3px; flex-shrink: 0; margin-top: 4px; display:flex; align-items:center; justify-content:center; font-size:11px; color:transparent; }
+  .principle-wrap { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .principle-left { flex: 0 0 220px; min-width: 0; }
+  .principle-left h4 { font-size: 10px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 5px; margin-bottom: 8px; }
+  .principle-left img { width: 100%; max-width: 220px; display:block; margin-bottom:8px; }
+  .principle-left p { font-size: 10px; color: var(--text-light); line-height: 1.55; margin-bottom: 6px; display:none; }
+  .principle-right { flex: 1; min-width: 220px; }
+  .principle-right > p { font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+
+  /* Each type row: checkbox | image | text stacked */
+  .type-row {
+    display: grid;
+    grid-template-columns: 20px 80px 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all .15s;
+    background: #fafcff;
+  }
+  .type-row:hover { border-color: var(--accent); background: #f0fdf9; }
+  .type-row.selected { border-color: var(--accent); background: #e6fdf9; box-shadow: 0 0 0 2px rgba(15,118,110,.18); }
+  .type-row img { width: 80px; height: 60px; object-fit:contain; border:1px solid var(--border); border-radius:4px; background:#f8faff; display:block; }
+  .type-text .series { font-weight: 700; font-size: 12px; color: var(--primary); }
+  .type-text .series small { font-weight: 400; color: var(--text-light); font-size: 10px; }
+  .type-text .series-desc { font-size: 10.5px; color: var(--text-light); line-height: 1.45; margin-top: 2px; }
+  .type-chk {
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--border); border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 900; color: transparent;
+    background: #fff; flex-shrink: 0;
+    transition: all .15s;
+  }
   .type-row.selected .type-chk { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Mobile: stack left and right vertically */
+  @media (max-width: 640px) {
+    .principle-left { flex: 0 0 100%; }
+    .principle-right { flex: 0 0 100%; }
+    .principle-wrap { gap: 12px; }
+  }
 
   /* ── CHECKLIST TABLE ── */
   .cs-table-wrap { overflow-x: auto; }
@@ -223,11 +257,21 @@
   </div>
 
   <!-- ASSET SEARCH SECTION -->
+  <!-- ASSET SEARCH SECTION -->
   <div class="panel" id="assetSearchSection">
     <div class="panel-title">Cari Asset</div>
     <div class="search-wrap">
-      <input type="text" class="search-input" id="assetSearchInput" placeholder="Ketik Asset Tag atau deskripsi... (contoh: 7HD-LSHH atau FEEDWATER)" autocomplete="off" oninput="onSearchInput(this.value)">
-      <button class="btn-search" onclick="doSearch()">🔍 Cari</button>
+      <input type="text" class="search-input" id="assetSearchInput"
+        placeholder="Ketik Asset Tag atau deskripsi... (contoh: 7HD-LSHH atau FEEDWATER)"
+        autocomplete="off"
+        oninput="onSearchInput(this.value)"
+        onkeydown="if(event.key==='Enter') doSearch()">
+      <button class="btn-search" onclick="doSearch()">&#128269; Cari</button>
+    </div>
+    <div style="margin-top:8px">
+      <button onclick="showAllAssets()" style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 14px;font-size:12px;color:var(--text-light);cursor:pointer;margin-top:4px">
+        &#128203; Tampilkan semua 29 asset Level Switch
+      </button>
     </div>
     <div class="dropdown-list" id="dropdownList"></div>
   </div>
@@ -586,26 +630,33 @@ function doSearch() {
   var q = document.getElementById('assetSearchInput').value.trim();
   if (!q) return;
   var list = document.getElementById('dropdownList');
-  list.innerHTML = '<div class="dropdown-item"><span style="color:var(--text-light)">Mencari...</span></div>';
-  list.classList.add('show');
 
-  // Search by asset_tag OR asset_desc, filter Level Switch category
+  // ── 1. Tampilkan local data DULU (instant, no network wait) ──
+  var localResults = LS_LOCAL_DATA.filter(function(r) {
+    var ql = q.toLowerCase();
+    return r.asset_tag.toLowerCase().includes(ql) ||
+           r.asset_desc.toLowerCase().includes(ql);
+  }).slice(0, 30);
+  renderDropdown(localResults);
+
+  // ── 2. Coba Supabase di background untuk enrich data ──
   var path = ASSET_TABLE + '?select=*&or=(asset_tag.ilike.*'+encodeURIComponent(q)+'*,asset_desc.ilike.*'+encodeURIComponent(q)+'*)&limit=30';
   supaFetch('GET', path)
     .then(function(rows) {
-      // Also include hardcoded LS data from Excel as fallback
-      var merged = mergeWithLocalLS(rows, q);
-      renderDropdown(merged);
+      if (rows && rows.length > 0) {
+        var merged = mergeWithLocalLS(rows, q);
+        renderDropdown(merged);
+      }
     })
     .catch(function(err) {
-      console.warn('Supabase search error:', err.message);
-      // Fallback to local Excel data
-      var filtered = LS_LOCAL_DATA.filter(function(r) {
-        return r.asset_tag.toLowerCase().includes(q.toLowerCase()) ||
-               r.asset_desc.toLowerCase().includes(q.toLowerCase());
-      });
-      renderDropdown(filtered.slice(0, 20));
+      // Local data already shown — silently ignore Supabase error
+      console.warn('Supabase enrich error (using local data):', err.message);
     });
+}
+
+function showAllAssets() {
+  document.getElementById('assetSearchInput').value = '';
+  renderDropdown(LS_LOCAL_DATA.slice());
 }
 
 function mergeWithLocalLS(supaRows, q) {
