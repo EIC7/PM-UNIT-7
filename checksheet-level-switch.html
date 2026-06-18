@@ -560,25 +560,44 @@ function lsLoadAssets() {
   document.getElementById('lsAssetLoading').style.display = 'block';
   document.getElementById('lsAssetPrompt').style.display  = 'none';
 
-  supaFetch('GET', ASSET_TABLE + '?select=*&input_category=eq.Level%20Switch&order=asset_tag.asc&limit=500')
+  /* Query semua asset, filter input_category Level Switch di client
+     agar tidak masalah case / spasi */
+  supaFetch('GET', ASSET_TABLE + '?select=*&order=asset_tag.asc&limit=1000')
     .then(function(data) {
-      lsAllAssets = data || [];
-      /* Merge dengan local data jika belum ada di Supabase */
-      var tags = {};
-      lsAllAssets.forEach(function(r){ tags[r.asset_tag] = true; });
-      LS_LOCAL_DATA.forEach(function(r){
-        if (!tags[r.asset_tag]) lsAllAssets.push(r);
+      var rows = (data || []).filter(function(r){
+        var cat = (r.input_category || '').toLowerCase().trim();
+        return cat === 'level switch' || cat === 'level_switch' ||
+               cat === 'levelswitch' || cat === 'level switch';
       });
+      lsAllAssets = rows;
       document.getElementById('lsAssetLoading').style.display = 'none';
-      document.getElementById('lsAssetPrompt').style.display  = 'block';
-      lsShowToast('Data dimuat: ' + lsAllAssets.length + ' asset ✓');
+      if (rows.length > 0) {
+        document.getElementById('lsAssetPrompt').style.display = 'block';
+        lsShowToast('Data dimuat: ' + rows.length + ' asset ✓');
+      } else {
+        /* Tidak ada data Level Switch di database */
+        document.getElementById('lsAssetPrompt').style.display = 'block';
+        document.getElementById('lsAssetPrompt').innerHTML =
+          '<div style="text-align:center;padding:32px 20px;color:var(--text-light)">' +
+          '<div style="font-size:36px;margin-bottom:10px">⚠️</div>' +
+          '<div style="font-size:14px;margin-bottom:8px;color:#d97706;font-weight:600">Belum ada data Level Switch di database</div>' +
+          '<div style="font-size:12px;margin-bottom:16px">Masukkan asset Level Switch terlebih dahulu di <strong>Outage Input</strong> dengan Input Utama = <strong>Level Switch</strong></div>' +
+          '<button onclick="lsGoToInput()" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">→ Buka Outage Input</button>' +
+          '<span style="margin:0 10px;color:var(--border)">|</span>' +
+          '<button onclick="lsLoadAssets()" style="background:transparent;color:var(--accent);border:1.5px solid var(--accent);border-radius:6px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer">↺ Refresh</button>' +
+          '</div>';
+      }
     })
-    .catch(function(){
-      /* Fallback local data */
-      lsAllAssets = LS_LOCAL_DATA.slice();
+    .catch(function(err) {
       document.getElementById('lsAssetLoading').style.display = 'none';
       document.getElementById('lsAssetPrompt').style.display  = 'block';
-      lsShowToast('Menggunakan data lokal');
+      document.getElementById('lsAssetPrompt').innerHTML =
+        '<div style="text-align:center;padding:32px 20px;color:var(--text-light)">' +
+        '<div style="font-size:36px;margin-bottom:10px">❌</div>' +
+        '<div style="font-size:14px;margin-bottom:8px;color:#dc2626;font-weight:600">Gagal koneksi ke database</div>' +
+        '<div style="font-size:12px;margin-bottom:16px;color:#64748b">' + (err.message||'Periksa koneksi internet') + '</div>' +
+        '<button onclick="lsLoadAssets()" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">↺ Coba Lagi</button>' +
+        '</div>';
     });
 }
 
@@ -703,6 +722,7 @@ function lsFillForm(a) {
   }
 }
 
+function lsGoToInput() { window.location.href = 'outage-input.html'; }
 function lsShowToast(msg) {
   var t = document.getElementById('lsToast'); if(!t) return;
   t.textContent = msg; t.style.opacity = '1';
@@ -806,40 +826,7 @@ function selectSeries(id, label) {
 function buildTypePicker() { /* handled inline in HTML */ }
 
 
-/* ══════════════════════════════════════════════
-   LOCAL DATA (dari Excel LS sheet) — fallback jika Supabase kosong
-══════════════════════════════════════════════ */
-var LS_LOCAL_DATA = [
-  {asset_tag:'7HD-LSHH-653A', asset_desc:'FEEDWATER HEATER 1A OUTLET LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSHH-653B', asset_desc:'FEEDWATER HEATER 1B OUTLET LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSHH-645',  asset_desc:'FEEDWATER HEATER 2 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSHH-646',  asset_desc:'FEEDWATER HEATER 2 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSH-643',   asset_desc:'FEEDWATER HEATER 2 OUTLET LEVEL SWITCH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSL-644',   asset_desc:'FEEDWATER HEATER 2 LEVEL SWITCH LOW', wo:'2504101111'},
-  {asset_tag:'7HD-LSHH-637',  asset_desc:'FEEDWATER HEATER 3 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSHH-638',  asset_desc:'FEEDWATER HEATER 3 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSH-635',   asset_desc:'FEEDWATER HEATER 3 LEVEL SWITCH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSL-636',   asset_desc:'FEEDWATER HEATER 3 LEVEL SWITCH LOW', wo:'2504101111'},
-  {asset_tag:'7HD-LSHH-629',  asset_desc:'FEEDWATER HEATER 4 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSHH-630',  asset_desc:'FEEDWATER HEATER 4 LEVEL SWITCH HIGH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSH-627',   asset_desc:'FEEDWATER HEATER 4 OUTLET LEVEL SWITCH HIGH', wo:'2504101111'},
-  {asset_tag:'7HD-LSL-628',   asset_desc:'FEEDWATER HEATER 4 OUTLET LEVEL SWITCH LOW', wo:'2504101111'},
-  {asset_tag:'7HD-LSHH-621A', asset_desc:'FEEDWATER HEATER 6A LEVEL SWITCH HIGH HIGH', wo:'2504101106'},
-  {asset_tag:'7HD-LSHH-621B', asset_desc:'FEEDWATER HEATER 6B LEVEL SWITCH HIGH HIGH', wo:'2504101106'},
-  {asset_tag:'7HD-LSH-619A',  asset_desc:'FEEDWATER HEATER 6A LEVEL SWITCH HIGH', wo:'2504101106'},
-  {asset_tag:'7HD-LSL-620A',  asset_desc:'FEEDWATER HEATER 6A LEVEL SWITCH LOW', wo:'2304201027'},
-  {asset_tag:'7HD-LSHH-613A', asset_desc:'FEEDWATER HEATER 7A LEVEL SWITCH HIGH HIGH', wo:'2504101106'},
-  {asset_tag:'7HD-LSHH-614A', asset_desc:'FEEDWATER HEATER 7A LEVEL SWITCH HIGH HIGH', wo:'2504101106'},
-  {asset_tag:'7BS-LSH-134A',  asset_desc:'COLD REHEAT 7A DRAIN POT 1 LEVEL SWITCH HIGH', wo:'2504101088'},
-  {asset_tag:'7BS-LSHH-134A', asset_desc:'COLD REHEAT 7A DRAIN POT 1 LEVEL SWITCH HIGH HIGH', wo:'2504101088'},
-  {asset_tag:'7LT-LSH-500A',  asset_desc:'BFPT LUBE OIL RESERVOIR 7A LEVEL SWITCH HIGH', wo:'2411302264'},
-  {asset_tag:'7LT-LSL-500A',  asset_desc:'BFPT LUBE OIL RESERVOIR 7A LEVEL SWITCH LOW', wo:''},
-  {asset_tag:'7LT-LSH-500B',  asset_desc:'BFPT LUBE OIL RESERVOIR 7B LEVEL SWITCH HIGH', wo:'2411302248'},
-  {asset_tag:'7FW-LSHL-266',  asset_desc:'MD BFP 7 OIL TANK LEVEL SWITCH HIGH LOW', wo:'2411302249'},
-  {asset_tag:'7LT-LSH-400',   asset_desc:'EHC FLUID TANK 8 LEVEL SWITCH HIGH', wo:'2411302270'},
-  {asset_tag:'7LT-LSL-400',   asset_desc:'EHC FLUID TANK 8 LEVEL SWITCH LOW', wo:'2411302270'},
-  {asset_tag:'7SC-LSH-305',   asset_desc:'#7 STATOR COOLING WATER TANK LEVEL SWITCH HIGH', wo:'2411302250'}
-];
+
 
 /* ══════════════════════════════════════════════
    UTILS
