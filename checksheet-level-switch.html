@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checksheet Level Switch — PLTU Paiton Unit 7</title>
-<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --bg: #f0f4f8;
@@ -557,7 +557,22 @@ var LS_FIELD_MAP = {
   'work_order':   'f_wo'
 };
 
+var CHECKLIST_ITEMS = [
+  { no:1, task:'Visually inspect panel for any obvious signs of damage', remark:'', type:'normal' },
+  { no:2, task:'Cleaning instrumentation, flushing-purging-draining impulse line if required. Check level switch magnetic carriage for free movement, repair if necessary.', remark:'', type:'normal' },
+  { no:3, task:'Check for micro-switch contact, repair/replace if contact >10 Ohm', remark:'', type:'resistance' },
+  { no:4, task:'Check sealing/covering of instrument & junction boxes, conduits. Apply sealant/duct seal to prevent water/oil vapor ingress. Replace conduit/cable if required.', remark:'', type:'normal' },
+  { no:5, task:'Check instrument signal/power availability at end of maintenance activities', remark:'', type:'voltage' },
+  { no:6, task:'Keep Overall Equipment Cleanliness & Appearance', remark:'', type:'normal' },
+  { no:7, task:'Record all defects found and result of work carried out as work history', remark:'', type:'normal' }
+];
+
 window.addEventListener('DOMContentLoaded', function(){
+  /* Overlay click-to-close */
+  var po = document.getElementById('lsPickerOverlay');
+  var co = document.getElementById('lsConfirmOverlay');
+  if (po) po.addEventListener('click', function(e){ if(e.target===this) lsClosePicker(); });
+  if (co) co.addEventListener('click', function(e){ if(e.target===this) lsCloseConfirm(); });
   lsLoadAssets();
   buildChecklist();
 });
@@ -735,9 +750,7 @@ function lsShowToast(msg) {
   clearTimeout(t._to); t._to = setTimeout(function(){ t.style.opacity='0'; }, 3000);
 }
 
-/* Close on overlay click */
-document.getElementById('lsPickerOverlay').addEventListener('click', function(e){ if(e.target===this) lsClosePicker(); });
-document.getElementById('lsConfirmOverlay').addEventListener('click', function(e){ if(e.target===this) lsCloseConfirm(); });
+/* overlay listeners moved to DOMContentLoaded */
 
 /* ══════════════════════════════════════════════
    CLOCK
@@ -755,15 +768,7 @@ setInterval(tickClock, 1000); tickClock();
 /* ══════════════════════════════════════════════
    CHECKLIST DATA
 ══════════════════════════════════════════════ */
-var CHECKLIST_ITEMS = [
-  { no:1, task:'Visually inspect panel for any obvious signs of damage', remark:'', type:'normal' },
-  { no:2, task:'Cleaning instrumentation, flushing-purging-draining impulse line if required. Check level switch magnetic carriage for free movement, repair if necessary.', remark:'', type:'normal' },
-  { no:3, task:'Check for micro-switch contact, repair/replace if contact >10 Ohm', remark:'', type:'resistance' },
-  { no:4, task:'Check sealing/covering of instrument & junction boxes, conduits. Apply sealant/duct seal to prevent water/oil vapor ingress. Replace conduit/cable if required.', remark:'', type:'normal' },
-  { no:5, task:'Check instrument signal/power availability at end of maintenance activities', remark:'', type:'voltage' },
-  { no:6, task:'Keep Overall Equipment Cleanliness & Appearance', remark:'', type:'normal' },
-  { no:7, task:'Record all defects found and result of work carried out as work history', remark:'', type:'normal' }
-];
+
 
 function buildChecklist() {
   var tbody = document.getElementById('checklistBody');
