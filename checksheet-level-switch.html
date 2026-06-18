@@ -348,7 +348,7 @@
         <tr>
           <td>Application</td>
           <td colspan="3">
-            <div class="app-row">
+            <div class="app-row" style="flex-wrap:wrap;gap:12px 20px">
               <label class="app-check">
                 <input type="checkbox" id="app_steam"> <span>Steam</span>
                 <span class="app-print-box" id="app_steam_box"></span>
@@ -467,7 +467,7 @@
     <!-- SIGN OFF -->
     <div class="panel">
       <div class="panel-title">Sign Off</div>
-      <table class="sign-table">
+      <div class="sign-table-wrap"><table class="sign-table">
         <thead>
           <tr><th style="text-align:left;width:180px">Peran</th><th>Nama</th><th>Jabatan</th><th>Dept / Company</th><th style="width:100px">Tanda Tangan</th><th style="width:80px">Tanggal</th></tr>
         </thead>
@@ -505,10 +505,10 @@
             <td><input type="text" placeholder="dd/mm/yyyy"></td>
           </tr>
         </tbody>
-      </table>
-      <div style="display:flex;gap:24px;margin-top:12px;font-size:12px;color:var(--text-light)">
-        <div>Job Start: <input type="datetime-local" id="f_job_start" style="border:none;border-bottom:1px solid var(--border);outline:none;font-size:12px"></div>
-        <div>Job Complete: <input type="datetime-local" id="f_job_end" style="border:none;border-bottom:1px solid var(--border);outline:none;font-size:12px"></div>
+      </table></div>
+      <div style="display:flex;gap:16px;margin-top:12px;font-size:12px;color:var(--text-light);flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">Job Start: <input type="datetime-local" id="f_job_start" style="border:none;border-bottom:1px solid var(--border);outline:none;font-size:12px;width:100%"></div>
+        <div style="flex:1;min-width:160px">Job Complete: <input type="datetime-local" id="f_job_end" style="border:none;border-bottom:1px solid var(--border);outline:none;font-size:12px;width:100%"></div>
       </div>
     </div>
 
