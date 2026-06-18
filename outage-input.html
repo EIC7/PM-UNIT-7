@@ -921,27 +921,39 @@
 <script>
 /* ══════════════════════════════════════════════
    XLSX / CSV PARSER — inline, no CDN needed
-   Replaces SheetJS to avoid Tracking Prevention
+   Replaces SheetJS CDN to avoid Tracking Prevention
    Supports: .csv, .xlsx (Office Open XML)
 ══════════════════════════════════════════════ */
 var XLSX = (function() {
 
   /* ── CSV parser ── */
   function parseCSV(text) {
-    var lines = text.split(/?
-/).filter(function(l){ return l.trim(); });
+    // Split on \r\n or \n
+    var lines = [];
+    var raw = text.split('\n');
+    for (var i = 0; i < raw.length; i++) {
+      var l = raw[i].replace(/\r$/, '');
+      if (l.trim()) lines.push(l);
+    }
     if (!lines.length) return [];
+
     function splitLine(line) {
       var cols = [], cur = '', inQ = false;
       for (var i = 0; i < line.length; i++) {
         var c = line[i];
-        if (c === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
-        else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
-        else cur += c;
+        if (c === '"') {
+          if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+          else inQ = !inQ;
+        } else if (c === ',' && !inQ) {
+          cols.push(cur.trim()); cur = '';
+        } else {
+          cur += c;
+        }
       }
-      cols.push(cur);
+      cols.push(cur.trim());
       return cols;
     }
+
     var headers = splitLine(lines[0]);
     return lines.slice(1).map(function(l) {
       var vals = splitLine(l);
@@ -953,13 +965,11 @@ var XLSX = (function() {
 
   /* ── XLSX parser (Office Open XML / zip) ── */
   function parseXLSX(arrayBuffer) {
-    // Minimal ZIP reader — finds shared strings and sheet1 XML
     var bytes = new Uint8Array(arrayBuffer);
 
-    function readUint16(b, o) { return b[o] | (b[o+1]<<8); }
-    function readUint32(b, o) { return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0; }
+    function readU16(b, o) { return b[o] | (b[o+1]<<8); }
+    function readU32(b, o) { return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0; }
 
-    // Parse ZIP central directory
     function findEOCD(b) {
       for (var i = b.length-22; i >= 0; i--)
         if (b[i]===0x50&&b[i+1]===0x4b&&b[i+2]===0x05&&b[i+3]===0x06) return i;
@@ -967,19 +977,20 @@ var XLSX = (function() {
     }
 
     var eocd = findEOCD(bytes);
-    if (eocd < 0) throw new Error('Invalid XLSX (no EOCD)');
-    var cdOffset = readUint32(bytes, eocd+16);
-    var cdSize   = readUint32(bytes, eocd+12);
+    if (eocd < 0) throw new Error('Invalid XLSX');
+    var cdOffset = readU32(bytes, eocd+16);
+    var cdSize   = readU32(bytes, eocd+12);
 
     var files = {};
     var pos = cdOffset;
     while (pos < cdOffset + cdSize) {
-      if (readUint32(bytes,pos) !== 0x02014b50) break;
-      var fnLen  = readUint16(bytes, pos+28);
-      var exLen  = readUint16(bytes, pos+30);
-      var cmLen  = readUint16(bytes, pos+32);
-      var hdrOff = readUint32(bytes, pos+42);
-      var fname  = String.fromCharCode.apply(null, bytes.subarray(pos+46, pos+46+fnLen));
+      if (readU32(bytes,pos) !== 0x02014b50) break;
+      var fnLen = readU16(bytes, pos+28);
+      var exLen = readU16(bytes, pos+30);
+      var cmLen = readU16(bytes, pos+32);
+      var hdrOff= readU32(bytes, pos+42);
+      var fname = '';
+      for (var fi = 0; fi < fnLen; fi++) fname += String.fromCharCode(bytes[pos+46+fi]);
       files[fname] = hdrOff;
       pos += 46 + fnLen + exLen + cmLen;
     }
@@ -987,90 +998,83 @@ var XLSX = (function() {
     function getEntry(name) {
       var off = files[name];
       if (off === undefined) return null;
-      var fnLen = readUint16(bytes, off+26);
-      var exLen = readUint16(bytes, off+28);
-      var comp  = readUint16(bytes, off+8);
-      var cSize = readUint32(bytes, off+18);
+      var fnLen = readU16(bytes, off+26);
+      var exLen = readU16(bytes, off+28);
+      var comp  = readU16(bytes, off+8);
+      var cSize = readU32(bytes, off+18);
+      var uSize = readU32(bytes, off+22);
       var dOff  = off + 30 + fnLen + exLen;
       var raw   = bytes.subarray(dOff, dOff + cSize);
       if (comp === 0) return raw;
-      if (comp === 8) return new Uint8Array(pako_inflate(raw));
-      throw new Error('Unsupported compression: ' + comp);
-    }
-
-    // Minimal inflate (deflate) — use DecompressionStream if available
-    function pako_inflate(data) {
-      try {
-        var ds = new DecompressionStream('deflate-raw');
-        var writer = ds.writable.getWriter();
-        var reader = ds.readable.getReader();
-        writer.write(data); writer.close();
-        var chunks = [], done = false;
-        // synchronous read via sync iteration not possible in all browsers
-        // fall back: return data as-is and let XML parse fail gracefully
-        return data;
-      } catch(e) { return data; }
+      if (comp === 8) {
+        try {
+          var ds = new DecompressionStream('deflate-raw');
+          // Synchronous read not possible; return raw and let XML fail gracefully
+          return raw;
+        } catch(e) { return raw; }
+      }
+      return raw;
     }
 
     function decode(u8) {
       try { return new TextDecoder().decode(u8); }
-      catch(e) { return String.fromCharCode.apply(null, u8); }
-    }
-
-    // Use DecompressionStream asynchronously — handled outside
-    // For xlsx we use a synchronous approach via FileReader already done
-    // So we just parse the XML from the raw bytes assuming stored (comp=0) for small files
-    // Most xlsx from Excel are deflate-compressed; handle via async path below
-
-    function parseXML(xml) {
-      var dp = new DOMParser();
-      return dp.parseFromString(xml, 'application/xml');
-    }
-
-    // Get shared strings
-    var ssRaw = getEntry('xl/sharedStrings.xml');
-    var sharedStrings = [];
-    if (ssRaw) {
-      var ssXml = parseXML(decode(ssRaw));
-      var tNodes = ssXml.querySelectorAll('si t');
-      tNodes.forEach(function(t){ sharedStrings.push(t.textContent); });
-      // Also handle <si><r><t> (rich text)
-      if (!tNodes.length) {
-        ssXml.querySelectorAll('si').forEach(function(si){
-          var txt = '';
-          si.querySelectorAll('t').forEach(function(t){ txt += t.textContent; });
-          sharedStrings.push(txt);
-        });
+      catch(e) {
+        var s = '';
+        for (var i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+        return s;
       }
     }
 
-    // Get sheet1
+    function parseXML(xml) {
+      return new DOMParser().parseFromString(xml, 'application/xml');
+    }
+
+    // Shared strings
+    var sharedStrings = [];
+    var ssRaw = getEntry('xl/sharedStrings.xml');
+    if (ssRaw) {
+      var ssXml = parseXML(decode(ssRaw));
+      ssXml.querySelectorAll('si').forEach(function(si){
+        var txt = '';
+        si.querySelectorAll('t').forEach(function(t){ txt += t.textContent; });
+        sharedStrings.push(txt);
+      });
+    }
+
+    // Sheet1
     var sheetRaw = getEntry('xl/worksheets/sheet1.xml');
     if (!sheetRaw) {
-      // try finding sheet name from workbook
-      var wbRaw = getEntry('xl/workbook.xml');
-      if (wbRaw) {
-        var wbXml = parseXML(decode(wbRaw));
-        var firstSheet = wbXml.querySelector('sheet');
-        if (firstSheet) {
-          var rId = firstSheet.getAttribute('r:id') || firstSheet.getAttribute('id') || '1';
-          var relsRaw = getEntry('xl/_rels/workbook.xml.rels');
-          if (relsRaw) {
-            var relsXml = parseXML(decode(relsRaw));
-            var rel = relsXml.querySelector('Relationship[Id="'+rId+'"]');
-            if (rel) sheetRaw = getEntry('xl/' + rel.getAttribute('Target').replace(/^\//,''));
-          }
+      // Try to find sheet name from workbook rels
+      var relsRaw = getEntry('xl/_rels/workbook.xml.rels');
+      if (relsRaw) {
+        var relsXml = parseXML(decode(relsRaw));
+        var firstRel = relsXml.querySelector('Relationship');
+        if (firstRel) {
+          var target = firstRel.getAttribute('Target') || '';
+          sheetRaw = getEntry('xl/' + target.replace(/^\//, ''));
         }
       }
     }
-    if (!sheetRaw) throw new Error('Sheet not found in XLSX');
+    if (!sheetRaw) throw new Error('Sheet not found');
 
     var sheetXml = parseXML(decode(sheetRaw));
-    var rows = [];
-    sheetXml.querySelectorAll('row').forEach(function(row) {
+    var rowEls = sheetXml.querySelectorAll('row');
+    if (!rowEls.length) return [];
+
+    // Column letter to 0-based index
+    function colIdx(col) {
+      var n = 0;
+      for (var i = 0; i < col.length; i++) n = n*26 + (col.charCodeAt(i)-64);
+      return n-1;
+    }
+
+    // Parse rows into {colLetter: value} maps
+    var rowData = [];
+    rowEls.forEach(function(row) {
       var cells = {};
       row.querySelectorAll('c').forEach(function(c) {
-        var r = c.getAttribute('r'); // e.g. A1
+        var r = c.getAttribute('r') || '';
+        var col = r.replace(/[0-9]/g, '');
         var t = c.getAttribute('t');
         var v = c.querySelector('v');
         var val = '';
@@ -1079,50 +1083,38 @@ var XLSX = (function() {
           else if (t === 'inlineStr') { var is = c.querySelector('t'); val = is ? is.textContent : ''; }
           else val = v.textContent;
         }
-        var col = r ? r.replace(/[0-9]/g,'') : '';
         if (col) cells[col] = val;
       });
-      rows.push(cells);
+      rowData.push(cells);
     });
 
-    if (!rows.length) return [];
+    if (!rowData.length) return [];
 
-    // Convert column letters to index, build header from row 1
-    function colToIdx(col) {
-      var n = 0;
-      for (var i = 0; i < col.length; i++) n = n*26 + (col.charCodeAt(i) - 64);
-      return n - 1;
-    }
-
-    var headerRow = rows[0];
+    // Build header from first row
+    var headerRow = rowData[0];
+    var colLetters = Object.keys(headerRow).sort(function(a,b){
+      return colIdx(a) - colIdx(b);
+    });
     var headers = {};
-    Object.keys(headerRow).forEach(function(col){ headers[colToIdx(col)] = headerRow[col]; });
-    var maxCol = Math.max.apply(null, Object.keys(headers).map(Number));
+    colLetters.forEach(function(col){ headers[col] = headerRow[col]; });
 
-    return rows.slice(1).filter(function(r){ return Object.keys(r).length; }).map(function(r) {
+    return rowData.slice(1).filter(function(r){ return Object.keys(r).length > 0; }).map(function(r) {
       var obj = {};
-      for (var i = 0; i <= maxCol; i++) {
-        var h = headers[i] || ('Col'+(i+1));
-        var col = String.fromCharCode(65 + (i < 26 ? i : 0)); // A-Z only for now
-        if (i >= 26) {
-          var first = String.fromCharCode(65 + Math.floor(i/26) - 1);
-          col = first + String.fromCharCode(65 + (i%26));
-        }
+      colLetters.forEach(function(col) {
+        var h = headers[col] || ('Col_'+col);
         obj[h] = r[col] || '';
-      }
+      });
       return obj;
     });
   }
 
   return {
     read: function(arrayBuffer, opts) {
-      // Return a workbook-like object
-      return { _buf: arrayBuffer, SheetNames: ['Sheet1'], Sheets: { Sheet1: { _buf: arrayBuffer } } };
+      return { _buf: arrayBuffer };
     },
     utils: {
       sheet_to_json: function(sheet, opts) {
         var buf = sheet._buf;
-        // Detect CSV vs XLSX by magic bytes
         var sig = new Uint8Array(buf, 0, 4);
         var isPK = sig[0]===0x50 && sig[1]===0x4b;
         if (isPK) {
@@ -1131,9 +1123,8 @@ var XLSX = (function() {
             console.warn('XLSX parse error, trying as CSV:', e.message);
             return parseCSV(new TextDecoder().decode(buf));
           }
-        } else {
-          return parseCSV(new TextDecoder().decode(buf));
         }
+        return parseCSV(new TextDecoder().decode(buf));
       }
     }
   };
@@ -1181,6 +1172,19 @@ var XLSX = (function() {
         <div class="drop-zone-icon">📂</div>
         <div class="drop-zone-text">Klik atau seret file ke sini</div>
         <div class="drop-zone-sub">.xlsx · .xls · .csv</div>
+      </div>
+
+      <!-- Tab target selector -->
+      <div style="margin-top:10px;padding:10px;background:#f0f7ff;border:1px solid #c3d9f5;border-radius:8px;">
+        <div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:6px;">
+          📁 Import ke Kategori / Tab:
+        </div>
+        <select id="importTargetTab" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);background:#fff;outline:none;">
+          <option value="__active__">— Gunakan Tab Aktif Sekarang —</option>
+        </select>
+        <div style="font-size:10px;color:var(--text-light);margin-top:5px;">
+          Pilih tab tujuan, atau biarkan "Tab Aktif" untuk import ke tab yang sedang dibuka.
+        </div>
       </div>
 
       <!-- Preview (muncul setelah file dipilih) -->
@@ -1406,6 +1410,8 @@ window.addEventListener('DOMContentLoaded', function(){
   initExcel();
   initRefChips();
   loadState();
+  // Populate import tab dropdown after state loaded
+  setTimeout(refreshImportTabDropdown, 100);
 });
 
 /* ══════════════════════════════════════════════
@@ -1853,8 +1859,8 @@ function handleExcelFile(file) {
   reader.onload=function(e){
     try {
       var wb=XLSX.read(e.target.result,{type:'array'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      // wb._buf holds the raw ArrayBuffer; pass it directly as the "sheet"
+      var rows=XLSX.utils.sheet_to_json({_buf: e.target.result},{defval:''});
       excelData=rows;
       var meta=document.getElementById('excelMeta');
       if(meta) meta.innerHTML='<span>File:</span> '+escHtml(file.name)+'<br><span>Baris:</span> '+rows.length+'<br><span>Kolom:</span> '+(rows.length?Object.keys(rows[0]).join(', '):'—');
@@ -1865,9 +1871,26 @@ function handleExcelFile(file) {
   reader.readAsArrayBuffer(file);
 }
 function importExcel(){
-  var tab=getTab(activeTabId); if(!tab){ showToast('Pilih tab dulu'); return; }
+  // Cek pilihan tab target dari dropdown
+  var sel = document.getElementById('importTargetTab');
+  var targetId = sel ? sel.value : '__active__';
+  if (targetId === '__active__') targetId = activeTabId;
+
+  // Buat tab baru otomatis jika dipilih __new__
+  if (targetId === '__new__') {
+    var fname = (excelData.length && excelData[0].__filename) ? excelData[0].__filename : 'Import';
+    // Guess category from filename
+    var guessName = fname.replace(/\.[^.]+$/, '').replace(/_/g,' ');
+    var newName = prompt('Nama kategori/tab baru:', guessName) || guessName;
+    targetId = addNewTab(newName);
+  }
+
+  var tab = getTab(targetId);
+  if (!tab) { showToast('Pilih tab/kategori tujuan terlebih dahulu'); return; }
   if(!excelData.length){ showToast('Tidak ada data Excel'); return; }
-  var colMap={'asset tag':'asset_tag','asset_tag':'asset_tag','asset description':'asset_desc','asset_desc':'asset_desc','description':'asset_desc','lokasi':'lokasi','location':'lokasi','pic':'pic'};
+  // Aktifkan tab tujuan jika berbeda
+  if (targetId !== activeTabId) { switchTab(targetId); }
+  var colMap={'asset tag':'asset_tag','asset_tag':'asset_tag','asset':'asset_tag','no':'_no','wo':'wo','work order':'wo','work order ref':'wo','asset description':'asset_desc','asset_desc':'asset_desc','description':'asset_desc','lokasi':'lokasi','location':'lokasi','pic':'pic','manufacturer':'extra_manufacturer','mnf':'extra_manufacturer','serial number':'extra_sn','sn':'extra_sn'};
   excelData.forEach(function(row){
     var newRow={_status:'new',id:null,asset_tag:'',asset_desc:'',lokasi:'',pic:'',extra_data:{},input_category:tab.name};
     Object.keys(row).forEach(function(k){
@@ -1883,6 +1906,24 @@ function importExcel(){
   saveState(); refreshPane(activeTabId); updateTabCount(activeTabId);
   resetExcel(); showToast(excelData.length+' baris diimpor dari Excel ✓');
 }
+function refreshImportTabDropdown() {
+  var sel = document.getElementById('importTargetTab');
+  if (!sel) return;
+  // Keep first option
+  while (sel.options.length > 1) sel.remove(1);
+  tabs.forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.name + (t.rows.length ? ' (' + t.rows.length + ' baris)' : '');
+    sel.appendChild(opt);
+  });
+  // Also add option to create new tab
+  var newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '➕ Buat Tab Baru Otomatis...';
+  sel.appendChild(newOpt);
+}
+
 function resetExcel(){
   excelData=[];
   var prev=document.getElementById('excelPreview'); if(prev) prev.classList.remove('visible');
