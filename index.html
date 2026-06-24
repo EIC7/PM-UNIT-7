@@ -156,6 +156,31 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
+        .btn-eic7 {
+            padding: 8px 18px;
+            border: 2.5px solid #7c3aed;
+            border-radius: 8px;
+            background: transparent;
+            color: #7c3aed;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            letter-spacing: 0.8px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .btn-eic7:hover {
+            background: #7c3aed;
+            color: white;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
         .clock-box {
             font-family: 'Courier New', monospace;
             font-size: 14px;
@@ -797,6 +822,7 @@
                     <span class="status-dot"></span>
                     UNIT 7 — ONLINE
                 </div>
+                <a class="btn-eic7" href="https://eenputra.github.io/EIC7-PORTAL/index.html#" target="_blank" rel="noopener">🔗 EIC7 PORTAL</a>
                 <button class="btn-history" onclick="window.location.href='history.html'">📋 RIWAYAT</button>
                 <div class="clock-box" id="clock">--:--:--</div>
             </div>
@@ -857,21 +883,6 @@
                 <div class="card-arrow">↗</div>
             </div>
 
-            <!-- MOD-15 Material Warehouse -->
-            <div class="pm-card" onclick="window.location.href='material-warehouse.html'" style="--card-color: #f59e0b;">
-                <div class="card-index">MOD-15</div>
-                <div class="card-icon">🏭</div>
-                <div class="card-title">Material<br>Warehouse</div>
-                <div class="card-desc">Database material dan spare part gudang. Manajemen inventaris, pencatatan stok, upload foto material, dan dokumentasi data warehouse Unit 7.</div>
-                <div class="card-tags">
-                    <span class="tag">WAREHOUSE</span>
-                    <span class="tag">INVENTARIS</span>
-                    <span class="tag">MATERIAL</span>
-                    <span class="tag">SPARE PART</span>
-                </div>
-                <div class="card-arrow">↗</div>
-            </div>
-
             <!-- MOD-01 PM O2 Inlet & Outlet -->
             <div class="pm-card" onclick="window.open('https://ahpm.figma.site/','_blank')">
                 <div class="card-index">MOD-01</div>
@@ -888,7 +899,7 @@
             </div>
 
             <!-- MOD-02 CEMS Calibration -->
-            <div class="pm-card" onclick="window.open('https://unit7cems.figma.site/','_blank')">
+            <div class="pm-card" onclick="window.open('https://www.figma.com/make/TVmb9eYccWTlG1sm8kysn7/CEMS-Calibration-Documentation-App?code-node-id=0-9&p=f&fullscreen=1','_blank')">
                 <div class="card-index">MOD-02</div>
                 <div class="card-icon">📡</div>
                 <div class="card-title">CEMS<br>Calibration</div>
