@@ -769,6 +769,89 @@
   }
   .jenis-chip-del:hover { color: #b91c1c; }
   .jenis-chips-empty { font-size: 11px; color: var(--text-light); font-style: italic; padding: 4px 0; }
+
+  /* ── AMBIL SEARCH RESULTS ── */
+  .ambil-result-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ambil-result-item:hover { border-color: var(--accent); background: #f0fdf9; }
+  .ambil-result-item.selected { border-color: var(--accent); background: #ecfdf5; }
+  .ambil-result-thumb {
+    width: 48px; height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+  }
+  .ambil-result-no-thumb {
+    width: 48px; height: 48px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .ambil-result-info { flex: 1; min-width: 0; }
+  .ambil-result-st { font-family: 'Courier New', monospace; font-size: 11px; color: var(--steel); font-weight: 700; }
+  .ambil-result-nama { font-size: 13px; font-weight: 600; color: var(--text-dark); margin: 2px 0; }
+  .ambil-result-meta { font-size: 11px; color: var(--text-light); }
+  .ambil-result-qty {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .ambil-result-qty.low { color: var(--warn); }
+  .ambil-result-qty.empty { color: var(--fail); }
+  .ambil-select-btn {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .ambil-select-btn:hover { background: var(--accent2); }
+
+  /* ── HISTORY TABLE ── */
+  #historyTable { min-width: 900px; }
+  .history-badge-qty {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .history-badge-sisa {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    background: #dcfce7;
+    color: #166534;
+  }
+  .history-badge-sisa.low { background: #fef3c7; color: #92400e; }
+  .history-badge-sisa.empty { background: #fee2e2; color: #991b1b; }
 </style>
 </head>
 <body>
@@ -804,6 +887,13 @@
     <button class="tab-nav-btn" onclick="switchTab('list')" id="tabBtn-list">
       📦 List Material Tersimpan
       <span class="tab-badge" id="listBadge">0</span>
+    </button>
+    <button class="tab-nav-btn" onclick="switchTab('ambil')" id="tabBtn-ambil">
+      🚚 Pengambilan Material Internal
+    </button>
+    <button class="tab-nav-btn" onclick="switchTab('history-ambil')" id="tabBtn-history-ambil">
+      📋 History Pengambilan
+      <span class="tab-badge" id="historyBadge">0</span>
     </button>
   </div>
 
@@ -846,6 +936,40 @@
         <div class="form-group">
           <label class="field-label">Lokasi / Digunakan Untuk</label>
           <input class="field" type="text" id="f_lokasi" placeholder="Contoh: Turbin, Boiler, Control Room..." />
+        </div>
+        <!-- Lokasi Barang -->
+        <div class="form-group">
+          <label class="field-label">Lokasi Barang<span class="req">*</span></label>
+          <select class="field" id="f_lokasi_barang" onchange="onLokasiBarangChange()">
+            <option value="">— Pilih Lokasi Barang —</option>
+            <option value="Warehouse">Warehouse</option>
+            <option value="White Container">White Container</option>
+            <option value="A55">A55</option>
+            <option value="__other__">✏️ Lainnya (isi manual)...</option>
+          </select>
+        </div>
+        <!-- Lokasi Barang manual (muncul jika pilih Lainnya) -->
+        <div class="form-group" id="f_lokasi_barang_other_wrap" style="display:none;">
+          <label class="field-label">Lokasi Barang (Lainnya)<span class="req">*</span></label>
+          <input class="field" type="text" id="f_lokasi_barang_other" placeholder="Tulis lokasi barang secara manual..." />
+        </div>
+        <!-- Detail Lokasi Barang -->
+        <div class="form-group full">
+          <label class="field-label">Detail Lokasi Barang</label>
+          <input class="field" type="text" id="f_detail_lokasi" placeholder="Contoh: Rak A-3, Laci 2, Sudut kanan..." />
+        </div>
+        <!-- Penanggung Jawab / Kunci -->
+        <div class="form-group">
+          <label class="field-label">Penanggung Jawab / Kunci</label>
+          <input class="field" type="text" id="f_pj" placeholder="Nama penanggung jawab atau pemegang kunci..." />
+        </div>
+        <!-- Quantity (wajib jika bukan Warehouse) -->
+        <div class="form-group" id="f_qty_wrap">
+          <label class="field-label" id="f_qty_label">Quantity</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input class="field" type="number" id="f_qty" placeholder="Jumlah..." min="0" style="flex:1;" />
+            <input class="field" type="text" id="f_satuan" placeholder="Satuan (pcs, set, m...)" style="flex:1;" />
+          </div>
         </div>
         <!-- Gambar Asset -->
         <div class="form-group full">
@@ -902,18 +1026,118 @@
               <th>No. Asset (ST)</th>
               <th>Nama Asset</th>
               <th>Jenis</th>
-              <th>Lokasi</th>
+              <th>Lokasi Penggunaan</th>
+              <th>Lokasi Barang</th>
+              <th style="width:80px;text-align:center;">Qty</th>
               <th>Gambar</th>
               <th style="width:130px">Aksi</th>
             </tr>
           </thead>
           <tbody id="tableBody">
             <tr>
-              <td colspan="7">
+              <td colspan="9">
                 <div class="empty-state">
                   <div class="icon">📦</div>
                   <div class="title">Belum ada data asset</div>
                   <div class="msg">Tambahkan asset melalui tab "Input Asset Material"</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PENGAMBILAN MATERIAL INTERNAL -->
+  <div class="tab-content" id="tab-ambil">
+    <div class="panel">
+      <div class="section-label">🚚 Pengambilan Material Internal</div>
+      <div style="font-size:12px;color:var(--text-mid);margin-bottom:18px;line-height:1.7;">
+        Cari material berdasarkan <strong>Nomor ST</strong> atau <strong>Nama Asset</strong>. Hanya material yang <strong>bukan di Warehouse</strong> yang akan muncul dalam pencarian.
+      </div>
+
+      <!-- Search -->
+      <div class="search-bar-wrap">
+        <div class="search-input-wrap">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input class="search-input" type="text" id="ambilSearch" placeholder="Cari nomor ST atau nama asset (bukan Warehouse)..." oninput="renderAmbilSearch()" />
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('ambilSearch').value='';renderAmbilSearch();">✕ Clear</button>
+      </div>
+
+      <!-- Search results -->
+      <div id="ambilSearchResults" style="margin-bottom:20px;"></div>
+
+      <!-- Form konfirmasi ambil (muncul setelah pilih asset) -->
+      <div id="ambilFormWrap" style="display:none;">
+        <div style="background:#f0fdf9;border:1.5px solid var(--accent);border-radius:10px;padding:18px 20px;margin-bottom:16px;">
+          <div style="font-family:'Arial Narrow',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;">📦 Asset Dipilih</div>
+          <div id="ambilSelectedInfo" style="font-size:13px;color:var(--text-dark);line-height:1.8;"></div>
+        </div>
+        <div class="form-grid" style="margin-bottom:16px;">
+          <div class="form-group">
+            <label class="field-label">Jumlah Diambil<span class="req">*</span></label>
+            <input class="field" type="number" id="ambilQty" placeholder="Jumlah yang diambil..." min="1" />
+            <span style="font-size:11px;color:var(--text-light);margin-top:3px;" id="ambilQtyInfo"></span>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Nama Pengambil<span class="req">*</span></label>
+            <input class="field" type="text" id="ambilNamaPengambil" placeholder="Nama orang yang mengambil..." />
+          </div>
+          <div class="form-group full">
+            <label class="field-label">Keperluan / Keterangan</label>
+            <input class="field" type="text" id="ambilKeperluan" placeholder="Untuk keperluan apa material ini diambil..." />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" onclick="cancelAmbil()">✕ Batal</button>
+          <button class="btn btn-primary" onclick="konfirmasiAmbil()">✅ Konfirmasi Pengambilan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: HISTORY PENGAMBILAN -->
+  <div class="tab-content" id="tab-history-ambil">
+    <div class="panel">
+      <div class="stats-row">
+        <div class="stat-chip total">📋 Total Pengambilan: <strong id="statHistoryTotal">0</strong></div>
+      </div>
+      <div class="search-bar-wrap">
+        <div class="search-input-wrap">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input class="search-input" type="text" id="historySearch" placeholder="Cari nama pengambil, nomor ST, nama asset..." oninput="renderHistoryTable()" />
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('historySearch').value='';renderHistoryTable();">✕ Clear</button>
+      </div>
+      <div class="table-scroll">
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th style="width:40px">No</th>
+              <th>Tanggal & Waktu</th>
+              <th>No. Asset (ST)</th>
+              <th>Nama Asset</th>
+              <th>Jenis</th>
+              <th>Lokasi Barang</th>
+              <th>Qty Diambil</th>
+              <th>Sisa Qty</th>
+              <th>Pengambil</th>
+              <th>Keperluan</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <tr>
+              <td colspan="10">
+                <div class="empty-state">
+                  <div class="icon">📋</div>
+                  <div class="title">Belum ada history pengambilan</div>
+                  <div class="msg">History akan muncul setelah pengambilan material dilakukan</div>
                 </div>
               </td>
             </tr>
@@ -1006,6 +1230,8 @@ function switchTab(id) {
   document.getElementById('tabBtn-'+id).classList.add('active');
   document.getElementById('tab-'+id).classList.add('active');
   if (id === 'list') renderTable();
+  if (id === 'ambil') { renderAmbilSearch(); }
+  if (id === 'history-ambil') { loadHistoryPengambilan(); }
 }
 
 /* ══════════════════════════════════════════════
@@ -1013,8 +1239,9 @@ function switchTab(id) {
 ══════════════════════════════════════════════ */
 var SUPA_URL  = 'https://ruvvximnnacpvvoogbzs.supabase.co';
 var SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
-var ASSET_TABLE = 'material_warehouse';
-var JENIS_TABLE = 'material_jenis';
+var ASSET_TABLE   = 'material_warehouse';
+var JENIS_TABLE   = 'material_jenis';
+var AMBIL_TABLE   = 'material_pengambilan';
 
 function supaFetch(method, path, body) {
   var url = SUPA_URL + '/rest/v1/' + path;
@@ -1045,20 +1272,24 @@ function loadAssets() {
   supaFetch('GET', ASSET_TABLE + '?select=*&order=created_at.desc')
     .then(function(data) {
       assets = (data || []).map(function(r) {
-        /* Flatten: data kolom Supabase → format lokal */
         var a = r.data || {};
         return {
-          id:         r.id,
-          nomor:      r.nomor      || '',
-          nama:       r.nama       || '',
-          jenis:      r.jenis      || '',
-          lokasi:     r.lokasi     || '',
-          deskripsi:  r.deskripsi  || '',
-          keterangan: r.deskripsi  || '',
-          image_data: r.image_data || '',
-          gambar:     r.image_data || '',
-          createdAt:  r.created_at || '',
-          updatedAt:  r.updated_at || '',
+          id:            r.id,
+          nomor:         r.nomor         || '',
+          nama:          r.nama          || '',
+          jenis:         r.jenis         || '',
+          lokasi:        r.lokasi        || '',
+          lokasi_barang: r.lokasi_barang || '',
+          detail_lokasi: r.detail_lokasi || '',
+          pj:            r.pj            || '',
+          qty:           (r.qty !== null && r.qty !== undefined) ? Number(r.qty) : null,
+          satuan:        r.satuan        || '',
+          deskripsi:     r.deskripsi     || '',
+          keterangan:    r.deskripsi     || '',
+          image_data:    r.image_data    || '',
+          gambar:        r.image_data    || '',
+          createdAt:     r.created_at    || '',
+          updatedAt:     r.updated_at    || '',
         };
       });
       updateBadge();
@@ -1297,14 +1528,24 @@ function applyCrop() {
    FORM SAVE / EDIT
 ══════════════════════════════════════════════ */
 function getFormData() {
+  var lokasiBarangRaw = document.getElementById('f_lokasi_barang').value;
+  var lokasiBarang = lokasiBarangRaw === '__other__'
+    ? document.getElementById('f_lokasi_barang_other').value.trim()
+    : lokasiBarangRaw;
+  var qtyVal = document.getElementById('f_qty').value.trim();
   return {
-    nomor: document.getElementById('f_nomor').value.trim(),
-    nama: document.getElementById('f_nama').value.trim(),
-    deskripsi: document.getElementById('f_deskripsi').value.trim(),
-    jenis: document.getElementById('f_jenis').value,
-    lokasi: document.getElementById('f_lokasi').value.trim(),
-    gambar: currentImageDataUrl || null,
-    keterangan: document.getElementById('f_keterangan').value.trim()
+    nomor:         document.getElementById('f_nomor').value.trim(),
+    nama:          document.getElementById('f_nama').value.trim(),
+    deskripsi:     document.getElementById('f_deskripsi').value.trim(),
+    jenis:         document.getElementById('f_jenis').value,
+    lokasi:        document.getElementById('f_lokasi').value.trim(),
+    lokasi_barang: lokasiBarang,
+    detail_lokasi: document.getElementById('f_detail_lokasi').value.trim(),
+    pj:            document.getElementById('f_pj').value.trim(),
+    qty:           qtyVal !== '' ? Number(qtyVal) : null,
+    satuan:        document.getElementById('f_satuan').value.trim(),
+    gambar:        currentImageDataUrl || null,
+    keterangan:    document.getElementById('f_keterangan').value.trim()
   };
 }
 
@@ -1315,7 +1556,28 @@ function fillForm(asset) {
   rebuildJenisSelect(asset.jenis || '');
   document.getElementById('f_lokasi').value = asset.lokasi || '';
   document.getElementById('f_keterangan').value = asset.keterangan || '';
-  // image_data = kolom Supabase, gambar = field lokal
+  document.getElementById('f_detail_lokasi').value = asset.detail_lokasi || '';
+  document.getElementById('f_pj').value = asset.pj || '';
+  document.getElementById('f_qty').value = (asset.qty !== null && asset.qty !== undefined) ? asset.qty : '';
+  document.getElementById('f_satuan').value = asset.satuan || '';
+
+  // Lokasi barang
+  var lokasiBarang = asset.lokasi_barang || '';
+  var sel = document.getElementById('f_lokasi_barang');
+  var knownOptions = ['', 'Warehouse', 'White Container', 'A55'];
+  if (knownOptions.indexOf(lokasiBarang) !== -1) {
+    sel.value = lokasiBarang;
+    document.getElementById('f_lokasi_barang_other_wrap').style.display = 'none';
+  } else if (lokasiBarang) {
+    sel.value = '__other__';
+    document.getElementById('f_lokasi_barang_other').value = lokasiBarang;
+    document.getElementById('f_lokasi_barang_other_wrap').style.display = '';
+  } else {
+    sel.value = '';
+    document.getElementById('f_lokasi_barang_other_wrap').style.display = 'none';
+  }
+  updateQtyLabel();
+
   var img = asset.image_data || asset.gambar || null;
   if (img) {
     setPreviewImage(img);
@@ -1334,6 +1596,13 @@ function resetForm() {
   document.getElementById('f_deskripsi').value = '';
   document.getElementById('f_jenis').value = '';
   document.getElementById('f_lokasi').value = '';
+  document.getElementById('f_lokasi_barang').value = '';
+  document.getElementById('f_lokasi_barang_other').value = '';
+  document.getElementById('f_lokasi_barang_other_wrap').style.display = 'none';
+  document.getElementById('f_detail_lokasi').value = '';
+  document.getElementById('f_pj').value = '';
+  document.getElementById('f_qty').value = '';
+  document.getElementById('f_satuan').value = '';
   document.getElementById('f_keterangan').value = '';
   currentImageDataUrl = null;
   document.getElementById('imgPreviewWrap').style.display = 'none';
@@ -1341,24 +1610,35 @@ function resetForm() {
   document.getElementById('imgUploadArea').classList.remove('has-image');
   document.getElementById('formSectionLabel').textContent = '📋 Form Input Asset Baru';
   document.getElementById('imgFileInput').value = '';
+  updateQtyLabel();
 }
 
 function saveAsset() {
   var d = getFormData();
   if (!d.nomor) { showToast('⚠️ Nomor Asset (ST) wajib diisi'); document.getElementById('f_nomor').focus(); return; }
   if (!d.nama)  { showToast('⚠️ Nama Asset wajib diisi');       document.getElementById('f_nama').focus();  return; }
+  if (!d.lokasi_barang) { showToast('⚠️ Lokasi Barang wajib dipilih'); document.getElementById('f_lokasi_barang').focus(); return; }
+  if (d.lokasi_barang === '__other__' || (document.getElementById('f_lokasi_barang').value === '__other__' && !d.lokasi_barang)) {
+    showToast('⚠️ Lokasi Barang (Lainnya) wajib diisi'); document.getElementById('f_lokasi_barang_other').focus(); return;
+  }
+  // Quantity wajib jika bukan Warehouse
+  if (d.lokasi_barang !== 'Warehouse' && (d.qty === null || d.qty === '' || isNaN(d.qty))) {
+    showToast('⚠️ Quantity wajib diisi karena barang bukan di Warehouse'); document.getElementById('f_qty').focus(); return;
+  }
 
-  // Mapping field form ke kolom Supabase
-  // Kolom tersedia: id, nomor, nama, jenis, lokasi, kondisi, jumlah, satuan, deskripsi, image_data
-  // Field keterangan digabung ke deskripsi karena tidak ada kolom terpisah
   var gabungDesc = [d.deskripsi, d.keterangan].filter(Boolean).join('\n\n') || null;
   var payload = {
-    nomor:      d.nomor,
-    nama:       d.nama,
-    deskripsi:  gabungDesc,
-    jenis:      d.jenis      || null,
-    lokasi:     d.lokasi     || null,
-    image_data: d.gambar     || null
+    nomor:         d.nomor,
+    nama:          d.nama,
+    deskripsi:     gabungDesc,
+    jenis:         d.jenis         || null,
+    lokasi:        d.lokasi        || null,
+    lokasi_barang: d.lokasi_barang || null,
+    detail_lokasi: d.detail_lokasi || null,
+    pj:            d.pj            || null,
+    qty:           d.qty !== null ? d.qty : null,
+    satuan:        d.satuan        || null,
+    image_data:    d.gambar        || null
   };
 
   if (editingId) {
@@ -1396,7 +1676,7 @@ function renderTable() {
   var q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
   var filtered = assets.filter(function(a) {
     if (!q) return true;
-    return (a.nomor+' '+a.nama+' '+a.jenis+' '+a.lokasi+' '+a.deskripsi).toLowerCase().indexOf(q) !== -1;
+    return (a.nomor+' '+a.nama+' '+a.jenis+' '+a.lokasi+' '+a.lokasi_barang+' '+a.deskripsi).toLowerCase().indexOf(q) !== -1;
   });
 
   var tbody = document.getElementById('tableBody');
@@ -1404,7 +1684,7 @@ function renderTable() {
 
   if (filtered.length === 0) {
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="7"><div class="empty-state">' +
+    tr.innerHTML = '<td colspan="9"><div class="empty-state">' +
       '<div class="icon">🔍</div>' +
       '<div class="title">'+(q ? 'Tidak ada hasil untuk "'+escHtml(q)+'"' : 'Belum ada data asset')+'</div>' +
       '<div class="msg">'+(q ? 'Coba kata kunci lain' : 'Tambahkan asset melalui tab "Input Asset Material"')+'</div>' +
@@ -1419,12 +1699,20 @@ function renderTable() {
     var imgCell = imgSrc
       ? '<img class="thumb-img" src="'+imgSrc+'" alt="gambar" onclick="openPreviewModal(\''+a.id+'\')" title="Lihat gambar">'
       : '<div class="no-img-cell">🖼️</div>';
+    var qtyCell = (a.lokasi_barang && a.lokasi_barang !== 'Warehouse' && a.qty !== null)
+      ? '<strong style="color:var(--accent)">' + a.qty + '</strong>' + (a.satuan ? ' <span style="font-size:10px;color:var(--text-light)">' + escHtml(a.satuan) + '</span>' : '')
+      : '<span style="color:var(--text-light);font-size:11px">—</span>';
+    var lokasiBarangCell = a.lokasi_barang
+      ? '<span style="font-size:11px;font-weight:700;color:var(--steel);font-family:\'Courier New\',monospace;">' + escHtml(a.lokasi_barang) + '</span>'
+      : '<span style="color:var(--text-light);font-size:11px">—</span>';
 
     tr.innerHTML = '<td class="col-no">'+(i+1)+'</td>' +
       '<td><strong style="font-family:\'Courier New\',monospace;font-size:12px;color:var(--steel)">'+escHtml(a.nomor)+'</strong></td>' +
       '<td>'+escHtml(a.nama)+'</td>' +
       '<td>'+(a.jenis ? '<span class="badge-jenis">'+escHtml(a.jenis)+'</span>' : '<span style="color:var(--text-light);font-size:11px">—</span>')+'</td>' +
       '<td style="color:var(--text-mid);font-size:12px">'+escHtml(a.lokasi||'—')+'</td>' +
+      '<td>'+lokasiBarangCell+'</td>' +
+      '<td style="text-align:center;">'+qtyCell+'</td>' +
       '<td>'+imgCell+'</td>' +
       '<td class="col-action"><div class="action-btns">' +
         '<button class="btn btn-icon btn-outline btn-sm" title="Preview" onclick="openPreviewModal(\''+a.id+'\')">👁</button>' +
@@ -1486,7 +1774,11 @@ function openPreviewModal(id) {
     { k: 'Nomor Asset (ST)', v: a.nomor, mono: true },
     { k: 'Nama Asset', v: a.nama },
     { k: 'Jenis Asset', v: a.jenis, tag: true },
-    { k: 'Lokasi / Digunakan Untuk', v: a.lokasi },
+    { k: 'Lokasi / Penggunaan', v: a.lokasi },
+    { k: 'Lokasi Barang', v: a.lokasi_barang },
+    { k: 'Detail Lokasi', v: a.detail_lokasi },
+    { k: 'Penanggung Jawab / Kunci', v: a.pj },
+    { k: 'Quantity', v: (a.qty !== null && a.qty !== undefined) ? (String(a.qty) + (a.satuan ? ' ' + a.satuan : '')) : null },
     { k: 'Deskripsi', v: a.deskripsi },
     { k: 'Keterangan Lainnya', v: a.keterangan },
     { k: 'Dibuat', v: a.createdAt ? new Date(a.createdAt).toLocaleString('id-ID') : null },
@@ -1691,6 +1983,254 @@ function showToast(msg) {
 
 
 /* ══════════════════════════════════════════════
+   LOKASI BARANG — helper
+══════════════════════════════════════════════ */
+function onLokasiBarangChange() {
+  var sel = document.getElementById('f_lokasi_barang');
+  var otherWrap = document.getElementById('f_lokasi_barang_other_wrap');
+  otherWrap.style.display = (sel.value === '__other__') ? '' : 'none';
+  if (sel.value !== '__other__') document.getElementById('f_lokasi_barang_other').value = '';
+  updateQtyLabel();
+}
+
+function updateQtyLabel() {
+  var sel = document.getElementById('f_lokasi_barang');
+  var lokasiVal = sel ? sel.value : '';
+  var label = document.getElementById('f_qty_label');
+  if (!label) return;
+  var isWarehouse = (lokasiVal === 'Warehouse');
+  label.innerHTML = isWarehouse
+    ? 'Quantity <span style="font-size:10px;color:var(--text-light);font-weight:400;">(opsional — barang di Warehouse)</span>'
+    : 'Quantity<span class="req">*</span> <span style="font-size:10px;color:var(--fail);font-weight:400;">(wajib — bukan di Warehouse)</span>';
+}
+
+
+/* ══════════════════════════════════════════════
+   PENGAMBILAN MATERIAL
+══════════════════════════════════════════════ */
+var selectedAmbilAsset = null;
+
+function renderAmbilSearch() {
+  var q = (document.getElementById('ambilSearch').value || '').toLowerCase().trim();
+  var container = document.getElementById('ambilSearchResults');
+
+  // Filter: bukan Warehouse, dan cocok dengan query
+  var filtered = assets.filter(function(a) {
+    if (!a.lokasi_barang || a.lokasi_barang === 'Warehouse') return false;
+    if (!q) return true;
+    return (a.nomor+' '+a.nama+' '+a.jenis).toLowerCase().indexOf(q) !== -1;
+  });
+
+  if (!q && filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding:30px 20px;"><div class="icon">📦</div>' +
+      '<div class="title">Tidak ada material tersedia</div>' +
+      '<div class="msg">Material dengan lokasi selain Warehouse akan muncul di sini</div></div>';
+    return;
+  }
+  if (q && filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding:24px 20px;"><div class="icon">🔍</div>' +
+      '<div class="title">Tidak ditemukan</div><div class="msg">Coba kata kunci lain</div></div>';
+    return;
+  }
+
+  var html = '';
+  filtered.forEach(function(a) {
+    var imgSrc = a.image_data || a.gambar || '';
+    var imgHtml = imgSrc
+      ? '<img class="ambil-result-thumb" src="'+imgSrc+'" alt="">'
+      : '<div class="ambil-result-no-thumb">📦</div>';
+    var qtyInfo = '';
+    var qtyClass = '';
+    if (a.qty !== null && a.qty !== undefined) {
+      qtyInfo = a.qty + (a.satuan ? ' ' + escHtml(a.satuan) : '');
+      if (a.qty === 0) qtyClass = 'empty';
+      else if (a.qty <= 3) qtyClass = 'low';
+    }
+    var canTake = (a.qty === null || a.qty > 0);
+    html += '<div class="ambil-result-item" id="ambil-item-'+a.id+'">' +
+      imgHtml +
+      '<div class="ambil-result-info">' +
+        '<div class="ambil-result-st">'+escHtml(a.nomor)+'</div>' +
+        '<div class="ambil-result-nama">'+escHtml(a.nama)+'</div>' +
+        '<div class="ambil-result-meta">'+
+          (a.jenis ? escHtml(a.jenis)+' · ' : '') +
+          escHtml(a.lokasi_barang) +
+          (a.detail_lokasi ? ' — '+escHtml(a.detail_lokasi) : '') +
+          (a.pj ? ' · PJ: '+escHtml(a.pj) : '') +
+        '</div>' +
+      '</div>' +
+      (qtyInfo ? '<div class="ambil-result-qty '+qtyClass+'">Sisa: '+qtyInfo+'</div>' : '') +
+      (canTake
+        ? '<button class="ambil-select-btn" onclick="selectAmbilAsset(\''+a.id+'\')">Pilih</button>'
+        : '<span style="font-size:11px;color:var(--fail);font-weight:700;flex-shrink:0;">Stok Habis</span>') +
+      '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function selectAmbilAsset(id) {
+  var a = assets.find(function(x){ return x.id === id; });
+  if (!a) return;
+  selectedAmbilAsset = a;
+
+  // Highlight item
+  document.querySelectorAll('.ambil-result-item').forEach(function(el){ el.classList.remove('selected'); });
+  var el = document.getElementById('ambil-item-'+id);
+  if (el) el.classList.add('selected');
+
+  // Isi info
+  var info = '<strong>'+escHtml(a.nomor)+'</strong> — '+escHtml(a.nama) +
+    '<br><span style="font-size:12px;color:var(--text-mid);">' +
+    'Jenis: '+(a.jenis||'—')+' &nbsp;|&nbsp; Lokasi: '+escHtml(a.lokasi_barang)+(a.detail_lokasi ? ', '+escHtml(a.detail_lokasi) : '')+
+    (a.pj ? '&nbsp;|&nbsp; PJ: '+escHtml(a.pj) : '') +
+    (a.qty !== null ? '&nbsp;|&nbsp; <strong>Sisa Qty: '+a.qty+(a.satuan?' '+escHtml(a.satuan):'')+'</strong>' : '') +
+    '</span>';
+  document.getElementById('ambilSelectedInfo').innerHTML = info;
+
+  var qtyInfo = document.getElementById('ambilQtyInfo');
+  if (a.qty !== null) {
+    qtyInfo.textContent = 'Maksimal yang bisa diambil: ' + a.qty + (a.satuan ? ' ' + a.satuan : '');
+  } else {
+    qtyInfo.textContent = 'Tidak ada batasan qty terdaftar';
+  }
+
+  document.getElementById('ambilQty').value = '';
+  document.getElementById('ambilNamaPengambil').value = '';
+  document.getElementById('ambilKeperluan').value = '';
+  document.getElementById('ambilFormWrap').style.display = '';
+  document.getElementById('ambilFormWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelAmbil() {
+  selectedAmbilAsset = null;
+  document.getElementById('ambilFormWrap').style.display = 'none';
+  document.querySelectorAll('.ambil-result-item').forEach(function(el){ el.classList.remove('selected'); });
+}
+
+function konfirmasiAmbil() {
+  if (!selectedAmbilAsset) return;
+  var qtyAmbil = parseInt(document.getElementById('ambilQty').value, 10);
+  var nama = document.getElementById('ambilNamaPengambil').value.trim();
+  var keperluan = document.getElementById('ambilKeperluan').value.trim();
+
+  if (!qtyAmbil || qtyAmbil <= 0) { showToast('⚠️ Jumlah diambil wajib diisi'); document.getElementById('ambilQty').focus(); return; }
+  if (!nama) { showToast('⚠️ Nama pengambil wajib diisi'); document.getElementById('ambilNamaPengambil').focus(); return; }
+
+  var a = selectedAmbilAsset;
+  if (a.qty !== null && qtyAmbil > a.qty) {
+    showToast('⚠️ Jumlah diambil ('+qtyAmbil+') melebihi sisa stok ('+a.qty+')'); return;
+  }
+
+  var sisaQty = (a.qty !== null) ? (a.qty - qtyAmbil) : null;
+  var now = new Date();
+
+  // 1. Simpan history pengambilan ke Supabase
+  var histPayload = {
+    asset_id:      a.id,
+    nomor:         a.nomor,
+    nama:          a.nama,
+    jenis:         a.jenis         || null,
+    lokasi_barang: a.lokasi_barang || null,
+    detail_lokasi: a.detail_lokasi || null,
+    pj:            a.pj            || null,
+    qty_diambil:   qtyAmbil,
+    qty_sisa:      sisaQty,
+    satuan:        a.satuan        || null,
+    pengambil:     nama,
+    keperluan:     keperluan       || null,
+    tanggal:       now.toISOString()
+  };
+
+  showToast('⏳ Memproses pengambilan...');
+  supaFetch('POST', AMBIL_TABLE, histPayload)
+    .then(function() {
+      // 2. Update qty di asset jika ada qty
+      if (a.qty !== null) {
+        return supaFetch('PATCH', ASSET_TABLE + '?id=eq.' + a.id, { qty: sisaQty });
+      }
+    })
+    .then(function() {
+      showToast('✅ Pengambilan berhasil dicatat! Sisa: ' + (sisaQty !== null ? sisaQty : '—'));
+      cancelAmbil();
+      document.getElementById('ambilSearch').value = '';
+      loadAssets();
+    })
+    .catch(function(err) {
+      showToast('⚠️ Gagal memproses: ' + err.message);
+    });
+}
+
+
+/* ══════════════════════════════════════════════
+   HISTORY PENGAMBILAN
+══════════════════════════════════════════════ */
+var historyData = [];
+
+function loadHistoryPengambilan() {
+  showToast('⏳ Memuat history...');
+  supaFetch('GET', AMBIL_TABLE + '?select=*&order=tanggal.desc')
+    .then(function(data) {
+      historyData = data || [];
+      renderHistoryTable();
+      var badge = document.getElementById('historyBadge');
+      if (badge) badge.textContent = historyData.length;
+      document.getElementById('statHistoryTotal').textContent = historyData.length;
+      showToast('✅ History dimuat (' + historyData.length + ' record)');
+    })
+    .catch(function(err) {
+      showToast('⚠️ Gagal memuat history: ' + err.message);
+      historyData = [];
+    });
+}
+
+function renderHistoryTable() {
+  var q = (document.getElementById('historySearch').value || '').toLowerCase().trim();
+  var filtered = historyData.filter(function(h) {
+    if (!q) return true;
+    return ((h.nomor||'')+' '+(h.nama||'')+' '+(h.pengambil||'')+' '+(h.lokasi_barang||'')+' '+(h.keperluan||'')).toLowerCase().indexOf(q) !== -1;
+  });
+
+  var tbody = document.getElementById('historyTableBody');
+  tbody.innerHTML = '';
+
+  if (filtered.length === 0) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="10"><div class="empty-state">' +
+      '<div class="icon">'+(q ? '🔍' : '📋')+'</div>' +
+      '<div class="title">'+(q ? 'Tidak ada hasil untuk "'+escHtml(q)+'"' : 'Belum ada history pengambilan')+'</div>' +
+      '<div class="msg">'+(q ? 'Coba kata kunci lain' : 'History akan muncul setelah pengambilan material dilakukan')+'</div>' +
+      '</div></td>';
+    tbody.appendChild(tr);
+    return;
+  }
+
+  filtered.forEach(function(h, i) {
+    var tr = document.createElement('tr');
+    var tgl = h.tanggal ? new Date(h.tanggal).toLocaleString('id-ID', {
+      day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+    }) : '—';
+    var sisaClass = '';
+    if (h.qty_sisa !== null) {
+      if (h.qty_sisa === 0) sisaClass = 'empty';
+      else if (h.qty_sisa <= 3) sisaClass = 'low';
+    }
+    tr.innerHTML =
+      '<td class="col-no">'+(i+1)+'</td>' +
+      '<td style="font-size:11px;white-space:nowrap;color:var(--text-mid);">'+tgl+'</td>' +
+      '<td><strong style="font-family:\'Courier New\',monospace;font-size:12px;color:var(--steel)">'+escHtml(h.nomor||'—')+'</strong></td>' +
+      '<td>'+escHtml(h.nama||'—')+'</td>' +
+      '<td>'+(h.jenis ? '<span class="badge-jenis">'+escHtml(h.jenis)+'</span>' : '<span style="color:var(--text-light);font-size:11px">—</span>')+'</td>' +
+      '<td style="font-size:12px;">'+escHtml(h.lokasi_barang||'—')+(h.detail_lokasi ? '<br><span style="font-size:10px;color:var(--text-light);">'+escHtml(h.detail_lokasi)+'</span>' : '')+'</td>' +
+      '<td style="text-align:center;"><span class="history-badge-qty">'+h.qty_diambil+(h.satuan?' '+escHtml(h.satuan):'')+'</span></td>' +
+      '<td style="text-align:center;">'+(h.qty_sisa !== null ? '<span class="history-badge-sisa '+sisaClass+'">'+h.qty_sisa+(h.satuan?' '+escHtml(h.satuan):'')+'</span>' : '<span style="color:var(--text-light);font-size:11px">—</span>')+'</td>' +
+      '<td style="font-weight:600;color:var(--steel);">'+escHtml(h.pengambil||'—')+'</td>' +
+      '<td style="font-size:12px;color:var(--text-mid);">'+escHtml(h.keperluan||'—')+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+
+/* ══════════════════════════════════════════════
    JENIS ASSET — Supabase persistent
 ══════════════════════════════════════════════ */
 var DEFAULT_JENIS = [
@@ -1815,6 +2355,7 @@ function deleteCustomJenis(jenis) {
 ══════════════════════════════════════════════ */
 loadCustomJenis(function(){
   rebuildJenisSelect('');
+  updateQtyLabel();
   loadAssets();
 });
 </script>
