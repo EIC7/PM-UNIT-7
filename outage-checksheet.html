@@ -27,25 +27,28 @@
     background: var(--bg);
     color: var(--text-dark);
     min-height: 100vh;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 
   /* ── TOPBAR ── */
   .topbar {
     background: linear-gradient(90deg, #1e3a5f 0%, #2d4a6a 60%, #1e3a5f 100%);
-    padding: 0 clamp(10px,3vw,32px);
+    padding: 0 clamp(8px,3vw,32px);
     display: flex;
     align-items: center;
-    gap: clamp(6px,1.2vw,16px);
+    gap: clamp(4px,1.2vw,16px);
     min-height: clamp(44px,5vh,54px);
     border-bottom: 2px solid #1d4ed844;
     position: sticky;
     top: 0;
     z-index: 100;
-    flex-wrap: nowrap;
+    overflow: hidden;
+    width: 100%;
   }
 
   .topbar-back {
-    padding: clamp(4px,0.5vh,6px) clamp(8px,1vw,14px);
+    padding: clamp(4px,0.5vh,6px) clamp(6px,1vw,12px);
     border: 1px solid #2a4a7a;
     border-radius: 4px;
     background: rgba(29,78,216,0.06);
@@ -64,7 +67,7 @@
 
   .topbar-logo {
     font-family: 'Arial Narrow', sans-serif;
-    font-size: clamp(12px,1.8vw,18px);
+    font-size: clamp(11px,1.8vw,18px);
     font-weight: 700;
     letter-spacing: 2px;
     color: #93c5fd;
@@ -79,6 +82,8 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     flex-shrink: 1;
+    min-width: 0;
+    flex: 1;
   }
 
   .topbar-right {
@@ -108,9 +113,13 @@
   /* ── WRAPPER ── */
   .wrapper {
     max-width: 1300px;
+    width: 100%;
     margin: 0 auto;
-    padding: clamp(16px,2.5vh,32px) clamp(12px,2.5vw,28px) 60px;
+    padding: 14px 10px 60px;
+    overflow-x: hidden;
   }
+  @media (min-width: 600px) { .wrapper { padding: 20px 20px 60px; } }
+  @media (min-width: 900px) { .wrapper { padding: 28px 32px 60px; } }
 
   /* ── PAGE HEADER ── */
   .page-header {
@@ -132,11 +141,12 @@
 
   .page-header-title {
     font-family: 'Arial Narrow', sans-serif;
-    font-size: clamp(22px,4vw,42px);
+    font-size: clamp(22px,5vw,42px);
     font-weight: 700;
     color: var(--steel);
-    line-height: 1;
+    line-height: 1.1;
     letter-spacing: 1px;
+    word-break: break-word;
   }
 
   .page-header-title span { color: var(--accent); }
@@ -169,16 +179,18 @@
   /* ── CARDS GRID ── */
   .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
-    gap: 20px;
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
+  @media (min-width: 600px) { .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 18px; } }
+  @media (min-width: 900px) { .cards-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; } }
 
   /* ── CHECKSHEET CARD ── */
   .cs-card {
     background: var(--bg2);
     border: 2px solid var(--border);
     border-radius: 14px;
-    padding: 26px 24px 22px;
+    padding: 18px 16px 16px;
     cursor: pointer;
     position: relative;
     overflow: hidden;
@@ -190,6 +202,7 @@
     color: inherit;
     animation: slideUp 0.4s ease both;
   }
+  @media (min-width: 600px) { .cs-card { padding: 24px 22px 20px; } }
 
   .cs-card:nth-child(1) { animation-delay: 0.04s; }
   .cs-card:nth-child(2) { animation-delay: 0.10s; }
@@ -476,9 +489,13 @@
     letter-spacing: 0.5px;
   }
 
-  @media(max-width:640px){
-    .cards-grid { grid-template-columns: 1fr; }
+  @media(max-width:600px){
+    .topbar-sub, .topbar-sep { display:none; }
     .page-header { flex-direction: column; align-items: flex-start; }
+    .card-icon-wrap { width: 44px; height: 44px; font-size: 22px; margin-bottom: 12px; }
+    .card-title { font-size: 15px; }
+    .card-desc { font-size: 12px; }
+    input, select, textarea { font-size: 14px; } /* prevent iOS zoom */
   }
 </style>
 </head>
