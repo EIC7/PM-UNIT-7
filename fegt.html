@@ -183,6 +183,14 @@
     <div id="leakResult" style="margin-top:16px;display:none"></div>
   </div>
 
+  <!-- CLEANING HOLE FEGT -->
+  <div class="panel" id="cleaningPanel">
+    <div class="section-label">Cleaning Hole FEGT — 8 Port</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px" id="cleaningGrid">
+      <!-- built by JS -->
+    </div>
+  </div>
+
   <!-- PORT REFERENCE TABLE -->
   <div class="panel" id="notePanel">
     <div class="section-label">Note — Port Reference</div>
@@ -238,7 +246,8 @@ var LEAK_PATHS = [
   {id:6, desc:'ECON 6 — Lt.10.5 Economizer Sisi Timur'},
   {id:7, desc:'ECON 7 — Lt.10.5 Economizer Sisi Utara'},
   {id:8, desc:'ECON 8 — Lt.10.5 Economizer Sisi Barat'},
-  {id:9, desc:'BS 09 — Lt.2 Bottom Slope Sisi Barat'},
+  {id:9,  desc:'BS 09 — Lt.2 Bottom Slope Sisi Barat'},
+  {id:10, desc:'BS 10 — Lt.2 Bottom Slope Sisi Timur'},
 ];
 
 var pathData = [], metaInfo = {tanggal:'—',shift:'—',operator:'—'}, diagResults = {};
@@ -823,6 +832,12 @@ function resetAll(){
   document.getElementById('diagGrid').innerHTML='';
   for(var s=1;s<=8;s++){var n=document.getElementById('snode-'+s);if(n)n.className='sensor-node unknown';}
   updateSvg();
+  // Reset cleaning images
+  if(typeof cleaningImages !== 'undefined') CLEANING_PORTS.forEach(function(p){
+    var pk='port'+p.id;
+    cleaningImages[pk]={before:[],after:[]};
+    ['before','after'].forEach(function(phase){ var uid='cl_'+pk+'_'+phase; var el=document.getElementById(uid+'_preview');if(el)el.innerHTML=''; var sz=document.getElementById(uid+'_size');if(sz)sz.textContent='0 KB / 1024 KB'; });
+  });
 }
 
 function runLeakDiagnosis(){
@@ -839,6 +854,143 @@ function runLeakDiagnosis(){
 function resetLeak(){
   LEAK_PATHS.forEach(function(p){var t=document.getElementById('lktemp-'+p.id);var s=document.getElementById('lkstatus-'+p.id);if(t&&!t.disabled)t.value='';if(s&&!s.disabled)s.value='ok';});
   document.getElementById('leakResult').style.display='none';
+}
+
+/* ── CLEANING HOLE FEGT ── */
+var CLEANING_PORTS = [
+  {id:1, tag:'7BG-CAB-133'},
+  {id:2, tag:'7BG-CAB-134'},
+  {id:3, tag:'7BG-CAB-135'},
+  {id:4, tag:'7BG-CAB-136'},
+  {id:5, tag:'7BG-CAB-137'},
+  {id:6, tag:'7BG-CAB-138'},
+  {id:7, tag:'7BG-CAB-139'},
+  {id:8, tag:'7BG-CAB-140'},
+];
+
+// cleaningImages['port1']['before'] = [{name,dataUrl,type,caption},...]
+var cleaningImages = {};
+CLEANING_PORTS.forEach(function(p){
+  cleaningImages['port'+p.id] = {before:[], after:[]};
+});
+
+function buildCleaningGrid() {
+  var grid = document.getElementById('cleaningGrid');
+  if (!grid || grid.children.length > 0) return;
+  CLEANING_PORTS.forEach(function(p) {
+    var portKey = 'port'+p.id;
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg2,#dde3de);border:1px solid var(--border);border-radius:6px;padding:14px;';
+    card.innerHTML =
+      '<div style="font-size:13px;font-weight:700;color:var(--steel);margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px">'+
+        '&#128270; Port '+p.id+' &nbsp;<span style="font-family:\'Courier New\',monospace;font-weight:400;font-size:12px;color:var(--text3)">'+p.tag+'</span>'+
+      '</div>'+
+      buildPhotoSlot(portKey,'before','Before Cleaning','#b45309')+
+      '<div style="margin-top:12px"></div>'+
+      buildPhotoSlot(portKey,'after','After Cleaning','#0f766e');
+    grid.appendChild(card);
+  });
+}
+
+function buildPhotoSlot(portKey, phase, label, color) {
+  var uid = 'cl_'+portKey+'_'+phase;
+  return '<div>'+
+    '<div style="font-size:11px;font-weight:600;color:'+color+';margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">&#128247; '+label+'</div>'+
+    '<div id="'+uid+'_drop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:12px;text-align:center;cursor:pointer;background:#fff;" '+
+      'onclick="clToggleSource(\''+uid+'_src\')" '+
+      'ondragover="event.preventDefault()" '+
+      'ondrop="clHandleDrop(event,\''+portKey+'\',\''+phase+'\')">' +
+      '<input type="file" id="'+uid+'_input" accept="image/*,.heic,.heif" multiple style="display:none" onchange="clHandleFiles(this.files,\''+portKey+'\',\''+phase+'\')">'+
+      '<div style="font-size:20px;margin-bottom:4px">&#128444;&#65039;</div>'+
+      '<div style="font-size:11px;color:var(--text3)">Klik pilih atau drag foto</div>'+
+      '<div id="'+uid+'_src" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">'+
+        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'storage\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Penyimpanan</button>'+
+        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'camera\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Kamera</button>'+
+      '</div>'+
+    '</div>'+
+    '<div id="'+uid+'_preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>'+
+    '<div id="'+uid+'_size" style="font-size:10px;color:var(--text3);margin-top:2px;font-family:\'Courier New\',monospace">0 KB / 1024 KB</div>'+
+  '</div>';
+}
+
+function clToggleSource(srcId) {
+  // Close all other source menus
+  document.querySelectorAll('[id$="_src"]').forEach(function(el){
+    if (el.id !== srcId) el.style.display = 'none';
+  });
+  var el = document.getElementById(srcId);
+  if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
+function clHandleDrop(e, portKey, phase) {
+  e.preventDefault();
+  clHandleFiles(e.dataTransfer.files, portKey, phase);
+}
+
+function clHandleFiles(files, portKey, phase) {
+  Array.from(files).forEach(function(file) {
+    var arr = cleaningImages[portKey][phase];
+    if (!isImageFile(file)) {
+      var r = new FileReader();
+      r.onload = function(ev){ arr.push({name:file.name,dataUrl:ev.target.result,type:file.type||'',caption:''}); clRenderPreviews(portKey,phase); };
+      r.readAsDataURL(file);
+      return;
+    }
+    fileToJpegDataUrl(file, function(dataUrl){
+      if(!dataUrl) return;
+      imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', arr, portKey+'_'+phase, 'cl', -1);
+    });
+  });
+}
+
+function clRenderPreviews(portKey, phase) {
+  clSyncCaptions(portKey, phase);
+  var uid = 'cl_'+portKey+'_'+phase;
+  var container = document.getElementById(uid+'_preview');
+  if (!container) return;
+  container.innerHTML = '';
+  var arr = cleaningImages[portKey][phase];
+  arr.forEach(function(img, idx) {
+    if (!img||!img.name) return;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:100px';
+    var isImg = IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
+    var safeStr = function(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+    var thumb = isImg ?
+      '<div style="width:100px;height:75px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center">'+
+        '<img src="'+safeStr(img.dataUrl)+'" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="clReEdit(\''+portKey+'\',\''+phase+'\','+idx+')" title="Klik crop ulang">'+
+      '</div>' :
+      '<div style="width:100px;height:75px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:24px">'+fileIcon(img.name)+'</div>';
+    var cropBtn = isImg ?
+      '<button onclick="clReEdit(\''+portKey+'\',\''+phase+'\','+idx+')" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 5px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>' : '';
+    wrap.innerHTML = thumb + cropBtn +
+      '<button onclick="clRemoveImg(\''+portKey+'\',\''+phase+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'+
+      '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safeStr(img.name)+'</div>'+
+      '<input id="cl_cap_'+portKey+'_'+phase+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safeStr(img.caption||'')+'" oninput="cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:4px;padding:4px 5px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+    container.appendChild(wrap);
+  });
+  // Update size indicator
+  var totalKb = arr.reduce(function(a,img){return a+(img.dataUrl?Math.round(img.dataUrl.length*0.75/1024):0);},0);
+  var sizeEl = document.getElementById(uid+'_size');
+  if (sizeEl) sizeEl.textContent = totalKb+' KB / 1024 KB';
+}
+
+function clSyncCaptions(portKey, phase) {
+  var arr = cleaningImages[portKey][phase];
+  arr.forEach(function(img,idx){
+    var inp = document.getElementById('cl_cap_'+portKey+'_'+phase+'_'+idx);
+    if (inp) img.caption = inp.value || '';
+  });
+}
+
+function clReEdit(portKey, phase, idx) {
+  var img = cleaningImages[portKey][phase][idx];
+  imgOpenCropper(img.dataUrl, img.name, img.type, cleaningImages[portKey][phase], portKey+'_'+phase, 'cl', idx);
+}
+
+function clRemoveImg(portKey, phase, idx) {
+  cleaningImages[portKey][phase].splice(idx,1);
+  clRenderPreviews(portKey, phase);
 }
 
 /* ── dbCollectData untuk modul FEGT ── */
@@ -861,13 +1013,24 @@ function dbCollectData(modul) {
     var s = document.getElementById('lkstatus-'+p.id);
     return {id: p.id, temp: t ? (parseFloat(t.value)||0) : 0, status: s ? s.value : (p.defaultNA?'na':'ok')};
   });
+  // Sync cleaning captions before collecting
+  CLEANING_PORTS.forEach(function(p){
+    var pk = 'port'+p.id;
+    clSyncCaptions(pk,'before'); clSyncCaptions(pk,'after');
+  });
+  var ki = function(img){return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};};
+  var cleaningData = {};
+  CLEANING_PORTS.forEach(function(p){
+    var pk='port'+p.id;
+    cleaningData[pk]={before:cleaningImages[pk].before.map(ki), after:cleaningImages[pk].after.map(ki)};
+  });
   return {modul:'FEGT & Leak Detection', tanggal:metaInfo.tanggal, shift:metaInfo.shift, pic:metaInfo.operator, work_order:'', unit:'Unit 7',
-    data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), leakPaths:leakPaths, diagResults:diagResults, meta:metaInfo}};
+    data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), leakPaths:leakPaths, diagResults:diagResults, meta:metaInfo, cleaning:cleaningData}};
 }
 
 /* ── INIT ── */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
-initUploadZone(); buildManualTable(); buildLeakTable(); updateSvg(); switchTab('manual');
+initUploadZone(); buildManualTable(); buildLeakTable(); buildCleaningGrid(); updateSvg(); switchTab('manual');
 initFegtBackground();
 (function(){
   var today=new Date();
@@ -928,6 +1091,20 @@ initFegtBackground();
           if(s&&!s.disabled)s.value=p.status||'ok';
         });
       }
+      // Restore Cleaning Hole images
+      if(data.cleaning){
+        CLEANING_PORTS.forEach(function(p){
+          var pk='port'+p.id;
+          if(data.cleaning[pk]){
+            ['before','after'].forEach(function(phase){
+              if(data.cleaning[pk][phase]){
+                cleaningImages[pk][phase]=(data.cleaning[pk][phase]||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
+                clRenderPreviews(pk,phase);
+              }
+            });
+          }
+        });
+      }
       updateSvg();
       document.getElementById('btnRun').disabled=false;
       document.getElementById('btnSave').disabled=false;
@@ -937,5 +1114,40 @@ initFegtBackground();
   });
 })();
 </script>
+<!-- CROP MODAL — matching shared.js requirements -->
+<div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#172536;border:1px solid #243b55;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div style="background:#243b55;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:14px;color:#e8f2ff;letter-spacing:1px">&#9986;&#65039; Crop Gambar</div>
+      <div id="cropNatSize" style="font-size:11px;color:#8fb7dc">— x — px</div>
+    </div>
+    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none">
+      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
+      <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;left:-7px;cursor:nw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;right:-7px;cursor:ne-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;left:-7px;cursor:sw-resize;touch-action:none"></div>
+        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;right:-7px;cursor:se-resize;touch-action:none"></div>
+      </div>
+    </div>
+    <div style="padding:8px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:11px;color:#8fb7dc;display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="cropLock" checked style="accent-color:#3498db"> Lock ratio
+      </label>
+      <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+        <span style="font-size:11px;color:#8fb7dc">W:</span>
+        <input type="number" id="cropOutW" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('w')">
+        <span style="font-size:11px;color:#8fb7dc">H:</span>
+        <input type="number" id="cropOutH" style="width:60px;padding:3px 5px;font-size:11px;background:#243b55;border:1px solid #3a5570;border-radius:4px;color:#e8f2ff;text-align:center" oninput="cropLinkSize('h')">
+        <span style="font-size:10px;color:#6a8faa">px</span>
+      </div>
+    </div>
+    <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">&#8634; Reset</button>
+      <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Lewati</button>
+      <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">&#10003; Simpan</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
