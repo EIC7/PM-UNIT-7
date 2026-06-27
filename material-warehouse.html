@@ -1336,7 +1336,8 @@
             <tr>
               <th style="width:28px">No</th>
               <th>Tanggal</th>
-              <th>ST / Asset</th>
+              <th>Nomor ST</th>
+              <th>Nama Asset</th>
               <th>Lokasi</th>
               <th style="text-align:center">Diambil</th>
               <th style="text-align:center">Sisa</th>
@@ -1346,7 +1347,7 @@
           </thead>
           <tbody id="historyTableBody">
             <tr>
-              <td colspan="8">
+              <td colspan="9">
                 <div class="empty-state">
                   <div class="icon">📋</div>
                   <div class="title">Belum ada history pengambilan</div>
@@ -1580,21 +1581,25 @@ function loadAssets() {
   loadAssetsPage(assetPage, currentAssetQ());
 }
 
-// Warehouse filter: everything that is NOT internal
-// Internal = lokasi_barang IN ('White Container','A55') OR starts with 'INT:'
-var _WAREHOUSE_EXCLUDE = 'not.or=(lokasi_barang.in.(White%20Container,A55),lokasi_barang.like.INT:*)';
+// Warehouse filter: two separate AND conditions (avoids not.or= conflict with search or=)
+// Internal filter: single or= clause
 var _INTERNAL_INCLUDE  = 'or=(lokasi_barang.in.(White%20Container,A55),lokasi_barang.like.INT:*)';
+
+function _buildSearchOr(enc, cols) {
+  return '&or=(' + cols.map(function(c){ return c + '.ilike.' + enc; }).join(',') + ')';
+}
 
 function loadAssetsPage(page, q) {
   assetPage = page;
   showToast('⏳ Memuat data...');
   var offset = (page - 1) * ASSET_PER_PAGE;
+  // Warehouse = NOT internal: two separate column filters (ANDed by PostgREST)
   var path = ASSET_TABLE + '?select=*&order=created_at.desc&limit=' + ASSET_PER_PAGE + '&offset=' + offset
-           + '&' + _WAREHOUSE_EXCLUDE;
+           + '&lokasi_barang=not.in.(White%20Container,A55)'
+           + '&lokasi_barang=not.like.INT:*';
   if (q) {
     var enc = encodeURIComponent('*' + q + '*');
-    path += '&and=(or=(nomor.ilike.' + enc + ',nama.ilike.' + enc + ',jenis.ilike.' + enc
-          + ',lokasi_barang.ilike.' + enc + ',lokasi.ilike.' + enc + ',deskripsi.ilike.' + enc + '))';
+    path += _buildSearchOr(enc, ['nomor','nama','jenis','lokasi_barang','lokasi','deskripsi']);
   }
   supaFetchPaged(path)
     .then(function(res) {
@@ -1615,12 +1620,12 @@ function loadInternalPage(page, q) {
   intPage = page;
   showToast('⏳ Memuat data internal...');
   var offset = (page - 1) * INT_PER_PAGE;
+  // Internal = or= of two conditions; search adds a second or= (PostgREST ANDs them)
   var path = ASSET_TABLE + '?select=*&order=created_at.desc&limit=' + INT_PER_PAGE + '&offset=' + offset
            + '&' + _INTERNAL_INCLUDE;
   if (q) {
     var enc = encodeURIComponent('*' + q + '*');
-    path += '&and=(or=(nomor.ilike.' + enc + ',nama.ilike.' + enc + ',jenis.ilike.' + enc
-          + ',lokasi.ilike.' + enc + ',deskripsi.ilike.' + enc + '))';
+    path += _buildSearchOr(enc, ['nomor','nama','jenis','lokasi','deskripsi']);
   }
   supaFetchPaged(path)
     .then(function(res) {
@@ -2723,7 +2728,7 @@ function renderHistoryTable() {
   if (historyData.length === 0) {
     var q = currentHistQ();
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="8"><div class="empty-state">' +
+    tr.innerHTML = '<td colspan="9"><div class="empty-state">' +
       '<div class="icon">'+(q?'🔍':'📋')+'</div>' +
       '<div class="title">'+(q?'Tidak ada hasil untuk "'+escHtml(q)+'"':'Belum ada history pengambilan')+'</div>' +
       '<div class="msg">'+(q?'Coba kata kunci lain':'History akan muncul setelah pengambilan material dilakukan')+'</div>' +
@@ -2744,16 +2749,18 @@ function renderHistoryTable() {
       if (h.qty_sisa === 0) sisaClass = 'empty';
       else if (h.qty_sisa <= 3) sisaClass = 'low';
     }
-    var assetCell = '<strong style="font-family:\'Courier New\',monospace;font-size:11px;color:var(--steel)">'+escHtml(h.nomor||'—')+'</strong>' +
-      '<br><span style="font-size:11px;color:var(--text-dark)">'+escHtml(h.nama||'')+'</span>' +
-      (h.jenis ? '<br><span class="badge-jenis" style="margin-top:2px;display:inline-block">'+escHtml(h.jenis)+'</span>' : '');
-    var lokasiCell = escHtml(h.lokasi_barang||'—') +
+    var nomorCell = '<strong style="font-family:\'Courier New\',monospace;font-size:11px;color:var(--steel)">'
+      + escHtml(h.nomor||'—') + '</strong>';
+    var namaCell = '<span style="font-size:11px;color:var(--text-dark)">' + escHtml(h.nama||'—') + '</span>'
+      + (h.jenis ? '<br><span class="badge-jenis" style="margin-top:2px;display:inline-block">'+escHtml(h.jenis)+'</span>' : '');
+    var lokasiCell = escHtml(displayLokasi(h.lokasi_barang)||'—') +
       (h.detail_lokasi ? '<br><span style="font-size:10px;color:var(--text-light)">'+escHtml(h.detail_lokasi)+'</span>' : '');
 
     tr.innerHTML =
       '<td class="col-no">'+(offset+i+1)+'</td>' +
       '<td style="font-size:10px;white-space:nowrap;color:var(--text-mid);">'+tgl+'</td>' +
-      '<td>'+assetCell+'</td>' +
+      '<td>'+nomorCell+'</td>' +
+      '<td>'+namaCell+'</td>' +
       '<td style="font-size:11px;">'+lokasiCell+'</td>' +
       '<td style="text-align:center;"><span class="history-badge-qty">'+(h.qty_diambil||'—')+(h.satuan?' '+escHtml(h.satuan):'')+'</span></td>' +
       '<td style="text-align:center;">'+(h.qty_sisa !== null ? '<span class="history-badge-sisa '+sisaClass+'">'+h.qty_sisa+(h.satuan?' '+escHtml(h.satuan):'')+'</span>' : '<span style="color:var(--text-light);font-size:11px">—</span>')+'</td>' +
