@@ -755,6 +755,36 @@
     .preview-row { grid-template-columns: 110px 1fr; }
   }
 
+  /* ── PAGINATION ── */
+  .pag-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 0 4px;
+    flex-wrap: wrap;
+  }
+  .pag-info {
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    color: var(--text-mid);
+    min-width: 160px;
+    text-align: center;
+  }
+  .pag-btn {
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1.5px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pag-btn:hover:not(:disabled) { background: var(--accent); color: #fff; }
+  .pag-btn:disabled { opacity: 0.35; cursor: default; }
 
   /* ── MODAL INPUT ── */
   .modal-input {
@@ -875,6 +905,60 @@
   }
   .ambil-select-btn:hover { background: var(--accent2); }
 
+  /* ── KATEGORI INDICATOR ── */
+  .kategori-auto-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1.5px solid;
+  }
+  .kategori-auto-badge.warehouse {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+  }
+  .kategori-auto-badge.internal {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+  }
+  .kategori-auto-badge .badge-icon { font-size: 18px; flex-shrink: 0; }
+  .kategori-auto-badge .badge-text { line-height: 1.4; }
+  .kategori-auto-badge .badge-sub  { font-size: 11px; font-weight: 400; opacity: 0.7; }
+
+  .kategori-radio-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .kategori-radio-opt {
+    flex: 1;
+    min-width: 180px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #fff;
+  }
+  .kategori-radio-opt:hover { border-color: var(--accent); background: #f0fdf9; }
+  .kategori-radio-opt:has(input:checked) {
+    border-color: var(--accent);
+    background: #ecfdf5;
+  }
+  .kategori-radio-opt input[type=radio] { width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--accent); }
+  .kategori-radio-icon { font-size: 22px; flex-shrink: 0; }
+  .kategori-radio-title { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+  .kategori-radio-sub { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+
   /* ── HISTORY TABLE ── */
   #historyTable { }
   .history-badge-qty {
@@ -933,9 +1017,14 @@
       Input Asset
     </button>
     <button class="tab-nav-btn" onclick="switchTab('list')" id="tabBtn-list">
-      <span class="tab-icon">📦</span>
-      List Material
+      <span class="tab-icon">🏭</span>
+      List Warehouse
       <span class="tab-badge" id="listBadge">0</span>
+    </button>
+    <button class="tab-nav-btn" onclick="switchTab('list-internal')" id="tabBtn-list-internal">
+      <span class="tab-icon">📦</span>
+      List Internal
+      <span class="tab-badge" id="listInternalBadge">0</span>
     </button>
     <button class="tab-nav-btn" onclick="switchTab('ambil')" id="tabBtn-ambil">
       <span class="tab-icon">🚚</span>
@@ -943,7 +1032,7 @@
     </button>
     <button class="tab-nav-btn" onclick="switchTab('history-ambil')" id="tabBtn-history-ambil">
       <span class="tab-icon">📋</span>
-      History Pengambilan
+      History
       <span class="tab-badge" id="historyBadge">0</span>
     </button>
   </div>
@@ -1002,7 +1091,34 @@
         <!-- Lokasi Barang manual (muncul jika pilih Lainnya) -->
         <div class="form-group" id="f_lokasi_barang_other_wrap" style="display:none;">
           <label class="field-label">Lokasi Barang (Lainnya)<span class="req">*</span></label>
-          <input class="field" type="text" id="f_lokasi_barang_other" placeholder="Tulis lokasi barang secara manual..." />
+          <input class="field" type="text" id="f_lokasi_barang_other" placeholder="Tulis lokasi barang secara manual..." oninput="updateKategoriIndicator()" />
+        </div>
+        <!-- Kategori otomatis / manual -->
+        <div class="form-group full" id="f_kategori_wrap">
+          <!-- Auto label (Warehouse/Internal diketahui) -->
+          <div id="f_kategori_auto" style="display:none;"></div>
+          <!-- Manual pilihan jika Lainnya -->
+          <div id="f_kategori_manual" style="display:none;">
+            <label class="field-label">Masuk ke Kategori<span class="req">*</span></label>
+            <div class="kategori-radio-group">
+              <label class="kategori-radio-opt" id="radio-warehouse-opt">
+                <input type="radio" name="f_kategori" id="f_kategori_wh" value="warehouse">
+                <span class="kategori-radio-icon">🏭</span>
+                <div>
+                  <div class="kategori-radio-title">List Warehouse</div>
+                  <div class="kategori-radio-sub">Stok referensi / gudang utama</div>
+                </div>
+              </label>
+              <label class="kategori-radio-opt" id="radio-internal-opt">
+                <input type="radio" name="f_kategori" id="f_kategori_int" value="internal">
+                <span class="kategori-radio-icon">📦</span>
+                <div>
+                  <div class="kategori-radio-title">List Internal</div>
+                  <div class="kategori-radio-sub">Stok lokal tim (White Container, A55, dll)</div>
+                </div>
+              </label>
+            </div>
+          </div>
         </div>
         <!-- Detail Lokasi Barang -->
         <div class="form-group full">
@@ -1064,9 +1180,9 @@
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input class="search-input" type="text" id="searchInput" placeholder="Cari nomor, nama, jenis, lokasi..." oninput="renderTable()" />
+          <input class="search-input" type="text" id="searchInput" placeholder="Cari nomor, nama, jenis, lokasi..." oninput="onAssetSearch()" />
         </div>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('searchInput').value=''; renderTable();">✕ Clear</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('searchInput').value=''; onAssetSearch();">✕ Clear</button>
       </div>
 
       <div class="table-scroll">
@@ -1097,6 +1213,54 @@
           </tbody>
         </table>
       </div>
+      <div id="assetPagination"></div>
+    </div>
+  </div>
+
+  <!-- TAB: LIST INTERNAL -->
+  <div class="tab-content" id="tab-list-internal">
+    <div class="panel">
+      <div class="stats-row">
+        <div class="stat-chip total">📦 Total Internal: <strong id="statTotalInternal">0</strong> Asset</div>
+      </div>
+      <div class="search-bar-wrap">
+        <div class="search-input-wrap">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input class="search-input" type="text" id="searchInputInternal" placeholder="Cari nomor, nama, jenis, lokasi..." oninput="onInternalSearch()" />
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('searchInputInternal').value=''; onInternalSearch();">✕ Clear</button>
+      </div>
+      <div class="table-scroll">
+        <table id="assetTableInternal">
+          <thead>
+            <tr>
+              <th style="width:40px">No</th>
+              <th>No. Asset (ST)</th>
+              <th>Nama Asset</th>
+              <th>Jenis</th>
+              <th>Lokasi Penggunaan</th>
+              <th>Lokasi Barang</th>
+              <th style="width:80px;text-align:center;">Qty</th>
+              <th>Gambar</th>
+              <th style="width:130px">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyInternal">
+            <tr>
+              <td colspan="9">
+                <div class="empty-state">
+                  <div class="icon">📦</div>
+                  <div class="title">Belum ada data material internal</div>
+                  <div class="msg">Tambahkan asset dengan lokasi White Container, A55, atau lokasi Internal lainnya</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="internalPagination"></div>
     </div>
   </div>
 
@@ -1162,9 +1326,9 @@
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input class="search-input" type="text" id="historySearch" placeholder="Cari nama pengambil, nomor ST, nama asset..." oninput="renderHistoryTable()" />
+          <input class="search-input" type="text" id="historySearch" placeholder="Cari nama pengambil, nomor ST, nama asset..." oninput="onHistorySearch()" />
         </div>
-        <button class="btn btn-outline btn-sm" onclick="document.getElementById('historySearch').value='';renderHistoryTable();">✕ Clear</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('historySearch').value='';onHistorySearch();">✕ Clear</button>
       </div>
       <div class="table-scroll">
         <table id="historyTable">
@@ -1193,6 +1357,7 @@
           </tbody>
         </table>
       </div>
+      <div id="historyPagination"></div>
     </div>
   </div>
 
@@ -1271,6 +1436,21 @@ setInterval(updateClock, 1000);
 updateClock();
 
 /* ══════════════════════════════════════════════
+   CONSTANTS — kategori
+══════════════════════════════════════════════ */
+var INTERNAL_LOCS = ['White Container', 'A55'];
+
+function isInternal(loc) {
+  if (!loc) return false;
+  return INTERNAL_LOCS.indexOf(loc) !== -1 || loc.indexOf('INT:') === 0;
+}
+
+function displayLokasi(loc) {
+  if (loc && loc.indexOf('INT:') === 0) return loc.slice(4);
+  return loc || '';
+}
+
+/* ══════════════════════════════════════════════
    TAB SWITCH
 ══════════════════════════════════════════════ */
 function switchTab(id) {
@@ -1278,9 +1458,10 @@ function switchTab(id) {
   document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
   document.getElementById('tabBtn-'+id).classList.add('active');
   document.getElementById('tab-'+id).classList.add('active');
-  if (id === 'list') renderTable();
-  if (id === 'ambil') { renderAmbilSearch(); }
-  if (id === 'history-ambil') { loadHistoryPengambilan(); }
+  if (id === 'list')          { assetPage = 1; loadAssets(); }
+  if (id === 'list-internal') { intPage = 1;   loadInternalPage(1, currentInternalQ()); }
+  if (id === 'ambil')         { _doAmbilSearch(); }
+  if (id === 'history-ambil') { histPage = 1; loadHistoryPengambilan(); }
 }
 
 /* ══════════════════════════════════════════════
@@ -1310,59 +1491,163 @@ function supaFetch(method, path, body) {
   });
 }
 
+function supaFetchPaged(path) {
+  var url = SUPA_URL + '/rest/v1/' + path;
+  return fetch(url, {
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Prefer': 'count=exact'
+    }
+  }).then(function(r) {
+    if (!r.ok) return r.text().then(function(t){ throw new Error(t); });
+    var cr = r.headers.get('content-range') || '';
+    var m  = cr.match(/\/(\d+)$/);
+    var count = m ? parseInt(m[1]) : 0;
+    return r.text().then(function(t) {
+      var data = [];
+      try { data = t ? JSON.parse(t) : []; } catch(e) {}
+      return { data: data, count: count };
+    });
+  });
+}
+
 /* ══════════════════════════════════════════════
-   DATA STORE — Supabase
+   DATA STORE — Supabase (paginated)
 ══════════════════════════════════════════════ */
-var assets = [];
+var assets    = [];
 var editingId = null;
 
+// Pagination state — List Warehouse
+var ASSET_PER_PAGE      = 100;
+var assetPage           = 1;
+var assetTotalCount     = 0;
+var assetSearchDebounce = null;
+
+// Pagination state — List Internal
+var INT_PER_PAGE        = 100;
+var intPage             = 1;
+var intTotalCount       = 0;
+var intSearchDebounce   = null;
+var internalAssets      = [];
+
+function mapAsset(r) {
+  return {
+    id:            r.id,
+    nomor:         r.nomor         || '',
+    nama:          r.nama          || '',
+    jenis:         r.jenis         || '',
+    lokasi:        r.lokasi        || '',
+    lokasi_barang: r.lokasi_barang || '',
+    detail_lokasi: r.detail_lokasi || '',
+    pj:            r.pj            || '',
+    qty:           (r.qty !== null && r.qty !== undefined) ? Number(r.qty) : null,
+    satuan:        r.satuan        || '',
+    deskripsi:     r.deskripsi     || '',
+    keterangan:    r.deskripsi     || '',
+    image_data:    r.image_data    || '',
+    gambar:        r.image_data    || '',
+    createdAt:     r.created_at    || '',
+    updatedAt:     r.updated_at    || '',
+  };
+}
+
+function currentAssetQ() {
+  return ((document.getElementById('searchInput') || {}).value || '').trim();
+}
+
+function currentInternalQ() {
+  return ((document.getElementById('searchInputInternal') || {}).value || '').trim();
+}
+
+function onAssetSearch() {
+  clearTimeout(assetSearchDebounce);
+  assetSearchDebounce = setTimeout(function() {
+    assetPage = 1;
+    loadAssetsPage(1, currentAssetQ());
+  }, 400);
+}
+
+function onInternalSearch() {
+  clearTimeout(intSearchDebounce);
+  intSearchDebounce = setTimeout(function() {
+    intPage = 1;
+    loadInternalPage(1, currentInternalQ());
+  }, 400);
+}
+
 function loadAssets() {
+  loadAssetsPage(assetPage, currentAssetQ());
+}
+
+// Warehouse filter: everything that is NOT internal
+// Internal = lokasi_barang IN ('White Container','A55') OR starts with 'INT:'
+var _WAREHOUSE_EXCLUDE = 'not.or=(lokasi_barang.in.(White%20Container,A55),lokasi_barang.like.INT:*)';
+var _INTERNAL_INCLUDE  = 'or=(lokasi_barang.in.(White%20Container,A55),lokasi_barang.like.INT:*)';
+
+function loadAssetsPage(page, q) {
+  assetPage = page;
   showToast('⏳ Memuat data...');
-  supaFetch('GET', ASSET_TABLE + '?select=*&order=created_at.desc')
-    .then(function(data) {
-      assets = (data || []).map(function(r) {
-        var a = r.data || {};
-        return {
-          id:            r.id,
-          nomor:         r.nomor         || '',
-          nama:          r.nama          || '',
-          jenis:         r.jenis         || '',
-          lokasi:        r.lokasi        || '',
-          lokasi_barang: r.lokasi_barang || '',
-          detail_lokasi: r.detail_lokasi || '',
-          pj:            r.pj            || '',
-          qty:           (r.qty !== null && r.qty !== undefined) ? Number(r.qty) : null,
-          satuan:        r.satuan        || '',
-          deskripsi:     r.deskripsi     || '',
-          keterangan:    r.deskripsi     || '',
-          image_data:    r.image_data    || '',
-          gambar:        r.image_data    || '',
-          createdAt:     r.created_at    || '',
-          updatedAt:     r.updated_at    || '',
-        };
-      });
+  var offset = (page - 1) * ASSET_PER_PAGE;
+  var path = ASSET_TABLE + '?select=*&order=created_at.desc&limit=' + ASSET_PER_PAGE + '&offset=' + offset
+           + '&' + _WAREHOUSE_EXCLUDE;
+  if (q) {
+    var enc = encodeURIComponent('*' + q + '*');
+    path += '&and=(or=(nomor.ilike.' + enc + ',nama.ilike.' + enc + ',jenis.ilike.' + enc
+          + ',lokasi_barang.ilike.' + enc + ',lokasi.ilike.' + enc + ',deskripsi.ilike.' + enc + '))';
+  }
+  supaFetchPaged(path)
+    .then(function(res) {
+      assets = (res.data || []).map(mapAsset);
+      assetTotalCount = res.count;
       updateBadge();
       renderTable();
-      showToast('✅ Data dimuat (' + assets.length + ' asset)');
+      showToast('✅ ' + res.count + ' total warehouse');
     })
     .catch(function(err) {
-      showToast('⚠️ Gagal memuat data: ' + err.message);
+      showToast('⚠️ Gagal memuat: ' + err.message);
       assets = [];
       updateBadge();
     });
 }
 
-function saveAssets() {
-  /* saveAssets() lama dipanggil di beberapa tempat —
-     sekarang hanya update badge karena simpan per-record */
-  updateBadge();
+function loadInternalPage(page, q) {
+  intPage = page;
+  showToast('⏳ Memuat data internal...');
+  var offset = (page - 1) * INT_PER_PAGE;
+  var path = ASSET_TABLE + '?select=*&order=created_at.desc&limit=' + INT_PER_PAGE + '&offset=' + offset
+           + '&' + _INTERNAL_INCLUDE;
+  if (q) {
+    var enc = encodeURIComponent('*' + q + '*');
+    path += '&and=(or=(nomor.ilike.' + enc + ',nama.ilike.' + enc + ',jenis.ilike.' + enc
+          + ',lokasi.ilike.' + enc + ',deskripsi.ilike.' + enc + '))';
+  }
+  supaFetchPaged(path)
+    .then(function(res) {
+      internalAssets = (res.data || []).map(mapAsset);
+      intTotalCount = res.count;
+      updateBadge();
+      renderInternalTable();
+      showToast('✅ ' + res.count + ' total internal');
+    })
+    .catch(function(err) {
+      showToast('⚠️ Gagal memuat: ' + err.message);
+      internalAssets = [];
+      updateBadge();
+    });
 }
 
+function saveAssets() { updateBadge(); }
+
 function updateBadge() {
-  var el = document.getElementById('listBadge');
-  if (el) el.textContent = assets.length;
+  var elWh = document.getElementById('listBadge');
+  if (elWh) elWh.textContent = assetTotalCount || assets.length;
+  var elInt = document.getElementById('listInternalBadge');
+  if (elInt) elInt.textContent = intTotalCount || internalAssets.length;
   var st = document.getElementById('statTotal');
-  if (st) st.textContent = assets.length;
+  if (st) st.textContent = assetTotalCount || assets.length;
+  var stInt = document.getElementById('statTotalInternal');
+  if (stInt) stInt.textContent = intTotalCount || internalAssets.length;
 }
 
 function genId() {
@@ -1614,18 +1899,32 @@ function fillForm(asset) {
   var lokasiBarang = asset.lokasi_barang || '';
   var sel = document.getElementById('f_lokasi_barang');
   var knownOptions = ['', 'Warehouse', 'White Container', 'A55'];
-  if (knownOptions.indexOf(lokasiBarang) !== -1) {
+  // Strip INT: prefix → custom internal
+  var isIntPrefixed = lokasiBarang.indexOf('INT:') === 0;
+  var rawLokasi = isIntPrefixed ? lokasiBarang.slice(4) : lokasiBarang;
+
+  if (!isIntPrefixed && knownOptions.indexOf(lokasiBarang) !== -1) {
     sel.value = lokasiBarang;
     document.getElementById('f_lokasi_barang_other_wrap').style.display = 'none';
-  } else if (lokasiBarang) {
+    document.getElementById('f_lokasi_barang_other').value = '';
+  } else if (rawLokasi) {
     sel.value = '__other__';
-    document.getElementById('f_lokasi_barang_other').value = lokasiBarang;
+    document.getElementById('f_lokasi_barang_other').value = rawLokasi;
     document.getElementById('f_lokasi_barang_other_wrap').style.display = '';
+    // Set kategori radio
+    var radioInt = document.getElementById('f_kategori_int');
+    var radioWh  = document.getElementById('f_kategori_wh');
+    if (isIntPrefixed) {
+      if (radioInt) radioInt.checked = true;
+    } else {
+      if (radioWh) radioWh.checked = true;
+    }
   } else {
     sel.value = '';
     document.getElementById('f_lokasi_barang_other_wrap').style.display = 'none';
   }
   updateQtyLabel();
+  updateKategoriIndicator();
 
   var img = asset.image_data || asset.gambar || null;
   if (img) {
@@ -1653,6 +1952,15 @@ function resetForm() {
   document.getElementById('f_qty').value = '';
   document.getElementById('f_satuan').value = '';
   document.getElementById('f_keterangan').value = '';
+  // Reset kategori
+  var rWh = document.getElementById('f_kategori_wh');
+  var rInt = document.getElementById('f_kategori_int');
+  if (rWh) rWh.checked = false;
+  if (rInt) rInt.checked = false;
+  var autoEl = document.getElementById('f_kategori_auto');
+  var manEl  = document.getElementById('f_kategori_manual');
+  if (autoEl) { autoEl.style.display = 'none'; }
+  if (manEl)  { manEl.style.display = 'none'; }
   currentImageDataUrl = null;
   document.getElementById('imgPreviewWrap').style.display = 'none';
   document.getElementById('imgUploadPlaceholder').style.display = 'block';
@@ -1667,12 +1975,23 @@ function saveAsset() {
   if (!d.nomor) { showToast('⚠️ Nomor Asset (ST) wajib diisi'); document.getElementById('f_nomor').focus(); return; }
   if (!d.nama)  { showToast('⚠️ Nama Asset wajib diisi');       document.getElementById('f_nama').focus();  return; }
   if (!d.lokasi_barang) { showToast('⚠️ Lokasi Barang wajib dipilih'); document.getElementById('f_lokasi_barang').focus(); return; }
-  if (d.lokasi_barang === '__other__' || (document.getElementById('f_lokasi_barang').value === '__other__' && !d.lokasi_barang)) {
-    showToast('⚠️ Lokasi Barang (Lainnya) wajib diisi'); document.getElementById('f_lokasi_barang_other').focus(); return;
+
+  var selVal = document.getElementById('f_lokasi_barang').value;
+  var lokasiBarangFinal = d.lokasi_barang;
+
+  if (selVal === '__other__') {
+    var otherVal = (document.getElementById('f_lokasi_barang_other').value || '').trim();
+    if (!otherVal) { showToast('⚠️ Lokasi Barang (Lainnya) wajib diisi'); document.getElementById('f_lokasi_barang_other').focus(); return; }
+    // Apply kategori
+    var checkedKat = document.querySelector('input[name="f_kategori"]:checked');
+    if (!checkedKat) { showToast('⚠️ Pilih kategori: Internal atau Warehouse'); return; }
+    lokasiBarangFinal = (checkedKat.value === 'internal') ? 'INT:' + otherVal : otherVal;
   }
+
   // Quantity wajib jika bukan Warehouse
-  if (d.lokasi_barang !== 'Warehouse' && (d.qty === null || d.qty === '' || isNaN(d.qty))) {
-    showToast('⚠️ Quantity wajib diisi karena barang bukan di Warehouse'); document.getElementById('f_qty').focus(); return;
+  var isWh = (lokasiBarangFinal === 'Warehouse' || lokasiBarangFinal === 'PEMAIN');
+  if (!isWh && (d.qty === null || d.qty === '' || isNaN(d.qty))) {
+    showToast('⚠️ Quantity wajib diisi untuk material non-Warehouse'); document.getElementById('f_qty').focus(); return;
   }
 
   var gabungDesc = [d.deskripsi, d.keterangan].filter(Boolean).join('\n\n') || null;
@@ -1682,7 +2001,7 @@ function saveAsset() {
     deskripsi:     gabungDesc,
     jenis:         d.jenis         || null,
     lokasi:        d.lokasi        || null,
-    lokasi_barang: d.lokasi_barang || null,
+    lokasi_barang: lokasiBarangFinal || null,
     detail_lokasi: d.detail_lokasi || null,
     pj:            d.pj            || null,
     qty:           d.qty !== null ? d.qty : null,
@@ -1690,13 +2009,19 @@ function saveAsset() {
     image_data:    d.gambar        || null
   };
 
+  var savedIsInternal = isInternal(lokasiBarangFinal);
+
   if (editingId) {
     showToast('⏳ Menyimpan perubahan...');
     supaFetch('PATCH', ASSET_TABLE + '?id=eq.' + editingId, payload)
       .then(function() {
         showToast('✅ Asset berhasil diperbarui');
         resetForm();
-        loadAssets();
+        if (savedIsInternal) {
+          switchTab('list-internal');
+        } else {
+          loadAssets();
+        }
       })
       .catch(function(err) {
         showToast('⚠️ Gagal update: ' + err.message);
@@ -1708,9 +2033,13 @@ function saveAsset() {
     showToast('⏳ Menyimpan asset...');
     supaFetch('POST', ASSET_TABLE, payload)
       .then(function() {
-        showToast('✅ Asset berhasil disimpan!');
+        showToast('✅ Asset berhasil disimpan! Masuk ke List ' + (savedIsInternal ? 'Internal 📦' : 'Warehouse 🏭'));
         resetForm();
-        loadAssets();
+        if (savedIsInternal) {
+          switchTab('list-internal');
+        } else {
+          loadAssets();
+        }
       })
       .catch(function(err) {
         showToast('⚠️ Gagal simpan: ' + err.message);
@@ -1719,19 +2048,14 @@ function saveAsset() {
 }
 
 /* ══════════════════════════════════════════════
-   TABLE RENDER
+   TABLE RENDER (server-paged)
 ══════════════════════════════════════════════ */
 function renderTable() {
-  var q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-  var filtered = assets.filter(function(a) {
-    if (!q) return true;
-    return (a.nomor+' '+a.nama+' '+a.jenis+' '+a.lokasi+' '+a.lokasi_barang+' '+a.deskripsi).toLowerCase().indexOf(q) !== -1;
-  });
-
   var tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
 
-  if (filtered.length === 0) {
+  if (assets.length === 0) {
+    var q = currentAssetQ();
     var tr = document.createElement('tr');
     tr.innerHTML = '<td colspan="9"><div class="empty-state">' +
       '<div class="icon">🔍</div>' +
@@ -1739,23 +2063,25 @@ function renderTable() {
       '<div class="msg">'+(q ? 'Coba kata kunci lain' : 'Tambahkan asset melalui tab "Input Asset Material"')+'</div>' +
       '</div></td>';
     tbody.appendChild(tr);
+    document.getElementById('assetPagination').innerHTML = '';
     return;
   }
 
-  filtered.forEach(function(a, i) {
+  var offset = (assetPage - 1) * ASSET_PER_PAGE;
+  assets.forEach(function(a, i) {
     var tr = document.createElement('tr');
     var imgSrc = a.image_data || a.gambar || '';
     var imgCell = imgSrc
       ? '<img class="thumb-img" src="'+imgSrc+'" alt="gambar" onclick="openPreviewModal(\''+a.id+'\')" title="Lihat gambar">'
       : '<div class="no-img-cell">🖼️</div>';
-    var qtyCell = (a.lokasi_barang && a.lokasi_barang !== 'Warehouse' && a.qty !== null)
+    var qtyCell = (a.qty !== null)
       ? '<strong style="color:var(--accent)">' + a.qty + '</strong>' + (a.satuan ? ' <span style="font-size:10px;color:var(--text-light)">' + escHtml(a.satuan) + '</span>' : '')
       : '<span style="color:var(--text-light);font-size:11px">—</span>';
     var lokasiBarangCell = a.lokasi_barang
-      ? '<span style="font-size:11px;font-weight:700;color:var(--steel);font-family:\'Courier New\',monospace;">' + escHtml(a.lokasi_barang) + '</span>'
+      ? '<span style="font-size:11px;font-weight:700;color:var(--steel);font-family:\'Courier New\',monospace;">' + escHtml(displayLokasi(a.lokasi_barang)) + '</span>'
       : '<span style="color:var(--text-light);font-size:11px">—</span>';
 
-    tr.innerHTML = '<td class="col-no">'+(i+1)+'</td>' +
+    tr.innerHTML = '<td class="col-no">'+(offset+i+1)+'</td>' +
       '<td><strong style="font-family:\'Courier New\',monospace;font-size:12px;color:var(--steel)">'+escHtml(a.nomor)+'</strong></td>' +
       '<td>'+escHtml(a.nama)+'</td>' +
       '<td>'+(a.jenis ? '<span class="badge-jenis">'+escHtml(a.jenis)+'</span>' : '<span style="color:var(--text-light);font-size:11px">—</span>')+'</td>' +
@@ -1771,7 +2097,97 @@ function renderTable() {
     tbody.appendChild(tr);
   });
 
-  document.getElementById('statTotal').textContent = assets.length;
+  document.getElementById('statTotal').textContent = assetTotalCount;
+  renderAssetPagination();
+}
+
+function renderAssetPagination() {
+  var el = document.getElementById('assetPagination');
+  if (!el) return;
+  var totalPages = Math.ceil(assetTotalCount / ASSET_PER_PAGE) || 1;
+  var q = currentAssetQ();
+  el.innerHTML = '<div class="pag-bar">' +
+    '<button class="pag-btn" onclick="loadAssetsPage('+(assetPage-1)+',\''+escHtml(q)+'\')" '+(assetPage<=1?'disabled':'')+'>← Prev</button>' +
+    '<span class="pag-info">Hal. '+assetPage+' / '+totalPages+' &nbsp;|&nbsp; '+assetTotalCount+' total</span>' +
+    '<button class="pag-btn" onclick="loadAssetsPage('+(assetPage+1)+',\''+escHtml(q)+'\')" '+(assetPage>=totalPages?'disabled':'')+'>Next →</button>' +
+    '</div>';
+}
+
+/* ══════════════════════════════════════════════
+   LIST INTERNAL
+══════════════════════════════════════════════ */
+function renderInternalTable() {
+  var tbody = document.getElementById('tableBodyInternal');
+  tbody.innerHTML = '';
+
+  if (internalAssets.length === 0) {
+    var q = currentInternalQ();
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="9"><div class="empty-state">' +
+      '<div class="icon">🔍</div>' +
+      '<div class="title">'+(q ? 'Tidak ada hasil untuk "'+escHtml(q)+'"' : 'Belum ada data material internal')+'</div>' +
+      '<div class="msg">'+(q ? 'Coba kata kunci lain' : 'Tambahkan material dengan lokasi White Container, A55, atau internal lainnya')+'</div>' +
+      '</div></td>';
+    tbody.appendChild(tr);
+    document.getElementById('internalPagination').innerHTML = '';
+    return;
+  }
+
+  var offset = (intPage - 1) * INT_PER_PAGE;
+  internalAssets.forEach(function(a, i) {
+    var tr = document.createElement('tr');
+    var imgSrc = a.image_data || a.gambar || '';
+    var imgCell = imgSrc
+      ? '<img class="thumb-img" src="'+imgSrc+'" alt="gambar" onclick="openPreviewModal(\''+a.id+'\')" title="Lihat gambar">'
+      : '<div class="no-img-cell">🖼️</div>';
+    var qtyCell = (a.qty !== null)
+      ? '<strong style="color:var(--accent)">' + a.qty + '</strong>' + (a.satuan ? ' <span style="font-size:10px;color:var(--text-light)">' + escHtml(a.satuan) + '</span>' : '')
+      : '<span style="color:var(--text-light);font-size:11px">—</span>';
+    var lokasiCell = a.lokasi_barang
+      ? '<span style="font-size:11px;font-weight:700;color:#065f46;font-family:\'Courier New\',monospace;">' + escHtml(displayLokasi(a.lokasi_barang)) + '</span>'
+      : '<span style="color:var(--text-light);font-size:11px">—</span>';
+
+    tr.innerHTML = '<td class="col-no">'+(offset+i+1)+'</td>' +
+      '<td><strong style="font-family:\'Courier New\',monospace;font-size:12px;color:var(--steel)">'+escHtml(a.nomor)+'</strong></td>' +
+      '<td>'+escHtml(a.nama)+'</td>' +
+      '<td>'+(a.jenis ? '<span class="badge-jenis">'+escHtml(a.jenis)+'</span>' : '<span style="color:var(--text-light);font-size:11px">—</span>')+'</td>' +
+      '<td style="color:var(--text-mid);font-size:12px">'+escHtml(a.lokasi||'—')+'</td>' +
+      '<td>'+lokasiCell+'</td>' +
+      '<td style="text-align:center;">'+qtyCell+'</td>' +
+      '<td>'+imgCell+'</td>' +
+      '<td class="col-action"><div class="action-btns">' +
+        '<button class="btn btn-icon btn-outline btn-sm" title="Preview" onclick="openPreviewModal(\''+a.id+'\')">👁</button>' +
+        '<button class="btn btn-icon btn-secondary btn-sm" title="Edit" onclick="editAssetInternal(\''+a.id+'\')">✏️</button>' +
+        '<button class="btn btn-icon btn-danger-soft btn-sm" title="Hapus" onclick="openDeleteModal(\''+a.id+'\')">🗑</button>' +
+      '</div></td>';
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('statTotalInternal').textContent = intTotalCount;
+  renderInternalPagination();
+}
+
+function renderInternalPagination() {
+  var el = document.getElementById('internalPagination');
+  if (!el) return;
+  var totalPages = Math.ceil(intTotalCount / INT_PER_PAGE) || 1;
+  var q = currentInternalQ();
+  el.innerHTML = '<div class="pag-bar">' +
+    '<button class="pag-btn" onclick="loadInternalPage('+(intPage-1)+',\''+escHtml(q)+'\')" '+(intPage<=1?'disabled':'')+'>← Prev</button>' +
+    '<span class="pag-info">Hal. '+intPage+' / '+totalPages+' &nbsp;|&nbsp; '+intTotalCount+' total</span>' +
+    '<button class="pag-btn" onclick="loadInternalPage('+(intPage+1)+',\''+escHtml(q)+'\')" '+(intPage>=totalPages?'disabled':'')+'>Next →</button>' +
+    '</div>';
+}
+
+function editAssetInternal(id) {
+  var asset = internalAssets.find(function(a){ return a.id === id; });
+  if (!asset) return;
+  editingId = id;
+  fillForm(asset);
+  document.getElementById('formSectionLabel').textContent = '✏️ Edit Asset: ' + asset.nomor;
+  switchTab('input');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('Mode edit: '+asset.nomor);
 }
 
 /* ══════════════════════════════════════════════
@@ -2040,6 +2456,36 @@ function onLokasiBarangChange() {
   otherWrap.style.display = (sel.value === '__other__') ? '' : 'none';
   if (sel.value !== '__other__') document.getElementById('f_lokasi_barang_other').value = '';
   updateQtyLabel();
+  updateKategoriIndicator();
+}
+
+function updateKategoriIndicator() {
+  var sel     = document.getElementById('f_lokasi_barang');
+  var autoEl  = document.getElementById('f_kategori_auto');
+  var manEl   = document.getElementById('f_kategori_manual');
+  if (!sel || !autoEl || !manEl) return;
+
+  var val = sel.value;
+  var INTERNAL_KNOWN = ['White Container', 'A55'];
+  var WAREHOUSE_KNOWN = ['Warehouse', 'PEMAIN'];
+
+  if (INTERNAL_KNOWN.indexOf(val) !== -1) {
+    autoEl.className = 'kategori-auto-badge internal';
+    autoEl.innerHTML = '<span class="badge-icon">📦</span><div class="badge-text">Otomatis masuk ke <strong>List Internal</strong><div class="badge-sub">White Container, A55 — stok lokal tim</div></div>';
+    autoEl.style.display = '';
+    manEl.style.display = 'none';
+  } else if (WAREHOUSE_KNOWN.indexOf(val) !== -1) {
+    autoEl.className = 'kategori-auto-badge warehouse';
+    autoEl.innerHTML = '<span class="badge-icon">🏭</span><div class="badge-text">Otomatis masuk ke <strong>List Warehouse</strong><div class="badge-sub">Warehouse — stok gudang utama</div></div>';
+    autoEl.style.display = '';
+    manEl.style.display = 'none';
+  } else if (val === '__other__') {
+    autoEl.style.display = 'none';
+    manEl.style.display = '';
+  } else {
+    autoEl.style.display = 'none';
+    manEl.style.display = 'none';
+  }
 }
 
 function updateQtyLabel() {
@@ -2059,66 +2505,76 @@ function updateQtyLabel() {
 ══════════════════════════════════════════════ */
 var selectedAmbilAsset = null;
 
+var _ambilDebounce = null;
+var _ambilCache = [];  // local items (non-Warehouse) for current ambil session
+
 function renderAmbilSearch() {
-  var q = (document.getElementById('ambilSearch').value || '').toLowerCase().trim();
+  clearTimeout(_ambilDebounce);
+  _ambilDebounce = setTimeout(_doAmbilSearch, 350);
+}
+
+function _doAmbilSearch() {
+  var q = (document.getElementById('ambilSearch').value || '').trim();
   var container = document.getElementById('ambilSearchResults');
+  container.innerHTML = '<div style="padding:16px;color:var(--text-light);font-size:12px;">⏳ Mencari...</div>';
 
-  // Filter: bukan Warehouse, dan cocok dengan query
-  var filtered = assets.filter(function(a) {
-    if (!a.lokasi_barang || a.lokasi_barang === 'Warehouse') return false;
-    if (!q) return true;
-    return (a.nomor+' '+a.nama+' '+a.jenis).toLowerCase().indexOf(q) !== -1;
-  });
-
-  if (!q && filtered.length === 0) {
-    container.innerHTML = '<div class="empty-state" style="padding:30px 20px;"><div class="icon">📦</div>' +
-      '<div class="title">Tidak ada material tersedia</div>' +
-      '<div class="msg">Material dengan lokasi selain Warehouse akan muncul di sini</div></div>';
-    return;
-  }
-  if (q && filtered.length === 0) {
-    container.innerHTML = '<div class="empty-state" style="padding:24px 20px;"><div class="icon">🔍</div>' +
-      '<div class="title">Tidak ditemukan</div><div class="msg">Coba kata kunci lain</div></div>';
-    return;
+  var path = ASSET_TABLE + '?select=*&order=nomor.asc&limit=100&' + _INTERNAL_INCLUDE;
+  if (q) {
+    var enc = encodeURIComponent('*' + q + '*');
+    path += '&or=(nomor.ilike.'+enc+',nama.ilike.'+enc+')';
   }
 
-  var html = '';
-  filtered.forEach(function(a) {
-    var imgSrc = a.image_data || a.gambar || '';
-    var imgHtml = imgSrc
-      ? '<img class="ambil-result-thumb" src="'+imgSrc+'" alt="">'
-      : '<div class="ambil-result-no-thumb">📦</div>';
-    var qtyInfo = '';
-    var qtyClass = '';
-    if (a.qty !== null && a.qty !== undefined) {
-      qtyInfo = a.qty + (a.satuan ? ' ' + escHtml(a.satuan) : '');
-      if (a.qty === 0) qtyClass = 'empty';
-      else if (a.qty <= 3) qtyClass = 'low';
+  supaFetch('GET', path).then(function(data) {
+    var filtered = (data || []).map(mapAsset);
+    _ambilCache = filtered;   // cache for selectAmbilAsset lookup
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="padding:24px 20px;">' +
+        '<div class="icon">'+(q?'🔍':'📦')+'</div>' +
+        '<div class="title">'+(q?'Tidak ditemukan':'Tidak ada material lokal tersedia')+'</div>' +
+        '<div class="msg">'+(q?'Coba kata kunci lain':'Tambahkan item di lokasi selain Warehouse')+'</div></div>';
+      return;
     }
-    var canTake = (a.qty === null || a.qty > 0);
-    html += '<div class="ambil-result-item" id="ambil-item-'+a.id+'">' +
-      imgHtml +
-      '<div class="ambil-result-info">' +
-        '<div class="ambil-result-st">'+escHtml(a.nomor)+'</div>' +
-        '<div class="ambil-result-nama">'+escHtml(a.nama)+'</div>' +
-        '<div class="ambil-result-meta">'+
-          (a.jenis ? escHtml(a.jenis)+' · ' : '') +
-          escHtml(a.lokasi_barang) +
-          (a.detail_lokasi ? ' — '+escHtml(a.detail_lokasi) : '') +
-          (a.pj ? ' · PJ: '+escHtml(a.pj) : '') +
+
+    var html = '';
+    filtered.forEach(function(a) {
+      var imgSrc = a.image_data || a.gambar || '';
+      var imgHtml = imgSrc
+        ? '<img class="ambil-result-thumb" src="'+imgSrc+'" alt="">'
+        : '<div class="ambil-result-no-thumb">📦</div>';
+      var qtyInfo = '', qtyClass = '';
+      if (a.qty !== null && a.qty !== undefined) {
+        qtyInfo = a.qty + (a.satuan ? ' ' + escHtml(a.satuan) : '');
+        if (a.qty === 0) qtyClass = 'empty';
+        else if (a.qty <= 3) qtyClass = 'low';
+      }
+      var canTake = (a.qty === null || a.qty > 0);
+      html += '<div class="ambil-result-item" id="ambil-item-'+a.id+'">' +
+        imgHtml +
+        '<div class="ambil-result-info">' +
+          '<div class="ambil-result-st">'+escHtml(a.nomor)+'</div>' +
+          '<div class="ambil-result-nama">'+escHtml(a.nama)+'</div>' +
+          '<div class="ambil-result-meta">'+
+            (a.jenis ? escHtml(a.jenis)+' · ' : '') +
+            escHtml(a.lokasi_barang) +
+            (a.detail_lokasi ? ' — '+escHtml(a.detail_lokasi) : '') +
+            (a.pj ? ' · PJ: '+escHtml(a.pj) : '') +
+          '</div>' +
         '</div>' +
-      '</div>' +
-      (qtyInfo ? '<div class="ambil-result-qty '+qtyClass+'">Sisa: '+qtyInfo+'</div>' : '') +
-      (canTake
-        ? '<button class="ambil-select-btn" onclick="selectAmbilAsset(\''+a.id+'\')">Pilih</button>'
-        : '<span style="font-size:11px;color:var(--fail);font-weight:700;flex-shrink:0;">Stok Habis</span>') +
-      '</div>';
+        (qtyInfo ? '<div class="ambil-result-qty '+qtyClass+'">Sisa: '+qtyInfo+'</div>' : '') +
+        (canTake
+          ? '<button class="ambil-select-btn" onclick="selectAmbilAsset(\''+a.id+'\')">Pilih</button>'
+          : '<span style="font-size:11px;color:var(--fail);font-weight:700;flex-shrink:0;">Stok Habis</span>') +
+        '</div>';
+    });
+    container.innerHTML = html;
+  }).catch(function(err) {
+    container.innerHTML = '<div style="padding:16px;color:var(--fail);font-size:12px;">⚠️ Gagal memuat: '+escHtml(err.message)+'</div>';
   });
-  container.innerHTML = html;
 }
 
 function selectAmbilAsset(id) {
-  var a = assets.find(function(x){ return x.id === id; });
+  var a = _ambilCache.find(function(x){ return x.id === id; });
   if (!a) return;
   selectedAmbilAsset = a;
 
@@ -2211,20 +2667,48 @@ function konfirmasiAmbil() {
 
 
 /* ══════════════════════════════════════════════
-   HISTORY PENGAMBILAN
+   HISTORY PENGAMBILAN (paginated)
 ══════════════════════════════════════════════ */
-var historyData = [];
+var historyData         = [];
+var HIST_PER_PAGE       = 100;
+var histPage            = 1;
+var histTotalCount      = 0;
+var histSearchDebounce  = null;
+
+function currentHistQ() {
+  return ((document.getElementById('historySearch') || {}).value || '').trim();
+}
+
+function onHistorySearch() {
+  clearTimeout(histSearchDebounce);
+  histSearchDebounce = setTimeout(function() {
+    histPage = 1;
+    loadHistoryPage(1, currentHistQ());
+  }, 400);
+}
 
 function loadHistoryPengambilan() {
+  loadHistoryPage(histPage, currentHistQ());
+}
+
+function loadHistoryPage(page, q) {
+  histPage = page;
   showToast('⏳ Memuat history...');
-  supaFetch('GET', AMBIL_TABLE + '?select=*&order=tanggal.desc')
-    .then(function(data) {
-      historyData = data || [];
-      renderHistoryTable();
+  var offset = (page - 1) * HIST_PER_PAGE;
+  var path = AMBIL_TABLE + '?select=*&order=tanggal.desc&limit=' + HIST_PER_PAGE + '&offset=' + offset;
+  if (q) {
+    var enc = encodeURIComponent('*' + q + '*');
+    path += '&or=(nomor.ilike.'+enc+',nama.ilike.'+enc+',pengambil.ilike.'+enc+',keperluan.ilike.'+enc+')';
+  }
+  supaFetchPaged(path)
+    .then(function(res) {
+      historyData     = res.data || [];
+      histTotalCount  = res.count;
       var badge = document.getElementById('historyBadge');
-      if (badge) badge.textContent = historyData.length;
-      document.getElementById('statHistoryTotal').textContent = historyData.length;
-      showToast('✅ History dimuat (' + historyData.length + ' record)');
+      if (badge) badge.textContent = histTotalCount;
+      document.getElementById('statHistoryTotal').textContent = histTotalCount;
+      renderHistoryTable();
+      showToast('✅ History: ' + histTotalCount + ' total record');
     })
     .catch(function(err) {
       showToast('⚠️ Gagal memuat history: ' + err.message);
@@ -2233,27 +2717,24 @@ function loadHistoryPengambilan() {
 }
 
 function renderHistoryTable() {
-  var q = (document.getElementById('historySearch').value || '').toLowerCase().trim();
-  var filtered = historyData.filter(function(h) {
-    if (!q) return true;
-    return ((h.nomor||'')+' '+(h.nama||'')+' '+(h.pengambil||'')+' '+(h.lokasi_barang||'')+' '+(h.keperluan||'')).toLowerCase().indexOf(q) !== -1;
-  });
-
   var tbody = document.getElementById('historyTableBody');
   tbody.innerHTML = '';
 
-  if (filtered.length === 0) {
+  if (historyData.length === 0) {
+    var q = currentHistQ();
     var tr = document.createElement('tr');
     tr.innerHTML = '<td colspan="8"><div class="empty-state">' +
-      '<div class="icon">'+(q ? '🔍' : '📋')+'</div>' +
-      '<div class="title">'+(q ? 'Tidak ada hasil untuk "'+escHtml(q)+'"' : 'Belum ada history pengambilan')+'</div>' +
-      '<div class="msg">'+(q ? 'Coba kata kunci lain' : 'History akan muncul setelah pengambilan material dilakukan')+'</div>' +
+      '<div class="icon">'+(q?'🔍':'📋')+'</div>' +
+      '<div class="title">'+(q?'Tidak ada hasil untuk "'+escHtml(q)+'"':'Belum ada history pengambilan')+'</div>' +
+      '<div class="msg">'+(q?'Coba kata kunci lain':'History akan muncul setelah pengambilan material dilakukan')+'</div>' +
       '</div></td>';
     tbody.appendChild(tr);
+    document.getElementById('historyPagination').innerHTML = '';
     return;
   }
 
-  filtered.forEach(function(h, i) {
+  var offset = (histPage - 1) * HIST_PER_PAGE;
+  historyData.forEach(function(h, i) {
     var tr = document.createElement('tr');
     var tgl = h.tanggal ? new Date(h.tanggal).toLocaleString('id-ID', {
       day:'2-digit', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit'
@@ -2263,25 +2744,37 @@ function renderHistoryTable() {
       if (h.qty_sisa === 0) sisaClass = 'empty';
       else if (h.qty_sisa <= 3) sisaClass = 'low';
     }
-    // Gabung ST + nama
     var assetCell = '<strong style="font-family:\'Courier New\',monospace;font-size:11px;color:var(--steel)">'+escHtml(h.nomor||'—')+'</strong>' +
       '<br><span style="font-size:11px;color:var(--text-dark)">'+escHtml(h.nama||'')+'</span>' +
       (h.jenis ? '<br><span class="badge-jenis" style="margin-top:2px;display:inline-block">'+escHtml(h.jenis)+'</span>' : '');
-    // Gabung lokasi barang + detail
     var lokasiCell = escHtml(h.lokasi_barang||'—') +
       (h.detail_lokasi ? '<br><span style="font-size:10px;color:var(--text-light)">'+escHtml(h.detail_lokasi)+'</span>' : '');
 
     tr.innerHTML =
-      '<td class="col-no">'+(i+1)+'</td>' +
+      '<td class="col-no">'+(offset+i+1)+'</td>' +
       '<td style="font-size:10px;white-space:nowrap;color:var(--text-mid);">'+tgl+'</td>' +
       '<td>'+assetCell+'</td>' +
       '<td style="font-size:11px;">'+lokasiCell+'</td>' +
-      '<td style="text-align:center;"><span class="history-badge-qty">'+h.qty_diambil+(h.satuan?' '+escHtml(h.satuan):'')+'</span></td>' +
+      '<td style="text-align:center;"><span class="history-badge-qty">'+(h.qty_diambil||'—')+(h.satuan?' '+escHtml(h.satuan):'')+'</span></td>' +
       '<td style="text-align:center;">'+(h.qty_sisa !== null ? '<span class="history-badge-sisa '+sisaClass+'">'+h.qty_sisa+(h.satuan?' '+escHtml(h.satuan):'')+'</span>' : '<span style="color:var(--text-light);font-size:11px">—</span>')+'</td>' +
       '<td style="font-size:12px;font-weight:600;color:var(--steel);">'+escHtml(h.pengambil||'—')+'</td>' +
       '<td style="font-size:11px;color:var(--text-mid);">'+escHtml(h.keperluan||'—')+'</td>';
     tbody.appendChild(tr);
   });
+
+  renderHistoryPagination();
+}
+
+function renderHistoryPagination() {
+  var el = document.getElementById('historyPagination');
+  if (!el) return;
+  var totalPages = Math.ceil(histTotalCount / HIST_PER_PAGE) || 1;
+  var q = currentHistQ();
+  el.innerHTML = '<div class="pag-bar">' +
+    '<button class="pag-btn" onclick="loadHistoryPage('+(histPage-1)+',\''+escHtml(q)+'\')" '+(histPage<=1?'disabled':'')+'>← Prev</button>' +
+    '<span class="pag-info">Hal. '+histPage+' / '+totalPages+' &nbsp;|&nbsp; '+histTotalCount+' record</span>' +
+    '<button class="pag-btn" onclick="loadHistoryPage('+(histPage+1)+',\''+escHtml(q)+'\')" '+(histPage>=totalPages?'disabled':'')+'>Next →</button>' +
+    '</div>';
 }
 
 
