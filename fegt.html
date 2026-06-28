@@ -958,7 +958,9 @@ function _clOpenCrop(dataUrl, name, arr, portKey, phase, replaceIdx) {
   modal._clPending = {dataUrl:dataUrl, name:name, arr:arr, portKey:portKey, phase:phase, replaceIdx:replaceIdx};
   modal._clMode = true;
 
-  cropImg.onload = function() {
+  cropImg.onload = null;
+  cropImg.onerror = null;
+  function clInitBox() {
     var box = document.getElementById('cropBox');
     var wrap = document.getElementById('cropWrap');
     var iw = cropImg.naturalWidth, ih = cropImg.naturalHeight;
@@ -974,15 +976,16 @@ function _clOpenCrop(dataUrl, name, arr, portKey, phase, replaceIdx) {
     document.getElementById('cropOutH').value = ih;
     document.getElementById('cropNatSize').textContent = iw + ' x ' + ih + ' px';
     if (typeof initDragCrop === 'function') initDragCrop(box, wrap);
-  };
+  }
+  cropImg.onload = function() { clInitBox(); };
   cropImg.onerror = function() {
     modal.style.display = 'none';
     modal._clMode = false;
     _clStore(dataUrl, name, arr, portKey, phase, replaceIdx);
   };
   modal.style.display = 'flex';
-  cropImg.src = ''; cropImg.src = dataUrl;
-  if (cropImg.complete && cropImg.naturalWidth) cropImg.onload();
+  cropImg.src = dataUrl;
+  if (cropImg.complete && cropImg.naturalWidth) { clInitBox(); }
 }
 
 function _clCropDone(skipCropMode) {
@@ -993,16 +996,8 @@ function _clCropDone(skipCropMode) {
   modal._clMode = false;
 
   if (skipCropMode) {
-    // skip: store original dataUrl compressed
-    var img2 = new Image();
-    img2.onload = function() {
-      var c = document.createElement('canvas');
-      c.width = img2.naturalWidth; c.height = img2.naturalHeight;
-      c.getContext('2d').drawImage(img2,0,0);
-      _clStore(c.toDataURL('image/jpeg',0.85), p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
-    };
-    img2.onerror = function() { _clStore(p.dataUrl, p.name, p.arr, p.portKey, p.phase, p.replaceIdx); };
-    img2.src = p.dataUrl;
+    // skip: store original dataUrl as-is (avoid black canvas from incomplete img load)
+    _clStore(p.dataUrl, p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
     return true;
   }
 
