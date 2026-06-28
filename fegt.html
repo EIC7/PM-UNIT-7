@@ -836,35 +836,52 @@ function downloadPdf(){
           y += 5;
 
           // Foto Before (kiri) dan After (kanan) side-by-side
-          var maxRows = Math.max(Math.ceil(befImgs.length / 2), Math.ceil(aftImgs.length / 2));
           var perRow = 2;
+          var fw = (colW - gap/2) / perRow - 2; // foto width dalam kolom
+          var fh = fw * 0.75;                    // 4:3 ratio
+          var xBef = marginX + 2;
+          var xAft = marginX + colW + gap;
 
-          function drawPhotoGroup(imgs, startX) {
-            var lx = startX, ly = y;
-            var fw = (colW - gap/2) / perRow - 2; // foto width dalam kolom
-            var fh = fw * 0.75;                    // 4:3 ratio
-            imgs.forEach(function(img, i) {
-              if (ly + fh + 10 > ph - marginBottom) {
-                doc.addPage(); drawBg(doc, pw, ph); ly = marginTop; lx = startX;
+          // Gambar Before dan After secara sinkron baris per baris
+          var maxImgs = Math.max(befImgs.length, aftImgs.length);
+          var lxBef = xBef, lxAft = xAft;
+          for (var ii = 0; ii < maxImgs; ii++) {
+            // Cek page break sebelum setiap foto
+            if (y + fh + 10 > ph - marginBottom) {
+              doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+              lxBef = xBef; lxAft = xAft;
+            }
+            // Gambar foto Before (jika ada)
+            if (ii < befImgs.length) {
+              var bImg = befImgs[ii];
+              try { doc.addImage(bImg.dataUrl, 'JPEG', lxBef, y, fw, fh); } catch(e) {
+                doc.setDrawColor(200,200,200); doc.rect(lxBef, y, fw, fh, 'S');
               }
-              try { doc.addImage(img.dataUrl, 'JPEG', lx, ly, fw, fh); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(lx, ly, fw, fh, 'S');
-              }
-              var cap = safe(img.caption || '');
-              if (cap) {
+              var bcap = safe(bImg.caption || '');
+              if (bcap) {
                 doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
-                doc.text(doc.splitTextToSize(cap, fw), lx, ly + fh + 2.5);
+                doc.text(doc.splitTextToSize(bcap, fw), lxBef, y + fh + 2.5);
               }
-              lx += fw + 2;
-              if ((i+1) % perRow === 0) { lx = startX; ly += fh + 9; }
-            });
-            if (imgs.length % perRow !== 0) ly += fh + 9;
-            return ly;
+            }
+            // Gambar foto After (jika ada)
+            if (ii < aftImgs.length) {
+              var aImg = aftImgs[ii];
+              try { doc.addImage(aImg.dataUrl, 'JPEG', lxAft, y, fw, fh); } catch(e) {
+                doc.setDrawColor(200,200,200); doc.rect(lxAft, y, fw, fh, 'S');
+              }
+              var acap = safe(aImg.caption || '');
+              if (acap) {
+                doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
+                doc.text(doc.splitTextToSize(acap, fw), lxAft, y + fh + 2.5);
+              }
+            }
+            lxBef += fw + 2; lxAft += fw + 2;
+            if ((ii + 1) % perRow === 0) {
+              lxBef = xBef; lxAft = xAft;
+              y += fh + 9;
+            }
           }
-
-          var yAfterBef = drawPhotoGroup(befImgs, marginX + 2);
-          var yAfterAft = drawPhotoGroup(aftImgs, marginX + colW + gap);
-          y = Math.max(yAfterBef, yAfterAft) + 4;
+          if (maxImgs % perRow !== 0) y += fh + 9;
 
           // Separator antar port
           checkPage(5);
