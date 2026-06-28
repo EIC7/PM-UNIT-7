@@ -944,6 +944,14 @@ function clHandleFiles(files, portKey, phase) {
 }
 
 function clRenderPreviews(portKey, phase) {
+  // shared.js calls clRenderPreviews('port1_before') with 1 arg after crop
+  // so we support both: clRenderPreviews(portKey, phase) and clRenderPreviews('portX_phase')
+  if (phase === undefined) {
+    // split on last underscore to support 'port1_before' / 'port1_after'
+    var lastUs = portKey.lastIndexOf('_');
+    phase   = portKey.slice(lastUs + 1);        // 'before' or 'after'
+    portKey = portKey.slice(0, lastUs);          // 'port1'
+  }
   clSyncCaptions(portKey, phase);
   var uid = 'cl_'+portKey+'_'+phase;
   var container = document.getElementById(uid+'_preview');
@@ -1121,13 +1129,13 @@ initFegtBackground();
       <div style="font-weight:700;font-size:14px;color:#e8f2ff;letter-spacing:1px">&#9986;&#65039; Crop Gambar</div>
       <div id="cropNatSize" style="font-size:11px;color:#8fb7dc">— x — px</div>
     </div>
-    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none">
-      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
-      <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
-        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;left:-7px;cursor:nw-resize;touch-action:none"></div>
-        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;top:-7px;right:-7px;cursor:ne-resize;touch-action:none"></div>
-        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;left:-7px;cursor:sw-resize;touch-action:none"></div>
-        <div style="position:absolute;width:14px;height:14px;background:#3498db;border-radius:2px;bottom:-7px;right:-7px;cursor:se-resize;touch-action:none"></div>
+    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab">
+      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block;will-change:transform">
+      <div id="cropBox" style="position:absolute;border:2px solid #3498db;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px;will-change:transform">
+        <div style="position:absolute;width:18px;height:18px;background:#3498db;border-radius:2px;top:-9px;left:-9px;cursor:nw-resize;touch-action:none;z-index:1"></div>
+        <div style="position:absolute;width:18px;height:18px;background:#3498db;border-radius:2px;top:-9px;right:-9px;cursor:ne-resize;touch-action:none;z-index:1"></div>
+        <div style="position:absolute;width:18px;height:18px;background:#3498db;border-radius:2px;bottom:-9px;left:-9px;cursor:sw-resize;touch-action:none;z-index:1"></div>
+        <div style="position:absolute;width:18px;height:18px;background:#3498db;border-radius:2px;bottom:-9px;right:-9px;cursor:se-resize;touch-action:none;z-index:1"></div>
       </div>
     </div>
     <div style="padding:8px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
