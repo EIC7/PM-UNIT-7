@@ -930,24 +930,16 @@ function clHandleDrop(e, portKey, phase) {
 function clHandleFiles(files, portKey, phase) {
   Array.from(files).forEach(function(file) {
     var arr = cleaningImages[portKey][phase];
-    if (!isImageFile(file)) {
-      var r = new FileReader();
-      r.onload = function(ev){
-        arr.push({name:file.name, dataUrl:ev.target.result, type:file.type||'', caption:''});
-        clRenderPreviews(portKey, phase);
-      };
-      r.readAsDataURL(file);
-      return;
-    }
-    // Use fileToJpegDataUrl then open cropper with 'cl' prefix
-    // After crop, shared.js calls clRenderPreviews(side) where side = portKey+'_'+phase
-    fileToJpegDataUrl(file, function(dataUrl){
+    // Read file directly as dataUrl — avoids black canvas from fileToJpegDataUrl
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var dataUrl = ev.target.result;
       if (!dataUrl) return;
-      var side = portKey + '_' + phase;
-      // Monkey-patch: make sure imgCompressAndStore knows 'cl' prefix
-      // by wrapping via a local callback approach
-      _clOpenCrop(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), arr, portKey, phase, -1);
-    });
+      var name = file.name.replace(/\.[^.]+$/, '.jpg');
+      _clOpenCrop(dataUrl, name, arr, portKey, phase, -1);
+    };
+    reader.onerror = function() { alert('Gagal membaca file: ' + file.name); };
+    reader.readAsDataURL(file);
   });
 }
 
@@ -1015,8 +1007,11 @@ function _clCropDone(skipCropMode) {
   var outH = parseInt(document.getElementById('cropOutH').value)||Math.round(sh);
   var canvas = document.createElement('canvas');
   canvas.width = outW; canvas.height = outH;
-  canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
-  _clStore(canvas.toDataURL('image/jpeg',0.85), p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, outW, outH);
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+  _clStore(canvas.toDataURL('image/jpeg', 0.85), p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
   return true;
 }
 
@@ -1024,27 +1019,36 @@ function _clStore(dataUrl, name, arr, portKey, phase, replaceIdx) {
   var caption = '';
   if (replaceIdx >= 0 && arr[replaceIdx]) caption = arr[replaceIdx].caption || '';
   if (replaceIdx >= 0) arr.splice(replaceIdx, 1);
-  // Compress if needed
-  var MAX = 1024*1024;
+
+  function doStore(url) {
+    arr.push({name:name.replace(/\.[^.]+$/,'.jpg'), dataUrl:url, type:'image/jpeg', caption:caption});
+    clRenderPreviews(portKey, phase);
+  }
+
+  // Check size — compress only if over 1MB total
+  var MAX = 1024 * 1024;
   var currentTotal = arr.reduce(function(a,im){return a+(im.dataUrl?im.dataUrl.length*0.75:0);},0);
   var newSize = dataUrl.length * 0.75;
-  if (currentTotal + newSize > MAX) {
-    // Already compressed enough or try lower quality via canvas
-    var img3 = new Image();
-    img3.onload = function(){
-      var factor = Math.sqrt(MAX / (currentTotal + newSize));
-      var c3 = document.createElement('canvas');
-      c3.width = Math.max(100, Math.floor(img3.naturalWidth * factor));
-      c3.height = Math.max(100, Math.floor(img3.naturalHeight * factor));
-      c3.getContext('2d').drawImage(img3, 0, 0, c3.width, c3.height);
-      arr.push({name:name.replace(/\.[^.]+$/,'.jpg'), dataUrl:c3.toDataURL('image/jpeg',0.7), type:'image/jpeg', caption:caption});
-      clRenderPreviews(portKey, phase);
-    };
-    img3.src = dataUrl;
+  if (currentTotal + newSize <= MAX) {
+    doStore(dataUrl);
     return;
   }
-  arr.push({name:name.replace(/\.[^.]+$/,'.jpg'), dataUrl:dataUrl, type:'image/jpeg', caption:caption});
-  clRenderPreviews(portKey, phase);
+
+  // Need to compress — draw via Image onload to get real pixels
+  var imgEl = new Image();
+  imgEl.onload = function() {
+    var factor = Math.sqrt(MAX / (currentTotal + newSize));
+    var c = document.createElement('canvas');
+    c.width  = Math.max(100, Math.floor(imgEl.naturalWidth  * factor));
+    c.height = Math.max(100, Math.floor(imgEl.naturalHeight * factor));
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(imgEl, 0, 0, c.width, c.height);
+    doStore(c.toDataURL('image/jpeg', 0.75));
+  };
+  imgEl.onerror = function() { doStore(dataUrl); }; // fallback: store as-is
+  imgEl.src = dataUrl;
 }
 
 function clRenderPreviews(portKey, phase) {
