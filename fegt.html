@@ -982,36 +982,57 @@ function _clOpenCrop(dataUrl, name, arr, portKey, phase, replaceIdx) {
 
 function _clCropDone(skipCropMode) {
   var modal = document.getElementById('cropModal');
-  if (!modal._clMode) return false; // not a cleaning crop, let shared.js handle
+  if (!modal._clMode) return false;
   var p = modal._clPending;
   modal.style.display = 'none';
   modal._clMode = false;
 
   if (skipCropMode) {
-    // skip: store original dataUrl as-is (avoid black canvas from incomplete img load)
     _clStore(p.dataUrl, p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
     return true;
   }
 
-  // crop mode
-  var img = document.getElementById('cropImg');
-  var box = document.getElementById('cropBox');
-  var iLeft = parseInt(img.style.left)||0, iTop = parseInt(img.style.top)||0;
-  var iW = img.offsetWidth, iH = img.offsetHeight;
-  var bLeft = parseInt(box.style.left)||0, bTop = parseInt(box.style.top)||0;
-  var bW = box.offsetWidth, bH = box.offsetHeight;
-  var scale = img.naturalWidth / iW;
-  var sx = (bLeft-iLeft)*scale, sy = (bTop-iTop)*scale;
-  var sw = bW*scale, sh = bH*scale;
-  var outW = parseInt(document.getElementById('cropOutW').value)||Math.round(sw);
-  var outH = parseInt(document.getElementById('cropOutH').value)||Math.round(sh);
-  var canvas = document.createElement('canvas');
-  canvas.width = outW; canvas.height = outH;
-  var ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, outW, outH);
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
-  _clStore(canvas.toDataURL('image/jpeg', 0.85), p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
+  // Crop: read geometry from DOM, then redraw from p.dataUrl via fresh Image
+  var cropImgEl = document.getElementById('cropImg');
+  var box       = document.getElementById('cropBox');
+  var iLeft = parseFloat(cropImgEl.style.left) || 0;
+  var iTop  = parseFloat(cropImgEl.style.top)  || 0;
+  var iW    = cropImgEl.offsetWidth  || 1;
+  var iH    = cropImgEl.offsetHeight || 1;
+  var bLeft = parseFloat(box.style.left) || 0;
+  var bTop  = parseFloat(box.style.top)  || 0;
+  var bW    = box.offsetWidth  || iW;
+  var bH    = box.offsetHeight || iH;
+  var outW  = parseInt(document.getElementById('cropOutW').value) || bW;
+  var outH  = parseInt(document.getElementById('cropOutH').value) || bH;
+
+  // Load fresh Image from original dataUrl to guarantee pixels are available
+  var freshImg = new Image();
+  freshImg.onload = function() {
+    var scaleX = freshImg.naturalWidth  / iW;
+    var scaleY = freshImg.naturalHeight / iH;
+    var sx = (bLeft - iLeft) * scaleX;
+    var sy = (bTop  - iTop)  * scaleY;
+    var sw = bW * scaleX;
+    var sh = bH * scaleY;
+    // Clamp to image bounds
+    sx = Math.max(0, sx); sy = Math.max(0, sy);
+    sw = Math.min(sw, freshImg.naturalWidth  - sx);
+    sh = Math.min(sh, freshImg.naturalHeight - sy);
+    var canvas = document.createElement('canvas');
+    canvas.width  = Math.max(1, outW);
+    canvas.height = Math.max(1, outH);
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(freshImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    _clStore(canvas.toDataURL('image/jpeg', 0.85), p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
+  };
+  freshImg.onerror = function() {
+    // fallback: store original
+    _clStore(p.dataUrl, p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
+  };
+  freshImg.src = p.dataUrl;
   return true;
 }
 
