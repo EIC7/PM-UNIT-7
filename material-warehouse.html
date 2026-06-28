@@ -1585,8 +1585,14 @@ function loadAssets() {
 // Internal filter: single or= clause
 var _INTERNAL_INCLUDE  = 'or=(lokasi_barang.in.(White%20Container,A55),lokasi_barang.like.INT:*)';
 
-function _buildSearchOr(enc, cols) {
-  return '&or=(' + cols.map(function(c){ return c + '.ilike.' + enc; }).join(',') + ')';
+// Multi-keyword AND search: split by whitespace, each token generates one or= param.
+// PostgREST ANDs multiple or= params → "breaker MA25" finds rows with BOTH words.
+function _buildSearchOr(q, cols) {
+  var tokens = q.trim().split(/\s+/).filter(Boolean);
+  return tokens.map(function(tok) {
+    var enc = encodeURIComponent('*' + tok + '*');
+    return '&or=(' + cols.map(function(c){ return c + '.ilike.' + enc; }).join(',') + ')';
+  }).join('');
 }
 
 function loadAssetsPage(page, q) {
@@ -1598,8 +1604,7 @@ function loadAssetsPage(page, q) {
            + '&lokasi_barang=not.in.(White%20Container,A55)'
            + '&lokasi_barang=not.like.INT:*';
   if (q) {
-    var enc = encodeURIComponent('*' + q + '*');
-    path += _buildSearchOr(enc, ['nomor','nama','jenis','lokasi_barang','lokasi','deskripsi']);
+    path += _buildSearchOr(q, ['nomor','nama','jenis','lokasi_barang','lokasi','deskripsi']);
   }
   supaFetchPaged(path)
     .then(function(res) {
@@ -1624,8 +1629,7 @@ function loadInternalPage(page, q) {
   var path = ASSET_TABLE + '?select=*&order=created_at.desc&limit=' + INT_PER_PAGE + '&offset=' + offset
            + '&' + _INTERNAL_INCLUDE;
   if (q) {
-    var enc = encodeURIComponent('*' + q + '*');
-    path += _buildSearchOr(enc, ['nomor','nama','jenis','lokasi','deskripsi']);
+    path += _buildSearchOr(q, ['nomor','nama','jenis','lokasi','deskripsi']);
   }
   supaFetchPaged(path)
     .then(function(res) {
@@ -2525,8 +2529,7 @@ function _doAmbilSearch() {
 
   var path = ASSET_TABLE + '?select=*&order=nomor.asc&limit=100&' + _INTERNAL_INCLUDE;
   if (q) {
-    var enc = encodeURIComponent('*' + q + '*');
-    path += '&or=(nomor.ilike.'+enc+',nama.ilike.'+enc+')';
+    path += _buildSearchOr(q, ['nomor','nama']);
   }
 
   supaFetch('GET', path).then(function(data) {
@@ -2702,8 +2705,7 @@ function loadHistoryPage(page, q) {
   var offset = (page - 1) * HIST_PER_PAGE;
   var path = AMBIL_TABLE + '?select=*&order=tanggal.desc&limit=' + HIST_PER_PAGE + '&offset=' + offset;
   if (q) {
-    var enc = encodeURIComponent('*' + q + '*');
-    path += '&or=(nomor.ilike.'+enc+',nama.ilike.'+enc+',pengambil.ilike.'+enc+',keperluan.ilike.'+enc+')';
+    path += _buildSearchOr(q, ['nomor','nama','pengambil','keperluan']);
   }
   supaFetchPaged(path)
     .then(function(res) {
