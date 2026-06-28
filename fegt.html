@@ -928,148 +928,26 @@ function clHandleDrop(e, portKey, phase) {
 }
 
 function clHandleFiles(files, portKey, phase) {
+  var side = portKey + '_' + phase;
   Array.from(files).forEach(function(file) {
-    var arr = cleaningImages[portKey][phase];
-    // Read file directly as dataUrl — avoids black canvas from fileToJpegDataUrl
-    var reader = new FileReader();
-    reader.onload = function(ev) {
-      var dataUrl = ev.target.result;
+    if (!isImageFile(file)) {
+      var r = new FileReader();
+      r.onload = function(ev){ cleaningImages[portKey][phase].push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''}); clRenderPreviews(side); };
+      r.readAsDataURL(file); return;
+    }
+    fileToJpegDataUrl(file, function(dataUrl){
       if (!dataUrl) return;
-      var name = file.name.replace(/\.[^.]+$/, '.jpg');
-      _clOpenCrop(dataUrl, name, arr, portKey, phase, -1);
-    };
-    reader.onerror = function() { alert('Gagal membaca file: ' + file.name); };
-    reader.readAsDataURL(file);
+      var name = file.name.replace(/\.[^.]+$/,'.jpg');
+      imgOpenCropper(dataUrl, name, 'image/jpeg', cleaningImages[portKey][phase], side, 'cl', -1);
+    });
   });
 }
 
-function _clOpenCrop(dataUrl, name, arr, portKey, phase, replaceIdx) {
-  var modal = document.getElementById('cropModal');
-  var cropImg = document.getElementById('cropImg');
-  // Store cleaning-specific callback on modal
-  modal._clPending = {dataUrl:dataUrl, name:name, arr:arr, portKey:portKey, phase:phase, replaceIdx:replaceIdx};
-  modal._clMode = true;
-
-  cropImg.onload = null;
-  cropImg.onerror = null;
-  function clInitBox() {
-    var box = document.getElementById('cropBox');
-    var wrap = document.getElementById('cropWrap');
-    var iw = cropImg.naturalWidth, ih = cropImg.naturalHeight;
-    if (!iw || !ih) { iw = 800; ih = 600; }
-    var ww = wrap.clientWidth || 320, wh = wrap.clientHeight || 280;
-    var scale = Math.min(ww/iw, wh/ih, 1);
-    var dw = iw*scale, dh = ih*scale;
-    cropImg.style.width = dw+'px'; cropImg.style.height = dh+'px';
-    cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
-    box.style.left = cropImg.style.left; box.style.top = cropImg.style.top;
-    box.style.width = dw+'px'; box.style.height = dh+'px';
-    document.getElementById('cropOutW').value = iw;
-    document.getElementById('cropOutH').value = ih;
-    document.getElementById('cropNatSize').textContent = iw + ' x ' + ih + ' px';
-    if (typeof initDragCrop === 'function') initDragCrop(box, wrap);
-  }
-  cropImg.onload = function() { clInitBox(); };
-  cropImg.onerror = function() {
-    modal.style.display = 'none';
-    modal._clMode = false;
-    _clStore(dataUrl, name, arr, portKey, phase, replaceIdx);
-  };
-  modal.style.display = 'flex';
-  cropImg.src = dataUrl;
-  if (cropImg.complete && cropImg.naturalWidth) { clInitBox(); }
-}
-
-function _clCropDone(skipCropMode) {
-  var modal = document.getElementById('cropModal');
-  if (!modal._clMode) return false;
-  var p = modal._clPending;
-  modal.style.display = 'none';
-  modal._clMode = false;
-
-  if (skipCropMode) {
-    _clStore(p.dataUrl, p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
-    return true;
-  }
-
-  // Crop: read geometry from DOM, then redraw from p.dataUrl via fresh Image
-  var cropImgEl = document.getElementById('cropImg');
-  var box       = document.getElementById('cropBox');
-  var iLeft = parseFloat(cropImgEl.style.left) || 0;
-  var iTop  = parseFloat(cropImgEl.style.top)  || 0;
-  var iW    = cropImgEl.offsetWidth  || 1;
-  var iH    = cropImgEl.offsetHeight || 1;
-  var bLeft = parseFloat(box.style.left) || 0;
-  var bTop  = parseFloat(box.style.top)  || 0;
-  var bW    = box.offsetWidth  || iW;
-  var bH    = box.offsetHeight || iH;
-  var outW  = parseInt(document.getElementById('cropOutW').value) || bW;
-  var outH  = parseInt(document.getElementById('cropOutH').value) || bH;
-
-  // Load fresh Image from original dataUrl to guarantee pixels are available
-  var freshImg = new Image();
-  freshImg.onload = function() {
-    var scaleX = freshImg.naturalWidth  / iW;
-    var scaleY = freshImg.naturalHeight / iH;
-    var sx = (bLeft - iLeft) * scaleX;
-    var sy = (bTop  - iTop)  * scaleY;
-    var sw = bW * scaleX;
-    var sh = bH * scaleY;
-    // Clamp to image bounds
-    sx = Math.max(0, sx); sy = Math.max(0, sy);
-    sw = Math.min(sw, freshImg.naturalWidth  - sx);
-    sh = Math.min(sh, freshImg.naturalHeight - sy);
-    var canvas = document.createElement('canvas');
-    canvas.width  = Math.max(1, outW);
-    canvas.height = Math.max(1, outH);
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(freshImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    _clStore(canvas.toDataURL('image/jpeg', 0.85), p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
-  };
-  freshImg.onerror = function() {
-    // fallback: store original
-    _clStore(p.dataUrl, p.name, p.arr, p.portKey, p.phase, p.replaceIdx);
-  };
-  freshImg.src = p.dataUrl;
-  return true;
-}
-
-function _clStore(dataUrl, name, arr, portKey, phase, replaceIdx) {
-  var caption = '';
-  if (replaceIdx >= 0 && arr[replaceIdx]) caption = arr[replaceIdx].caption || '';
-  if (replaceIdx >= 0) arr.splice(replaceIdx, 1);
-
-  function doStore(url) {
-    arr.push({name:name.replace(/\.[^.]+$/,'.jpg'), dataUrl:url, type:'image/jpeg', caption:caption});
-    clRenderPreviews(portKey, phase);
-  }
-
-  // Check size — compress only if over 1MB total
-  var MAX = 1024 * 1024;
-  var currentTotal = arr.reduce(function(a,im){return a+(im.dataUrl?im.dataUrl.length*0.75:0);},0);
-  var newSize = dataUrl.length * 0.75;
-  if (currentTotal + newSize <= MAX) {
-    doStore(dataUrl);
-    return;
-  }
-
-  // Need to compress — draw via Image onload to get real pixels
-  var imgEl = new Image();
-  imgEl.onload = function() {
-    var factor = Math.sqrt(MAX / (currentTotal + newSize));
-    var c = document.createElement('canvas');
-    c.width  = Math.max(100, Math.floor(imgEl.naturalWidth  * factor));
-    c.height = Math.max(100, Math.floor(imgEl.naturalHeight * factor));
-    var ctx = c.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, c.width, c.height);
-    ctx.drawImage(imgEl, 0, 0, c.width, c.height);
-    doStore(c.toDataURL('image/jpeg', 0.75));
-  };
-  imgEl.onerror = function() { doStore(dataUrl); }; // fallback: store as-is
-  imgEl.src = dataUrl;
+function clReEdit(portKey, phase, idx) {
+  var img = cleaningImages[portKey][phase][idx];
+  if (!img) return;
+  var side = portKey + '_' + phase;
+  imgOpenCropper(img.dataUrl, img.name, img.type, cleaningImages[portKey][phase], side, 'cl', idx);
 }
 
 function clRenderPreviews(portKey, phase) {
@@ -1094,13 +972,14 @@ function clRenderPreviews(portKey, phase) {
     wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px;vertical-align:top';
     var isImg = IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
     var safe = function(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+    var side = portKey+'_'+phase;
+    var fallback = '<span style=&quot;font-size:10px;color:#c0392b;padding:6px;text-align:center;line-height:1.35&quot;>Preview gagal<br>upload ulang</span>';
+    var thumbStyle = 'width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center';
     var thumb = isImg
-      ? '<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center">'
-          +'<img src="'+safe(img.dataUrl)+'" alt="" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="clReEdit(\''+portKey+'\',\''+phase+'\','+idx+')" title="Klik crop ulang">'
-        +'</div>'
+      ? '<div style="'+thumbStyle+'"><img src="'+safe(img.dataUrl)+'" alt="" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="imgOpenCropper(cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].dataUrl,cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].name,cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].type,cleaningImages[\''+portKey+'\'][\''+phase+'\'],\''+side+'\',\'cl\','+idx+')" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\''+fallback+'\'" title="Klik untuk crop ulang"></div>'
       : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
     var cropBtn = isImg
-      ? '<button onclick="clReEdit(\''+portKey+'\',\''+phase+'\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
+      ? '<button onclick="imgOpenCropper(cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].dataUrl,cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].name,cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].type,cleaningImages[\''+portKey+'\'][\''+phase+'\'],\''+side+'\',\'cl\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
       : '';
     wrap.innerHTML = thumb + cropBtn
       + '<button onclick="clRemoveImg(\''+portKey+'\',\''+phase+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
@@ -1122,14 +1001,9 @@ function clSyncCaptions(portKey, phase) {
   });
 }
 
-function clReEdit(portKey, phase, idx) {
-  var img = cleaningImages[portKey][phase][idx];
-  _clOpenCrop(img.dataUrl, img.name, cleaningImages[portKey][phase], portKey, phase, idx);
-}
-
 function clRemoveImg(portKey, phase, idx) {
   cleaningImages[portKey][phase].splice(idx,1);
-  clRenderPreviews(portKey, phase);
+  clRenderPreviews(portKey+'_'+phase);
 }
 
 /* ── dbCollectData untuk modul FEGT ── */
@@ -1283,8 +1157,8 @@ initFegtBackground();
     </div>
     <div style="padding:10px 16px;background:#172536;border-top:1px solid #2b4563;display:flex;gap:8px;justify-content:flex-end">
       <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">&#8634; Reset</button>
-      <button onclick="if(!_clCropDone(true)) skipCrop()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Lewati</button>
-      <button onclick="if(!_clCropDone(false)) cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">&#10003; Simpan</button>
+      <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #243b55;border-radius:6px;background:transparent;color:#9bc4ea;cursor:pointer;font-size:12px">Lewati</button>
+      <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">&#10003; Simpan</button>
     </div>
   </div>
 </div>
