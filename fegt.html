@@ -771,8 +771,8 @@ function downloadPdf(){
       var lkOk=0,lkFail=0,lkNa=0;
       leakResults.forEach(function(r){ if(r.status==='na')lkNa++; else if(r.status==='ok')lkOk++; else lkFail++; });
 
-      secHeader('DATA PEMBACAAN LEAK DETECTION (9 PATH)');
-      statBox([{label:'Total',val:'9'},{label:'OK',val:String(lkOk)},{label:'Fail',val:String(lkFail)},{label:'N/A',val:String(lkNa)}]);
+      secHeader('DATA PEMBACAAN LEAK DETECTION (10 PATH)');
+      statBox([{label:'Total',val:'10'},{label:'OK',val:String(lkOk)},{label:'Fail',val:String(lkFail)},{label:'N/A',val:String(lkNa)}]);
 
       doc.autoTable({
         startY: y,
@@ -797,6 +797,82 @@ function downloadPdf(){
       var lkIssues = leakResults.filter(function(r){return r.status!=='ok'&&r.status!=='na';});
       var ldLines  = lkIssues.length===0 ? ['KESIMPULAN LD: Tidak Ada Indikasi Kebocoran','Semua path aktif terbaca normal.'] : ['KESIMPULAN LD: Terdeteksi Indikasi Kebocoran','Path bermasalah: '+lkIssues.map(function(r){return 'Path-'+r.id;}).join(', ')];
       conclusionBox(ldLines, lkIssues.length===0);
+
+      // ─────── BAGIAN 3 — CLEANING HOLE FEGT ───────
+      var hasCleaningPhotos = false;
+      CLEANING_PORTS.forEach(function(p) {
+        var pk = 'port'+p.id;
+        if ((cleaningImages[pk].before.length + cleaningImages[pk].after.length) > 0) hasCleaningPhotos = true;
+      });
+
+      if (hasCleaningPhotos) {
+        checkPage(20);
+        secHeader('BAGIAN 3 — CLEANING HOLE FEGT (FOTO DOKUMENTASI)');
+
+        var imgW = 76, imgH = 57, gap = 6;
+        // 2 kolom: Before (kiri) dan After (kanan)
+        var colW = (contentW - gap) / 2;
+
+        CLEANING_PORTS.forEach(function(p) {
+          var pk = 'port'+p.id;
+          var befImgs = cleaningImages[pk].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
+          var aftImgs = cleaningImages[pk].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
+          if (!befImgs.length && !aftImgs.length) return;
+
+          // Port header
+          checkPage(14);
+          doc.setFillColor(60, 90, 70);
+          doc.rect(marginX, y, contentW, 7, 'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
+          doc.text('Port '+p.id+'  |  '+p.tag, marginX+4, y+5);
+          y += 10;
+
+          // Sub-header Before | After
+          checkPage(7);
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160, 90, 20);
+          doc.text('BEFORE CLEANING', marginX+3, y);
+          doc.setTextColor(15, 110, 90);
+          doc.text('AFTER CLEANING', marginX + colW + gap + 3, y);
+          y += 5;
+
+          // Foto Before (kiri) dan After (kanan) side-by-side
+          var maxRows = Math.max(Math.ceil(befImgs.length / 2), Math.ceil(aftImgs.length / 2));
+          var perRow = 2;
+
+          function drawPhotoGroup(imgs, startX) {
+            var lx = startX, ly = y;
+            var fw = (colW - gap/2) / perRow - 2; // foto width dalam kolom
+            var fh = fw * 0.75;                    // 4:3 ratio
+            imgs.forEach(function(img, i) {
+              if (ly + fh + 10 > ph - marginBottom) {
+                doc.addPage(); drawBg(doc, pw, ph); ly = marginTop; lx = startX;
+              }
+              try { doc.addImage(img.dataUrl, 'JPEG', lx, ly, fw, fh); } catch(e) {
+                doc.setDrawColor(200,200,200); doc.rect(lx, ly, fw, fh, 'S');
+              }
+              var cap = safe(img.caption || '');
+              if (cap) {
+                doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
+                doc.text(doc.splitTextToSize(cap, fw), lx, ly + fh + 2.5);
+              }
+              lx += fw + 2;
+              if ((i+1) % perRow === 0) { lx = startX; ly += fh + 9; }
+            });
+            if (imgs.length % perRow !== 0) ly += fh + 9;
+            return ly;
+          }
+
+          var yAfterBef = drawPhotoGroup(befImgs, marginX + 2);
+          var yAfterAft = drawPhotoGroup(aftImgs, marginX + colW + gap);
+          y = Math.max(yAfterBef, yAfterAft) + 4;
+
+          // Separator antar port
+          checkPage(5);
+          doc.setDrawColor(180, 210, 185); doc.setLineWidth(0.3);
+          doc.line(marginX, y, marginX + contentW, y);
+          y += 5;
+        });
+      }
 
       // Footer area dibiarkan kosong — mengandalkan background template (sama seperti opacity)
       var nPages = doc.internal.getNumberOfPages();
