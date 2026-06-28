@@ -806,7 +806,9 @@ function downloadPdf(){
       });
 
       if (hasCleaningPhotos) {
-        checkPage(20);
+        doc.addPage();
+        drawBg(doc, pw, ph);
+        y = marginTop;
         secHeader('BAGIAN 3 — CLEANING HOLE FEGT (FOTO DOKUMENTASI)');
 
         var imgW = 76, imgH = 57, gap = 6;
