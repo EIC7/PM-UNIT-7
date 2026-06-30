@@ -541,7 +541,7 @@ function fmDownloadPdf() {
         head: [['No','Step of Work','Criteria','v','101','103','201','203','Result']],
         body: tableRows,
         theme: 'grid',
-        margin: {left:marginX, right:marginX},
+        margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:7.5, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:7, textColor:[20,30,25], font:'helvetica', cellPadding:2},
         columnStyles: {
@@ -575,7 +575,7 @@ function fmDownloadPdf() {
         head: [['Tahapan','7FC-FT-101','7FC-FT-103','7FC-FT-201','7FC-FT-203']],
         body: readRows,
         theme: 'grid',
-        margin: {left:marginX, right:marginX},
+        margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:8, textColor:[20,30,25], font:'helvetica', cellPadding:2.5, halign:'center'},
         columnStyles: {0:{cellWidth:42, halign:'left'}, 1:{cellWidth:32},2:{cellWidth:32},3:{cellWidth:32},4:{cellWidth:32}},
@@ -593,7 +593,7 @@ function fmDownloadPdf() {
         head: [['Parameter','7FC-FT-101','7FC-FT-103','7FC-FT-201','7FC-FT-203','Satuan']],
         body: paramRows,
         theme: 'grid',
-        margin: {left:marginX, right:marginX},
+        margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:8, textColor:[20,30,25], font:'helvetica', cellPadding:2.5, halign:'center'},
         columnStyles: {0:{cellWidth:42, halign:'left'}, 1:{cellWidth:27},2:{cellWidth:27},3:{cellWidth:27},4:{cellWidth:27},5:{cellWidth:20}},
@@ -618,7 +618,7 @@ function fmDownloadPdf() {
       });
       doc.autoTable({
         startY: y,
-        margin: {left:marginX+38, right:marginX},
+        margin: {top:marginTop, bottom:marginBottom, left:marginX+38, right:marginX},
         tableWidth: contentW-38,
         head: [['Panjang','7FC-FT-101','7FC-FT-103','7FC-FT-201','7FC-FT-203']],
         body: dimRows,
