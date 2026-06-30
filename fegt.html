@@ -550,6 +550,11 @@ function runDiagnosis(){
   }
   var faulty=Object.entries(diagResults).filter(function(e){return e[1].verdict==='error';}).map(function(e){return e[0];});
   var suspect=Object.entries(diagResults).filter(function(e){return e[1].verdict==='warning';}).map(function(e){return e[0];});
+
+  // ─────── ANALISIS FREKUENSI SENSOR PADA PATH FAIL/HARD FAIL ───────
+  var failFreq = computeFailFrequency(pathData);
+  var failRecommendations = buildFailRecommendations(failFreq);
+
   var box=document.getElementById('conclusionBox');
   var title=box.querySelector('.conc-title');
   var text=document.getElementById('conclusionText');
@@ -561,11 +566,41 @@ function runDiagnosis(){
     var html='';
     if(faulty.length>0) html+='<strong>Sensor kemungkinan bermasalah:</strong> '+faulty.map(function(s){return '<strong>Sensor '+s+'</strong>';}).join(', ')+'<br>';
     if(suspect.length>0) html+='<strong>Sensor perlu pengecekan:</strong> '+suspect.map(function(s){return 'Sensor '+s;}).join(', ');
+    if(failRecommendations.length>0){
+      html+='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,0,0,.15)">'+
+        '<strong>&#128295; Rekomendasi Pengecekan Path (berdasarkan frekuensi kemunculan sensor pada Data Fail/Hard Fail):</strong>'+
+        '<ol style="margin:6px 0 0 18px;padding:0">'+
+          failRecommendations.map(function(r){return '<li>Cek Path '+r.sensor+' pada solenoid valve, sensor, atau IA Supply <span style="color:var(--text3);font-size:11px">(muncul '+r.count+'x pada path fail)</span></li>';}).join('')+
+        '</ol>'+
+      '</div>';
+    }
     text.innerHTML=html;
   }
   updateSvg();
   document.getElementById('btnPdf').disabled=false;
   document.getElementById('btnSave').disabled=false;
+}
+
+/* ─── Hitung frekuensi sensor (Tx & Rx) yang muncul pada path Data Fail / Hard Fail ─── */
+function computeFailFrequency(pData) {
+  var freq = {}; // {sensorNumber: count}
+  pData.forEach(function(p) {
+    var eff = effectiveStatus(p);
+    if (eff === 'fail' || eff === 'hard') {
+      freq[p.tx] = (freq[p.tx] || 0) + 1;
+      freq[p.rx] = (freq[p.rx] || 0) + 1;
+    }
+  });
+  return freq;
+}
+
+/* ─── Bangun daftar rekomendasi: sensor yang muncul >= 2 kali pada path fail, urut dari paling sering ─── */
+function buildFailRecommendations(freq) {
+  var entries = Object.entries(freq)
+    .filter(function(e){ return e[1] >= 2; })
+    .sort(function(a,b){ return b[1]-a[1]; })
+    .map(function(e){ return {sensor: e[0], count: e[1]}; });
+  return entries;
 }
 
 // ─────── BACKGROUND IMAGE (metode dari opacity.html) ───────
@@ -767,6 +802,12 @@ function downloadPdf(){
       var fEgtOk  = faulty.length===0 && suspect.length===0;
       var fEgtLines= fEgtOk ? ['KESIMPULAN FEGT: Semua Sensor Operasional','Tidak ditemukan indikasi kerusakan sensor.'] : ['KESIMPULAN FEGT: Terdeteksi Indikasi Kerusakan'];
       if(!fEgtOk){ if(faulty.length) fEgtLines.push('Sensor bermasalah: '+faulty.join(', ')); if(suspect.length) fEgtLines.push('Sensor perlu cek: '+suspect.join(', ')); }
+      var pdfFailFreq = computeFailFrequency(pathData);
+      var pdfFailRecs = buildFailRecommendations(pdfFailFreq);
+      if (pdfFailRecs.length > 0) {
+        fEgtLines.push('REKOMENDASI PENGECEKAN PATH:');
+        pdfFailRecs.forEach(function(r){ fEgtLines.push('- Cek Path '+r.sensor+' pada solenoid valve, sensor, atau IA Supply ('+r.count+'x pada path fail)'); });
+      }
       conclusionBox(fEgtLines, fEgtOk);
 
       // ─────── LEAK DETECTION SECTION ───────
