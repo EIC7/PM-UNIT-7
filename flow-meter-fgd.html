@@ -15,12 +15,12 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .topbar-logo{color:#b7d8f5}.topbar-sep{background:#3f668a}.topbar-sub,.topbar-back,.topbar-time{color:#8fb7dc}
 .topbar-back{border-color:#315d86;background:rgba(29,116,199,0.06)}.topbar-back:hover{color:#b7d8f5;border-color:#1d74c7;background:rgba(29,116,199,0.12)}
 .badge{background:#1d74c722;color:var(--ok);border-color:#1d74c744}
-.fm-locked{background:#fff7d6 !important;color:#7a6300;font-weight:600;cursor:not-allowed}
-.fm-editable{background:#e9f9ee !important;color:#14532d;font-weight:600}
+.fm-locked{background:#ffe600 !important;color:#5a4a00;font-weight:700;cursor:not-allowed;border:1px solid #d4b800 !important}
+.fm-editable{background:#92d050 !important;color:#0c2e0c;font-weight:700;border:1px solid #6fae34 !important}
 .fm-unit{font-size:10px;color:var(--text3);margin-left:4px;white-space:nowrap}
 .fm-dim-table td,.fm-dim-table th{text-align:center}
 .fm-param-table td,.fm-param-table th{text-align:center}
-.fm-param-table input[type=number],.fm-dim-table input[type=number]{width:70px;text-align:center}
+.fm-param-table input[type=number],.fm-dim-table input[type=number]{width:88px;text-align:center;padding:6px 4px;box-sizing:border-box}
 .fm-reading-table input[type=number]{width:90px;text-align:center}
 </style>
 </head>
@@ -126,8 +126,8 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       </table>
     </div>
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--text3)">
-      <div><span style="display:inline-block;width:12px;height:12px;background:#fff7d6;border:1px solid #d9c46b;vertical-align:middle;margin-right:5px"></span>Background Kuning = Parameter Jangan Dirubah</div>
-      <div><span style="display:inline-block;width:12px;height:12px;background:#e9f9ee;border:1px solid #7fc99a;vertical-align:middle;margin-right:5px"></span>Background Hijau = Parameter Bisa Dirubah</div>
+      <div><span style="display:inline-block;width:12px;height:12px;background:#ffe600;border:1px solid #d4b800;vertical-align:middle;margin-right:5px"></span>Background Kuning = Parameter Jangan Dirubah</div>
+      <div><span style="display:inline-block;width:12px;height:12px;background:#92d050;border:1px solid #6fae34;vertical-align:middle;margin-right:5px"></span>Background Hijau = Parameter Bisa Dirubah</div>
     </div>
   </div>
 
@@ -228,7 +228,7 @@ var FM_CHECKS = [
 /* Parameter referensi — { id, label, unit, locked, values:{101,103,201,203} } */
 var FM_PARAMS = [
   {id:'ppb',  label:'Probe Pipe Bore',   unit:'mm',   locked:true,  values:{101:254,    103:1066.8, 201:254,    203:1066.8}},
-  {id:'insf', label:'Insertion Factor',  unit:'',     locked:true,  values:{101:1.18,   103:2.45,   201:1.6,    203:1.2}},
+  {id:'insf', label:'Insertion Factor',  unit:'',     locked:false, values:{101:1.18,   103:2.45,   201:1.6,    203:1.2}},
   {id:'pf',   label:'Profile Factor',    unit:'',     locked:false, values:{101:1,      103:1.2,    201:1,      203:1}},
   {id:'qmax', label:'Qmax',              unit:'m3/h', locked:true,  values:{101:1000,   103:10000,  201:1000,   203:10000}},
   {id:'damp', label:'Damping',           unit:'s',    locked:true,  values:{101:60,     103:60,     201:60,     203:60}},
@@ -464,7 +464,7 @@ function fmDownloadPdf() {
       var pw = doc.internal.pageSize.getWidth();
       var ph = doc.internal.pageSize.getHeight();
 
-      var marginX = 20, marginTop = 20, marginBottom = 20;
+      var marginX = 30, marginTop = 30, marginBottom = 30;
       var contentW = pw - marginX*2;
 
       var now = new Date();
@@ -601,7 +601,7 @@ function fmDownloadPdf() {
           if (data.section==='body') {
             var p = FM_PARAMS[data.row.index];
             if (p && data.column.index>=1 && data.column.index<=4) {
-              data.cell.styles.fillColor = p.locked ? [255,247,214] : [233,249,238];
+              data.cell.styles.fillColor = p.locked ? [255,230,0] : [146,208,80];
             }
           }
         },
