@@ -42,8 +42,8 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       <div class="meta-field">
         <label>Jenis Pekerjaan</label>
         <select id="fmJenis">
-          <option value="PM 1 Yearly Inspection">PM 1 Yearly Inspection</option>
-          <option value="Cleaning &amp; Correction by Defect">Cleaning &amp; Correction by Defect</option>
+          <option value="PM 1 Yearly Inspection &amp; Cleaning">PM 1 Yearly Inspection &amp; Cleaning</option>
+          <option value="Correction Maintenance By Defect">Correction Maintenance By Defect</option>
         </select>
       </div>
       <div class="meta-field"><label>Date / Time</label><input type="date" id="fmDate"></div>
@@ -444,7 +444,7 @@ function fmReset() {
   var allIds = ['fmAllCheck']; FM_ASSETS.forEach(function(a){ allIds.push('fmAll'+a.key); });
   allIds.forEach(function(id){ var e=document.getElementById(id); if(e) e.checked=false; });
   ['fmDate','fmPIC','fmWO'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
-  document.getElementById('fmJenis').value = 'PM 1 Yearly Inspection';
+  document.getElementById('fmJenis').value = 'PM 1 Yearly Inspection & Cleaning';
   FM_ASSETS.forEach(function(a){ document.getElementById('fmAsset'+a.key).value = a.code; document.getElementById('fmNote'+a.key).value=''; });
   ['fmRead_before_','fmRead_after_'].forEach(function(p){ FM_ASSETS.forEach(function(a){ var e=document.getElementById(p+a.key); if(e) e.value=''; }); });
   FM_PARAMS.forEach(function(p){ FM_ASSETS.forEach(function(a){ var e=document.getElementById('fmParam_'+p.id+'_'+a.key); if(e) e.value=p.values[a.key]; }); });
@@ -464,7 +464,7 @@ function fmDownloadPdf() {
       var pw = doc.internal.pageSize.getWidth();
       var ph = doc.internal.pageSize.getHeight();
 
-      var marginX = 30, marginTop = 30, marginBottom = 30;
+      var marginX = 25, marginTop = 25, marginBottom = 25;
       var contentW = pw - marginX*2;
 
       var now = new Date();
