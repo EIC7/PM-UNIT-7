@@ -1263,35 +1263,30 @@ function ldHandleDrop(e, portKey, phase) {
 function ldHandleFiles(files, portKey, phase) {
   var side = portKey + '_' + phase;
   Array.from(files).forEach(function(file) {
-    // Semua file: langsung baca sebagai dataURL, bypass cropper, render langsung
-    var r = new FileReader();
-    r.onload = function(ev) {
-      var dataUrl = ev.target.result;
-      var mimeType = file.type || 'image/jpeg';
-      var name = file.name;
-      // Jika gambar, compress ke JPEG via canvas
-      if (mimeType.startsWith('image/')) {
-        var img = new Image();
-        img.onload = function() {
-          var maxW = 1200, maxH = 900;
-          var w = img.width, h = img.height;
-          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-          if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
-          var canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          var compressed = canvas.toDataURL('image/jpeg', 0.80);
-          ldCleaningImages[portKey][phase].push({name: name.replace(/\.[^.]+$/, '.jpg'), dataUrl: compressed, type: 'image/jpeg', caption: ''});
-          ldRenderPreviews(side);
-        };
-        img.src = dataUrl;
-      } else {
-        ldCleaningImages[portKey][phase].push({name: name, dataUrl: dataUrl, type: mimeType, caption: ''});
+    if (!isImageFile(file)) {
+      // Non-gambar (mis. PDF): baca langsung sebagai dataURL, tidak lewat cropper
+      var r = new FileReader();
+      r.onload = function(ev){
+        ldCleaningImages[portKey][phase].push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''});
         ldRenderPreviews(side);
-      }
-    };
-    r.readAsDataURL(file);
+      };
+      r.readAsDataURL(file);
+      return;
+    }
+    // Gambar: konversi ke JPEG lalu buka cropper (sama seperti alur cleaning FGD)
+    fileToJpegDataUrl(file, function(dataUrl){
+      if (!dataUrl) return;
+      var name = file.name.replace(/\.[^.]+$/, '.jpg');
+      imgOpenCropper(dataUrl, name, 'image/jpeg', ldCleaningImages[portKey][phase], side, 'ld', -1);
+    });
   });
+}
+
+function ldReEdit(portKey, phase, idx) {
+  var img = ldCleaningImages[portKey][phase][idx];
+  if (!img) return;
+  var side = portKey + '_' + phase;
+  imgOpenCropper(img.dataUrl, img.name, img.type, ldCleaningImages[portKey][phase], side, 'ld', idx);
 }
 
 function ldRenderPreviews(side) {
@@ -1306,11 +1301,14 @@ function ldRenderPreviews(side) {
     var s = function(v){ return String(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
     var isImg = img.type && img.type.startsWith('image/');
     var thumb = isImg
-      ? '<img src="' + s(img.dataUrl) + '" style="width:100%;height:100%;object-fit:contain;display:block">'
+      ? '<img src="' + s(img.dataUrl) + '" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="ldReEdit(\''+portKey+'\',\''+phase+'\','+idx+')" title="Klik untuk crop ulang">'
       : '<div style="color:#aaa;font-size:18px;line-height:60px;text-align:center">&#128444;</div>';
+    var cropBtn = isImg
+      ? '<button onclick="ldReEdit(\''+portKey+'\',\''+phase+'\','+idx+')" style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:3px;font-size:8px;padding:1px 5px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
+      : '';
     return '<div style="display:flex;flex-direction:column;align-items:center;width:90px">' +
       '<div style="position:relative;width:80px;height:60px;background:#111;border-radius:4px;overflow:hidden;flex-shrink:0">' +
-        thumb +
+        thumb + cropBtn +
         '<button onclick="ldCleaningImages[\''+portKey+'\'][\''+phase+'\'].splice('+idx+',1);ldRenderPreviews(\''+side+'\')" style="position:absolute;top:2px;right:2px;background:rgba(180,0,0,0.75);color:#fff;border:none;border-radius:3px;font-size:9px;padding:1px 4px;cursor:pointer">&#10005;</button>' +
       '</div>' +
       '<input type="text" placeholder="Keterangan" value="' + s(img.caption||'') + '" ' +
