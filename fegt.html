@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
-<script src="shared.js"></script>
+<script src="shared.js?v=cl2"></script>
 <link rel="stylesheet" href="shared.css">
 </head>
 <body>
@@ -187,14 +187,6 @@
   <div class="panel" id="cleaningPanel">
     <div class="section-label">Cleaning Hole FEGT — 8 Port</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px" id="cleaningGrid">
-      <!-- built by JS -->
-    </div>
-  </div>
-
-  <!-- CLEANING HOLE LD -->
-  <div class="panel" id="ldCleaningPanel">
-    <div class="section-label">Cleaning Hole LD — 10 Port</div>
-    <div id="ldCleaningGrid" style="display:flex;flex-direction:column;gap:10px">
       <!-- built by JS -->
     </div>
   </div>
@@ -550,11 +542,6 @@ function runDiagnosis(){
   }
   var faulty=Object.entries(diagResults).filter(function(e){return e[1].verdict==='error';}).map(function(e){return e[0];});
   var suspect=Object.entries(diagResults).filter(function(e){return e[1].verdict==='warning';}).map(function(e){return e[0];});
-
-  // ─────── ANALISIS FREKUENSI SENSOR PADA PATH FAIL/HARD FAIL ───────
-  var failFreq = computeFailFrequency(pathData);
-  var failRecommendations = buildFailRecommendations(failFreq);
-
   var box=document.getElementById('conclusionBox');
   var title=box.querySelector('.conc-title');
   var text=document.getElementById('conclusionText');
@@ -566,41 +553,11 @@ function runDiagnosis(){
     var html='';
     if(faulty.length>0) html+='<strong>Sensor kemungkinan bermasalah:</strong> '+faulty.map(function(s){return '<strong>Sensor '+s+'</strong>';}).join(', ')+'<br>';
     if(suspect.length>0) html+='<strong>Sensor perlu pengecekan:</strong> '+suspect.map(function(s){return 'Sensor '+s;}).join(', ');
-    if(failRecommendations.length>0){
-      html+='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,0,0,.15)">'+
-        '<strong>&#128295; Rekomendasi Pengecekan Path (berdasarkan frekuensi kemunculan sensor pada Data Fail/Hard Fail):</strong>'+
-        '<ol style="margin:6px 0 0 18px;padding:0">'+
-          failRecommendations.map(function(r){return '<li>Cek Path '+r.sensor+' pada solenoid valve, sensor, atau IA Supply <span style="color:var(--text3);font-size:11px">(muncul '+r.count+'x pada path fail)</span></li>';}).join('')+
-        '</ol>'+
-      '</div>';
-    }
     text.innerHTML=html;
   }
   updateSvg();
   document.getElementById('btnPdf').disabled=false;
   document.getElementById('btnSave').disabled=false;
-}
-
-/* ─── Hitung frekuensi sensor (Tx & Rx) yang muncul pada path Data Fail / Hard Fail ─── */
-function computeFailFrequency(pData) {
-  var freq = {}; // {sensorNumber: count}
-  pData.forEach(function(p) {
-    var eff = effectiveStatus(p);
-    if (eff === 'fail' || eff === 'hard') {
-      freq[p.tx] = (freq[p.tx] || 0) + 1;
-      freq[p.rx] = (freq[p.rx] || 0) + 1;
-    }
-  });
-  return freq;
-}
-
-/* ─── Bangun daftar rekomendasi: sensor yang muncul >= 2 kali pada path fail, urut dari paling sering ─── */
-function buildFailRecommendations(freq) {
-  var entries = Object.entries(freq)
-    .filter(function(e){ return e[1] >= 2; })
-    .sort(function(a,b){ return b[1]-a[1]; })
-    .map(function(e){ return {sensor: e[0], count: e[1]}; });
-  return entries;
 }
 
 // ─────── BACKGROUND IMAGE (metode dari opacity.html) ───────
@@ -802,12 +759,6 @@ function downloadPdf(){
       var fEgtOk  = faulty.length===0 && suspect.length===0;
       var fEgtLines= fEgtOk ? ['KESIMPULAN FEGT: Semua Sensor Operasional','Tidak ditemukan indikasi kerusakan sensor.'] : ['KESIMPULAN FEGT: Terdeteksi Indikasi Kerusakan'];
       if(!fEgtOk){ if(faulty.length) fEgtLines.push('Sensor bermasalah: '+faulty.join(', ')); if(suspect.length) fEgtLines.push('Sensor perlu cek: '+suspect.join(', ')); }
-      var pdfFailFreq = computeFailFrequency(pathData);
-      var pdfFailRecs = buildFailRecommendations(pdfFailFreq);
-      if (pdfFailRecs.length > 0) {
-        fEgtLines.push('REKOMENDASI PENGECEKAN PATH:');
-        pdfFailRecs.forEach(function(r){ fEgtLines.push('- Cek Path '+r.sensor+' pada solenoid valve, sensor, atau IA Supply ('+r.count+'x pada path fail)'); });
-      }
       conclusionBox(fEgtLines, fEgtOk);
 
       // ─────── LEAK DETECTION SECTION ───────
@@ -855,9 +806,7 @@ function downloadPdf(){
       });
 
       if (hasCleaningPhotos) {
-        doc.addPage();
-        drawBg(doc, pw, ph);
-        y = marginTop;
+        checkPage(20);
         secHeader('BAGIAN 3 — CLEANING HOLE FEGT (FOTO DOKUMENTASI)');
 
         var imgW = 76, imgH = 57, gap = 6;
@@ -887,132 +836,39 @@ function downloadPdf(){
           y += 5;
 
           // Foto Before (kiri) dan After (kanan) side-by-side
+          var maxRows = Math.max(Math.ceil(befImgs.length / 2), Math.ceil(aftImgs.length / 2));
           var perRow = 2;
-          var fw = (colW - gap/2) / perRow - 2; // foto width dalam kolom
-          var fh = fw * 0.75;                    // 4:3 ratio
-          var xBef = marginX + 2;
-          var xAft = marginX + colW + gap;
 
-          // Gambar Before dan After secara sinkron baris per baris
-          var maxImgs = Math.max(befImgs.length, aftImgs.length);
-          var lxBef = xBef, lxAft = xAft;
-          for (var ii = 0; ii < maxImgs; ii++) {
-            // Cek page break sebelum setiap foto
-            if (y + fh + 10 > ph - marginBottom) {
-              doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
-              lxBef = xBef; lxAft = xAft;
-            }
-            // Gambar foto Before (jika ada)
-            if (ii < befImgs.length) {
-              var bImg = befImgs[ii];
-              try { doc.addImage(bImg.dataUrl, 'JPEG', lxBef, y, fw, fh); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(lxBef, y, fw, fh, 'S');
+          function drawPhotoGroup(imgs, startX) {
+            var lx = startX, ly = y;
+            var fw = (colW - gap/2) / perRow - 2; // foto width dalam kolom
+            var fh = fw * 0.75;                    // 4:3 ratio
+            imgs.forEach(function(img, i) {
+              if (ly + fh + 10 > ph - marginBottom) {
+                doc.addPage(); drawBg(doc, pw, ph); ly = marginTop; lx = startX;
               }
-              var bcap = safe(bImg.caption || '');
-              if (bcap) {
+              try { doc.addImage(img.dataUrl, 'JPEG', lx, ly, fw, fh); } catch(e) {
+                doc.setDrawColor(200,200,200); doc.rect(lx, ly, fw, fh, 'S');
+              }
+              var cap = safe(img.caption || '');
+              if (cap) {
                 doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
-                doc.text(doc.splitTextToSize(bcap, fw), lxBef, y + fh + 2.5);
+                doc.text(doc.splitTextToSize(cap, fw), lx, ly + fh + 2.5);
               }
-            }
-            // Gambar foto After (jika ada)
-            if (ii < aftImgs.length) {
-              var aImg = aftImgs[ii];
-              try { doc.addImage(aImg.dataUrl, 'JPEG', lxAft, y, fw, fh); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(lxAft, y, fw, fh, 'S');
-              }
-              var acap = safe(aImg.caption || '');
-              if (acap) {
-                doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
-                doc.text(doc.splitTextToSize(acap, fw), lxAft, y + fh + 2.5);
-              }
-            }
-            lxBef += fw + 2; lxAft += fw + 2;
-            if ((ii + 1) % perRow === 0) {
-              lxBef = xBef; lxAft = xAft;
-              y += fh + 9;
-            }
+              lx += fw + 2;
+              if ((i+1) % perRow === 0) { lx = startX; ly += fh + 9; }
+            });
+            if (imgs.length % perRow !== 0) ly += fh + 9;
+            return ly;
           }
-          if (maxImgs % perRow !== 0) y += fh + 9;
+
+          var yAfterBef = drawPhotoGroup(befImgs, marginX + 2);
+          var yAfterAft = drawPhotoGroup(aftImgs, marginX + colW + gap);
+          y = Math.max(yAfterBef, yAfterAft) + 4;
 
           // Separator antar port
           checkPage(5);
           doc.setDrawColor(180, 210, 185); doc.setLineWidth(0.3);
-          doc.line(marginX, y, marginX + contentW, y);
-          y += 5;
-        });
-      }
-
-      // ─────── BAGIAN 4 — CLEANING HOLE LD ───────
-      var hasLdPhotos = false;
-      LD_CLEANING_PORTS.forEach(function(p) {
-        var pk = 'ldport'+p.id;
-        if (ldCleaningEnabled[pk] && (ldCleaningImages[pk].before.length + ldCleaningImages[pk].after.length) > 0) hasLdPhotos = true;
-      });
-
-      if (hasLdPhotos) {
-        doc.addPage();
-        drawBg(doc, pw, ph);
-        y = marginTop;
-        secHeader('BAGIAN 4 — CLEANING HOLE LEAK DETECTION (FOTO DOKUMENTASI)');
-
-        var gap4 = 6; var colW4 = (contentW - gap4) / 2;
-
-        LD_CLEANING_PORTS.forEach(function(p) {
-          var pk = 'ldport'+p.id;
-          if (!ldCleaningEnabled[pk]) return;
-          var befImgs = ldCleaningImages[pk].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
-          var aftImgs = ldCleaningImages[pk].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
-          if (!befImgs.length && !aftImgs.length) return;
-
-          checkPage(14);
-          doc.setFillColor(60, 80, 110);
-          doc.rect(marginX, y, contentW, 7, 'F');
-          doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(210, 225, 245);
-          doc.text('Port '+p.id+'  |  '+p.tag+'  ('+p.label+')', marginX+4, y+5);
-          y += 10;
-
-          checkPage(7);
-          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160, 90, 20);
-          doc.text('BEFORE CLEANING', marginX+3, y);
-          doc.setTextColor(15, 110, 90);
-          doc.text('AFTER CLEANING', marginX + colW4 + gap4 + 3, y);
-          y += 5;
-
-          var perRow4 = 2;
-          var fw4 = (colW4 - gap/2) / perRow4 - 2;
-          var fh4 = fw4 * 0.75;
-          var xBef4 = marginX + 2;
-          var xAft4 = marginX + colW4 + gap4;
-          var maxImgs4 = Math.max(befImgs.length, aftImgs.length);
-          var lxBef4 = xBef4, lxAft4 = xAft4;
-          for (var ii4 = 0; ii4 < maxImgs4; ii4++) {
-            if (y + fh4 + 10 > ph - marginBottom) {
-              doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
-              lxBef4 = xBef4; lxAft4 = xAft4;
-            }
-            if (ii4 < befImgs.length) {
-              var bImg4 = befImgs[ii4];
-              try { doc.addImage(bImg4.dataUrl, 'JPEG', lxBef4, y, fw4, fh4); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(lxBef4, y, fw4, fh4, 'S');
-              }
-              var bcap4 = safe(bImg4.caption || '');
-              if (bcap4) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(bcap4, fw4), lxBef4, y+fh4+2.5); }
-            }
-            if (ii4 < aftImgs.length) {
-              var aImg4 = aftImgs[ii4];
-              try { doc.addImage(aImg4.dataUrl, 'JPEG', lxAft4, y, fw4, fh4); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(lxAft4, y, fw4, fh4, 'S');
-              }
-              var acap4 = safe(aImg4.caption || '');
-              if (acap4) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(acap4, fw4), lxAft4, y+fh4+2.5); }
-            }
-            lxBef4 += fw4 + 2; lxAft4 += fw4 + 2;
-            if ((ii4 + 1) % perRow4 === 0) { lxBef4 = xBef4; lxAft4 = xAft4; y += fh4 + 9; }
-          }
-          if (maxImgs4 % perRow4 !== 0) y += fh4 + 9;
-
-          checkPage(5);
-          doc.setDrawColor(160, 185, 220); doc.setLineWidth(0.3);
           doc.line(marginX, y, marginX + contentW, y);
           y += 5;
         });
@@ -1058,14 +914,6 @@ function resetAll(){
     cleaningImages[pk]={before:[],after:[]};
     ['before','after'].forEach(function(phase){ var uid='cl_'+pk+'_'+phase; var el=document.getElementById(uid+'_preview');if(el)el.innerHTML=''; var sz=document.getElementById(uid+'_size');if(sz)sz.textContent='0 KB / 1024 KB'; });
   });
-  // Reset LD cleaning images
-  if(typeof ldCleaningImages !== 'undefined') LD_CLEANING_PORTS.forEach(function(p){
-    var pk='ldport'+p.id; ldCleaningEnabled[pk]=false;
-    ldCleaningImages[pk]={before:[],after:[]};
-    var chk=document.getElementById('ldchk_'+pk); if(chk) chk.checked=false;
-    ldTogglePort(pk,false);
-    ['before','after'].forEach(function(phase){ var uid='ld_'+pk+'_'+phase; var el=document.getElementById(uid+'_preview');if(el)el.innerHTML=''; var sz=document.getElementById(uid+'_size');if(sz)sz.textContent='0 KB / 1024 KB'; });
-  });
 }
 
 function runLeakDiagnosis(){
@@ -1102,26 +950,6 @@ CLEANING_PORTS.forEach(function(p){
   cleaningImages['port'+p.id] = {before:[], after:[]};
 });
 
-var LD_CLEANING_PORTS = [
-  {id:1,  tag:'7BG-CAB-141', label:'SH1'},
-  {id:2,  tag:'7BG-CAB-142', label:'SH2'},
-  {id:3,  tag:'7BG-CAB-143', label:'SH3'},
-  {id:4,  tag:'7BG-CAB-144', label:'FRH1'},
-  {id:5,  tag:'7BG-CAB-145', label:'FRH2'},
-  {id:6,  tag:'7BG-CAB-149', label:'ECON 6'},
-  {id:7,  tag:'7BG-CAB-131', label:'ECON 7'},
-  {id:8,  tag:'7BG-CAB-132', label:'ECON 8'},
-  {id:9,  tag:'7BG-CAB-150', label:'BS 09'},
-  {id:10, tag:'7BG-CAB-151', label:'BS 10'},
-];
-
-var ldCleaningImages = {};
-LD_CLEANING_PORTS.forEach(function(p){
-  ldCleaningImages['ldport'+p.id] = {before:[], after:[]};
-});
-var ldCleaningEnabled = {};
-LD_CLEANING_PORTS.forEach(function(p){ ldCleaningEnabled['ldport'+p.id] = false; });
-
 function buildCleaningGrid() {
   var grid = document.getElementById('cleaningGrid');
   if (!grid || grid.children.length > 0) return;
@@ -1138,128 +966,6 @@ function buildCleaningGrid() {
       buildPhotoSlot(portKey,'after','After Cleaning','#0f766e');
     grid.appendChild(card);
   });
-}
-
-function buildLdCleaningGrid() {
-  var grid = document.getElementById('ldCleaningGrid');
-  if (!grid || grid.children.length > 0) return;
-  LD_CLEANING_PORTS.forEach(function(p) {
-    var portKey = 'ldport'+p.id;
-    var row = document.createElement('div');
-    row.style.cssText = 'background:var(--bg2,#dde3de);border:1px solid var(--border);border-radius:6px;overflow:hidden;';
-    row.id = 'ldrow_'+portKey;
-
-    // Header row dengan checkbox
-    var hdr = document.createElement('div');
-    hdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none;border-bottom:1px solid transparent;';
-    hdr.id = 'ldhdr_'+portKey;
-    hdr.innerHTML =
-      '<input type="checkbox" id="ldchk_'+portKey+'" onchange="ldTogglePort(\''+portKey+'\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok,#39ae60)">'+
-      '<label for="ldchk_'+portKey+'" style="font-size:13px;font-weight:700;color:var(--steel);cursor:pointer;flex:1">'+
-        'Port '+p.id+' &nbsp;<span style="font-family:\'Courier New\',monospace;font-weight:400;font-size:12px;color:var(--text3)">'+p.tag+'</span>'+
-        '&nbsp;<span style="font-size:11px;color:var(--text3);font-weight:400">('+p.label+')</span>'+
-      '</label>'+
-      '<span style="font-size:11px;color:var(--text3)" id="ldbadge_'+portKey+'">— tidak dipilih</span>';
-    row.appendChild(hdr);
-
-    // Photo area (hidden by default)
-    var photoArea = document.createElement('div');
-    photoArea.id = 'ldphoto_'+portKey;
-    photoArea.style.cssText = 'display:none;padding:14px;display:none;grid-template-columns:1fr 1fr;gap:16px';
-    photoArea.innerHTML =
-      buildPhotoSlotLd(portKey,'before','Before Cleaning','#b45309')+
-      buildPhotoSlotLd(portKey,'after','After Cleaning','#0f766e');
-    row.appendChild(photoArea);
-    grid.appendChild(row);
-  });
-}
-
-function ldTogglePort(portKey, checked) {
-  ldCleaningEnabled[portKey] = checked;
-  var area = document.getElementById('ldphoto_'+portKey);
-  var badge = document.getElementById('ldbadge_'+portKey);
-  var hdr = document.getElementById('ldhdr_'+portKey);
-  if (checked) {
-    area.style.display = 'grid';
-    badge.textContent = '✓ dipilih';
-    badge.style.color = 'var(--ok,#39ae60)';
-    hdr.style.borderBottomColor = 'var(--border)';
-  } else {
-    area.style.display = 'none';
-    badge.textContent = '— tidak dipilih';
-    badge.style.color = 'var(--text3)';
-    hdr.style.borderBottomColor = 'transparent';
-  }
-}
-
-function buildPhotoSlotLd(portKey, phase, label, color) {
-  var uid = 'ld_'+portKey+'_'+phase;
-  return '<div>'+
-    '<div style="font-size:11px;font-weight:600;color:'+color+';margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">&#128247; '+label+'</div>'+
-    '<div id="'+uid+'_drop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:12px;text-align:center;cursor:pointer;background:#fff;" '+
-    '<div id="'+uid+'_drop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:12px;text-align:center;cursor:pointer;background:#fff;" '+
-      'onclick="clToggleSource(\''+uid+'_src\')" '+
-      'ondrop="ldHandleDrop(event,\''+portKey+'\',\''+phase+'\')">' +
-      '<input type="file" id="'+uid+'_input" accept="image/*,.heic,.heif" multiple style="display:none" onchange="ldHandleFiles(this.files,\''+portKey+'\',\''+phase+'\')">'+ 
-      '<div style="font-size:20px;margin-bottom:4px">&#128444;&#65039;</div>'+
-      '<div style="font-size:11px;color:var(--text3)">Klik pilih atau drag foto</div>'+
-      '<div id="'+uid+'_src" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">'+
-        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'storage\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Penyimpanan</button>'+
-        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'camera\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Kamera</button>'+
-    '</div>'+
-    '<div id="'+uid+'_preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:8px;overflow:visible;min-height:0"></div>'+
-    '<div id="'+uid+'_size" style="font-size:10px;color:var(--text3);margin-top:2px;font-family:\'Courier New\',monospace">0 KB / 1024 KB</div>'+
-  '</div>';
-}
-
-function ldHandleDrop(e, portKey, phase) {
-  e.preventDefault();
-  ldHandleFiles(e.dataTransfer.files, portKey, phase);
-}
-
-function ldHandleFiles(files, portKey, phase) {
-  var side = portKey + '_' + phase;
-  Array.from(files).forEach(function(file) {
-    if (!isImageFile(file)) {
-      var r = new FileReader();
-      r.onload = function(ev){ ldCleaningImages[portKey][phase].push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''}); ldRenderPreviews(side); };
-      r.readAsDataURL(file); return;
-    }
-    fileToJpegDataUrl(file, function(dataUrl){
-      if (!dataUrl) return;
-      var name = file.name.replace(/\.[^.]+$/,'.jpg');
-      imgOpenCropper(dataUrl, name, 'image/jpeg', ldCleaningImages[portKey][phase], side, 'ld', -1);
-    });
-  });
-}
-
-function ldRenderPreviews(side) {
-  var lastUs = side.lastIndexOf('_');
-  var portKey = side.slice(0, lastUs);   // e.g. 'ldport1'
-  var phase   = side.slice(lastUs + 1);  // 'before' or 'after'
-  var uid = 'ld_' + portKey + '_' + phase;
-  var arr = ldCleaningImages[portKey] ? ldCleaningImages[portKey][phase] : null;
-  var cont = document.getElementById(uid + '_preview');
-  if (!cont || !arr) return;
-  cont.innerHTML = arr.map(function(img, idx) {
-    var s = function(v){ return String(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
-    var isImg = img.type && img.type.startsWith('image/');
-    var thumb = isImg
-      ? '<img src="' + s(img.dataUrl) + '" style="width:100%;height:100%;object-fit:contain;display:block">'
-      : '<div style="color:#aaa;font-size:18px;line-height:60px;text-align:center">&#128444;</div>';
-    return '<div style="display:flex;flex-direction:column;align-items:center;width:90px">' +
-      '<div style="position:relative;width:80px;height:60px;background:#111;border-radius:4px;overflow:hidden;flex-shrink:0">' +
-        thumb +
-        '<button onclick="ldCleaningImages[\''+portKey+'\'][\''+phase+'\'].splice('+idx+',1);ldRenderPreviews(\''+side+'\')" style="position:absolute;top:2px;right:2px;background:rgba(180,0,0,0.75);color:#fff;border:none;border-radius:3px;font-size:9px;padding:1px 4px;cursor:pointer">&#10005;</button>' +
-      '</div>' +
-      '<input type="text" placeholder="Keterangan" value="' + s(img.caption||'') + '" ' +
-        'oninput="ldCleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].caption=this.value" ' +
-        'style="width:100%;margin-top:4px;padding:4px 5px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">' +
-    '</div>';
-  }).join('');
-  var totalKb = arr.reduce(function(a,img){ return a+(img.dataUrl?Math.round(img.dataUrl.length*0.75/1024):0); }, 0);
-  var szEl = document.getElementById(uid + '_size');
-  if (szEl) szEl.textContent = totalKb + ' KB / 1024 KB';
 }
 
 function buildPhotoSlot(portKey, phase, label, color) {
@@ -1323,9 +1029,6 @@ function clReEdit(portKey, phase, idx) {
 function clRenderPreviews(portKey, phase) {
   // shared.js calls clRenderPreviews('port1_before') with 1 arg after crop
   // so we support both: clRenderPreviews(portKey, phase) and clRenderPreviews('portX_phase')
-  // Redirect LD ports to ldRenderPreviews
-  var _checkKey = (phase === undefined) ? portKey.slice(0, portKey.lastIndexOf('_')) : portKey;
-  if (_checkKey.indexOf('ldport') === 0) { ldRenderPreviews(phase === undefined ? portKey : portKey+'_'+phase); return; }
   if (phase === undefined) {
     // split on last underscore to support 'port1_before' / 'port1_after'
     var lastUs = portKey.lastIndexOf('_');
@@ -1416,7 +1119,7 @@ function dbCollectData(modul) {
 
 /* ── INIT ── */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
-initUploadZone(); buildManualTable(); buildLeakTable(); buildCleaningGrid(); buildLdCleaningGrid(); updateSvg(); switchTab('manual');
+initUploadZone(); buildManualTable(); buildLeakTable(); buildCleaningGrid(); updateSvg(); switchTab('manual');
 initFegtBackground();
 (function(){
   var today=new Date();
