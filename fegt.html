@@ -255,7 +255,7 @@ var LEAK_PATHS = [
   {id:7, desc:'ECON 7 — Lt.10.5 Economizer Sisi Utara'},
   {id:8, desc:'ECON 8 — Lt.10.5 Economizer Sisi Barat'},
   {id:9,  desc:'BS 09 — Lt.2 Bottom Slope Sisi Barat'},
-  {id:10, desc:'BS 10 — Lt.2 Bottom Slope Sisi Timur'},
+  {id:10, desc:'BS 10 — Lt.2 Bottom Slope Sisi Timur', defaultNA:true},
 ];
 
 var pathData = [], metaInfo = {tanggal:'—',shift:'—',operator:'—'}, diagResults = {};
@@ -511,25 +511,32 @@ function runDiagnosis(){
   var sensors={};
   for(var s=1;s<=8;s++) sensors[s]={asTx:[],asRx:[]};
   pathData.forEach(function(p){var eff=effectiveStatus(p);sensors[p.tx].asTx.push({path:p.id,partner:p.rx,status:eff});sensors[p.rx].asRx.push({path:p.id,partner:p.tx,status:eff});});
+  // ─── Kumpulkan path 1-8 yang Hard Fail → diagnosis khusus (tidak masuk sensor logic)
+  var hardFailPaths18 = pathData.filter(function(p){ return p.id<=8 && effectiveStatus(p)==='hard'; });
+
   diagResults={};
   for(var s=1;s<=8;s++){
     var txP=sensors[s].asTx,rxP=sensors[s].asRx,all=txP.concat(rxP);
-    var hasInput=all.some(function(p){return p.status!=='';});
-    if(!hasInput){diagResults[s]={verdict:'unknown',reason:'Tidak ada data path'};continue;}
-    var anyOk=all.some(function(p){return p.status==='ok';});
-    if(anyOk){diagResults[s]={verdict:'ok',reason:all.filter(function(p){return p.status==='ok';}).length+' path berfungsi normal'};continue;}
-    var hardAsTx=txP.filter(function(p){return p.status==='hard';});
-    var failAsTx=txP.filter(function(p){return p.status==='fail';});
-    var hardAsRx=rxP.filter(function(p){return p.status==='hard';});
-    var failAsRx=rxP.filter(function(p){return p.status==='fail';});
+    // Exclude path 1-8 dari sensor diagnosis (ditangani terpisah)
+    var txPFiltered=txP.filter(function(p){return p.path>8;});
+    var rxPFiltered=rxP.filter(function(p){return p.path>8;});
+    var allFiltered=txPFiltered.concat(rxPFiltered);
+    var hasInput=allFiltered.some(function(p){return p.status!=='';});
+    if(!hasInput){diagResults[s]={verdict:'unknown',reason:'Tidak ada data path (9-21)'};continue;}
+    var anyOk=allFiltered.some(function(p){return p.status==='ok';});
+    if(anyOk){diagResults[s]={verdict:'ok',reason:allFiltered.filter(function(p){return p.status==='ok';}).length+' path berfungsi normal'};continue;}
+    var hardAsTx=txPFiltered.filter(function(p){return p.status==='hard';});
+    var failAsTx=txPFiltered.filter(function(p){return p.status==='fail';});
+    var hardAsRx=rxPFiltered.filter(function(p){return p.status==='hard';});
+    var failAsRx=rxPFiltered.filter(function(p){return p.status==='fail';});
     var partnerHasOk=function(list){return list.some(function(p){return sensors[p.partner].asTx.concat(sensors[p.partner].asRx).some(function(pp){return pp.status==='ok'&&pp.partner!==s;});});};
-    if(hardAsTx.length>0&&partnerHasOk(txP)){
+    if(hardAsTx.length>0&&partnerHasOk(txPFiltered)){
       diagResults[s]={verdict:'error',reason:'Hard Fail pada '+hardAsTx.length+' path sebagai Tx. Sensor Rx pasangan masih berfungsi - Sensor '+s+' kemungkinan besar bermasalah'};
-    } else if(failAsTx.length>0&&partnerHasOk(txP)&&hardAsTx.length===0&&failAsRx.length===0&&hardAsRx.length===0){
+    } else if(failAsTx.length>0&&partnerHasOk(txPFiltered)&&hardAsTx.length===0&&failAsRx.length===0&&hardAsRx.length===0){
       diagResults[s]={verdict:'error',reason:'Data Fail pada '+failAsTx.length+' path sebagai Tx. Sensor '+s+' kemungkinan bermasalah pada sisi transmit'};
     } else if((hardAsTx.length+failAsTx.length)>0&&(hardAsRx.length+failAsRx.length)>0){
       diagResults[s]={verdict:'warning',reason:'Gagal sebagai Tx dan Rx - perlu cross-check lebih lanjut'};
-    } else if((hardAsRx.length+failAsRx.length)>0&&txP.every(function(p){return p.status==='ok'||p.status===''})){
+    } else if((hardAsRx.length+failAsRx.length)>0&&txPFiltered.every(function(p){return p.status==='ok'||p.status===''})){
       diagResults[s]={verdict:'warning',reason:'Kegagalan hanya saat sebagai Rx - kemungkinan masalah ada di Tx pasangan'};
     } else {
       diagResults[s]={verdict:'warning',reason:'Semua path gagal namun status sensor pasangan belum terkonfirmasi'};
@@ -558,12 +565,24 @@ function runDiagnosis(){
   var box=document.getElementById('conclusionBox');
   var title=box.querySelector('.conc-title');
   var text=document.getElementById('conclusionText');
-  if(faulty.length===0&&suspect.length===0){
+  var hasAnyIssue = faulty.length>0 || suspect.length>0 || hardFailPaths18.length>0;
+  if(!hasAnyIssue){
     box.className='conclusion-box all-ok';title.textContent='Semua Sensor Operasional';
     text.innerHTML='Tidak ditemukan indikasi kerusakan sensor. Sistem FEGT berfungsi normal.';
   } else {
     box.className='conclusion-box has-issue';title.textContent='Terdeteksi Indikasi Kerusakan Sensor';
     var html='';
+    // ── Path 1-8 Hard Fail → ditampilkan paling atas ──
+    if(hardFailPaths18.length>0){
+      html+='<div style="margin-bottom:10px;padding:8px 10px;background:rgba(180,0,0,0.08);border-left:3px solid #c0392b;border-radius:4px">'+
+        '<strong style="color:#c0392b">&#9888; Hard Fail pada Path Utama (Path 1-8):</strong><br>'+
+        '<ol style="margin:6px 0 0 18px;padding:0">'+
+          hardFailPaths18.map(function(p){
+            return '<li><strong>Path '+p.id+' Hard Fail Low Transmit</strong> &mdash; Silahkan Cek Solenoid, IA Supply dan Sensor Probe</li>';
+          }).join('')+
+        '</ol>'+
+      '</div>';
+    }
     if(faulty.length>0) html+='<strong>Sensor kemungkinan bermasalah:</strong> '+faulty.map(function(s){return '<strong>Sensor '+s+'</strong>';}).join(', ')+'<br>';
     if(suspect.length>0) html+='<strong>Sensor perlu pengecekan:</strong> '+suspect.map(function(s){return 'Sensor '+s;}).join(', ');
     if(failRecommendations.length>0){
@@ -799,8 +818,13 @@ function downloadPdf(){
 
       var faulty = Object.entries(diagResults).filter(function(e){return e[1].verdict==='error';}).map(function(e){return 'Sensor '+e[0];});
       var suspect= Object.entries(diagResults).filter(function(e){return e[1].verdict==='warning';}).map(function(e){return 'Sensor '+e[0];});
-      var fEgtOk  = faulty.length===0 && suspect.length===0;
+      var pdfHardPaths18 = pathData.filter(function(p){ return p.id<=8 && effectiveStatus(p)==='hard'; });
+      var fEgtOk  = faulty.length===0 && suspect.length===0 && pdfHardPaths18.length===0;
       var fEgtLines= fEgtOk ? ['KESIMPULAN FEGT: Semua Sensor Operasional','Tidak ditemukan indikasi kerusakan sensor.'] : ['KESIMPULAN FEGT: Terdeteksi Indikasi Kerusakan'];
+      if(pdfHardPaths18.length>0){
+        fEgtLines.push('HARD FAIL PATH UTAMA (Path 1-8):');
+        pdfHardPaths18.forEach(function(p){ fEgtLines.push('- Path '+p.id+' Hard Fail Low Transmit - Cek Solenoid, IA Supply dan Sensor Probe'); });
+      }
       if(!fEgtOk){ if(faulty.length) fEgtLines.push('Sensor bermasalah: '+faulty.join(', ')); if(suspect.length) fEgtLines.push('Sensor perlu cek: '+suspect.join(', ')); }
       var pdfFailFreq = computeFailFrequency(pathData);
       var pdfFailRecs = buildFailRecommendations(pdfFailFreq);
@@ -1075,8 +1099,25 @@ function runLeakDiagnosis(){
   var issues=results.filter(function(r){return r.status!=='ok'&&r.status!=='na';});
   var div=document.getElementById('leakResult'); div.style.display='block';
   var html='<div class="stat-row" style="margin-bottom:16px"><div class="stat-chip total">Total <span>'+results.length+'</span></div><div class="stat-chip ok">OK <span>'+okC+'</span></div><div class="stat-chip fail">Fail <span>'+failC+'</span></div><div class="stat-chip" style="background:#f5f5f5;border-color:#ccc;color:#888">N/A <span>'+naC+'</span></div></div>';
-  if(issues.length===0){html+='<div class="conclusion-box all-ok"><div class="conc-title">&#10003; No Issues</div><div style="font-size:13px;color:var(--text2)">Semua path aktif terbaca normal.</div></div>';}
-  else{html+='<div class="conclusion-box has-issue"><div class="conc-title">&#10005; Leak Detected</div><div style="font-size:13px">Path bermasalah: <strong>'+issues.map(function(r){return 'Path-'+r.id;}).join(', ')+'</strong></div></div>';}
+  var hardIssues=issues.filter(function(r){return r.status&&r.status.includes('hard');});
+  var otherIssues=issues.filter(function(r){return !r.status||!r.status.includes('hard');});
+  if(issues.length===0){
+    html+='<div class="conclusion-box all-ok"><div class="conc-title">&#10003; No Issues</div><div style="font-size:13px;color:var(--text2)">Semua path aktif terbaca normal.</div></div>';
+  } else {
+    html+='<div class="conclusion-box has-issue"><div class="conc-title">&#10005; Leak Detected</div><div style="font-size:13px">';
+    if(hardIssues.length>0){
+      html+='<div style="margin-bottom:8px;padding:8px 10px;background:rgba(180,0,0,0.08);border-left:3px solid #c0392b;border-radius:4px">'+
+        '<strong style="color:#c0392b">&#9888; Hard Fail Low Transmit:</strong><br>'+
+        '<ol style="margin:6px 0 0 18px;padding:0">'+
+          hardIssues.map(function(r){return '<li>Path '+r.id+' Hard Fail Low Transmit</li>';}).join('')+
+        '</ol>'+
+      '</div>';
+    }
+    if(otherIssues.length>0){
+      html+='Path bermasalah: <strong>'+otherIssues.map(function(r){return 'Path-'+r.id;}).join(', ')+'</strong>';
+    }
+    html+='</div></div>';
+  }
   div.innerHTML=html;
 }
 function resetLeak(){
@@ -1194,21 +1235,23 @@ function ldTogglePort(portKey, checked) {
 
 function buildPhotoSlotLd(portKey, phase, label, color) {
   var uid = 'ld_'+portKey+'_'+phase;
-  return '<div>'+
-    '<div style="font-size:11px;font-weight:600;color:'+color+';margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">&#128247; '+label+'</div>'+
-    '<div id="'+uid+'_drop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:12px;text-align:center;cursor:pointer;background:#fff;" '+
-    '<div id="'+uid+'_drop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:12px;text-align:center;cursor:pointer;background:#fff;" '+
-      'onclick="clToggleSource(\''+uid+'_src\')" '+
-      'ondrop="ldHandleDrop(event,\''+portKey+'\',\''+phase+'\')">' +
-      '<input type="file" id="'+uid+'_input" accept="image/*,.heic,.heif" multiple style="display:none" onchange="ldHandleFiles(this.files,\''+portKey+'\',\''+phase+'\')">'+ 
+  return '<div style="display:flex;flex-direction:column;gap:6px">'+
+    '<div style="font-size:11px;font-weight:600;color:'+color+';text-transform:uppercase;letter-spacing:1px">&#128247; '+label+'</div>'+
+    '<div id="'+uid+'_drop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:12px;text-align:center;cursor:pointer;background:#fff"'+
+      ' onclick="clToggleSource(\''+uid+'_src\')"'+
+      ' ondragover="event.preventDefault()"'+
+      ' ondrop="ldHandleDrop(event,\''+portKey+'\',\''+phase+'\')">'+
+      '<input type="file" id="'+uid+'_input" accept="image/*,.heic,.heif" multiple style="display:none"'+
+        ' onchange="ldHandleFiles(this.files,\''+portKey+'\',\''+phase+'\')">'+
       '<div style="font-size:20px;margin-bottom:4px">&#128444;&#65039;</div>'+
       '<div style="font-size:11px;color:var(--text3)">Klik pilih atau drag foto</div>'+
-      '<div id="'+uid+'_src" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">'+
+      '<div id="'+uid+'_src" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10;white-space:nowrap">'+
         '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'storage\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Penyimpanan</button>'+
         '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'camera\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Kamera</button>'+
+      '</div>'+
     '</div>'+
-    '<div id="'+uid+'_preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:8px;overflow:visible;min-height:0"></div>'+
-    '<div id="'+uid+'_size" style="font-size:10px;color:var(--text3);margin-top:2px;font-family:\'Courier New\',monospace">0 KB / 1024 KB</div>'+
+    '<div id="'+uid+'_preview" style="display:flex;flex-wrap:wrap;gap:8px;min-height:0"></div>'+
+    '<div id="'+uid+'_size" style="font-size:10px;color:var(--text3);font-family:monospace">0 KB / 1024 KB</div>'+
   '</div>';
 }
 
@@ -1220,16 +1263,34 @@ function ldHandleDrop(e, portKey, phase) {
 function ldHandleFiles(files, portKey, phase) {
   var side = portKey + '_' + phase;
   Array.from(files).forEach(function(file) {
-    if (!isImageFile(file)) {
-      var r = new FileReader();
-      r.onload = function(ev){ ldCleaningImages[portKey][phase].push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''}); ldRenderPreviews(side); };
-      r.readAsDataURL(file); return;
-    }
-    fileToJpegDataUrl(file, function(dataUrl){
-      if (!dataUrl) return;
-      var name = file.name.replace(/\.[^.]+$/,'.jpg');
-      imgOpenCropper(dataUrl, name, 'image/jpeg', ldCleaningImages[portKey][phase], side, 'ld', -1);
-    });
+    // Semua file: langsung baca sebagai dataURL, bypass cropper, render langsung
+    var r = new FileReader();
+    r.onload = function(ev) {
+      var dataUrl = ev.target.result;
+      var mimeType = file.type || 'image/jpeg';
+      var name = file.name;
+      // Jika gambar, compress ke JPEG via canvas
+      if (mimeType.startsWith('image/')) {
+        var img = new Image();
+        img.onload = function() {
+          var maxW = 1200, maxH = 900;
+          var w = img.width, h = img.height;
+          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+          if (h > maxH) { w = Math.round(w * maxH / h); h = maxH; }
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var compressed = canvas.toDataURL('image/jpeg', 0.80);
+          ldCleaningImages[portKey][phase].push({name: name.replace(/\.[^.]+$/, '.jpg'), dataUrl: compressed, type: 'image/jpeg', caption: ''});
+          ldRenderPreviews(side);
+        };
+        img.src = dataUrl;
+      } else {
+        ldCleaningImages[portKey][phase].push({name: name, dataUrl: dataUrl, type: mimeType, caption: ''});
+        ldRenderPreviews(side);
+      }
+    };
+    r.readAsDataURL(file);
   });
 }
 
