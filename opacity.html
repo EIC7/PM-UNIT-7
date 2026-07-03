@@ -276,6 +276,7 @@ function imgReEditOp(side,idx){ var img=opImages[side][idx]; imgOpenCropper(img.
 function opRemoveImg(side,idx){ opImages[side].splice(idx,1); opRenderPreviews(side); }
 
 function opReset() {
+  window._editingId = null; // mulai entri baru — jangan lagi update record lama
   OP_CHECKS.forEach(function(item,idx){
     ['opChk_','op7A_','op7B_'].forEach(function(p){var e=document.getElementById(p+idx);if(e)e.checked=false;});
     var r=document.getElementById('opRec_'+idx);if(r)r.textContent='';
