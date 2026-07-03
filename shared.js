@@ -114,8 +114,34 @@ function dbDelete(id) {
     .catch(function(err){ alert('Gagal hapus: ' + (err.message||err)); });
 }
 
+/* ── SAVING OVERLAY (full-screen, blocks double-submit) ── */
+function dbShowSavingOverlay(show, msg) {
+  var ov = document.getElementById('dbSavingOverlay');
+  if (show) {
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'dbSavingOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff';
+      ov.innerHTML = '<div style="width:38px;height:38px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:dbSpin 0.8s linear infinite;margin-bottom:14px"></div>'
+        + '<div id="dbSavingOverlayMsg" style="font-size:14px;font-weight:600;text-align:center;padding:0 20px"></div>';
+      document.body.appendChild(ov);
+      if (!document.getElementById('dbSpinKeyframes')) {
+        var style = document.createElement('style');
+        style.id = 'dbSpinKeyframes';
+        style.textContent = '@keyframes dbSpin{to{transform:rotate(360deg)}}';
+        document.head.appendChild(style);
+      }
+    }
+    document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Menyimpan data, mohon tunggu...';
+    ov.style.display = 'flex';
+  } else if (ov) {
+    ov.style.display = 'none';
+  }
+}
+
 /* ── DB SAVE (generic — modul-specific dbCollectData defined per page) ── */
 function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  if (window._dbSaving) return; // cegah klik dobel saat masih proses simpan
   var rec, existingId, callback;
   if (arg6 !== undefined && typeof arg6 === 'object') {
     rec = { modul:modul, tanggal:arg2||null, pic:arg3||null, work_order:arg4||null,
@@ -133,7 +159,9 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   var btn = null;
   try { btn = event && event.target && event.target.tagName === 'BUTTON' ? event.target : null; } catch(e){}
   var origText = btn ? btn.innerHTML : '';
-  if (btn) btn.innerHTML = '⏳ Menyimpan...';
+  window._dbSaving = true;
+  if (btn) { btn.innerHTML = '⏳ Menyimpan...'; btn.disabled = true; }
+  dbShowSavingOverlay(true, existingId ? 'Memperbarui data, mohon tunggu...' : 'Menyimpan data, mohon tunggu...');
   var path, method;
   if (existingId) {
     path  = SUPA_TABLE + '?id=eq.' + existingId;
@@ -144,13 +172,17 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   }
   supaFetch(method, path, rec)
     .then(function(rows) {
-      if (btn) btn.innerHTML = origText;
+      window._dbSaving = false;
+      dbShowSavingOverlay(false);
+      if (btn) { btn.innerHTML = origText; btn.disabled = false; }
       window._editingId = null;
       dbShowToast(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
       if (callback) callback(rows && rows[0] && rows[0].id ? rows[0].id : existingId);
     })
     .catch(function(err) {
-      if (btn) btn.innerHTML = origText;
+      window._dbSaving = false;
+      dbShowSavingOverlay(false);
+      if (btn) { btn.innerHTML = origText; btn.disabled = false; }
       dbShowToast('✗ Gagal simpan: ' + (err.message || err));
     });
 }
