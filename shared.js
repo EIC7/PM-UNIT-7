@@ -495,6 +495,9 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
   else if (modulePrefix === 'cl') {
     if (typeof clRenderPreviews === 'function') clRenderPreviews(side);
   }
+  else if (modulePrefix === 'ld') {
+    if (typeof ldRenderPreviews === 'function') ldRenderPreviews(side);
+  }
 }
 
 function updateSizeIndicator(prefix, side) {
