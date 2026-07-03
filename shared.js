@@ -95,12 +95,14 @@ function dbShowToast(msg) {
 
 /* ── DB LOAD (satu record by ID) ── */
 function dbLoad(id, callback) {
+  dbShowSavingOverlay(true, 'Memuat data, mohon tunggu...', 'Data dengan banyak gambar membutuhkan waktu yang lama');
   supaFetch('GET', SUPA_TABLE + '?id=eq.' + id + '&limit=1')
     .then(function(rows) {
+      dbShowSavingOverlay(false);
       if (rows && rows[0]) callback(rows[0]);
       else alert('Data tidak ditemukan.');
     })
-    .catch(function(err){ alert('Gagal memuat data: ' + (err.message||err)); });
+    .catch(function(err){ dbShowSavingOverlay(false); alert('Gagal memuat data: ' + (err.message||err)); });
 }
 
 /* ── DB DELETE ── */
@@ -115,7 +117,7 @@ function dbDelete(id) {
 }
 
 /* ── SAVING OVERLAY (full-screen, blocks double-submit) ── */
-function dbShowSavingOverlay(show, msg) {
+function dbShowSavingOverlay(show, msg, submsg) {
   var ov = document.getElementById('dbSavingOverlay');
   if (show) {
     if (!ov) {
@@ -123,7 +125,8 @@ function dbShowSavingOverlay(show, msg) {
       ov.id = 'dbSavingOverlay';
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff';
       ov.innerHTML = '<div style="width:38px;height:38px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:dbSpin 0.8s linear infinite;margin-bottom:14px"></div>'
-        + '<div id="dbSavingOverlayMsg" style="font-size:14px;font-weight:600;text-align:center;padding:0 20px"></div>';
+        + '<div id="dbSavingOverlayMsg" style="font-size:14px;font-weight:600;text-align:center;padding:0 20px"></div>'
+        + '<div id="dbSavingOverlaySub" style="font-size:12px;font-weight:400;text-align:center;padding:6px 30px 0;color:rgba(255,255,255,0.75)"></div>';
       document.body.appendChild(ov);
       if (!document.getElementById('dbSpinKeyframes')) {
         var style = document.createElement('style');
@@ -133,6 +136,7 @@ function dbShowSavingOverlay(show, msg) {
       }
     }
     document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Menyimpan data, mohon tunggu...';
+    document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
     ov.style.display = 'flex';
   } else if (ov) {
     ov.style.display = 'none';
@@ -161,7 +165,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   var origText = btn ? btn.innerHTML : '';
   window._dbSaving = true;
   if (btn) { btn.innerHTML = '⏳ Menyimpan...'; btn.disabled = true; }
-  dbShowSavingOverlay(true, existingId ? 'Memperbarui data, mohon tunggu...' : 'Menyimpan data, mohon tunggu...');
+  dbShowSavingOverlay(true, existingId ? 'Memperbarui data, mohon tunggu...' : 'Menyimpan data, mohon tunggu...', 'Mengupload banyak gambar membutuhkan waktu yang lama');
   var path, method;
   if (existingId) {
     path  = SUPA_TABLE + '?id=eq.' + existingId;
