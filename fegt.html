@@ -887,6 +887,10 @@ function downloadPdf(){
         var imgW = 76, imgH = 57, gap = 6;
         // 2 kolom: Before (kiri) dan After (kanan)
         var colW = (contentW - gap) / 2;
+        var perRow = 2;
+        var fw = (colW - gap/2) / perRow - 2; // foto width dalam kolom
+        var fh = fw * 0.75;                    // 4:3 ratio
+        var firstBlockH3 = 10 + 5 + (fh + 9);  // port header + subheader + 1 baris foto pertama
 
         CLEANING_PORTS.forEach(function(p) {
           var pk = 'port'+p.id;
@@ -894,8 +898,12 @@ function downloadPdf(){
           var aftImgs = cleaningImages[pk].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
           if (!befImgs.length && !aftImgs.length) return;
 
-          // Port header
-          checkPage(14);
+          // Port header + subheader + baris foto pertama harus 1 paket (tidak terpisah halaman)
+          if (firstBlockH3 <= (ph - marginTop - marginBottom) && (y + firstBlockH3 > ph - marginBottom)) {
+            doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+          } else {
+            checkPage(14);
+          }
           doc.setFillColor(60, 90, 70);
           doc.rect(marginX, y, contentW, 7, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
@@ -903,7 +911,6 @@ function downloadPdf(){
           y += 10;
 
           // Sub-header Before | After
-          checkPage(7);
           doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160, 90, 20);
           doc.text('BEFORE CLEANING', marginX+3, y);
           doc.setTextColor(15, 110, 90);
@@ -911,9 +918,6 @@ function downloadPdf(){
           y += 5;
 
           // Foto Before (kiri) dan After (kanan) side-by-side
-          var perRow = 2;
-          var fw = (colW - gap/2) / perRow - 2; // foto width dalam kolom
-          var fh = fw * 0.75;                    // 4:3 ratio
           var xBef = marginX + 2;
           var xAft = marginX + colW + gap;
 
@@ -980,6 +984,10 @@ function downloadPdf(){
         secHeader('BAGIAN 4 — CLEANING HOLE LEAK DETECTION (FOTO DOKUMENTASI)');
 
         var gap4 = 6; var colW4 = (contentW - gap4) / 2;
+        var perRow4 = 2;
+        var fw4 = (colW4 - gap4/2) / perRow4 - 2;
+        var fh4 = fw4 * 0.75;
+        var firstBlockH4 = 10 + 5 + (fh4 + 9); // port header + subheader + 1 baris foto pertama
 
         LD_CLEANING_PORTS.forEach(function(p) {
           var pk = 'ldport'+p.id;
@@ -988,23 +996,24 @@ function downloadPdf(){
           var aftImgs = ldCleaningImages[pk].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
           if (!befImgs.length && !aftImgs.length) return;
 
-          checkPage(14);
+          // Port header + subheader + baris foto pertama harus 1 paket (tidak terpisah halaman)
+          if (firstBlockH4 <= (ph - marginTop - marginBottom) && (y + firstBlockH4 > ph - marginBottom)) {
+            doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+          } else {
+            checkPage(14);
+          }
           doc.setFillColor(60, 80, 110);
           doc.rect(marginX, y, contentW, 7, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(210, 225, 245);
           doc.text('Port '+p.id+'  |  '+p.tag+'  ('+p.label+')', marginX+4, y+5);
           y += 10;
 
-          checkPage(7);
           doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160, 90, 20);
           doc.text('BEFORE CLEANING', marginX+3, y);
           doc.setTextColor(15, 110, 90);
           doc.text('AFTER CLEANING', marginX + colW4 + gap4 + 3, y);
           y += 5;
 
-          var perRow4 = 2;
-          var fw4 = (colW4 - gap/2) / perRow4 - 2;
-          var fh4 = fw4 * 0.75;
           var xBef4 = marginX + 2;
           var xAft4 = marginX + colW4 + gap4;
           var maxImgs4 = Math.max(befImgs.length, aftImgs.length);
