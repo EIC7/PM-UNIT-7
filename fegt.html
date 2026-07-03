@@ -1469,8 +1469,17 @@ function dbCollectData(modul) {
     var pk='port'+p.id;
     cleaningData[pk]={before:cleaningImages[pk].before.map(ki), after:cleaningImages[pk].after.map(ki)};
   });
+  var cleaningLdData = {};
+  LD_CLEANING_PORTS.forEach(function(p){
+    var pk='ldport'+p.id;
+    cleaningLdData[pk]={
+      enabled: !!ldCleaningEnabled[pk],
+      before: (ldCleaningImages[pk].before||[]).map(ki),
+      after:  (ldCleaningImages[pk].after||[]).map(ki)
+    };
+  });
   return {modul:'FEGT & Leak Detection', tanggal:metaInfo.tanggal, shift:metaInfo.shift, pic:metaInfo.operator, work_order:'', unit:'Unit 7',
-    data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), leakPaths:leakPaths, diagResults:diagResults, meta:metaInfo, cleaning:cleaningData}};
+    data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), leakPaths:leakPaths, diagResults:diagResults, meta:metaInfo, cleaning:cleaningData, cleaningLd:cleaningLdData}};
 }
 
 /* ── INIT ── */
@@ -1545,6 +1554,25 @@ initFegtBackground();
               if(data.cleaning[pk][phase]){
                 cleaningImages[pk][phase]=(data.cleaning[pk][phase]||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
                 clRenderPreviews(pk,phase);
+              }
+            });
+          }
+        });
+      }
+      // Restore Cleaning Hole LD images
+      if(data.cleaningLd){
+        LD_CLEANING_PORTS.forEach(function(p){
+          var pk='ldport'+p.id;
+          if(data.cleaningLd[pk]){
+            if (typeof data.cleaningLd[pk].enabled === 'boolean') {
+              var cb = document.getElementById('ldchk_'+pk);
+              if (cb) { cb.checked = data.cleaningLd[pk].enabled; }
+              if (typeof ldTogglePort === 'function') ldTogglePort(pk, data.cleaningLd[pk].enabled);
+            }
+            ['before','after'].forEach(function(phase){
+              if(data.cleaningLd[pk][phase]){
+                ldCleaningImages[pk][phase]=(data.cleaningLd[pk][phase]||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
+                ldRenderPreviews(pk+'_'+phase);
               }
             });
           }
