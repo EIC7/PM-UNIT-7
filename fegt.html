@@ -1065,6 +1065,7 @@ function downloadPdf(){
 }
 
 function resetAll(){
+  window._editingId = null; // mulai entri baru — jangan lagi update record lama
   pathData=[];diagResults={};metaInfo={tanggal:'—',shift:'—',operator:'—'};rawHeaders=[];rawRows=[];
   document.getElementById('fileInput').value='';
   document.getElementById('fileInfo').classList.remove('visible');

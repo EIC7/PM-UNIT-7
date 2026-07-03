@@ -179,10 +179,14 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
       window._dbSaving = false;
       dbShowSavingOverlay(false);
       if (btn) { btn.innerHTML = origText; btn.disabled = false; }
-      window._editingId = null;
+      var savedId = (rows && rows[0] && rows[0].id) ? rows[0].id : existingId;
+      // PENTING: tetap "nempel" ke record yang sama (bukan di-null-kan) supaya
+      // klik Simpan berikutnya tetap UPDATE record ini, bukan bikin duplikat baru.
+      // _editingId hanya boleh direset ke null lewat tombol Reset/mulai entri baru.
+      window._editingId = savedId || null;
       if (typeof autosaveClear === 'function') autosaveClear();
       dbShowToast(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
-      if (callback) callback(rows && rows[0] && rows[0].id ? rows[0].id : existingId);
+      if (callback) callback(savedId);
     })
     .catch(function(err) {
       window._dbSaving = false;
