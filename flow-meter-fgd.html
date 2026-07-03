@@ -527,28 +527,43 @@ function fmDownloadPdf() {
         }
       }
 
-      /* ── STEP OF WORK TABLE ── */
+      /* Asset dianggap "dipilih" untuk PDF kalau minimal ada satu baris Step of Work
+         yang dicentang pada kolom asset tsb. Kalau tidak ada sama sekali yang
+         dicentang, asset itu (dan datanya di 3 tabel) dilewati dari PDF. */
+      function fmAssetHasCheck(key) {
+        for (var idx = 0; idx < FM_CHECKS.length; idx++) {
+          var e = document.getElementById('fm'+key+'_'+idx);
+          if (e && e.checked) return true;
+        }
+        return false;
+      }
+      var activeAssets = FM_ASSETS.filter(function(a){ return fmAssetHasCheck(a.key); });
+
+      /* ── STEP OF WORK TABLE (hanya kolom asset yang dicentang) ── */
+      if (activeAssets.length > 0) {
       secHeader('STEP OF WORK — Flow Meter FGD Inlet & Quencher');
       var tableRows = FM_CHECKS.map(function(item, idx) {
         var chk = document.getElementById('fmChk_'+idx);
-        var assetVals = FM_ASSETS.map(function(a){ var e=document.getElementById('fm'+a.key+'_'+idx); return (e&&e.checked)?'__CHK__':'__BOX__'; });
+        var assetVals = activeAssets.map(function(a){ var e=document.getElementById('fm'+a.key+'_'+idx); return (e&&e.checked)?'__CHK__':'__BOX__'; });
         var rec = document.getElementById('fmRec_'+idx);
         return [String(item.no), safe(item.label), safe(item.criteria), (chk&&chk.checked)?'__CHK__':'__BOX__'].concat(assetVals).concat([rec?safe(rec.textContent):'']);
       });
-      var CHK_COLS_FM = {3:true,4:true,5:true,6:true,7:true};
+      var ASSET_COL_START = 4;
+      var CHK_COLS_FM = {3:true};
+      activeAssets.forEach(function(a,i){ CHK_COLS_FM[ASSET_COL_START+i] = true; });
+      var headRowSow = ['No','Step of Work','Criteria','v'].concat(activeAssets.map(function(a){return a.key;})).concat(['Result']);
+      var colStylesSow = {0:{cellWidth:8, halign:'center'}, 1:{cellWidth:65}, 2:{cellWidth:23}, 3:{cellWidth:8, halign:'center'}};
+      activeAssets.forEach(function(a,i){ colStylesSow[ASSET_COL_START+i] = {cellWidth:9, halign:'center'}; });
+      colStylesSow[ASSET_COL_START+activeAssets.length] = {cellWidth:20, halign:'center'};
       doc.autoTable({
         startY: y,
-        head: [['No','Step of Work','Criteria','v','101','103','201','203','Result']],
+        head: [headRowSow],
         body: tableRows,
         theme: 'grid',
         margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:7.5, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:7, textColor:[20,30,25], font:'helvetica', cellPadding:2},
-        columnStyles: {
-          0:{cellWidth:8, halign:'center'}, 1:{cellWidth:65}, 2:{cellWidth:23},
-          3:{cellWidth:8, halign:'center'}, 4:{cellWidth:9, halign:'center'}, 5:{cellWidth:9, halign:'center'},
-          6:{cellWidth:9, halign:'center'}, 7:{cellWidth:9, halign:'center'}, 8:{cellWidth:20, halign:'center'}
-        },
+        columnStyles: colStylesSow,
         alternateRowStyles: {fillColor:[246,249,247]},
         didDrawCell: function(data) {
           if (data.section !== 'body') return;
@@ -563,44 +578,57 @@ function fmDownloadPdf() {
         willDrawPage: function(data) { if (data.pageNumber>1) drawBg(doc,pw,ph); }
       });
       y = doc.lastAutoTable.finalY + 8;
+      }
 
-      /* ── FLOW METER READING TABLE ── */
+      /* ── FLOW METER READING TABLE (hanya kolom asset yang dicentang) ── */
+      if (activeAssets.length > 0) {
       secHeader('6. FLOW METER READING');
       var readRows = [
-        ['6a. Before Cleaning / Correction'].concat(FM_ASSETS.map(function(a){ var v=gv('fmRead_before_'+a.key); return v!==''?(v+' m3/Hr'):'-'; })),
-        ['6b. After Cleaning / Correction'].concat(FM_ASSETS.map(function(a){ var v=gv('fmRead_after_'+a.key); return v!==''?(v+' m3/Hr'):'-'; }))
+        ['6a. Before Cleaning / Correction'].concat(activeAssets.map(function(a){ var v=gv('fmRead_before_'+a.key); return v!==''?(v+' m3/Hr'):'-'; })),
+        ['6b. After Cleaning / Correction'].concat(activeAssets.map(function(a){ var v=gv('fmRead_after_'+a.key); return v!==''?(v+' m3/Hr'):'-'; }))
       ];
+      var readHead = ['Tahapan'].concat(activeAssets.map(function(a){return '7FC-FT-'+a.key;}));
+      var readColStyles = {0:{cellWidth:42, halign:'left'}};
+      var readPerW = (contentW-42) / activeAssets.length;
+      activeAssets.forEach(function(a,i){ readColStyles[i+1] = {cellWidth:readPerW}; });
       doc.autoTable({
         startY: y,
-        head: [['Tahapan','7FC-FT-101','7FC-FT-103','7FC-FT-201','7FC-FT-203']],
+        head: [readHead],
         body: readRows,
         theme: 'grid',
         margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:8, textColor:[20,30,25], font:'helvetica', cellPadding:2.5, halign:'center'},
-        columnStyles: {0:{cellWidth:42, halign:'left'}, 1:{cellWidth:32},2:{cellWidth:32},3:{cellWidth:32},4:{cellWidth:32}},
+        columnStyles: readColStyles,
         willDrawPage: function(data) { if (data.pageNumber>1) drawBg(doc,pw,ph); }
       });
       y = doc.lastAutoTable.finalY + 8;
+      }
 
-      /* ── PARAMETER TABLE ── */
+      /* ── PARAMETER TABLE (hanya kolom asset yang dicentang) ── */
+      if (activeAssets.length > 0) {
       secHeader('7. PARAMETER FLOW TRANSMITTER FGD');
       var paramRows = FM_PARAMS.map(function(p) {
-        return [p.label].concat(FM_ASSETS.map(function(a){ var v=gv('fmParam_'+p.id+'_'+a.key); return v!==''?v:String(p.values[a.key]); })).concat([p.unit||'-']);
+        return [p.label].concat(activeAssets.map(function(a){ var v=gv('fmParam_'+p.id+'_'+a.key); return v!==''?v:String(p.values[a.key]); })).concat([p.unit||'-']);
       });
+      var paramHead = ['Parameter'].concat(activeAssets.map(function(a){return '7FC-FT-'+a.key;})).concat(['Satuan']);
+      var paramColStyles = {0:{cellWidth:42, halign:'left'}};
+      var paramPerW = (contentW-42-20) / activeAssets.length;
+      activeAssets.forEach(function(a,i){ paramColStyles[i+1] = {cellWidth:paramPerW}; });
+      paramColStyles[activeAssets.length+1] = {cellWidth:20};
       doc.autoTable({
         startY: y,
-        head: [['Parameter','7FC-FT-101','7FC-FT-103','7FC-FT-201','7FC-FT-203','Satuan']],
+        head: [paramHead],
         body: paramRows,
         theme: 'grid',
         margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:8, textColor:[20,30,25], font:'helvetica', cellPadding:2.5, halign:'center'},
-        columnStyles: {0:{cellWidth:42, halign:'left'}, 1:{cellWidth:27},2:{cellWidth:27},3:{cellWidth:27},4:{cellWidth:27},5:{cellWidth:20}},
+        columnStyles: paramColStyles,
         didParseCell: function(data) {
           if (data.section==='body') {
             var p = FM_PARAMS[data.row.index];
-            if (p && data.column.index>=1 && data.column.index<=4) {
+            if (p && data.column.index>=1 && data.column.index<=activeAssets.length) {
               data.cell.styles.fillColor = p.locked ? [255,230,0] : [146,208,80];
             }
           }
@@ -608,6 +636,7 @@ function fmDownloadPdf() {
         willDrawPage: function(data) { if (data.pageNumber>1) drawBg(doc,pw,ph); }
       });
       y = doc.lastAutoTable.finalY + 8;
+      }
 
       /* ── REFERENSI DIMENSI INSTALASI PROBE (selalu tampil) ── */
       secHeader('REFERENSI DIMENSI INSTALASI PROBE');

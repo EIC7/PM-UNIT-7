@@ -180,6 +180,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
       dbShowSavingOverlay(false);
       if (btn) { btn.innerHTML = origText; btn.disabled = false; }
       window._editingId = null;
+      if (typeof autosaveClear === 'function') autosaveClear();
       dbShowToast(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
       if (callback) callback(rows && rows[0] && rows[0].id ? rows[0].id : existingId);
     })
@@ -534,6 +535,9 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
   else if (modulePrefix === 'ld') {
     if (typeof ldRenderPreviews === 'function') ldRenderPreviews(side);
   }
+  else if (modulePrefix === 'fm') {
+    if (typeof fmRenderPreviews === 'function') fmRenderPreviews(side);
+  }
 }
 
 function updateSizeIndicator(prefix, side) {
@@ -550,4 +554,141 @@ function updateSizeIndicator(prefix, side) {
     ? document.getElementById('cfSizeInfo')
     : document.getElementById(prefix+'SizeInfo'+side);
   if(el){ el.textContent = kb+' KB / 1024 KB'; el.style.color = color; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUTOSAVE DRAFT (IndexedDB) — jaga-jaga halaman tertutup
+   tidak sengaja sebelum sempat klik Simpan.
+
+   Cara pakai di tiap file modul (HTML):
+   1. Di awal <script>, definisikan nama modul:
+        window.CURRENT_MODUL = 'fegt';   // sesuaikan per modul
+   2. Sediakan fungsi restoreDraftData(rec, editingId) yang mengisi
+      ulang field form dari objek rec (struktur sama persis dengan
+      return value dbCollectData(modul)). Lihat contoh di fegt.html.
+   Modul yang BELUM punya restoreDraftData() otomatis dilewati
+   (autosave tetap jalan di background, hanya prompt "lanjutkan draft"
+   yang tidak akan muncul).
+   ═══════════════════════════════════════════════════════ */
+var AUTOSAVE_DB_NAME = 'pm_unit7_autosave';
+var AUTOSAVE_STORE   = 'drafts';
+var AUTOSAVE_DELAY   = 2500; // ms, debounce setelah berhenti mengetik/upload
+var _autosaveTimer = null;
+var _autosaveDbPromise = null;
+
+function _autosaveOpenDb() {
+  if (_autosaveDbPromise) return _autosaveDbPromise;
+  _autosaveDbPromise = new Promise(function(resolve, reject) {
+    if (!window.indexedDB) { reject(new Error('IndexedDB tidak didukung browser ini')); return; }
+    var req = indexedDB.open(AUTOSAVE_DB_NAME, 1);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(AUTOSAVE_STORE)) db.createObjectStore(AUTOSAVE_STORE, {keyPath:'key'});
+    };
+    req.onsuccess = function(e){ resolve(e.target.result); };
+    req.onerror = function(e){ reject(e.target.error); };
+  });
+  return _autosaveDbPromise;
+}
+function autosaveSet(key, value) {
+  return _autosaveOpenDb().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(AUTOSAVE_STORE, 'readwrite');
+      tx.objectStore(AUTOSAVE_STORE).put({key:key, value:value, savedAt:Date.now()});
+      tx.oncomplete = function(){ resolve(); };
+      tx.onerror = function(e){ reject(e.target.error); };
+    });
+  });
+}
+function autosaveGet(key) {
+  return _autosaveOpenDb().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(AUTOSAVE_STORE, 'readonly');
+      var req = tx.objectStore(AUTOSAVE_STORE).get(key);
+      req.onsuccess = function(){ resolve(req.result || null); };
+      req.onerror = function(e){ reject(e.target.error); };
+    });
+  });
+}
+function autosaveDelete(key) {
+  return _autosaveOpenDb().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(AUTOSAVE_STORE, 'readwrite');
+      tx.objectStore(AUTOSAVE_STORE).delete(key);
+      tx.oncomplete = function(){ resolve(); };
+      tx.onerror = function(e){ reject(e.target.error); };
+    });
+  });
+}
+function _autosaveKey() {
+  var modul = window.CURRENT_MODUL || location.pathname.split('/').pop().replace(/\.html$/,'') || 'unknown';
+  return 'draft_' + modul;
+}
+function _autosaveIndicator() {
+  var el = document.getElementById('autosaveIndicator');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'autosaveIndicator';
+    el.className = 'no-print';
+    el.style.cssText = 'position:fixed;bottom:14px;right:14px;background:rgba(0,0,0,0.65);color:#cfe3f7;font-size:11px;padding:5px 11px;border-radius:14px;z-index:99998;pointer-events:none;opacity:0;transition:opacity .35s';
+    document.body.appendChild(el);
+  }
+  el.textContent = '💾 Draft tersimpan otomatis';
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.style.opacity='0'; }, 1800);
+}
+function autosaveTrigger() {
+  clearTimeout(_autosaveTimer);
+  _autosaveTimer = setTimeout(function(){
+    try {
+      if (typeof dbCollectData !== 'function') return;
+      var modul = window.CURRENT_MODUL || undefined;
+      var rec = modul ? dbCollectData(modul) : dbCollectData();
+      if (!rec) return;
+      autosaveSet(_autosaveKey(), {rec: rec, editingId: window._editingId || null})
+        .then(_autosaveIndicator).catch(function(){});
+    } catch(e) {}
+  }, AUTOSAVE_DELAY);
+}
+function autosaveClear() {
+  autosaveDelete(_autosaveKey()).catch(function(){});
+}
+function autosaveCheckAndPrompt() {
+  // Jangan tawarkan draft kalau memang sedang buka record dari RIWAYAT (?id=...)
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('id')) return;
+  if (typeof restoreDraftData !== 'function') return; // modul ini belum siap restore draft
+  autosaveGet(_autosaveKey()).then(function(row){
+    if (!row || !row.value || !row.value.rec) return;
+    var savedAt = row.value.savedAt ? new Date(row.value.savedAt) : null;
+    var timeStr = savedAt ? savedAt.toLocaleString('id-ID') : '';
+    var msg = 'Ditemukan draft yang belum sempat disimpan' + (timeStr ? ' (terakhir diubah ' + timeStr + ')' : '') + '.\n\nLanjutkan mengisi draft ini?';
+    if (confirm(msg)) {
+      restoreDraftData(row.value.rec, row.value.editingId);
+    } else {
+      autosaveDelete(_autosaveKey()).catch(function(){});
+    }
+  }).catch(function(){});
+}
+// Trigger autosave saat ada perubahan input apa pun di halaman (event delegation)
+document.addEventListener('input', autosaveTrigger, true);
+document.addEventListener('change', autosaveTrigger, true);
+// Simpan segera saat halaman mau ditutup/di-minimize (jaga-jaga sebelum sempat debounce)
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'hidden') {
+    clearTimeout(_autosaveTimer);
+    try {
+      if (typeof dbCollectData !== 'function') return;
+      var modul = window.CURRENT_MODUL || undefined;
+      var rec = modul ? dbCollectData(modul) : dbCollectData();
+      if (rec) autosaveSet(_autosaveKey(), {rec: rec, editingId: window._editingId || null});
+    } catch(e) {}
+  }
+});
+// Cek draft begitu halaman selesai load
+if (document.readyState === 'complete') {
+  setTimeout(autosaveCheckAndPrompt, 300);
+} else {
+  window.addEventListener('load', function(){ setTimeout(autosaveCheckAndPrompt, 300); });
 }
