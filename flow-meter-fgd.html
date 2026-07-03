@@ -665,7 +665,22 @@ function fmDownloadPdf() {
         secHeader('CATATAN & EVIDENCE PHOTO');
         function addSide(label, note, imgs) {
           if (!note && !imgs.length) return;
-          checkPage(10);
+          // Hitung kebutuhan tinggi "judul + baris gambar pertama" sebagai 1 paket,
+          // supaya keduanya tidak terpisah halaman. Kalau blok ini muat dalam 1 halaman
+          // penuh tapi tidak muat di sisa halaman saat ini → pindah halaman DULU sebelum
+          // gambar judul. Kalau blok ini memang lebih besar dari 1 halaman penuh (misal
+          // catatan sangat panjang), biarkan mengalir natural seperti sebelumnya.
+          var labelH = 6;
+          var noteLinesPre = note ? doc.splitTextToSize(note, contentW-6) : [];
+          var noteH = note ? (noteLinesPre.length*4.5 + 2) : 0;
+          var firstImgH = imgs.length ? 42+12 : 0; // imgW/imgH baris pertama + caption
+          var neededFirstBlock = labelH + noteH + firstImgH;
+          var pageUsableH = ph - marginTop - marginBottom;
+          if (neededFirstBlock <= pageUsableH && (y + neededFirstBlock > ph - marginBottom)) {
+            doc.addPage(); drawBg(doc,pw,ph); y = marginTop;
+          } else {
+            checkPage(10);
+          }
           doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,64,175);
           doc.text(label, marginX+3, y); y += 6;
           if (note) {
