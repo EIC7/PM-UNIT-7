@@ -6,6 +6,41 @@
 <title>PM HG Analyzer — Unit 7</title>
 <script src="shared.js"></script>
 <link rel="stylesheet" href="shared.css">
+<style>
+/* Checkbox kustom: tampilan konsisten di semua browser/HP (Android/iOS/MIUI dll),
+   supaya status "belum dikerjakan" tidak pernah terlihat seperti tanda X.
+   Kosong = kotak putih. Sudah dikerjakan = kotak dengan centang hijau,
+   senada dengan gambar centang pada hasil PDF. */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 1.5px solid #7d8f88;
+  border-radius: 3px;
+  background: #fff;
+  position: relative;
+  cursor: pointer;
+  margin: 0;
+  vertical-align: middle;
+}
+input[type="checkbox"]:checked {
+  border-color: #1a6b3a;
+  background: #eafaf0;
+}
+input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 6px;
+  height: 11px;
+  border: solid #1a6b3a;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(40deg);
+}
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -42,8 +77,8 @@
         &#128214; Referensi Komponen HM-1400 TRX 2 (klik untuk buka/tutup)
       </summary>
       <div style="margin-top:14px">
-        <img src="assets/hg-fig3-1-panel-overview.png" alt="Fig 3.1 Overview Komponen Panel" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px;margin-bottom:16px">
-        <img src="assets/hg-table3-1-fig3-2-probe.png" alt="Table 3.1 dan Fig 3.2 Sampling Probe" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px">
+        <img src="assets/hg-fig3-1-panel-overview.png" alt="Fig 3.1 Overview Komponen Panel" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px;margin-bottom:16px" onerror="this.onerror=null;this.outerHTML='<div style=&quot;padding:12px;background:#fef2f2;border:1px dashed #c33;border-radius:6px;color:#900;font-size:12px;margin-bottom:16px&quot;>&#9888; Gambar tidak ditemukan: <b>assets/hg-fig3-1-panel-overview.png</b><br>Cek: (1) file sudah di-push ke folder <b>assets/</b> di GitHub, (2) nama file persis sama termasuk huruf besar/kecil (GitHub Pages case-sensitive), (3) ekstensi benar .png.</div>'">
+        <img src="assets/hg-table3-1-fig3-2-probe.png" alt="Table 3.1 dan Fig 3.2 Sampling Probe" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px" onerror="this.onerror=null;this.outerHTML='<div style=&quot;padding:12px;background:#fef2f2;border:1px dashed #c33;border-radius:6px;color:#900;font-size:12px&quot;>&#9888; Gambar tidak ditemukan: <b>assets/hg-table3-1-fig3-2-probe.png</b><br>Cek: (1) file sudah di-push ke folder <b>assets/</b> di GitHub, (2) nama file persis sama termasuk huruf besar/kecil (GitHub Pages case-sensitive), (3) ekstensi benar .png.</div>'">
       </div>
     </details>
   </div>
