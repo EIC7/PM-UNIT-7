@@ -400,7 +400,22 @@ function drawBg(doc, pw, ph) {
   try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
 }
 
+/* ── Preload gambar Reference (assets/hg-stepN-ref.png) supaya bisa dipakai di PDF ── */
+var hgRefImgCache = {};
+function hgPreloadRefImages(callback) {
+  var toLoad = STEP_DATA.filter(function(s){ return s.refImg && !hgRefImgCache[s.refImg]; });
+  var remaining = toLoad.length;
+  if (remaining === 0) { callback(); return; }
+  toLoad.forEach(function(s){
+    var img = new Image();
+    img.onload  = function(){ hgRefImgCache[s.refImg] = img; if (--remaining === 0) callback(); };
+    img.onerror = function(){ hgRefImgCache[s.refImg] = null; if (--remaining === 0) callback(); };
+    img.src = s.refImg;
+  });
+}
+
 function hgDownloadPdf() {
+  hgPreloadRefImages(function() {
   ensureReportBackground(function() {
     try {
       var jsPDF = window.jspdf.jsPDF;
@@ -530,16 +545,31 @@ function hgDownloadPdf() {
           }),
           headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
           bodyStyles:{fontSize:7,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:87},2:{cellWidth:24},3:{cellWidth:14,halign:'center'},4:{cellWidth:24,halign:'center'}},
+          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:87},2:{cellWidth:24,halign:'center'},3:{cellWidth:14,halign:'center'},4:{cellWidth:24,halign:'center'}},
           didParseCell:function(d){
-            if (d.section==='body' && d.column.index===4) {
+            if (d.section==='body' && d.column.index===2) {
               var s = rowsStep[d.row.index];
-              if (s && s.replace && (d.cell.raw==='Ready'||d.cell.raw==='Kosong')) {
+              if (s && s.refImg && hgRefImgCache[s.refImg]) { d.cell.styles.minCellHeight = 22; d.cell.text = []; }
+            }
+            if (d.section==='body' && d.column.index===4) {
+              var s2 = rowsStep[d.row.index];
+              if (s2 && s2.replace && (d.cell.raw==='Ready'||d.cell.raw==='Kosong')) {
                 d.cell.styles.fillColor = d.cell.raw==='Ready' ? [200,240,205] : [250,210,205];
               }
             }
           },
           didDrawCell:function(d){
+            if (d.section==='body' && d.column.index===2) {
+              var s = rowsStep[d.row.index];
+              if (s && s.refImg && hgRefImgCache[s.refImg]) {
+                var img = hgRefImgCache[s.refImg];
+                var maxW = d.cell.width - 3, maxH = d.cell.height - 3;
+                var ratio = Math.min(maxW/img.naturalWidth, maxH/img.naturalHeight, 1);
+                var iw = img.naturalWidth*ratio, ih = img.naturalHeight*ratio;
+                var ix = d.cell.x + (d.cell.width-iw)/2, iy = d.cell.y + (d.cell.height-ih)/2;
+                try { doc.addImage(img, 'PNG', ix, iy, iw, ih); } catch(e) {}
+              }
+            }
             if (d.section!=='body' || !CHK_COL_53[d.column.index]) return;
             var val = d.cell.raw; if (val!=='__CHK__' && val!=='__BOX__') return;
             var bg=(d.row.index%2===0)?[255,255,255]:[246,249,247];
@@ -582,7 +612,7 @@ function hgDownloadPdf() {
         var evidRows = rowsStep.filter(function(s){ return hgEvidence[s.no].before.length || hgEvidence[s.no].after.length; });
         if (evidRows.length) {
           secHeader('CATATAN & EVIDENCE PHOTO');
-          var gap=6, colW=(contentW-gap)/2, perRow=2, fw=(colW-gap/2)/perRow-2, fh=fw*0.75;
+          var gap=6, colW=(contentW-gap)/2, perRow=1, fw=(colW-gap/2)/perRow-2, fh=fw*0.72;
           var firstBlockH = 10 + 5 + (fh+9);
           evidRows.forEach(function(s){
             var befImgs = hgEvidence[s.no].before.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
@@ -632,6 +662,7 @@ function hgDownloadPdf() {
     } catch(err) {
       alert('Gagal membuat PDF: ' + (err.message||err));
     }
+  });
   });
 }
 
