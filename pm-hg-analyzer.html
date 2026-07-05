@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM HG Analyzer — Unit 7</title>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">PM HG ANALYZER</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">HM-1400 TRX 2 — Total Mercury Analyzer — Unit 7</div>
+  <div class="topbar-right"><div class="live-dot"></div></div>
+</div>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Preventive Maintenance</div>
+      <div class="page-header-title">PM <span>HG Analyzer</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-label">Data Umum</div>
+    <div class="manual-meta">
+      <div class="meta-field"><label>Tanggal</label><input type="date" id="hgTanggal"></div>
+      <div class="meta-field"><label>Work Order</label><input type="text" id="hgWorkOrder" placeholder="Nomor Work Order..."></div>
+      <div class="meta-field"><label>Nama Operator / PIC</label><input type="text" id="hgPIC" placeholder="Nama PIC..."></div>
+    </div>
+
+    <details style="margin-top:18px;border:1px solid var(--panel-border);border-radius:8px;padding:10px 14px;background:#f8faf9">
+      <summary style="cursor:pointer;font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;color:var(--steel);letter-spacing:0.5px">
+        &#128214; Referensi Komponen HM-1400 TRX 2 (klik untuk buka/tutup)
+      </summary>
+      <div style="margin-top:14px">
+        <img src="assets/hg-fig3-1-panel-overview.png" alt="Fig 3.1 Overview Komponen Panel" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px;margin-bottom:16px">
+        <img src="assets/hg-table3-1-fig3-2-probe.png" alt="Table 3.1 dan Fig 3.2 Sampling Probe" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px">
+      </div>
+    </details>
+  </div>
+
+  <div class="panel">
+    <div class="tab-bar" id="hgTabBar">
+      <button class="tab-btn active" data-freq="3M" onclick="hgSwitchTab('3M')">3 Monthly</button>
+      <button class="tab-btn" data-freq="6M" onclick="hgSwitchTab('6M')">6 Monthly</button>
+      <button class="tab-btn" data-freq="9M" onclick="hgSwitchTab('9M')">9 Monthly</button>
+      <button class="tab-btn" data-freq="1Y" onclick="hgSwitchTab('1Y')">1 Yearly</button>
+      <button class="tab-btn" data-freq="2Y" onclick="hgSwitchTab('2Y')">2 Yearly</button>
+      <button class="tab-btn" data-freq="5Y" onclick="hgSwitchTab('5Y')">5 Yearly</button>
+      <button class="tab-btn" data-freq="manual" onclick="hgSwitchTab('manual')">Manual Book PM HG All Page</button>
+    </div>
+
+    <!-- Tab isi frequency utama (3M/6M/9M/1Y/2Y/5Y) dirender dinamis ke sini -->
+    <div id="hgFreqContent"></div>
+
+    <!-- Tab Manual Book -->
+    <div id="hgTabManual" style="display:none">
+      <div class="section-label">Manual Book PM HG Analyzer (HM-1400 TRX 2) — Semua Halaman</div>
+      <div style="margin-bottom:12px">
+        <a href="assets/HM1400-TRX2OperatingMaintenanceHG.pdf" download class="btn btn-outline" style="display:inline-flex;text-decoration:none;width:auto">&#11015; Download PDF</a>
+      </div>
+      <iframe src="assets/HM1400-TRX2OperatingMaintenanceHG.pdf" style="width:100%;height:80vh;border:1px solid var(--panel-border);border-radius:8px"></iframe>
+    </div>
+
+    <div class="btn-row" id="hgActionRow">
+      <button class="btn btn-primary" id="hgBtnPdf" onclick="hgDownloadPdf()">&#128438; Download PDF</button>
+      <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('PM HG Analyzer')">&#128190; Simpan ke Database</button>
+      <button class="btn btn-danger" onclick="hgResetAll()">&#10005; Reset</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal Pop-up Pengingat Prosedur -->
+<div id="hgProcModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:24px 28px;max-width:420px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3)">
+    <div style="font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;font-size:16px;color:#c0392b;margin-bottom:10px">&#9888; Perhatian</div>
+    <div id="hgProcModalBody" style="font-size:13px;color:#333;line-height:1.6;margin-bottom:18px"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="document.getElementById('hgProcModal').style.display='none'">Mengerti</button>
+  </div>
+</div>
+
+<script>
+window.CURRENT_MODUL = 'PM HG Analyzer'; // harus sama persis dengan HG_MODUL_NAME & argumen dbSave()
+var HG_MODUL_NAME = 'PM HG Analyzer';
+
+/* ── DATA: Table 5.3 — Regularly Recurring Maintenance Work for 1 Year ── */
+/* freq: bulan-bulan di mana step ini muncul (3/6/9/12). replace: true => kolom
+   "Sparepart Replacement" berupa dropdown Ready/Kosong. false => checkbox "Sudah Dikerjakan". */
+var STEP_DATA = [
+  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", replace:true,  freq:[3,6,9,12]},
+  {no:2,  label:"Replace the particle protection filter (13) upstream from the photometer", ref:"", replace:true,  freq:[3,6,9,12]},
+  {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", replace:true,  freq:[3,6,9,12], proc:'iodine'},
+  {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", replace:false, freq:[3,6,9,12]},
+  {no:5,  label:"Adjust the flow at the needle valve (15)", ref:"", replace:false, freq:[3,6,9,12]},
+  {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"", replace:false, freq:[3,6,9,12]},
+  {no:7,  label:"Rinse the wash bottles of the gas cooler (M1) with water", ref:"", replace:false, freq:[6,12]},
+  {no:8,  label:"Replace the reactor filling (A6.1 and A6.2)*", ref:"", replace:true,  freq:[6,12], proc:'reactor'},
+  {no:9,  label:"Replace the condensate blocking membrane (16)", ref:"", replace:true,  freq:[6,12]},
+  {no:10, label:"Replace the membrane of the gas pump (M3)", ref:"", replace:true,  freq:[12]},
+  {no:11, label:"Maintain the condensate pump (M4.#), replace the hoses and pressure rollers", ref:"", replace:true,  freq:[12]},
+  {no:12, label:"Replace the iodine-active carbon (12) in the zero gas filter", ref:"", replace:true,  freq:[12]},
+  {no:13, label:"Replace all hoses in the gas path from the reactor to the photometer", ref:"", replace:true,  freq:[12]},
+  {no:14, label:"Adjust the flow", ref:"", replace:false, freq:[12]},
+  {no:15, label:"Test the AC unit in accordance with the manufacturer's specifications", ref:"", replace:false, freq:[12]},
+  {no:16, label:"Replace the hoses in the pumps (M31) for the HgCl\u2082", ref:"", replace:true,  freq:[12]}
+];
+var FREQ_MONTH = {'3M':3, '6M':6, '9M':9, '1Y':12};
+var FREQ_LABEL = {'3M':'3 Monthly', '6M':'6 Monthly', '9M':'9 Monthly', '1Y':'1 Yearly', '2Y':'2 Yearly', '5Y':'5 Yearly'};
+
+/* ── DATA: Table 5.1 — Daily Routine Check (selalu tampil, statis) ── */
+var TABLE51 = [
+  {no:1, unit:"Cabinet and component exterior", work:"Clean all surfaces"},
+  {no:2, unit:"All components", work:"Inspect visually for deposits, damages, corrosion etc."},
+  {no:3, unit:"All instruments", work:"Check status in menu 41\u202646. Check for alarms and fault messages. Inspect information messages and logs."},
+  {no:4, unit:"Heated sample line", work:"Check status in menu 41\u202646. Check status temperature by hand. Sample tubes should be noticeably warm."},
+  {no:5, unit:"Calibration gas (standard solution)", work:"Check that there is sufficient HgCl\u2082 in the bottle."},
+  {no:6, unit:"Air conditioning unit", work:"Clean unit exterior. Check that air inlet and outlet vents are free from sand, dust or other foreign matters"}
+];
+
+/* ── DATA: Table 5.2 — Regularly Maintenance Check (selalu tampil, statis) ── */
+var TABLE52 = [
+  {no:1,  label:"Determine the current status of the overall measuring system", ref:"Menu 41 \u2026. 46"},
+  {no:2,  label:"Read out, document and check all parameters, sensor information and operating data", ref:"Menu 41 \u2026. 46"},
+  {no:3,  label:"Read out, document and check the fault log and calibration messages", ref:"USB/Memory stick"},
+  {no:4,  label:"Check the leak-tightness of the HM-1400 TRX 2", ref:"Menu: 224"},
+  {no:5,  label:"Check the sampling system, including a test of the leak-tightness and the cold spots and a check of the heating systems.", ref:"Leak: menu 224 / Temperature: menu 41 \u2026. 46"},
+  {no:6,  label:"Function test of the internal gas generator including a check of the flow rate and zero gas test.", ref:"Zero: 32111 / Ref#0: 242"},
+  {no:7,  label:"Reference point check with Hg\u207f\u207a", ref:"Manual Ref: 241\u2026. / Cycle: 32515"},
+  {no:8,  label:"Check the flow measurement", ref:"Menu 41 \u2026. 46"},
+  {no:9,  label:"Measurement-based check of the temperature sensors in the reactor (A6) and on the 3-way valve (Y1)", ref:"Menu 41\u202646 / Adjustment: menu 3214"},
+  {no:10, label:"Check the residual current device", ref:""},
+  {no:11, label:"Check the age of the battery in the PLC and in the display", ref:"", onlyMonth:12}
+];
+
+/* ── DATA: Table 5.4 — Regularly Recurring Maintenance Work for >2 Years ── */
+var TABLE54 = [
+  {no:1, label:"Fully replace the condensate pumps (M4.#)", interval:"\u2265 2 years", freq:'2Y'},
+  {no:2, label:"Replace and calibrate the UV lamp in the photometer (performed by manufacturer)", interval:"\u2265 2 years", freq:'2Y'},
+  {no:3, label:"Replace the battery in the PLC and in the display", interval:"5 years", freq:'5Y'}
+];
+
+/* ── DATA: Table 5.5 — Final Check After All Maintenance Work (selalu tampil, statis, tanpa interaksi) ── */
+var TABLE55 = [
+  {no:1, label:"Check the status of all temperature controllers and all analogue and digital sensors"},
+  {no:2, label:"Check the leak-tightness"},
+  {no:3, label:"Check the span value and linearity using an internal gas generator"},
+  {no:4, label:"Test the internal gas generator"},
+  {no:5, label:"Reset the maintenance counter, delete the fault log and set the operating data for normal operation"},
+  {no:6, label:"Check normal operation"},
+  {no:7, label:"Create current configuration file"}
+];
+
+/* ── DATA: Prosedur 5.2 — Replace Reactor Filling (A6.1 & A6.2) ── */
+var PROC_REACTOR_STEPS = [
+  "Open the reactor box.",
+  "Loose the screw reactor plate using 5mm Allen key (hex key).",
+  "Remove the plate using provided tool.",
+  "Pull the box.",
+  "Place the box in horizontal position to prevent activator charcoal washers being damage.",
+  "Wait until the box temperature cooler, around ambient temperature.",
+  "Remove 4 nuts.",
+  "Take out the plate.",
+  "Pour the charcoal & glass wool into zip lock bag. Mark the zip lock bag using label.",
+  "Replace gasket and washer behind the box with new spare part.",
+  "Re-fill the box using glass wool + charcoal + glass wool.",
+  "Close it back and secure with 4 nuts.",
+  "Use the special tool, and the box up, place the box in to the reactor.",
+  "Place the plate to the reactor.",
+  "Tighten the screw using 5mm Allen key.",
+  "Close the cover of reactor boxes."
+];
+
+/* ── DATA: Prosedur 5.3 — Replace Iodine-Carbon Hg Trap Filter ── */
+var PROC_IODINE_STEPS = [
+  "Make sure the unit already turn-off.",
+  "Loosen the tube that connected to the bottle.",
+  "Loosen the clip to remove the bottle.",
+  "Remove bottle.",
+  "Open the bottle cap (red).",
+  "Pour the charcoal & glass wool into zip lock bag. Mark the zip lock bag using label.",
+  "Re-fill the box with: glass wool + charcoal + glass wool.",
+  "Put on bottle cap.",
+  "Put the bottle back in its place.",
+  "Tighten the clip.",
+  "Re-install the tube"
+];
+
+/* ── STATE ── */
+var activeFreq = '3M';
+var stepState = {};
+STEP_DATA.forEach(function(s){ stepState[s.no] = {check:false, sparepart:'', done:false}; });
+var hgEvidence = {};
+STEP_DATA.forEach(function(s){ hgEvidence[s.no] = {before:[], after:[]}; });
+var table54State = {};
+TABLE54.forEach(function(r){ table54State[r.no] = {selesai:false}; });
+
+function safe(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function stepsFor(month){ return STEP_DATA.filter(function(s){ return s.freq.indexOf(month) >= 0; }); }
+
+/* ── RENDER: Table 5.1 Daily Routine Check (statis) ── */
+function renderTable51Html() {
+  var rows = TABLE51.map(function(r){
+    return '<tr><td style="text-align:center">'+r.no+'</td><td><b>'+safe(r.unit)+'</b></td><td>'+safe(r.work)+'</td><td>End-User</td></tr>';
+  }).join('');
+  return '<div class="section-label">Table 5.1 — Daily Routine Check</div>'+
+    '<div class="preview-wrap" style="margin-bottom:24px"><table class="manual-table">'+
+    '<thead><tr><th style="width:36px">No</th><th style="width:180px">Unit</th><th>Maintenance Work</th><th style="width:110px">Responsibility</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table></div>';
+}
+
+/* ── RENDER: Table 5.2 Regularly Maintenance Check (statis) ── */
+function renderTable52Html() {
+  var rows = TABLE52.map(function(r){
+    var months = [3,6,9,12].map(function(m){
+      var on = r.onlyMonth ? (m===r.onlyMonth) : true;
+      return '<td style="text-align:center">'+(on?'X':'')+'</td>';
+    }).join('');
+    return '<tr><td style="text-align:center">'+r.no+'</td><td>'+safe(r.label)+(r.ref?'<br><span style="color:var(--text3);font-size:11px">'+safe(r.ref)+'</span>':'')+'</td>'+months+'<td>Specialist</td></tr>';
+  }).join('');
+  return '<div class="section-label">Table 5.2 — Regularly Maintenance Check</div>'+
+    '<div class="preview-wrap" style="margin-bottom:24px"><table class="manual-table">'+
+    '<thead><tr><th style="width:36px">No</th><th>Maintenance Work</th><th style="width:34px">3</th><th style="width:34px">6</th><th style="width:34px">9</th><th style="width:34px">12</th><th style="width:110px">Responsibility</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table></div>';
+}
+
+/* ── RENDER: Table 5.5 Final Check (statis, selalu tampil, tanpa interaksi) ── */
+function renderTable55Html() {
+  var rows = TABLE55.map(function(r){
+    return '<tr><td style="text-align:center">'+r.no+'</td><td>'+safe(r.label)+'</td><td>Specialist</td></tr>';
+  }).join('');
+  return '<div class="section-label" style="margin-top:28px">Table 5.5 — Final Check After All Maintenance Work</div>'+
+    '<div class="preview-wrap" style="margin-bottom:24px"><table class="manual-table">'+
+    '<thead><tr><th style="width:36px">No</th><th>Maintenance Work</th><th style="width:110px">Responsibility</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table></div>';
+}
+
+/* ── RENDER: Blok Prosedur Khusus (statis, tampil kondisional) ── */
+function renderProcBlockHtml(title, subtitle, steps, warningHtml) {
+  var li = steps.map(function(s,i){ return '<li style="margin-bottom:4px">'+safe(s)+'</li>'; }).join('');
+  return '<div style="margin-top:24px;border:1.5px solid #f39c1250;border-radius:8px;padding:16px 20px;background:#fffdf7">'+
+    '<div style="font-family:\'Arial Narrow\',\'Rajdhani\',sans-serif;font-weight:700;font-size:14px;color:#b9770e;margin-bottom:4px">'+safe(title)+'</div>'+
+    (subtitle ? '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">'+safe(subtitle)+'</div>' : '')+
+    (warningHtml || '')+
+    '<ol style="margin:10px 0 0 18px;padding:0;font-size:12.5px;color:#333;line-height:1.5">'+li+'</ol>'+
+  '</div>';
+}
+function renderProcReactorHtml() {
+  var warn = '<div style="display:flex;gap:10px;align-items:flex-start;background:#fef5e7;border:1px solid #f39c1250;border-radius:6px;padding:10px 12px;margin-bottom:6px">'+
+    '<span style="font-size:20px">&#9888;</span>'+
+    '<div style="font-size:11.5px;color:#7d5a00"><b>Risk posed by hot surfaces!</b><br>Contact with hot components may cause serious burns. Always use suitable heat-protective equipment (such as protective gloves).</div>'+
+  '</div>';
+  return renderProcBlockHtml('5.2 Procedure of Replace Reactor Filling (A6.1 and A6.2)', '', PROC_REACTOR_STEPS, warn);
+}
+function renderProcIodineHtml() {
+  return renderProcBlockHtml('5.3 Procedure of Replace Iodine-Carbon Hg Trap Filter', '', PROC_IODINE_STEPS, '');
+}
+
+/* ── RENDER: Konten per tab frequency ── */
+function hgRenderFreqContent(freq) {
+  var html = renderTable51Html() + renderTable52Html();
+  if (freq === '2Y' || freq === '5Y') {
+    html += renderTable54Html(freq);
+    html += renderTable55Html();
+    document.getElementById('hgFreqContent').innerHTML = html;
+  } else {
+    var month = FREQ_MONTH[freq];
+    html += renderStepTableHtml(month);
+    var hasReactor = stepsFor(month).some(function(s){ return s.proc === 'reactor'; });
+    var hasIodine  = stepsFor(month).some(function(s){ return s.proc === 'iodine'; });
+    if (hasReactor) html += renderProcReactorHtml();
+    if (hasIodine)  html += renderProcIodineHtml();
+    html += renderTable55Html();
+    document.getElementById('hgFreqContent').innerHTML = html;
+    stepsFor(month).forEach(function(s){
+      hgRenderPreviews('step'+s.no+'_before');
+      hgRenderPreviews('step'+s.no+'_after');
+    });
+  }
+}
+
+/* ── POPUP pengingat prosedur, muncul saat tab frequency dipilih ── */
+function hgShowProcPopup(freq) {
+  if (freq === '2Y' || freq === '5Y' || freq === 'manual') return;
+  var month = FREQ_MONTH[freq];
+  var hasReactor = stepsFor(month).some(function(s){ return s.proc === 'reactor'; });
+  var hasIodine  = stepsFor(month).some(function(s){ return s.proc === 'iodine'; });
+  if (!hasReactor && !hasIodine) return;
+  var items = [];
+  if (hasReactor) items.push('Lihat Prosedur Replace Reactor Filling Di Bawah Tabel Input');
+  if (hasIodine)  items.push('Lihat Prosedur replace iodine-carbon Hg trap filter');
+  document.getElementById('hgProcModalBody').innerHTML = '<ul style="margin:0 0 0 16px;padding:0">'+items.map(function(t){return '<li style="margin-bottom:6px">'+safe(t)+'</li>';}).join('')+'</ul>';
+  document.getElementById('hgProcModal').style.display = 'flex';
+}
+
+/* ── PDF BACKGROUND TEMPLATE (sama seperti modul lain) ── */
+var reportBgImg = null, reportBgReady = false, reportBgCallbacks = [];
+function initReportBackground() {
+  if (reportBgImg) return;
+  reportBgImg = new Image();
+  reportBgImg.onload = function() { reportBgReady = true; var cbs = reportBgCallbacks.splice(0); for (var i=0;i<cbs.length;i++) cbs[i](); };
+  reportBgImg.onerror = function() { reportBgReady = false; var cbs = reportBgCallbacks.splice(0); for (var i=0;i<cbs.length;i++) cbs[i](); };
+  reportBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+function ensureReportBackground(callback) {
+  if (!reportBgImg) { reportBgCallbacks.push(callback); initReportBackground(); return; }
+  if (reportBgReady) { callback(); return; }
+  if (reportBgImg.complete && reportBgImg.naturalWidth > 0) { reportBgReady = true; callback(); return; }
+  reportBgCallbacks.push(callback);
+}
+function drawBg(doc, pw, ph) {
+  if (!reportBgImg || !reportBgImg.naturalWidth) return;
+  try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+
+function hgDownloadPdf() {
+  ensureReportBackground(function() {
+    try {
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+      var pw = doc.internal.pageSize.getWidth();
+      var ph = doc.internal.pageSize.getHeight();
+      var marginX = 25, marginTop = 25, marginBottom = 25;
+      var contentW = pw - marginX*2;
+
+      function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
+      function pdfSafe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
+
+      var y = marginTop;
+      function checkPage(need) { if (y + need > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; } }
+      function secHeader(title) {
+        checkPage(12);
+        doc.setFillColor(232,240,253);
+        doc.rect(marginX, y, contentW, 8, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(30,64,175);
+        doc.text(title, marginX+3, y+5.5);
+        y += 11;
+      }
+      function drawCheckbox(x, yy, w, h, checked) {
+        var size=3.5, cx=x+w/2, cy=yy+h/2;
+        doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+        doc.rect(cx-size/2, cy-size/2, size, size, 'S');
+        if (checked) {
+          doc.setDrawColor(26,107,58); doc.setLineWidth(0.5);
+          doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.5);
+          doc.line(cx-size/2+size*0.38, cy+size/2-0.5, cx+size/2-0.3, cy-size/2+0.5);
+        }
+      }
+
+      drawBg(doc, pw, ph);
+
+      /* Header info box */
+      doc.setDrawColor(180,210,220); doc.setLineWidth(0.3);
+      doc.rect(marginX, y, contentW, 22, 'S');
+      var pairs = [
+        [marginX+3, [['Frequency', FREQ_LABEL[activeFreq]||''], ['Tanggal', gv('hgTanggal')]]],
+        [marginX+contentW/2+5, [['Work Order', gv('hgWorkOrder')], ['PIC', gv('hgPIC')]]]
+      ];
+      pairs.forEach(function(pair) {
+        pair[1].forEach(function(it, i) {
+          var iy = y+7+i*7;
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+          doc.text(it[0]+':', pair[0], iy);
+          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+          doc.text(pdfSafe(it[1]).substring(0,45), pair[0]+30, iy);
+        });
+      });
+      y += 27;
+
+      /* Table 5.1 Daily Routine Check */
+      secHeader('Table 5.1 \u2014 Daily Routine Check');
+      doc.autoTable({
+        startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
+        head: [['No','Unit','Maintenance Work','Resp.']],
+        body: TABLE51.map(function(r){ return [String(r.no), pdfSafe(r.unit), pdfSafe(r.work), 'End-User']; }),
+        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
+        bodyStyles:{fontSize:7,textColor:[20,30,25],font:'helvetica',cellPadding:2},
+        columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:38},2:{cellWidth:99},3:{cellWidth:20,halign:'center'}},
+        willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      /* Table 5.2 Regularly Maintenance Check */
+      secHeader('Table 5.2 \u2014 Regularly Maintenance Check');
+      doc.autoTable({
+        startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
+        head: [['No','Maintenance Work','3','6','9','12','Resp.']],
+        body: TABLE52.map(function(r){
+          var lbl = pdfSafe(r.label) + (r.ref?(' ['+pdfSafe(r.ref)+']'):'');
+          var m = [3,6,9,12].map(function(mm){ var on = r.onlyMonth?(mm===r.onlyMonth):true; return on?'X':''; });
+          return [String(r.no), lbl].concat(m).concat(['Specialist']);
+        }),
+        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
+        bodyStyles:{fontSize:6.8,textColor:[20,30,25],font:'helvetica',cellPadding:2},
+        columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:97},2:{cellWidth:8,halign:'center'},3:{cellWidth:8,halign:'center'},4:{cellWidth:8,halign:'center'},5:{cellWidth:8,halign:'center'},6:{cellWidth:20,halign:'center'}},
+        willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      if (activeFreq === '2Y' || activeFreq === '5Y') {
+        /* Table 5.4 (2/5 Yearly) */
+        secHeader('Table 5.4 \u2014 Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')');
+        var t54Rows = TABLE54.filter(function(r){ return r.freq === activeFreq; });
+        var CHK_COL_54 = {4:true};
+        doc.autoTable({
+          startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
+          head: [['No','Maintenance Work','Time Intervals','Resp.','Selesai']],
+          body: t54Rows.map(function(r){ return [String(r.no), pdfSafe(r.label), pdfSafe(r.interval), 'Specialist', table54State[r.no].selesai?'__CHK__':'__BOX__']; }),
+          headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
+          bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
+          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:97},2:{cellWidth:24,halign:'center'},3:{cellWidth:20,halign:'center'},4:{cellWidth:14,halign:'center'}},
+          didDrawCell:function(d){
+            if (d.section!=='body' || !CHK_COL_54[d.column.index]) return;
+            var val = d.cell.raw; if (val!=='__CHK__' && val!=='__BOX__') return;
+            var bg=(d.row.index%2===0)?[255,255,255]:[246,249,247];
+            doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(d.cell.x+0.2,d.cell.y+0.2,d.cell.width-0.4,d.cell.height-0.4,'F');
+            drawCheckbox(d.cell.x, d.cell.y, d.cell.width, d.cell.height, val==='__CHK__');
+          },
+          willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      } else {
+        /* Table 5.3 — step of work sesuai frequency aktif */
+        var month = FREQ_MONTH[activeFreq];
+        var rowsStep = stepsFor(month);
+        secHeader('Table 5.3 \u2014 Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')');
+        var CHK_COL_53 = {3:true,4:true};
+        doc.autoTable({
+          startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
+          head: [['No','Step Of Work','Ref','Check','Sparepart / Selesai']],
+          body: rowsStep.map(function(s){
+            var st = stepState[s.no];
+            var spCell = s.replace ? (st.sparepart || '-') : (st.done?'__CHK__':'__BOX__');
+            return [String(s.no), pdfSafe(s.label), pdfSafe(s.ref||'-'), st.check?'__CHK__':'__BOX__', spCell];
+          }),
+          headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
+          bodyStyles:{fontSize:7,textColor:[20,30,25],font:'helvetica',cellPadding:2},
+          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:87},2:{cellWidth:24},3:{cellWidth:14,halign:'center'},4:{cellWidth:24,halign:'center'}},
+          didParseCell:function(d){
+            if (d.section==='body' && d.column.index===4) {
+              var s = rowsStep[d.row.index];
+              if (s && s.replace && (d.cell.raw==='Ready'||d.cell.raw==='Kosong')) {
+                d.cell.styles.fillColor = d.cell.raw==='Ready' ? [200,240,205] : [250,210,205];
+              }
+            }
+          },
+          didDrawCell:function(d){
+            if (d.section!=='body' || !CHK_COL_53[d.column.index]) return;
+            var val = d.cell.raw; if (val!=='__CHK__' && val!=='__BOX__') return;
+            var bg=(d.row.index%2===0)?[255,255,255]:[246,249,247];
+            doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(d.cell.x+0.2,d.cell.y+0.2,d.cell.width-0.4,d.cell.height-0.4,'F');
+            drawCheckbox(d.cell.x, d.cell.y, d.cell.width, d.cell.height, val==='__CHK__');
+          },
+          willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+
+        /* Prosedur khusus (teks), tampil kondisional sesuai frequency aktif */
+        function addProcText(title, steps, warnLines) {
+          var titleH = 7, warnH = warnLines ? (warnLines.length*4+4) : 0;
+          var lineH = 4.3;
+          var firstLinesH = titleH + warnH + lineH*2; // judul + warning + minimal 2 baris pertama prosedur
+          if (firstLinesH <= (ph-marginTop-marginBottom) && (y+firstLinesH > ph-marginBottom)) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
+          else { checkPage(10); }
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(185,119,14);
+          doc.text(title, marginX+2, y); y += 6;
+          if (warnLines) {
+            doc.setFillColor(254,245,231); doc.rect(marginX+2, y-3.5, contentW-4, warnLines.length*4+3, 'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(125,90,0);
+            warnLines.forEach(function(wl,i){ doc.text(wl, marginX+5, y+i*4); });
+            y += warnLines.length*4+4;
+          }
+          doc.setFont('helvetica','normal'); doc.setFontSize(7.8); doc.setTextColor(30,30,30);
+          steps.forEach(function(st,i){
+            checkPage(lineH+2);
+            var lines = doc.splitTextToSize((i+1)+'. '+st, contentW-8);
+            lines.forEach(function(l){ checkPage(lineH); doc.text(l, marginX+4, y); y += lineH; });
+          });
+          y += 4;
+        }
+        var hasReactor = rowsStep.some(function(s){ return s.proc==='reactor'; });
+        var hasIodine  = rowsStep.some(function(s){ return s.proc==='iodine'; });
+        if (hasReactor) addProcText('5.2 Procedure of Replace Reactor Filling (A6.1 and A6.2)', PROC_REACTOR_STEPS, ['Risk posed by hot surfaces! Contact with hot components may cause serious burns.','Always use suitable heat-protective equipment (such as protective gloves).']);
+        if (hasIodine)  addProcText('5.3 Procedure of Replace Iodine-Carbon Hg Trap Filter', PROC_IODINE_STEPS, null);
+
+        /* Evidence foto per step (judul + foto pertama tidak terpisah halaman) */
+        var evidRows = rowsStep.filter(function(s){ return hgEvidence[s.no].before.length || hgEvidence[s.no].after.length; });
+        if (evidRows.length) {
+          secHeader('CATATAN & EVIDENCE PHOTO');
+          var gap=6, colW=(contentW-gap)/2, perRow=2, fw=(colW-gap/2)/perRow-2, fh=fw*0.75;
+          var firstBlockH = 10 + 5 + (fh+9);
+          evidRows.forEach(function(s){
+            var befImgs = hgEvidence[s.no].before.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
+            var aftImgs = hgEvidence[s.no].after.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
+            if (!befImgs.length && !aftImgs.length) return;
+            if (firstBlockH <= (ph-marginTop-marginBottom) && (y+firstBlockH > ph-marginBottom)) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
+            else { checkPage(14); }
+            doc.setFillColor(60,90,70);
+            doc.rect(marginX, y, contentW, 7, 'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220,240,225);
+            doc.text('Step '+s.no+'  |  '+pdfSafe(s.label).substring(0,70), marginX+4, y+5);
+            y += 10;
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160,90,20);
+            doc.text('BEFORE', marginX+3, y);
+            doc.setTextColor(15,110,90);
+            doc.text('AFTER', marginX+colW+gap+3, y);
+            y += 5;
+            var xBef=marginX+2, xAft=marginX+colW+gap;
+            var maxImgs = Math.max(befImgs.length, aftImgs.length);
+            for (var ii=0; ii<maxImgs; ii++) {
+              if (y+fh+10 > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
+              var bImg = befImgs[ii], aImg = aftImgs[ii];
+              if (bImg) { try{ doc.addImage(bImg.dataUrl,'JPEG',xBef,y,fw,fh); }catch(e){} }
+              if (aImg) { try{ doc.addImage(aImg.dataUrl,'JPEG',xAft,y,fw,fh); }catch(e){} }
+              y += fh + 9;
+            }
+            y += 3;
+          });
+        }
+      }
+
+      /* Table 5.5 Final Check — selalu tampil */
+      secHeader('Table 5.5 \u2014 Final Check After All Maintenance Work');
+      doc.autoTable({
+        startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
+        head: [['No','Final Check After All Maintenance Work','Resp.']],
+        body: TABLE55.map(function(r){ return [String(r.no), pdfSafe(r.label), 'Specialist']; }),
+        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
+        bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
+        columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:137},2:{cellWidth:20,halign:'center'}},
+        willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
+      });
+
+      var now = new Date();
+      var dateStr = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+      doc.save('PM_HG_Analyzer_'+FREQ_LABEL[activeFreq].replace(' ','')+'_'+dateStr+'.pdf');
+    } catch(err) {
+      alert('Gagal membuat PDF: ' + (err.message||err));
+    }
+  });
+}
+
+
+function dbCollectData(modul) {
+  if (modul !== HG_MODUL_NAME) return null;
+  var ki = function(img){return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};};
+  var stepsOut = {};
+  STEP_DATA.forEach(function(s){
+    stepsOut[s.no] = {
+      check: !!stepState[s.no].check,
+      sparepart: stepState[s.no].sparepart || '',
+      done: !!stepState[s.no].done,
+      before: hgEvidence[s.no].before.map(ki),
+      after: hgEvidence[s.no].after.map(ki)
+    };
+  });
+  var t54Out = {};
+  TABLE54.forEach(function(r){ t54Out[r.no] = {selesai: !!table54State[r.no].selesai}; });
+  return {
+    modul: HG_MODUL_NAME,
+    tanggal: document.getElementById('hgTanggal').value || '',
+    pic: document.getElementById('hgPIC').value || '',
+    work_order: document.getElementById('hgWorkOrder').value || '',
+    unit: 'Unit 7',
+    data: { frequency: activeFreq, steps: stepsOut, table54: t54Out }
+  };
+}
+
+/* ── RESTORE record (dipakai untuk load dari RIWAYAT maupun lanjutkan draft autosave) ── */
+function hgRestoreRecord(rec, opts) {
+  opts = opts || {};
+  var data = rec.data || {};
+  document.getElementById('hgTanggal').value = rec.tanggal || '';
+  document.getElementById('hgWorkOrder').value = rec.work_order || '';
+  document.getElementById('hgPIC').value = rec.pic || '';
+  if (data.steps) {
+    Object.keys(data.steps).forEach(function(no){
+      var s = data.steps[no];
+      if (!stepState[no]) return;
+      stepState[no].check = !!s.check;
+      stepState[no].sparepart = s.sparepart || '';
+      stepState[no].done = !!s.done;
+      hgEvidence[no] = {
+        before: (s.before||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};}),
+        after:  (s.after ||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};})
+      };
+    });
+  }
+  if (data.table54) {
+    Object.keys(data.table54).forEach(function(no){ if (table54State[no]) table54State[no].selesai = !!data.table54[no].selesai; });
+  }
+  hgSwitchTab(data.frequency || '3M');
+  dbShowToast(opts.fromDraft ? 'Draft berhasil dilanjutkan \u2713' : 'Data dimuat dari riwayat \u2713');
+}
+function restoreDraftData(rec, editingId) {
+  window._editingId = editingId || null;
+  hgRestoreRecord(rec, {fromDraft:true});
+}
+
+/* ── RESET ── */
+function hgResetAll() {
+  window._editingId = null;
+  document.getElementById('hgTanggal').value = '';
+  document.getElementById('hgWorkOrder').value = '';
+  document.getElementById('hgPIC').value = '';
+  STEP_DATA.forEach(function(s){ stepState[s.no] = {check:false, sparepart:'', done:false}; hgEvidence[s.no] = {before:[], after:[]}; });
+  TABLE54.forEach(function(r){ table54State[r.no] = {selesai:false}; });
+  hgSwitchTab(activeFreq);
+}
+
+/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  if (!id) { hgSwitchTab('3M'); return; }
+  dbLoad(id, function(rec){
+    window._editingId = id;
+    hgRestoreRecord(rec, {});
+  });
+})();
+
+
+function hgSwitchTab(freq) {
+  activeFreq = freq;
+  document.querySelectorAll('#hgTabBar .tab-btn').forEach(function(btn){
+    btn.classList.toggle('active', btn.getAttribute('data-freq') === freq);
+  });
+  if (freq === 'manual') {
+    document.getElementById('hgFreqContent').style.display = 'none';
+    document.getElementById('hgTabManual').style.display = 'block';
+    document.getElementById('hgActionRow').style.display = 'none';
+  } else {
+    document.getElementById('hgFreqContent').style.display = 'block';
+    document.getElementById('hgTabManual').style.display = 'none';
+    document.getElementById('hgActionRow').style.display = 'flex';
+    hgRenderFreqContent(freq);
+    hgShowProcPopup(freq);
+  }
+}
+
+
+function hgEvidenceCellHtml(no, phase) {
+  return '<div id="hgEvBox_'+no+'_'+phase+'" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">'+
+    '<input type="file" accept="image/*" multiple style="display:none" id="hgFile_'+no+'_'+phase+'" onchange="hgHandleFiles(this.files,'+no+',\''+phase+'\')">'+
+    '<div onclick="document.getElementById(\'hgFile_'+no+'_'+phase+'\').click()" style="width:44px;height:34px;border:1.5px dashed var(--panel-border);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text3);flex-shrink:0" title="Upload foto">+</div>'+
+  '</div>';
+}
+
+function hgHandleFiles(files, no, phase) {
+  var side = 'step'+no+'_'+phase;
+  Array.from(files).forEach(function(file) {
+    if (!isImageFile(file)) return;
+    fileToJpegDataUrl(file, function(dataUrl){
+      if (!dataUrl) return;
+      var name = file.name.replace(/\.[^.]+$/, '.jpg');
+      imgOpenCropper(dataUrl, name, 'image/jpeg', hgEvidence[no][phase], side, 'hg', -1);
+    });
+  });
+}
+
+function hgReEdit(no, phase, idx) {
+  var img = hgEvidence[no][phase][idx];
+  if (!img) return;
+  var side = 'step'+no+'_'+phase;
+  imgOpenCropper(img.dataUrl, img.name, img.type, hgEvidence[no][phase], side, 'hg', idx);
+}
+
+function hgRenderPreviews(side) {
+  var us = side.lastIndexOf('_');
+  var stepKey = side.slice(0, us);           // "step3"
+  var phase = side.slice(us+1);              // "before" / "after"
+  var no = parseInt(stepKey.replace('step',''), 10);
+  var box = document.getElementById('hgEvBox_'+no+'_'+phase);
+  if (!box) return;
+  var arr = hgEvidence[no][phase];
+  var thumbsHtml = arr.map(function(img, idx){
+    var isImg = img.type && img.type.indexOf('image/') === 0;
+    var thumb = isImg
+      ? '<img src="'+img.dataUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer" onclick="hgReEdit('+no+',\''+phase+'\','+idx+')" title="Klik untuk crop ulang">'
+      : '';
+    return '<div style="position:relative;width:44px;height:34px;border-radius:4px;overflow:hidden;background:#111;flex-shrink:0">'+
+      thumb+
+      '<button onclick="hgEvidence['+no+']['+"'"+phase+"'"+'].splice('+idx+',1);hgRenderPreviews(\''+side+'\')" style="position:absolute;top:0;right:0;background:rgba(180,0,0,0.8);color:#fff;border:none;font-size:8px;line-height:1;padding:1px 3px;cursor:pointer">&#10005;</button>'+
+    '</div>';
+  }).join('');
+  var addBtn = '<input type="file" accept="image/*" multiple style="display:none" id="hgFile_'+no+'_'+phase+'" onchange="hgHandleFiles(this.files,'+no+',\''+phase+'\')">'+
+    '<div onclick="document.getElementById(\'hgFile_'+no+'_'+phase+'\').click()" style="width:44px;height:34px;border:1.5px dashed var(--panel-border);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text3);flex-shrink:0" title="Upload foto">+</div>';
+  box.innerHTML = thumbsHtml + addBtn;
+}
+
+/* ── RENDER: Table 5.4 (2 Yearly / 5 Yearly) — dengan checkbox Selesai ── */
+function renderTable54Html(freq) {
+  var rows = TABLE54.filter(function(r){ return r.freq === freq; }).map(function(r){
+    var st = table54State[r.no];
+    return '<tr><td style="text-align:center">'+r.no+'</td><td>'+safe(r.label)+'</td><td style="text-align:center">'+safe(r.interval)+'</td><td>Specialist</td>'+
+      '<td style="text-align:center"><input type="checkbox" '+(st.selesai?'checked':'')+' onchange="table54State['+r.no+'].selesai=this.checked" style="width:20px;height:20px;cursor:pointer"></td></tr>';
+  }).join('');
+  return '<div class="section-label">Table 5.4 — Regularly Recurring Maintenance Work ('+FREQ_LABEL[freq]+')</div>'+
+    '<div class="preview-wrap" style="margin-bottom:24px"><table class="manual-table">'+
+    '<thead><tr><th style="width:36px">No</th><th>Maintenance Work</th><th style="width:100px">Time Intervals</th><th style="width:110px">Responsibility</th><th style="width:70px">Selesai</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table></div>';
+}
+
+
+function renderStepTableHtml(month) {
+  var rows = stepsFor(month).map(function(s){
+    var st = stepState[s.no];
+    var sparepartCell = s.replace
+      ? '<select onchange="stepState['+s.no+'].sparepart=this.value" style="min-width:90px">'+
+          '<option value=""'+(st.sparepart===''?' selected':'')+'>— pilih —</option>'+
+          '<option value="Ready"'+(st.sparepart==='Ready'?' selected':'')+'>Ready</option>'+
+          '<option value="Kosong"'+(st.sparepart==='Kosong'?' selected':'')+'>Sparepart Kosong</option>'+
+        '</select>'
+      : '<input type="checkbox" '+(st.done?'checked':'')+' onchange="stepState['+s.no+'].done=this.checked" style="width:20px;height:20px;cursor:pointer">';
+    var procBadge = s.proc ? ' <span style="font-size:10px;color:#c0392b;font-weight:700">&#9888; lihat prosedur</span>' : '';
+    return '<tr>'+
+      '<td style="text-align:center">'+s.no+'</td>'+
+      '<td>'+safe(s.label)+procBadge+'</td>'+
+      '<td id="hgRef_'+s.no+'" style="min-width:80px;color:var(--text3);font-size:11px">'+(s.ref?safe(s.ref):'<em>— referensi menyusul —</em>')+'</td>'+
+      '<td style="text-align:center"><input type="checkbox" '+(st.check?'checked':'')+' onchange="stepState['+s.no+'].check=this.checked" style="width:20px;height:20px;cursor:pointer"></td>'+
+      '<td style="text-align:center">'+sparepartCell+'</td>'+
+      '<td>'+hgEvidenceCellHtml(s.no,'before')+'</td>'+
+      '<td>'+hgEvidenceCellHtml(s.no,'after')+'</td>'+
+    '</tr>';
+  }).join('');
+  return '<div class="section-label" style="margin-top:8px">Table 5.3 — Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')</div>'+
+    '<div class="preview-wrap" style="margin-bottom:8px"><table class="manual-table">'+
+    '<thead><tr><th style="width:32px">No</th><th style="min-width:220px">Step Of Work</th><th style="width:90px">Reference</th><th style="width:50px">Check</th><th style="width:110px">Sparepart Replacement</th><th style="width:130px">Evidence Before</th><th style="width:130px">Evidence After</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table></div>';
+}
+</script>
+</body>
+</html>

@@ -229,6 +229,7 @@ function normalizeModul(name) {
   if (n.indexOf('DCS')>=0 || n.indexOf('HMI')>=0 || n.indexOf('OIS')>=0) return 'DCS_HMI';
   if (n.indexOf('FLOW METER')>=0 || n.indexOf('FLOWMETER')>=0 || n.indexOf('FGD')>=0) return 'FLOWMETER_FGD';
   if (n.indexOf('CONDUCTIVITY')>=0) return 'CONDUCTIVITY';
+  if (n.indexOf('HG')>=0 || n.indexOf('MERCURY')>=0) return 'PM_HG_ANALYZER';
   if (n.indexOf('PH')>=0 || n.indexOf('TRANSMITTER')>=0 || n.indexOf('AIT')>=0 || n.indexOf('ANALYZER')>=0) return 'PH-ANALYZER';
   return n;
 }
@@ -543,6 +544,9 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
   }
   else if (modulePrefix === 'fm') {
     if (typeof fmRenderPreviews === 'function') fmRenderPreviews(side);
+  }
+  else if (modulePrefix === 'hg') {
+    if (typeof hgRenderPreviews === 'function') hgRenderPreviews(side);
   }
 }
 
