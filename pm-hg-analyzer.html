@@ -72,26 +72,31 @@ input[type="checkbox"]:checked::after {
       <div class="meta-field"><label>Nama Operator / PIC</label><input type="text" id="hgPIC" placeholder="Nama PIC..."></div>
     </div>
 
-    <details style="margin-top:18px;border:1px solid var(--panel-border);border-radius:8px;padding:10px 14px;background:#f8faf9">
-      <summary style="cursor:pointer;font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;color:var(--steel);letter-spacing:0.5px">
-        &#128214; Referensi Komponen HM-1400 TRX 2 (klik untuk buka/tutup)
-      </summary>
+    <div style="margin-top:18px;border:1px solid var(--panel-border);border-radius:8px;padding:10px 14px;background:#f8faf9">
+      <div style="font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;color:var(--steel);letter-spacing:0.5px">
+        &#128214; Referensi Komponen HM-1400 TRX 2
+      </div>
       <div style="margin-top:14px">
         <img src="assets/hg-fig3-1-panel-overview.png" alt="Fig 3.1 Overview Komponen Panel" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px;margin-bottom:16px" onerror="this.onerror=null;this.outerHTML='<div style=&quot;padding:12px;background:#fef2f2;border:1px dashed #c33;border-radius:6px;color:#900;font-size:12px;margin-bottom:16px&quot;>&#9888; Gambar tidak ditemukan: <b>assets/hg-fig3-1-panel-overview.png</b><br>Cek: (1) file sudah di-push ke folder <b>assets/</b> di GitHub, (2) nama file persis sama termasuk huruf besar/kecil (GitHub Pages case-sensitive), (3) ekstensi benar .png.</div>'">
         <img src="assets/hg-table3-1-fig3-2-probe.png" alt="Table 3.1 dan Fig 3.2 Sampling Probe" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px" onerror="this.onerror=null;this.outerHTML='<div style=&quot;padding:12px;background:#fef2f2;border:1px dashed #c33;border-radius:6px;color:#900;font-size:12px&quot;>&#9888; Gambar tidak ditemukan: <b>assets/hg-table3-1-fig3-2-probe.png</b><br>Cek: (1) file sudah di-push ke folder <b>assets/</b> di GitHub, (2) nama file persis sama termasuk huruf besar/kecil (GitHub Pages case-sensitive), (3) ekstensi benar .png.</div>'">
       </div>
-    </details>
+    </div>
   </div>
 
   <div class="panel">
-    <div class="tab-bar" id="hgTabBar">
-      <button class="tab-btn active" data-freq="3M" onclick="hgSwitchTab('3M')">3 Monthly</button>
-      <button class="tab-btn" data-freq="6M" onclick="hgSwitchTab('6M')">6 Monthly</button>
-      <button class="tab-btn" data-freq="9M" onclick="hgSwitchTab('9M')">9 Monthly</button>
-      <button class="tab-btn" data-freq="1Y" onclick="hgSwitchTab('1Y')">1 Yearly</button>
-      <button class="tab-btn" data-freq="2Y" onclick="hgSwitchTab('2Y')">2 Yearly</button>
-      <button class="tab-btn" data-freq="5Y" onclick="hgSwitchTab('5Y')">5 Yearly</button>
-      <button class="tab-btn" data-freq="manual" onclick="hgSwitchTab('manual')">Manual Book PM HG All Page</button>
+    <div class="tab-bar" id="hgTabBar" style="align-items:center;gap:14px;flex-wrap:wrap">
+      <div class="meta-field" style="max-width:230px;margin:0">
+        <label style="font-size:11px;color:var(--text3)">Frequency</label>
+        <select id="hgFreqSelect" onchange="hgSwitchTab(this.value)">
+          <option value="3M">3 Monthly</option>
+          <option value="6M">6 Monthly</option>
+          <option value="9M">9 Monthly</option>
+          <option value="1Y">1 Yearly</option>
+          <option value="2Y">2 Yearly</option>
+          <option value="5Y">5 Yearly</option>
+        </select>
+      </div>
+      <button class="tab-btn" data-freq="manual" onclick="hgSwitchTab('manual')" style="align-self:flex-end">Manual Book PM HG All Page</button>
     </div>
 
     <!-- Tab isi frequency utama (3M/6M/9M/1Y/2Y/5Y) dirender dinamis ke sini -->
@@ -103,7 +108,9 @@ input[type="checkbox"]:checked::after {
       <div style="margin-bottom:12px">
         <a href="assets/HM1400-TRX2OperatingMaintenanceHG.pdf" download class="btn btn-outline" style="display:inline-flex;text-decoration:none;width:auto">&#11015; Download PDF</a>
       </div>
-      <iframe src="assets/HM1400-TRX2OperatingMaintenanceHG.pdf" style="width:100%;height:80vh;border:1px solid var(--panel-border);border-radius:8px"></iframe>
+      <div id="hgManualBookArea">
+        <iframe id="hgManualIframe" src="assets/HM1400-TRX2OperatingMaintenanceHG.pdf" style="width:100%;height:80vh;border:1px solid var(--panel-border);border-radius:8px"></iframe>
+      </div>
     </div>
 
     <div class="btn-row" id="hgActionRow">
@@ -168,22 +175,22 @@ var HG_MODUL_NAME = 'PM HG Analyzer';
 /* freq: bulan-bulan di mana step ini muncul (3/6/9/12). replace: true => kolom
    "Sparepart Replacement" berupa dropdown Ready/Kosong. false => checkbox "Sudah Dikerjakan". */
 var STEP_DATA = [
-  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", replace:true,  freq:[3,6,9,12]},
-  {no:2,  label:"Replace the particle protection filter (13) upstream from the photometer", ref:"", replace:true,  freq:[3,6,9,12]},
-  {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", replace:true,  freq:[3,6,9,12], proc:'iodine'},
-  {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", replace:false, freq:[3,6,9,12]},
-  {no:5,  label:"Adjust the flow at the needle valve (15)", ref:"", replace:false, freq:[3,6,9,12]},
-  {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"", replace:false, freq:[3,6,9,12]},
-  {no:7,  label:"Rinse the wash bottles of the gas cooler (M1) with water", ref:"", replace:false, freq:[6,12]},
-  {no:8,  label:"Replace the reactor filling (A6.1 and A6.2)*", ref:"", replace:true,  freq:[6,12], proc:'reactor'},
-  {no:9,  label:"Replace the condensate blocking membrane (16)", ref:"", replace:true,  freq:[6,12]},
-  {no:10, label:"Replace the membrane of the gas pump (M3)", ref:"", replace:true,  freq:[12]},
-  {no:11, label:"Maintain the condensate pump (M4.#), replace the hoses and pressure rollers", ref:"", replace:true,  freq:[12]},
-  {no:12, label:"Replace the iodine-active carbon (12) in the zero gas filter", ref:"", replace:true,  freq:[12]},
-  {no:13, label:"Replace all hoses in the gas path from the reactor to the photometer", ref:"", replace:true,  freq:[12]},
-  {no:14, label:"Adjust the flow", ref:"", replace:false, freq:[12]},
-  {no:15, label:"Test the AC unit in accordance with the manufacturer's specifications", ref:"", replace:false, freq:[12]},
-  {no:16, label:"Replace the hoses in the pumps (M31) for the HgCl\u2082", ref:"", replace:true,  freq:[12]}
+  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[3,6,9,12]},
+  {no:2,  label:"Replace the particle protection filter (13) upstream from the photometer", ref:"", refImg:"assets/hg-step2-ref.png", replace:true,  freq:[3,6,9,12]},
+  {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", refImg:"assets/hg-step3-ref.png", replace:true,  freq:[3,6,9,12], proc:'iodine'},
+  {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", refImg:"assets/hg-step4-ref.png", replace:false, freq:[3,6,9,12]},
+  {no:5,  label:"Adjust the flow at the needle valve (15)", ref:"", refImg:"assets/hg-step5-ref.png", replace:false, freq:[3,6,9,12]},
+  {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"Menu 32111", refImg:"", replace:false, freq:[3,6,9,12]},
+  {no:7,  label:"Rinse the wash bottles of the gas cooler (M1) with water", ref:"", refImg:"assets/hg-step7-ref.png", replace:false, freq:[6,12]},
+  {no:8,  label:"Replace the reactor filling (A6.1 and A6.2)*", ref:"", refImg:"assets/hg-step8-ref.png", replace:true,  freq:[6,12], proc:'reactor'},
+  {no:9,  label:"Replace the condensate blocking membrane (16)", ref:"", refImg:"assets/hg-step9-ref.png", replace:true,  freq:[6,12]},
+  {no:10, label:"Replace the membrane of the gas pump (M3)", ref:"", refImg:"assets/hg-step10-ref.png", replace:true,  freq:[12]},
+  {no:11, label:"Maintain the condensate pump (M4.#), replace the hoses and pressure rollers", ref:"", refImg:"assets/hg-step11-ref.png", replace:true,  freq:[12]},
+  {no:12, label:"Replace the iodine-active carbon (12) in the zero gas filter", ref:"", refImg:"assets/hg-step12-ref.png", replace:true,  freq:[12]},
+  {no:13, label:"Replace all hoses in the gas path from the reactor to the photometer", ref:"", refImg:"assets/hg-step13-ref.png", replace:true,  freq:[12]},
+  {no:14, label:"Adjust the flow", ref:"", refImg:"assets/hg-step14-ref.png", replace:false, freq:[12]},
+  {no:15, label:"Test the AC unit in accordance with the manufacturer's specifications", ref:"", refImg:"", replace:false, freq:[12]},
+  {no:16, label:"Replace the hoses in the pumps (M31) for the HgCl\u2082", ref:"", refImg:"assets/hg-step16-ref.png", replace:true,  freq:[12]}
 ];
 var FREQ_MONTH = {'3M':3, '6M':6, '9M':9, '1Y':12};
 var FREQ_LABEL = {'3M':'3 Monthly', '6M':'6 Monthly', '9M':'9 Monthly', '1Y':'1 Yearly', '2Y':'2 Yearly', '5Y':'5 Yearly'};
@@ -688,7 +695,8 @@ function restoreDraftData(rec, editingId) {
 /* ── RESET ── */
 function hgResetAll() {
   window._editingId = null;
-  document.getElementById('hgTanggal').value = '';
+  var t = new Date();
+  document.getElementById('hgTanggal').value = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
   document.getElementById('hgWorkOrder').value = '';
   document.getElementById('hgPIC').value = '';
   STEP_DATA.forEach(function(s){ stepState[s.no] = {check:false, sparepart:'', done:false}; hgEvidence[s.no] = {before:[], after:[]}; });
@@ -700,7 +708,15 @@ function hgResetAll() {
 (function(){
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
-  if (!id) { hgSwitchTab('3M'); return; }
+  if (!id) {
+    var todayEl = document.getElementById('hgTanggal');
+    if (todayEl && !todayEl.value) {
+      var t = new Date();
+      todayEl.value = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+    }
+    hgSwitchTab('3M');
+    return;
+  }
   dbLoad(id, function(rec){
     window._editingId = id;
     hgRestoreRecord(rec, {});
@@ -708,15 +724,31 @@ function hgResetAll() {
 })();
 
 
+function hgCheckManualBookFile() {
+  var pdfPath = 'assets/HM1400-TRX2OperatingMaintenanceHG.pdf';
+  var area = document.getElementById('hgManualBookArea');
+  fetch(pdfPath, {method:'HEAD'}).then(function(res){
+    if (!res.ok) throw new Error('not found');
+    area.innerHTML = '<iframe id="hgManualIframe" src="'+pdfPath+'" style="width:100%;height:80vh;border:1px solid var(--panel-border);border-radius:8px"></iframe>';
+  }).catch(function(){
+    area.innerHTML = '<div style="padding:24px;background:#fef2f2;border:1px dashed #c33;border-radius:8px;color:#900;font-size:13px;text-align:center">'+
+      '&#9888; File PDF belum ditemukan di <b>'+pdfPath+'</b><br><br>'+
+      'Pastikan file PDF sudah di-upload ke folder <b>assets/</b> di repo GitHub dengan nama persis sama (huruf besar/kecil ikut berpengaruh di GitHub Pages).'+
+      '</div>';
+  });
+}
+
 function hgSwitchTab(freq) {
   activeFreq = freq;
-  document.querySelectorAll('#hgTabBar .tab-btn').forEach(function(btn){
-    btn.classList.toggle('active', btn.getAttribute('data-freq') === freq);
-  });
+  var manualBtn = document.querySelector('#hgTabBar .tab-btn[data-freq="manual"]');
+  if (manualBtn) manualBtn.classList.toggle('active', freq === 'manual');
+  var sel = document.getElementById('hgFreqSelect');
+  if (sel && freq !== 'manual') sel.value = freq;
   if (freq === 'manual') {
     document.getElementById('hgFreqContent').style.display = 'none';
     document.getElementById('hgTabManual').style.display = 'block';
     document.getElementById('hgActionRow').style.display = 'none';
+    hgCheckManualBookFile();
   } else {
     document.getElementById('hgFreqContent').style.display = 'block';
     document.getElementById('hgTabManual').style.display = 'none';
@@ -799,6 +831,15 @@ function renderTable54Html(freq) {
 }
 
 
+function hgRefCellHtml(s) {
+  if (s.refImg) {
+    return '<img src="'+s.refImg+'" alt="Referensi step '+s.no+'" style="width:64px;height:auto;border-radius:4px;border:1px solid var(--panel-border)" '+
+      'onerror="this.onerror=null;this.outerHTML=\'<em>&#9888; gambar tidak ditemukan</em>\'">';
+  }
+  if (s.ref) return safe(s.ref);
+  return '<em>gambar menyusul</em>';
+}
+
 function renderStepTableHtml(month) {
   var rows = stepsFor(month).map(function(s){
     var st = stepState[s.no];
@@ -813,7 +854,7 @@ function renderStepTableHtml(month) {
     return '<tr>'+
       '<td style="text-align:center">'+s.no+'</td>'+
       '<td>'+safe(s.label)+procBadge+'</td>'+
-      '<td id="hgRef_'+s.no+'" style="min-width:80px;color:var(--text3);font-size:11px">'+(s.ref?safe(s.ref):'<em>— referensi menyusul —</em>')+'</td>'+
+      '<td id="hgRef_'+s.no+'" style="min-width:80px;color:var(--text3);font-size:11px;text-align:center">'+hgRefCellHtml(s)+'</td>'+
       '<td style="text-align:center"><input type="checkbox" '+(st.check?'checked':'')+' onchange="stepState['+s.no+'].check=this.checked" style="width:20px;height:20px;cursor:pointer"></td>'+
       '<td style="text-align:center">'+sparepartCell+'</td>'+
       '<td>'+hgEvidenceCellHtml(s.no,'before')+'</td>'+
