@@ -350,7 +350,7 @@ function strategy2(file, callback) {
   };
   reader.onerror = function() {
     hideImgLoading();
-    alert('Gagal membaca file: ' + file.name);
+    alert('Gagal membaca file: ' + file.name + '\n\nKemungkinan sebab:\n\u2022 Foto masih tersimpan di cloud (Google Photos / Samsung Cloud) dan belum terunduh penuh ke HP \u2014 buka foto itu di aplikasi Galeri sampai termuat penuh, lalu coba upload lagi.\n\u2022 File terlalu besar atau format tidak didukung.\n\nJika masih gagal, coba screenshot foto tersebut lalu upload screenshot-nya.');
     callback(null);
   };
   reader.readAsDataURL(file);

@@ -124,6 +124,28 @@ input[type="checkbox"]:checked::after {
   </div>
 </div>
 
+<!-- Modal Crop Foto (dibutuhkan oleh imgOpenCropper/cropAndSave/skipCrop/cropReset di shared.js) -->
+<div id="cropModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100000;align-items:center;justify-content:center;padding:12px">
+  <div style="background:#fff;border-radius:12px;padding:14px;max-width:480px;width:100%;max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:10px">
+    <div style="font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;color:var(--steel);font-size:15px">&#9986; Crop Foto</div>
+    <div id="cropWrap" style="position:relative;width:100%;height:300px;background:#111;border-radius:8px;overflow:hidden;touch-action:none">
+      <img id="cropImg" style="position:absolute;max-width:none;user-select:none;-webkit-user-drag:none" draggable="false">
+      <div id="cropBox" style="position:absolute;border:2px solid #27ae60;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3)">Ukuran asli: <span id="cropNatSize">-</span></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px">
+      <label style="display:flex;align-items:center;gap:4px">W <input type="number" id="cropOutW" oninput="cropLinkSize('w')" style="width:70px;padding:4px;border:1px solid var(--panel-border);border-radius:4px"></label>
+      <label style="display:flex;align-items:center;gap:4px">H <input type="number" id="cropOutH" oninput="cropLinkSize('h')" style="width:70px;padding:4px;border:1px solid var(--panel-border);border-radius:4px"></label>
+      <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="cropLock" checked> Kunci rasio</label>
+      <button type="button" onclick="cropReset()" class="btn btn-outline" style="width:auto;padding:6px 10px;font-size:12px">&#8635; Reset</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button type="button" onclick="skipCrop()" class="btn btn-outline" style="flex:1">Lewati Crop</button>
+      <button type="button" onclick="cropAndSave()" class="btn btn-primary" style="flex:1">&#10003; Simpan</button>
+    </div>
+  </div>
+</div>
+
 <script>
 window.CURRENT_MODUL = 'PM HG Analyzer'; // harus sama persis dengan HG_MODUL_NAME & argumen dbSave()
 var HG_MODUL_NAME = 'PM HG Analyzer';
@@ -258,7 +280,7 @@ function renderTable52Html() {
   var rows = TABLE52.map(function(r){
     var months = [3,6,9,12].map(function(m){
       var on = r.onlyMonth ? (m===r.onlyMonth) : true;
-      return '<td style="text-align:center">'+(on?'X':'')+'</td>';
+      return '<td style="text-align:center">'+(on?'<span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:#eafaf0;border:1.3px solid #1a6b3a;position:relative;vertical-align:middle"><span style="position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #1a6b3a;border-width:0 2px 2px 0;transform:rotate(40deg)"></span></span>':'')+'</td>';
     }).join('');
     return '<tr><td style="text-align:center">'+r.no+'</td><td>'+safe(r.label)+(r.ref?'<br><span style="color:var(--text3);font-size:11px">'+safe(r.ref)+'</span>':'')+'</td>'+months+'<td>Specialist</td></tr>';
   }).join('');
