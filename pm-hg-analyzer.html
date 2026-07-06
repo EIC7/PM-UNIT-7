@@ -545,11 +545,11 @@ function hgDownloadPdf() {
           }),
           headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
           bodyStyles:{fontSize:7,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:87},2:{cellWidth:24,halign:'center'},3:{cellWidth:14,halign:'center'},4:{cellWidth:24,halign:'center'}},
+          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:87},2:{cellWidth:24,halign:'center',minCellHeight:24},3:{cellWidth:14,halign:'center'},4:{cellWidth:24,halign:'center'}},
           didParseCell:function(d){
             if (d.section==='body' && d.column.index===2) {
               var s = rowsStep[d.row.index];
-              if (s && s.refImg && hgRefImgCache[s.refImg]) { d.cell.styles.minCellHeight = 22; d.cell.text = []; }
+              if (s && s.refImg && hgRefImgCache[s.refImg]) { d.cell.text = []; }
             }
             if (d.section==='body' && d.column.index===4) {
               var s2 = rowsStep[d.row.index];
@@ -864,7 +864,8 @@ function renderTable54Html(freq) {
 
 function hgRefCellHtml(s) {
   if (s.refImg) {
-    return '<img src="'+s.refImg+'" alt="Referensi step '+s.no+'" style="width:64px;height:auto;border-radius:4px;border:1px solid var(--panel-border)" '+
+    return '<img src="'+s.refImg+'" alt="Referensi step '+s.no+'" style="width:130px;height:auto;border-radius:4px;border:1px solid var(--panel-border);cursor:zoom-in" '+
+      'onclick="window.open(this.src,\'_blank\')" title="Klik untuk lihat ukuran penuh" '+
       'onerror="this.onerror=null;this.outerHTML=\'<em>&#9888; gambar tidak ditemukan</em>\'">';
   }
   if (s.ref) return safe(s.ref);
@@ -894,7 +895,7 @@ function renderStepTableHtml(month) {
   }).join('');
   return '<div class="section-label" style="margin-top:8px">Table 5.3 — Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')</div>'+
     '<div class="preview-wrap" style="margin-bottom:8px"><table class="manual-table">'+
-    '<thead><tr><th style="width:32px">No</th><th style="min-width:220px">Step Of Work</th><th style="width:90px">Reference</th><th style="width:50px">Check</th><th style="width:110px">Sparepart Replacement</th><th style="width:130px">Evidence Before</th><th style="width:130px">Evidence After</th></tr></thead>'+
+    '<thead><tr><th style="width:32px">No</th><th style="min-width:220px">Step Of Work</th><th style="width:150px">Reference</th><th style="width:50px">Check</th><th style="width:110px">Sparepart Replacement</th><th style="width:130px">Evidence Before</th><th style="width:130px">Evidence After</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table></div>';
 }
 </script>
