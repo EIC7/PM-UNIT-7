@@ -67,12 +67,14 @@
         /* CROP SIZE PANEL */
         .crop-size-panel{border-top:1px solid #2a3a30;padding-top:8px;margin-top:2px}
         .crop-size-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-        .crop-preset-btn,.crop-orient-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
-        .crop-preset-btn.active,.crop-orient-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+        .crop-preset-btn,.crop-orient-btn,.crop-mode-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
+        .crop-preset-btn.active,.crop-orient-btn.active,.crop-mode-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+        .crop-mode-btn{padding:6px 12px;font-size:12px}
         .crop-cm-field{display:flex;flex-direction:column;gap:2px}
         .crop-cm-field label{font-size:9px;color:#8aab96;font-weight:600}
         .crop-cm-field input{width:64px;padding:5px 6px;font-size:12px;border-radius:5px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8}
         .crop-size-label{font-size:11px;color:#7fd9a4;font-weight:600;margin-left:4px}
+        .crop-default-label{font-size:12px;color:#7fd9a4;font-weight:600;padding:4px 2px}
         .img-thumb .size-badge{position:absolute;bottom:6px;left:2px;background:rgba(0,0,0,0.65);color:#fff;font-size:9px;padding:1px 4px;border-radius:4px;font-weight:600}
         @media print{.no-print{display:none!important}}
     </style>
@@ -184,15 +186,22 @@
             </div>
             <div class="crop-footer">
                 <div class="crop-size-panel">
-                    <div class="crop-size-row" id="cropPresetRow"></div>
-                    <div class="crop-size-row" style="margin-top:8px">
-                        <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
-                        <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
-                        <button type="button" class="crop-orient-btn" id="cropOrientFree" onclick="setFreeCrop()">✋ Bebas</button>
+                    <div class="crop-size-row" id="cropModeRow">
+                        <button type="button" class="crop-mode-btn" id="cropModeDefault" onclick="setCropMode('default')">⭐ Default</button>
+                        <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
+                        <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
                     </div>
-                    <div class="crop-size-row" style="margin-top:8px">
-                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="5" step="0.1" value="5" oninput="onCustomCmChange()"></div>
-                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="5" step="0.1" value="5" oninput="onCustomCmChange()"></div>
+                    <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran: 7.2 × 5.18 cm (default, tidak perlu diatur)</div>
+                    <div id="cropPresetControls" style="display:none">
+                        <div class="crop-size-row" id="cropPresetRow"></div>
+                        <div class="crop-size-row" style="margin-top:8px">
+                            <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
+                            <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
+                        </div>
+                    </div>
+                    <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
+                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
                         <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                     </div>
                 </div>
@@ -222,6 +231,13 @@
         cropModal._cropHcm = null;
         cropModal._orientation = 'portrait';
         cropModal._activePresetIdx = -1;
+        cropModal._mode = 'default';
+        cropModal._presetRatio = 1;
+
+        var DEFAULT_CROP_W_CM = 7.2;
+        var DEFAULT_CROP_H_CM = 5.18;
+        var PRESET_DEFAULT_LONG_CM = 4;
+        var MANUAL_MAX_CM = 7;
 
         var CROP_PRESETS = [
             {label:'1:1', w:1, h:1},
@@ -270,11 +286,92 @@
             return orientation === 'landscape' ? {w: hi, h: lo} : {w: lo, h: hi};
         }
 
+        // Batas maksimal per-field tergantung mode aktif & orientasi.
+        // Preset: sisi panjang (mengikuti orientasi) maks 7cm, sisi pendek maks 5cm.
+        // Manual: bebas kedua sisi, maks 7cm masing-masing.
+        function getMaxForField(field) {
+            if (cropModal._mode === 'preset') {
+                var longMax = 7, shortMax = 5;
+                if (cropModal._orientation === 'landscape') {
+                    return field === 'w' ? longMax : shortMax;
+                } else {
+                    return field === 'w' ? shortMax : longMax;
+                }
+            }
+            if (cropModal._mode === 'manual') return MANUAL_MAX_CM;
+            return 99;
+        }
+
+        function clampCmValue(v, maxV) {
+            v = parseFloat(v);
+            if (!isFinite(v) || v <= 0) v = 0.5;
+            if (v > maxV) v = maxV;
+            if (v < 0.5) v = 0.5;
+            return Math.round(v * 10) / 10;
+        }
+
+        // ── MODE: Default / Preset / Manual ─────────────────────────────────────────
+        function setCropMode(mode) {
+            cropModal._mode = mode;
+            var dB = document.getElementById('cropModeDefault');
+            var pB = document.getElementById('cropModePreset');
+            var mB = document.getElementById('cropModeManual');
+            if (dB) dB.classList.toggle('active', mode === 'default');
+            if (pB) pB.classList.toggle('active', mode === 'preset');
+            if (mB) mB.classList.toggle('active', mode === 'manual');
+
+            var presetControls = document.getElementById('cropPresetControls');
+            var cmRow = document.getElementById('cropCmRow');
+            var defaultLabel = document.getElementById('cropDefaultLabel');
+
+            if (mode === 'default') {
+                if (presetControls) presetControls.style.display = 'none';
+                if (cmRow) cmRow.style.display = 'none';
+                if (defaultLabel) defaultLabel.style.display = 'block';
+                highlightPreset(-1);
+                applyDefaultSize();
+            } else if (mode === 'preset') {
+                if (presetControls) presetControls.style.display = 'block';
+                if (cmRow) cmRow.style.display = 'flex';
+                if (defaultLabel) defaultLabel.style.display = 'none';
+                if (cropModal._activePresetIdx < 0) {
+                    applyPreset(0);
+                } else {
+                    applyPreset(cropModal._activePresetIdx);
+                }
+            } else {
+                if (presetControls) presetControls.style.display = 'none';
+                if (cmRow) cmRow.style.display = 'flex';
+                if (defaultLabel) defaultLabel.style.display = 'none';
+                highlightPreset(-1);
+                var w = cropModal._cropWcm || 5;
+                var h = cropModal._cropHcm || 5;
+                setFreeSize(w, h);
+            }
+        }
+
+        // Mode Default: ukuran tetap 7.2 × 5.18 cm, sama seperti PM HG Analyzer, tanpa input tambahan.
+        function applyDefaultSize() {
+            cropModal._ratioLocked = true;
+            cropModal._cropWcm = DEFAULT_CROP_W_CM;
+            cropModal._cropHcm = DEFAULT_CROP_H_CM;
+            updateSizeLabel();
+            reshapeCropBoxToRatio();
+        }
+
+        // Mode Preset: pilih rasio + orientasi, ukuran awal dibuat kecil (sisi panjang 4cm)
+        // lalu user bisa membesarkan/mengecilkan lewat salah satu input (rasio tetap terkunci).
         function applyPreset(i) {
             var p = CROP_PRESETS[i];
-            var wh = orientedWH(p.w, p.h, cropModal._orientation);
+            var ratioValue = Math.max(p.w, p.h) / Math.min(p.w, p.h);
             cropModal._activePresetIdx = i;
-            setLockedSize(wh.w, wh.h);
+            var longSide = PRESET_DEFAULT_LONG_CM;
+            var shortSide = Math.round((longSide / ratioValue) * 10) / 10;
+            var w, h;
+            if (cropModal._orientation === 'landscape') { w = longSide; h = shortSide; }
+            else { h = longSide; w = shortSide; }
+            cropModal._presetRatio = w / h;
+            setLockedSize(w, h);
             highlightPreset(i);
         }
 
@@ -282,48 +379,61 @@
             cropModal._orientation = orientation;
             var pB = document.getElementById('cropOrientPotrait');
             var lB = document.getElementById('cropOrientLandscape');
-            var fB = document.getElementById('cropOrientFree');
             if (pB) pB.classList.toggle('active', orientation === 'portrait');
             if (lB) lB.classList.toggle('active', orientation === 'landscape');
-            if (fB) fB.classList.remove('active');
-            // Menukar panjang/lebar yang sedang aktif sesuai orientasi baru
-            var w = parseFloat(document.getElementById('cropWcm').value) || 1;
-            var h = parseFloat(document.getElementById('cropHcm').value) || 1;
-            var wh = orientedWH(w, h, orientation);
-            if (cropModal._ratioLocked) {
-                setLockedSize(wh.w, wh.h);
-            } else {
-                setFreeSize(wh.w, wh.h);
-            }
-        }
-
-        function clampCm(v) {
-            v = parseFloat(v);
-            if (!isFinite(v) || v <= 0) v = 1;
-            if (v > 5) v = 5;
-            return Math.round(v * 10) / 10;
+            // Menukar panjang/lebar yang sedang aktif sesuai orientasi baru (rasio tetap sama)
+            var w = cropModal._cropWcm || 1, h = cropModal._cropHcm || 1;
+            var longVal = Math.max(w, h), shortVal = Math.min(w, h);
+            var neww, newh;
+            if (orientation === 'landscape') { neww = longVal; newh = shortVal; }
+            else { newh = longVal; neww = shortVal; }
+            cropModal._presetRatio = neww / newh;
+            setLockedSize(neww, newh);
         }
 
         // Dipanggil saat user mengetik manual di input cm.
-        // Nilai ukuran SELALU tersimpan (untuk hasil PDF), baik saat bentuk crop
-        // dikunci ke rasio (preset) maupun saat crop bebas (Bebas).
-        function onCustomCmChange() {
-            var w = clampCm(document.getElementById('cropWcm').value);
-            var h = clampCm(document.getElementById('cropHcm').value);
-            document.getElementById('cropWcm').value = w;
-            document.getElementById('cropHcm').value = h;
-            cropModal._activePresetIdx = -1;
-            highlightPreset(-1);
-            if (cropModal._ratioLocked) {
-                setLockedSize(w, h, true);
-            } else {
+        // Mode Preset: isi salah satu (Panjang/Lebar), sisi lainnya otomatis mengikuti rasio.
+        // Mode Manual: kedua sisi bebas, tidak saling terkait.
+        function onCustomCmChange(field) {
+            if (cropModal._mode === 'preset') {
+                onPresetFieldChange(field);
+            } else if (cropModal._mode === 'manual') {
+                var w = clampCmValue(document.getElementById('cropWcm').value, getMaxForField('w'));
+                var h = clampCmValue(document.getElementById('cropHcm').value, getMaxForField('h'));
+                document.getElementById('cropWcm').value = w;
+                document.getElementById('cropHcm').value = h;
                 setFreeSize(w, h, true);
             }
         }
 
-        // Set ukuran target cetak DAN kunci bentuk kotak crop mengikuti rasio itu (dipakai preset)
+        function onPresetFieldChange(field) {
+            var ratio = cropModal._presetRatio || 1;
+            var wEl = document.getElementById('cropWcm'), hEl = document.getElementById('cropHcm');
+            var w, h;
+            if (field === 'w') {
+                w = parseFloat(wEl.value) || 0.5;
+                h = w / ratio;
+            } else {
+                h = parseFloat(hEl.value) || 0.5;
+                w = h * ratio;
+            }
+            var maxW = getMaxForField('w'), maxH = getMaxForField('h');
+            var scale = Math.min(1, maxW / w, maxH / h);
+            w *= scale; h *= scale;
+            if (w < 0.5) { w = 0.5; h = w / ratio; }
+            if (h < 0.5) { h = 0.5; w = h * ratio; }
+            w = Math.round(w * 10) / 10; h = Math.round(h * 10) / 10;
+            wEl.value = w; hEl.value = h;
+            cropModal._ratioLocked = true;
+            cropModal._cropWcm = w;
+            cropModal._cropHcm = h;
+            updateSizeLabel();
+            reshapeCropBoxToRatio();
+        }
+
+        // Set ukuran target cetak DAN kunci bentuk kotak crop mengikuti rasio itu (dipakai preset & default)
         function setLockedSize(w, h, skipInputSync) {
-            w = clampCm(w); h = clampCm(h);
+            w = clampCmValue(w, getMaxForField('w')); h = clampCmValue(h, getMaxForField('h'));
             cropModal._ratioLocked = true;
             cropModal._cropWcm = w;
             cropModal._cropHcm = h;
@@ -332,14 +442,12 @@
                 document.getElementById('cropHcm').value = h;
             }
             updateSizeLabel();
-            var fB = document.getElementById('cropOrientFree');
-            if (fB) fB.classList.remove('active');
             reshapeCropBoxToRatio();
         }
 
-        // Set ukuran target cetak TANPA mengunci bentuk kotak crop (mode Bebas tetap freeform)
+        // Set ukuran target cetak TANPA mengunci bentuk kotak crop (mode Manual tetap freeform)
         function setFreeSize(w, h, skipInputSync) {
-            w = clampCm(w); h = clampCm(h);
+            w = clampCmValue(w, getMaxForField('w')); h = clampCmValue(h, getMaxForField('h'));
             cropModal._ratioLocked = false;
             cropModal._cropWcm = w;
             cropModal._cropHcm = h;
@@ -354,25 +462,11 @@
             var lbl = document.getElementById('cropSizeLabel');
             if (!lbl) return;
             var w = cropModal._cropWcm, h = cropModal._cropHcm;
-            if (cropModal._ratioLocked) {
-                lbl.textContent = 'Ukuran cetak: ' + w + ' cm × ' + h + ' cm (bentuk terkunci)';
+            if (cropModal._mode === 'preset') {
+                lbl.textContent = 'Ukuran cetak: ' + w + ' cm × ' + h + ' cm (rasio terkunci)';
             } else {
-                lbl.textContent = 'Ukuran cetak: ' + w + ' cm × ' + h + ' cm (crop bebas)';
+                lbl.textContent = 'Ukuran cetak: ' + w + ' cm × ' + h + ' cm (bebas, maks ' + MANUAL_MAX_CM + '×' + MANUAL_MAX_CM + 'cm)';
             }
-        }
-
-        function setFreeCrop() {
-            var w = parseFloat(document.getElementById('cropWcm').value) || cropModal._cropWcm || 5;
-            var h = parseFloat(document.getElementById('cropHcm').value) || cropModal._cropHcm || 5;
-            cropModal._activePresetIdx = -1;
-            highlightPreset(-1);
-            var pB = document.getElementById('cropOrientPotrait');
-            var lB = document.getElementById('cropOrientLandscape');
-            var fB = document.getElementById('cropOrientFree');
-            if (pB) pB.classList.remove('active');
-            if (lB) lB.classList.remove('active');
-            if (fB) fB.classList.add('active');
-            setFreeSize(w, h, true);
         }
 
         function reshapeCropBoxToRatio() {
@@ -613,9 +707,10 @@
         // ── CROP MODAL ─────────────────────────────────────────────────────────────
         function openCropModal(dataUrl) {
             cropModal._orientation = 'portrait';
+            cropModal._activePresetIdx = -1;
             document.getElementById('cropWcm').value = 5;
             document.getElementById('cropHcm').value = 5;
-            setFreeCrop();
+            setCropMode('default');
             var img = document.getElementById('cropImg');
             var token = Date.now() + '_' + Math.random();
             img._loadToken = token;
