@@ -33,10 +33,11 @@
         .btn-gray{background:#e0e0e0;color:#333}
         .btn-full{width:100%;justify-content:center;margin-bottom:10px}
         /* Image gallery */
-        .img-gallery{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+        .img-gallery{display:flex;flex-wrap:wrap;gap:20px;margin-top:10px}
         .img-thumb{position:relative;cursor:pointer}
         .img-thumb img{width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block}
         .img-thumb .del{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0;font-weight:700}
+        .img-thumb .reedit{position:absolute;top:-7px;left:-7px;width:20px;height:20px;border-radius:50%;background:#2563eb;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:20px;text-align:center;padding:0}
         /* CROP MODAL */
         #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
         #cropModal.show{display:flex}
@@ -638,6 +639,7 @@
                         if (img.widthCm && img.heightCm) {
                             html += '<span class="size-badge">'+img.widthCm+'×'+img.heightCm+'cm</span>';
                         }
+                        html += '<button class="reedit" onclick="reEditCrop(\''+type+'\','+idx+','+imgIdx+')" title="Crop ulang">✂️</button>';
                         html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
                         html += '<input type="text" placeholder="Keterangan" value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:#111;box-sizing:border-box">';
                         html += '</div>';
@@ -672,6 +674,15 @@
         function deleteImg(type, idx, imgIdx) {
             sections[type][idx].images.splice(imgIdx, 1);
             renderSection(type, type+'Box');
+        }
+
+        // Buka ulang gambar yang sudah diupload untuk di-crop ulang (tanpa upload foto baru)
+        function reEditCrop(type, idx, imgIdx) {
+            var img = sections[type] && sections[type][idx] && sections[type][idx].images[imgIdx];
+            if (!img || !img.dataUrl) return;
+            cropModal._pending = {type:type, idx:idx, replaceIdx:imgIdx};
+            var preferredSize = (img.widthCm && img.heightCm) ? {w: img.widthCm, h: img.heightCm} : null;
+            openCropModal(img.dataUrl, preferredSize);
         }
 
         function toggleSourceChoices(type, idx) {
@@ -732,12 +743,23 @@
         }
 
         // ── CROP MODAL ─────────────────────────────────────────────────────────────
-        function openCropModal(dataUrl) {
+        function openCropModal(dataUrl, preferredSize) {
             cropModal._orientation = 'portrait';
             cropModal._activePresetIdx = -1;
-            document.getElementById('cropWcm').value = 5;
-            document.getElementById('cropHcm').value = 5;
-            setCropMode('default');
+            if (preferredSize && preferredSize.w && preferredSize.h) {
+                document.getElementById('cropWcm').value = preferredSize.w;
+                document.getElementById('cropHcm').value = preferredSize.h;
+                if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) {
+                    setCropMode('default');
+                } else {
+                    setCropMode('manual');
+                    setFreeSize(preferredSize.w, preferredSize.h);
+                }
+            } else {
+                document.getElementById('cropWcm').value = 5;
+                document.getElementById('cropHcm').value = 5;
+                setCropMode('default');
+            }
             var img = document.getElementById('cropImg');
             var token = Date.now() + '_' + Math.random();
             img._loadToken = token;
