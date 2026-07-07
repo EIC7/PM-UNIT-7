@@ -38,6 +38,9 @@
         .img-thumb img{width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block}
         .img-thumb .del{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0;font-weight:700}
         .img-thumb .reedit{position:absolute;top:-7px;left:-7px;width:20px;height:20px;border-radius:50%;background:#2563eb;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:20px;text-align:center;padding:0}
+        .img-nudge{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:4px}
+        .img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
+        .img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
         /* CROP MODAL */
         #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
         #cropModal.show{display:flex}
@@ -168,9 +171,8 @@
         <div class="form-group"><textarea id="conclusion"></textarea></div>
 
         <div class="no-print" style="margin-top:20px">
-            <button class="btn btn-green btn-full" onclick="dbSave('Maintenance Report')" style="padding:13px;font-size:1em">💾 Simpan ke Database</button>
+            <button class="btn btn-green btn-full" onclick="saveToDatabase()" style="padding:13px;font-size:1em">💾 Simpan ke Database</button>
             <button class="btn btn-green btn-full" onclick="exportPdf()" style="padding:13px;font-size:1em">⬇ Export ke PDF</button>
-            <button class="btn btn-gray btn-full" onclick="printReport()" style="padding:13px;font-size:1em">🖨 Print Preview</button>
         </div>
     </div>
 
@@ -284,7 +286,121 @@
             initCropDrag();
             initReportBackground();
             renderPresetButtons();
+            initAutoSaveDraft();
         });
+
+        // ── AUTO-SAVE DRAFT (localStorage) ──────────────────────────────────────────
+        // Menyimpan otomatis isi form ke localStorage supaya tidak hilang kalau
+        // tab/halaman tertutup atau ter-refresh tanpa sengaja.
+        var DRAFT_KEY = 'maintenance_report_draft_v1';
+        var AUTOSAVE_INTERVAL_MS = 15000;
+        var autoSaveTimer = null;
+
+        function safeLocalStorage() {
+            // Pakai wrapper _ls jika tersedia (dari shared.js), fallback ke localStorage biasa.
+            if (typeof _ls !== 'undefined' && _ls) return _ls;
+            return {
+                get: function(k) { try { return localStorage.getItem(k); } catch(e) { return null; } },
+                set: function(k, v) { try { localStorage.setItem(k, v); return true; } catch(e) { return false; } },
+                remove: function(k) { try { localStorage.removeItem(k); } catch(e) {} }
+            };
+        }
+
+        function collectDraftData() {
+            syncSectionsFromDom();
+            return {
+                savedAt: Date.now(),
+                reportType: document.getElementById('reportType').value || 'EM',
+                wo: document.getElementById('wo').value || '',
+                workDate: document.getElementById('workDate').value || '',
+                assetTag: document.getElementById('assetTag').value || '',
+                assetDesc: document.getElementById('assetDesc').value || '',
+                failureDesc: document.getElementById('failureDesc').value || '',
+                pic: document.getElementById('pic').value || '',
+                material: document.getElementById('material').value || '',
+                conclusion: document.getElementById('conclusion').value || '',
+                sections: sections
+            };
+        }
+
+        function saveDraftNow() {
+            var store = safeLocalStorage();
+            try {
+                var data = collectDraftData();
+                var hasContent = data.wo || data.assetTag || data.assetDesc || data.failureDesc ||
+                    ['findings','actions','restore'].some(function(t){
+                        return sections[t].some(function(it){ return it.title || it.desc || (it.images && it.images.length); });
+                    });
+                if (!hasContent) { store.remove(DRAFT_KEY); return; }
+                store.set(DRAFT_KEY, JSON.stringify(data));
+            } catch(e) { /* localStorage penuh / diblokir, abaikan diam-diam */ }
+        }
+
+        function clearDraft() {
+            safeLocalStorage().remove(DRAFT_KEY);
+        }
+
+        function restoreDraft(data) {
+            document.getElementById('reportType').value = data.reportType || 'EM';
+            document.getElementById('wo').value = data.wo || '';
+            document.getElementById('workDate').value = data.workDate || new Date().toISOString().split('T')[0];
+            document.getElementById('assetTag').value = data.assetTag || '';
+            document.getElementById('assetDesc').value = data.assetDesc || '';
+            document.getElementById('failureDesc').value = data.failureDesc || '';
+            document.getElementById('pic').value = data.pic || '';
+            document.getElementById('material').value = data.material || '';
+            document.getElementById('conclusion').value = data.conclusion || '';
+            if (data.sections) {
+                ['findings','actions','restore'].forEach(function(t) {
+                    if (Array.isArray(data.sections[t]) && data.sections[t].length) sections[t] = data.sections[t];
+                });
+            }
+            renderAll();
+            ['findings','actions','restore'].forEach(function(type) {
+                var chkMap = {findings:'chkFindings', actions:'chkActions', restore:'chkRestore'};
+                var secMap = {findings:'sectionFindings', actions:'sectionActions', restore:'sectionRestore'};
+                var hasData = sections[type].some(function(it){ return it.title || it.desc || (it.images && it.images.length); });
+                if (hasData) {
+                    var chk = document.getElementById(chkMap[type]);
+                    var sec = document.getElementById(secMap[type]);
+                    if (chk) chk.checked = true;
+                    if (sec) sec.style.display = 'block';
+                }
+            });
+            updateBadges();
+            if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
+        }
+
+        function initAutoSaveDraft() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('id')) return; // sedang buka data dari database, jangan tawarkan draft lokal
+
+            var store = safeLocalStorage();
+            var raw = store.get(DRAFT_KEY);
+            if (raw) {
+                try {
+                    var data = JSON.parse(raw);
+                    var ageMin = Math.round((Date.now() - (data.savedAt || 0)) / 60000);
+                    var msg = 'Ditemukan draft yang belum tersimpan' + (ageMin ? ' (' + ageMin + ' menit lalu)' : '') + '.\nLanjutkan draft tersebut?';
+                    if (confirm(msg)) {
+                        restoreDraft(data);
+                    } else {
+                        clearDraft();
+                    }
+                } catch(e) { clearDraft(); }
+            }
+
+            // Simpan berkala tiap beberapa detik, sebagai jaring pengaman.
+            autoSaveTimer = setInterval(saveDraftNow, AUTOSAVE_INTERVAL_MS);
+            // Simpan sekali lagi tepat sebelum tab/halaman ditutup.
+            window.addEventListener('beforeunload', saveDraftNow);
+            window.addEventListener('pagehide', saveDraftNow);
+        }
+
+        function saveToDatabase() {
+            dbSave('Maintenance Report');
+            clearDraft();
+        }
 
         // ── CROP SIZE / RATIO CONTROLS ────────────────────────────────────────────
         function renderPresetButtons() {
@@ -641,6 +757,11 @@
                         }
                         html += '<button class="reedit" onclick="reEditCrop(\''+type+'\','+idx+','+imgIdx+')" title="Crop ulang">✂️</button>';
                         html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
+                        html += '<div class="img-nudge">';
+                        html += '<button type="button" onclick="nudgeImage(\''+type+'\','+idx+','+imgIdx+',-0.5)" title="Geser kiri">◀</button>';
+                        html += '<span>'+(img.offsetX||0)+'cm</span>';
+                        html += '<button type="button" onclick="nudgeImage(\''+type+'\','+idx+','+imgIdx+',0.5)" title="Geser kanan">▶</button>';
+                        html += '</div>';
                         html += '<input type="text" placeholder="Keterangan" value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:#111;box-sizing:border-box">';
                         html += '</div>';
                     });
@@ -683,6 +804,18 @@
             cropModal._pending = {type:type, idx:idx, replaceIdx:imgIdx};
             var preferredSize = (img.widthCm && img.heightCm) ? {w: img.widthCm, h: img.heightCm} : null;
             openCropModal(img.dataUrl, preferredSize);
+        }
+
+        // Geser posisi horizontal gambar di hasil PDF (kekanan/kekiri), tanpa mengubah crop-nya.
+        function nudgeImage(type, idx, imgIdx, delta) {
+            var img = sections[type] && sections[type][idx] && sections[type][idx].images[imgIdx];
+            if (!img) return;
+            var next = Math.round(((img.offsetX || 0) + delta) * 10) / 10;
+            var LIMIT = 5; // cm, batas geser supaya gambar tidak keluar halaman
+            if (next > LIMIT) next = LIMIT;
+            if (next < -LIMIT) next = -LIMIT;
+            img.offsetX = next;
+            renderSection(type, type + 'Box');
         }
 
         function toggleSourceChoices(type, idx) {
@@ -870,6 +1003,7 @@
             var entry = {dataUrl: dataUrl, caption: existing && existing.caption ? existing.caption : ''};
             if (existing && existing.name) { entry.name = existing.name; }
             if (existing && existing.type) { entry.type = existing.type; }
+            if (existing && existing.offsetX) { entry.offsetX = existing.offsetX; }
             if (cropModal._cropWcm && cropModal._cropHcm) {
                 entry.widthCm = cropModal._cropWcm;
                 entry.heightCm = cropModal._cropHcm;
@@ -1220,10 +1354,14 @@
                                         y = marginTop; rowX = rowStartX; rowMaxH = 0;
                                     }
 
-                                    try { doc.addImage(im.dataUrl, 'JPEG', rowX, y, imgW, imgH); } catch(e) {}
+                                    // Geser posisi horizontal sesuai pengaturan user, tetap dijaga agar tidak keluar halaman
+                                    var drawX = rowX + ((im.offsetX || 0) * 10);
+                                    drawX = Math.max(marginX, Math.min(drawX, pw - marginX - imgW));
+
+                                    try { doc.addImage(im.dataUrl, 'JPEG', drawX, y, imgW, imgH); } catch(e) {}
                                     if (im.caption) {
                                         doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(80,80,80);
-                                        doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, rowX, y+imgH+3+ci*3.5); });
+                                        doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, drawX, y+imgH+3+ci*3.5); });
                                     }
 
                                     rowMaxH = Math.max(rowMaxH, imgH + capH);
