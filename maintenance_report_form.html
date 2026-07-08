@@ -1289,7 +1289,10 @@
                                     }
 
                                     rowMaxH = Math.max(rowMaxH, imgH + capH);
-                                    rowX += imgW + gap;
+                                    // Pakai posisi AKTUAL (drawX) sebagai titik awal gambar berikutnya,
+                                    // supaya kalau gambar ini digeser, gambar sebelahnya ikut ke-push
+                                    // dan tidak saling tumpuk.
+                                    rowX = drawX + imgW + gap;
                                 });
                                 y += rowMaxH + gap + 2;
                             }
