@@ -33,10 +33,16 @@
         .btn-gray{background:#e0e0e0;color:#333}
         .btn-full{width:100%;justify-content:center;margin-bottom:10px}
         /* Image gallery */
-        .img-gallery{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+        .img-gallery{display:flex;flex-wrap:wrap;gap:20px;margin-top:10px}
         .img-thumb{position:relative;cursor:pointer}
         .img-thumb img{width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block}
         .img-thumb .del{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0;font-weight:700}
+        .img-thumb .reedit{position:absolute;top:-7px;left:-7px;width:20px;height:20px;border-radius:50%;background:#2563eb;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:20px;text-align:center;padding:0}
+        .img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
+        .img-nudge-label{font-size:8px;color:#8a8a8a;text-align:center;line-height:1.2;max-width:78px}
+        .img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
+        .img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
+        .img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
         /* CROP MODAL */
         #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
         #cropModal.show{display:flex}
@@ -67,12 +73,24 @@
         /* CROP SIZE PANEL */
         .crop-size-panel{border-top:1px solid #2a3a30;padding-top:8px;margin-top:2px}
         .crop-size-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-        .crop-preset-btn,.crop-orient-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
-        .crop-preset-btn.active,.crop-orient-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+        .crop-preset-btn,.crop-orient-btn,.crop-mode-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
+        .crop-preset-btn.active,.crop-orient-btn.active,.crop-mode-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+        .crop-mode-btn{padding:6px 12px;font-size:12px}
         .crop-cm-field{display:flex;flex-direction:column;gap:2px}
         .crop-cm-field label{font-size:9px;color:#8aab96;font-weight:600}
         .crop-cm-field input{width:64px;padding:5px 6px;font-size:12px;border-radius:5px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8}
         .crop-size-label{font-size:11px;color:#7fd9a4;font-weight:600;margin-left:4px}
+        .crop-default-label{font-size:12px;color:#7fd9a4;font-weight:600;padding:4px 2px}
+        /* PDF PREVIEW MODAL */
+        .pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+        .pdf-preview-modal.show{display:flex}
+        .pdf-preview-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,900px);height:min(92vh,1100px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
+        .pdf-preview-header{background:#243228;padding:10px 16px;flex:0 0 auto}
+        .pdf-preview-title{font-weight:700;font-size:14px;color:#e0f0e8}
+        .pdf-preview-hint{font-size:11px;color:#8aab96;margin-top:2px}
+        .pdf-preview-body{flex:1 1 auto;background:#333;min-height:0}
+        .pdf-preview-body iframe{width:100%;height:100%;border:none;display:block}
+        .pdf-preview-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
         .img-thumb .size-badge{position:absolute;bottom:6px;left:2px;background:rgba(0,0,0,0.65);color:#fff;font-size:9px;padding:1px 4px;border-radius:4px;font-weight:600}
         @media print{.no-print{display:none!important}}
     </style>
@@ -157,7 +175,6 @@
         <div class="no-print" style="margin-top:20px">
             <button class="btn btn-green btn-full" onclick="dbSave('Maintenance Report')" style="padding:13px;font-size:1em">💾 Simpan ke Database</button>
             <button class="btn btn-green btn-full" onclick="exportPdf()" style="padding:13px;font-size:1em">⬇ Export ke PDF</button>
-            <button class="btn btn-gray btn-full" onclick="printReport()" style="padding:13px;font-size:1em">🖨 Print Preview</button>
         </div>
     </div>
 
@@ -184,15 +201,23 @@
             </div>
             <div class="crop-footer">
                 <div class="crop-size-panel">
-                    <div class="crop-size-row" id="cropPresetRow"></div>
-                    <div class="crop-size-row" style="margin-top:8px">
-                        <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
-                        <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
+                    <div class="crop-size-row" id="cropModeRow">
+                        <button type="button" class="crop-mode-btn" id="cropModeDefault" onclick="setCropMode('default')">⭐ Default</button>
+                        <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
+                        <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
                     </div>
-                    <div class="crop-size-row" style="margin-top:8px">
-                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="7.2" onchange="onWidthChange()"></div>
-                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5.18" onchange="onHeightChange()"></div>
-                        <div class="crop-size-label" id="cropSizeLabel">Default: 7.2 × 5.18 cm</div>
+                    <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran: 7.2 × 5.18 cm (default, tidak perlu diatur)</div>
+                    <div id="cropPresetControls" style="display:none">
+                        <div class="crop-size-row" id="cropPresetRow"></div>
+                        <div class="crop-size-row" style="margin-top:8px">
+                            <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
+                            <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
+                        </div>
+                    </div>
+                    <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
+                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                        <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                     </div>
                 </div>
                 <div class="crop-btns">
@@ -205,6 +230,23 @@
     </div>
 
     <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <!-- PDF PREVIEW MODAL -->
+    <div id="pdfPreviewModal" class="pdf-preview-modal">
+        <div class="pdf-preview-dialog">
+            <div class="pdf-preview-header">
+                <div class="pdf-preview-title">📄 Preview Hasil PDF</div>
+                <div class="pdf-preview-hint">Ini tampilan asli file PDF-nya, cek dulu sebelum download</div>
+            </div>
+            <div class="pdf-preview-body">
+                <iframe id="pdfPreviewFrame" src="about:blank"></iframe>
+            </div>
+            <div class="pdf-preview-footer">
+                <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
+                <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // ── STATE ──────────────────────────────────────────────────────────────────
@@ -219,13 +261,15 @@
         cropModal._ratioLocked = false;
         cropModal._cropWcm = null;
         cropModal._cropHcm = null;
-        cropModal._orientation = 'landscape';
-        cropModal._mode = 'default'; // 'default' | 'preset' | 'free'
-        cropModal._activeKey = 'default'; // 'default' | preset index (number) | 'free'
+        cropModal._orientation = 'portrait';
+        cropModal._activePresetIdx = -1;
+        cropModal._mode = 'default';
+        cropModal._presetRatio = 1;
 
-        var DEFAULT_W_CM = 7.2, DEFAULT_H_CM = 5.18; // sama persis dengan pm-hg-analyzer.html
-        var MAX_LONG_CM = 7, MAX_SHORT_CM = 5; // batas untuk mode Preset (tergantung orientasi)
-        var FREE_MAX_CM = 7; // batas untuk mode Bebas (kedua sisi)
+        var DEFAULT_CROP_W_CM = 7.2;
+        var DEFAULT_CROP_H_CM = 5.18;
+        var PRESET_DEFAULT_LONG_CM = 4;
+        var MANUAL_MAX_CM = 7;
 
         var CROP_PRESETS = [
             {label:'1:1', w:1, h:1},
@@ -243,54 +287,91 @@
             renderAll();
             initCropDrag();
             initReportBackground();
-            renderModeButtons();
+            renderPresetButtons();
         });
 
-        // ── CROP SIZE / RATIO CONTROLS ────────────────────────────────────────────
-        function round1(v) { return Math.round(v * 10) / 10; }
+        // ── AUTO-SAVE DRAFT ──────────────────────────────────────────────────────────
+        // Sama seperti modul lain (mis. PM HG Analyzer): mekanisme autosave-nya sudah
+        // jalan otomatis dari shared.js (event delegation input/change + IndexedDB).
+        // Di sini kita hanya perlu:
+        //   1) window.CURRENT_MODUL biar shared.js tahu draft ini punya modul mana
+        //   2) restoreDraftData(rec, editingId) untuk mengisi ulang form saat draft
+        //      ditemukan (dipanggil otomatis oleh shared.js lewat autosaveCheckAndPrompt)
+        window.CURRENT_MODUL = 'Maintenance Report';
 
-        function renderModeButtons() {
+        function applyRecordToForm(rec) {
+            document.getElementById('reportType').value = (rec.data && rec.data.reportType) || 'EM';
+            document.getElementById('wo').value = rec.work_order || '';
+            document.getElementById('workDate').value = rec.tanggal || new Date().toISOString().split('T')[0];
+            document.getElementById('assetTag').value = (rec.data && rec.data.assetTag) || '';
+            document.getElementById('assetDesc').value = (rec.data && rec.data.assetDesc) || '';
+            document.getElementById('failureDesc').value = (rec.data && rec.data.failureDesc) || '';
+            document.getElementById('pic').value = rec.pic || '';
+            document.getElementById('material').value = (rec.data && rec.data.material) || '';
+            document.getElementById('conclusion').value = (rec.data && rec.data.conclusion) || '';
+            function normalizeItems(arr) {
+                if (!Array.isArray(arr) || !arr.length) return [{title:'',desc:'',images:[]}];
+                return arr.map(function(it) {
+                    return {
+                        title:  it.title  || '',
+                        desc:   it.desc   || '',
+                        images: Array.isArray(it.images) ? it.images.map(function(im) {
+                            var e = { dataUrl: im.dataUrl||'', caption: im.caption||'' };
+                            if (im.widthCm) e.widthCm = im.widthCm;
+                            if (im.heightCm) e.heightCm = im.heightCm;
+                            if (im.offsetX) e.offsetX = im.offsetX;
+                            return e;
+                        }) : []
+                    };
+                });
+            }
+            sections.findings = normalizeItems(rec.data && rec.data.findings);
+            sections.actions  = normalizeItems(rec.data && rec.data.actions);
+            sections.restore  = normalizeItems(rec.data && rec.data.restore);
+            renderAll();
+            ['findings','actions','restore'].forEach(function(type) {
+                var chkMap = {findings:'chkFindings', actions:'chkActions', restore:'chkRestore'};
+                var secMap = {findings:'sectionFindings', actions:'sectionActions', restore:'sectionRestore'};
+                var hasData = sections[type].some(function(it){ return it.title || it.desc || (it.images && it.images.length); });
+                if (hasData) {
+                    var chk = document.getElementById(chkMap[type]);
+                    var sec = document.getElementById(secMap[type]);
+                    if (chk) chk.checked = true;
+                    if (sec) sec.style.display = 'block';
+                }
+            });
+            updateBadges();
+        }
+
+        // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft
+        // tersimpan dan user memilih "Lanjutkan mengisi draft ini?"
+        function restoreDraftData(rec, editingId) {
+            if (!rec) return;
+            applyRecordToForm(rec);
+            if (editingId) window._editingId = editingId;
+            if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
+        }
+
+        // ── CROP SIZE / RATIO CONTROLS ────────────────────────────────────────────
+        function renderPresetButtons() {
             var row = document.getElementById('cropPresetRow');
             if (!row) return;
             row.innerHTML = '';
-
-            var defBtn = document.createElement('button');
-            defBtn.type = 'button';
-            defBtn.className = 'crop-preset-btn';
-            defBtn.id = 'cropMode-default';
-            defBtn.textContent = '🎯 Default';
-            defBtn.onclick = function () { selectDefault(); };
-            row.appendChild(defBtn);
-
             CROP_PRESETS.forEach(function(p, i) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'crop-preset-btn';
-                btn.id = 'cropMode-preset-' + i;
+                btn.id = 'cropPreset-' + i;
                 btn.textContent = p.label;
-                btn.onclick = function () { selectPreset(i); };
+                btn.onclick = function () { applyPreset(i); };
                 row.appendChild(btn);
             });
-
-            var freeBtn = document.createElement('button');
-            freeBtn.type = 'button';
-            freeBtn.className = 'crop-preset-btn';
-            freeBtn.id = 'cropMode-free';
-            freeBtn.textContent = '✋ Bebas';
-            freeBtn.onclick = function () { selectFree(); };
-            row.appendChild(freeBtn);
         }
 
-        function highlightMode(key) {
-            var ids = ['cropMode-default', 'cropMode-free'];
-            CROP_PRESETS.forEach(function(p, i) { ids.push('cropMode-preset-' + i); });
-            ids.forEach(function(id) {
-                var btn = document.getElementById(id);
-                if (!btn) return;
-                var isActive = (key === 'default' && id === 'cropMode-default') ||
-                                (key === 'free' && id === 'cropMode-free') ||
-                                (typeof key === 'number' && id === 'cropMode-preset-' + key);
-                btn.classList.toggle('active', isActive);
+        function highlightPreset(activeIdx) {
+            CROP_PRESETS.forEach(function (p, idx) {
+                var btn = document.getElementById('cropPreset-' + idx);
+                if (btn) btn.classList.toggle('active', idx === activeIdx);
             });
         }
 
@@ -299,71 +380,93 @@
             return orientation === 'landscape' ? {w: hi, h: lo} : {w: lo, h: hi};
         }
 
-        // Skalakan pasangan w/h (rasio apa pun) supaya pas dalam batas maksimal
-        // sesuai orientasi: Lanskap -> panjang(w) maks 7cm, lebar(h) maks 5cm.
-        // Potrait -> tinggi(h) maks 7cm, lebar(w) maks 5cm.
-        function fitPresetToMax(w, h, orientation) {
-            var wMax = orientation === 'landscape' ? MAX_LONG_CM : MAX_SHORT_CM;
-            var hMax = orientation === 'landscape' ? MAX_SHORT_CM : MAX_LONG_CM;
-            var scale = Math.min(wMax / w, hMax / h);
-            return {w: round1(w * scale), h: round1(h * scale)};
+        // Batas maksimal per-field tergantung mode aktif & orientasi.
+        // Preset: sisi panjang (mengikuti orientasi) maks 7cm, sisi pendek maks 5cm.
+        // Manual: bebas kedua sisi, maks 7cm masing-masing.
+        function getMaxForField(field) {
+            if (cropModal._mode === 'preset') {
+                var longMax = 7, shortMax = 5;
+                if (cropModal._orientation === 'landscape') {
+                    return field === 'w' ? longMax : shortMax;
+                } else {
+                    return field === 'w' ? shortMax : longMax;
+                }
+            }
+            if (cropModal._mode === 'manual') return MANUAL_MAX_CM;
+            return 99;
         }
 
-        function updateCmInputsEnabled() {
-            var disabled = cropModal._mode === 'default';
-            document.getElementById('cropWcm').disabled = disabled;
-            document.getElementById('cropHcm').disabled = disabled;
+        function clampCmValue(v, maxV) {
+            v = parseFloat(v);
+            if (!isFinite(v) || v <= 0) v = 0.5;
+            if (v > maxV) v = maxV;
+            if (v < 0.5) v = 0.5;
+            return Math.round(v * 10) / 10;
         }
 
-        function syncInputsFromState() {
-            document.getElementById('cropWcm').value = cropModal._cropWcm;
-            document.getElementById('cropHcm').value = cropModal._cropHcm;
+        // ── MODE: Default / Preset / Manual ─────────────────────────────────────────
+        function setCropMode(mode) {
+            cropModal._mode = mode;
+            var dB = document.getElementById('cropModeDefault');
+            var pB = document.getElementById('cropModePreset');
+            var mB = document.getElementById('cropModeManual');
+            if (dB) dB.classList.toggle('active', mode === 'default');
+            if (pB) pB.classList.toggle('active', mode === 'preset');
+            if (mB) mB.classList.toggle('active', mode === 'manual');
+
+            var presetControls = document.getElementById('cropPresetControls');
+            var cmRow = document.getElementById('cropCmRow');
+            var defaultLabel = document.getElementById('cropDefaultLabel');
+
+            if (mode === 'default') {
+                if (presetControls) presetControls.style.display = 'none';
+                if (cmRow) cmRow.style.display = 'none';
+                if (defaultLabel) defaultLabel.style.display = 'block';
+                highlightPreset(-1);
+                applyDefaultSize();
+            } else if (mode === 'preset') {
+                if (presetControls) presetControls.style.display = 'block';
+                if (cmRow) cmRow.style.display = 'flex';
+                if (defaultLabel) defaultLabel.style.display = 'none';
+                if (cropModal._activePresetIdx < 0) {
+                    applyPreset(0);
+                } else {
+                    applyPreset(cropModal._activePresetIdx);
+                }
+            } else {
+                if (presetControls) presetControls.style.display = 'none';
+                if (cmRow) cmRow.style.display = 'flex';
+                if (defaultLabel) defaultLabel.style.display = 'none';
+                highlightPreset(-1);
+                var w = cropModal._cropWcm || 5;
+                var h = cropModal._cropHcm || 5;
+                setFreeSize(w, h);
+            }
         }
 
-        // ── MODE: DEFAULT (7.2 x 5.18 cm, tetap — sama seperti pm-hg-analyzer.html) ──
-        function selectDefault() {
-            cropModal._mode = 'default';
-            cropModal._activeKey = 'default';
+        // Mode Default: ukuran tetap 7.2 × 5.18 cm, sama seperti PM HG Analyzer, tanpa input tambahan.
+        function applyDefaultSize() {
             cropModal._ratioLocked = true;
-            cropModal._cropWcm = DEFAULT_W_CM;
-            cropModal._cropHcm = DEFAULT_H_CM;
-            highlightMode('default');
-            updateCmInputsEnabled();
-            syncInputsFromState();
+            cropModal._cropWcm = DEFAULT_CROP_W_CM;
+            cropModal._cropHcm = DEFAULT_CROP_H_CM;
             updateSizeLabel();
             reshapeCropBoxToRatio();
         }
 
-        // ── MODE: PRESET (rasio terkunci, isi salah satu Panjang/Lebar) ─────────────
-        function selectPreset(i) {
+        // Mode Preset: pilih rasio + orientasi, ukuran awal dibuat kecil (sisi panjang 4cm)
+        // lalu user bisa membesarkan/mengecilkan lewat salah satu input (rasio tetap terkunci).
+        function applyPreset(i) {
             var p = CROP_PRESETS[i];
-            var wh = orientedWH(p.w, p.h, cropModal._orientation);
-            var fitted = fitPresetToMax(wh.w, wh.h, cropModal._orientation);
-            cropModal._mode = 'preset';
-            cropModal._activeKey = i;
-            cropModal._ratioLocked = true;
-            cropModal._cropWcm = fitted.w;
-            cropModal._cropHcm = fitted.h;
-            highlightMode(i);
-            updateCmInputsEnabled();
-            syncInputsFromState();
-            updateSizeLabel();
-            reshapeCropBoxToRatio();
-        }
-
-        // ── MODE: BEBAS (Panjang & Lebar independen, maks 7x7cm) ─────────────────────
-        function selectFree() {
-            var w = clamp(cropModal._cropWcm || 5, 0.5, FREE_MAX_CM);
-            var h = clamp(cropModal._cropHcm || 5, 0.5, FREE_MAX_CM);
-            cropModal._mode = 'free';
-            cropModal._activeKey = 'free';
-            cropModal._ratioLocked = false;
-            cropModal._cropWcm = round1(w);
-            cropModal._cropHcm = round1(h);
-            highlightMode('free');
-            updateCmInputsEnabled();
-            syncInputsFromState();
-            updateSizeLabel();
+            var ratioValue = Math.max(p.w, p.h) / Math.min(p.w, p.h);
+            cropModal._activePresetIdx = i;
+            var longSide = PRESET_DEFAULT_LONG_CM;
+            var shortSide = Math.round((longSide / ratioValue) * 10) / 10;
+            var w, h;
+            if (cropModal._orientation === 'landscape') { w = longSide; h = shortSide; }
+            else { h = longSide; w = shortSide; }
+            cropModal._presetRatio = w / h;
+            setLockedSize(w, h);
+            highlightPreset(i);
         }
 
         function setCropOrientation(orientation) {
@@ -372,100 +475,91 @@
             var lB = document.getElementById('cropOrientLandscape');
             if (pB) pB.classList.toggle('active', orientation === 'portrait');
             if (lB) lB.classList.toggle('active', orientation === 'landscape');
-
-            if (cropModal._mode === 'preset') {
-                var p = CROP_PRESETS[cropModal._activeKey];
-                var wh = orientedWH(p.w, p.h, orientation);
-                var fitted = fitPresetToMax(wh.w, wh.h, orientation);
-                cropModal._cropWcm = fitted.w;
-                cropModal._cropHcm = fitted.h;
-                syncInputsFromState();
-                updateSizeLabel();
-                reshapeCropBoxToRatio();
-            } else if (cropModal._mode === 'free') {
-                var wh2 = orientedWH(cropModal._cropWcm, cropModal._cropHcm, orientation);
-                cropModal._cropWcm = round1(clamp(wh2.w, 0.5, FREE_MAX_CM));
-                cropModal._cropHcm = round1(clamp(wh2.h, 0.5, FREE_MAX_CM));
-                syncInputsFromState();
-                updateSizeLabel();
-            }
-            // mode 'default': orientasi tidak relevan (ukuran tetap)
+            // Menukar panjang/lebar yang sedang aktif sesuai orientasi baru (rasio tetap sama)
+            var w = cropModal._cropWcm || 1, h = cropModal._cropHcm || 1;
+            var longVal = Math.max(w, h), shortVal = Math.min(w, h);
+            var neww, newh;
+            if (orientation === 'landscape') { neww = longVal; newh = shortVal; }
+            else { newh = longVal; neww = shortVal; }
+            cropModal._presetRatio = neww / newh;
+            setLockedSize(neww, newh);
         }
 
-        // Dipanggil saat user mengetik di kolom Panjang. Di mode Preset, Lebar
-        // otomatis mengikuti rasio (cukup isi salah satu). Di mode Bebas, independen.
-        function onWidthChange() {
-            var raw = parseFloat(document.getElementById('cropWcm').value);
-            if (!isFinite(raw) || raw <= 0) raw = cropModal._cropWcm || 1;
+        // Dipanggil saat user mengetik manual di input cm.
+        // Mode Preset: isi salah satu (Panjang/Lebar), sisi lainnya otomatis mengikuti rasio.
+        // Mode Manual: kedua sisi bebas, tidak saling terkait.
+        function onCustomCmChange(field) {
             if (cropModal._mode === 'preset') {
-                var p = CROP_PRESETS[cropModal._activeKey];
-                var wh = orientedWH(p.w, p.h, cropModal._orientation);
-                var ratio = wh.w / wh.h;
-                var wMax = cropModal._orientation === 'landscape' ? MAX_LONG_CM : MAX_SHORT_CM;
-                var hMax = cropModal._orientation === 'landscape' ? MAX_SHORT_CM : MAX_LONG_CM;
-                var w = clamp(raw, 0.5, wMax);
-                var h = w / ratio;
-                if (h > hMax) { var f = hMax / h; w *= f; h = hMax; }
-                cropModal._cropWcm = round1(w);
-                cropModal._cropHcm = round1(h);
-            } else if (cropModal._mode === 'free') {
-                cropModal._cropWcm = round1(clamp(raw, 0.5, FREE_MAX_CM));
+                onPresetFieldChange(field);
+            } else if (cropModal._mode === 'manual') {
+                var w = clampCmValue(document.getElementById('cropWcm').value, getMaxForField('w'));
+                var h = clampCmValue(document.getElementById('cropHcm').value, getMaxForField('h'));
+                document.getElementById('cropWcm').value = w;
+                document.getElementById('cropHcm').value = h;
+                setFreeSize(w, h, true);
             }
-            syncInputsFromState();
+        }
+
+        function onPresetFieldChange(field) {
+            var ratio = cropModal._presetRatio || 1;
+            var wEl = document.getElementById('cropWcm'), hEl = document.getElementById('cropHcm');
+            var w, h;
+            if (field === 'w') {
+                w = parseFloat(wEl.value) || 0.5;
+                h = w / ratio;
+            } else {
+                h = parseFloat(hEl.value) || 0.5;
+                w = h * ratio;
+            }
+            var maxW = getMaxForField('w'), maxH = getMaxForField('h');
+            var scale = Math.min(1, maxW / w, maxH / h);
+            w *= scale; h *= scale;
+            if (w < 0.5) { w = 0.5; h = w / ratio; }
+            if (h < 0.5) { h = 0.5; w = h * ratio; }
+            w = Math.round(w * 10) / 10; h = Math.round(h * 10) / 10;
+            wEl.value = w; hEl.value = h;
+            cropModal._ratioLocked = true;
+            cropModal._cropWcm = w;
+            cropModal._cropHcm = h;
             updateSizeLabel();
             reshapeCropBoxToRatio();
         }
 
-        // Dipanggil saat user mengetik di kolom Lebar (kebalikan dari onWidthChange).
-        function onHeightChange() {
-            var raw = parseFloat(document.getElementById('cropHcm').value);
-            if (!isFinite(raw) || raw <= 0) raw = cropModal._cropHcm || 1;
-            if (cropModal._mode === 'preset') {
-                var p = CROP_PRESETS[cropModal._activeKey];
-                var wh = orientedWH(p.w, p.h, cropModal._orientation);
-                var ratio = wh.w / wh.h;
-                var wMax = cropModal._orientation === 'landscape' ? MAX_LONG_CM : MAX_SHORT_CM;
-                var hMax = cropModal._orientation === 'landscape' ? MAX_SHORT_CM : MAX_LONG_CM;
-                var h = clamp(raw, 0.5, hMax);
-                var w = h * ratio;
-                if (w > wMax) { var f = wMax / w; h *= f; w = wMax; }
-                cropModal._cropWcm = round1(w);
-                cropModal._cropHcm = round1(h);
-            } else if (cropModal._mode === 'free') {
-                cropModal._cropHcm = round1(clamp(raw, 0.5, FREE_MAX_CM));
+        // Set ukuran target cetak DAN kunci bentuk kotak crop mengikuti rasio itu (dipakai preset & default)
+        function setLockedSize(w, h, skipInputSync) {
+            w = clampCmValue(w, getMaxForField('w')); h = clampCmValue(h, getMaxForField('h'));
+            cropModal._ratioLocked = true;
+            cropModal._cropWcm = w;
+            cropModal._cropHcm = h;
+            if (!skipInputSync) {
+                document.getElementById('cropWcm').value = w;
+                document.getElementById('cropHcm').value = h;
             }
-            syncInputsFromState();
             updateSizeLabel();
             reshapeCropBoxToRatio();
+        }
+
+        // Set ukuran target cetak TANPA mengunci bentuk kotak crop (mode Manual tetap freeform)
+        function setFreeSize(w, h, skipInputSync) {
+            w = clampCmValue(w, getMaxForField('w')); h = clampCmValue(h, getMaxForField('h'));
+            cropModal._ratioLocked = false;
+            cropModal._cropWcm = w;
+            cropModal._cropHcm = h;
+            if (!skipInputSync) {
+                document.getElementById('cropWcm').value = w;
+                document.getElementById('cropHcm').value = h;
+            }
+            updateSizeLabel();
         }
 
         function updateSizeLabel() {
             var lbl = document.getElementById('cropSizeLabel');
             if (!lbl) return;
             var w = cropModal._cropWcm, h = cropModal._cropHcm;
-            if (cropModal._mode === 'default') {
-                lbl.textContent = 'Default: ' + w + ' × ' + h + ' cm (tetap, sama seperti PM HG Analyzer)';
-            } else if (cropModal._mode === 'preset') {
-                lbl.textContent = 'Ukuran cetak: ' + w + ' × ' + h + ' cm (rasio terkunci, maks ' + MAX_LONG_CM + '×' + MAX_SHORT_CM + 'cm)';
+            if (cropModal._mode === 'preset') {
+                lbl.textContent = 'Ukuran cetak: ' + w + ' cm × ' + h + ' cm (rasio terkunci)';
             } else {
-                lbl.textContent = 'Ukuran cetak: ' + w + ' × ' + h + ' cm (bebas, maks ' + FREE_MAX_CM + '×' + FREE_MAX_CM + 'cm)';
-            }
-        }
-
-        // Sinkronisasi terakhir sebelum simpan — jaga-jaga kalau event 'change' belum
-        // sempat terpicu (mis. Enter/tap cepat setelah mengetik).
-        function finalizeCmBeforeSave() {
-            if (cropModal._mode === 'default') {
-                cropModal._cropWcm = DEFAULT_W_CM;
-                cropModal._cropHcm = DEFAULT_H_CM;
-            } else if (cropModal._mode === 'preset') {
-                onWidthChange();
-            } else {
-                var w = clamp(parseFloat(document.getElementById('cropWcm').value) || cropModal._cropWcm || 5, 0.5, FREE_MAX_CM);
-                var h = clamp(parseFloat(document.getElementById('cropHcm').value) || cropModal._cropHcm || 5, 0.5, FREE_MAX_CM);
-                cropModal._cropWcm = round1(w);
-                cropModal._cropHcm = round1(h);
-                syncInputsFromState();
+                lbl.textContent = 'Ukuran cetak: ' + w + ' cm × ' + h + ' cm (bebas, maks ' + MANUAL_MAX_CM + '×' + MANUAL_MAX_CM + 'cm)';
             }
         }
 
@@ -498,48 +592,8 @@
             if (!id) return;
             dbLoad(id, function(rec) {
                 if (!rec) return;
-                document.getElementById('reportType').value = (rec.data && rec.data.reportType) || 'EM';
-                document.getElementById('wo').value = rec.work_order || '';
-                document.getElementById('workDate').value = rec.tanggal || new Date().toISOString().split('T')[0];
-                document.getElementById('assetTag').value = (rec.data && rec.data.assetTag) || '';
-                document.getElementById('assetDesc').value = (rec.data && rec.data.assetDesc) || '';
-                document.getElementById('failureDesc').value = (rec.data && rec.data.failureDesc) || '';
-                document.getElementById('pic').value = rec.pic || '';
-                document.getElementById('material').value = (rec.data && rec.data.material) || '';
-                document.getElementById('conclusion').value = (rec.data && rec.data.conclusion) || '';
-                function normalizeItems(arr) {
-                    if (!Array.isArray(arr) || !arr.length) return [{title:'',desc:'',images:[]}];
-                    return arr.map(function(it) {
-                        return {
-                            title:  it.title  || '',
-                            desc:   it.desc   || '',
-                            images: Array.isArray(it.images) ? it.images.map(function(im) {
-                                var e = { dataUrl: im.dataUrl||'', caption: im.caption||'' };
-                                if (im.widthCm) e.widthCm = im.widthCm;
-                                if (im.heightCm) e.heightCm = im.heightCm;
-                                return e;
-                            }) : []
-                        };
-                    });
-                }
-                sections.findings = normalizeItems(rec.data && rec.data.findings);
-                sections.actions  = normalizeItems(rec.data && rec.data.actions);
-                sections.restore  = normalizeItems(rec.data && rec.data.restore);
-                renderAll();
+                applyRecordToForm(rec);
                 window._editingId = id;
-                // Buka checkbox untuk section yang punya data
-                ['findings','actions','restore'].forEach(function(type) {
-                    var chkMap = {findings:'chkFindings', actions:'chkActions', restore:'chkRestore'};
-                    var secMap = {findings:'sectionFindings', actions:'sectionActions', restore:'sectionRestore'};
-                    var hasData = sections[type].some(function(it){ return it.title || it.desc || (it.images && it.images.length); });
-                    if (hasData) {
-                        var chk = document.getElementById(chkMap[type]);
-                        var sec = document.getElementById(secMap[type]);
-                        if (chk) chk.checked = true;
-                        if (sec) sec.style.display = 'block';
-                    }
-                });
-                updateBadges();
                 dbShowToast('Data dimuat dari riwayat ✓');
                 if (doPrint) {
                     setTimeout(printReport, 250);
@@ -611,7 +665,16 @@
                         if (img.widthCm && img.heightCm) {
                             html += '<span class="size-badge">'+img.widthCm+'×'+img.heightCm+'cm</span>';
                         }
+                        html += '<button class="reedit" onclick="reEditCrop(\''+type+'\','+idx+','+imgIdx+')" title="Crop ulang">✂️</button>';
                         html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
+                        html += '<div class="img-nudge">';
+                        html += '<div class="img-nudge-label">Geser posisi di hasil PDF</div>';
+                        html += '<div class="img-nudge-controls">';
+                        html += '<button type="button" onclick="nudgeImage(\''+type+'\','+idx+','+imgIdx+',-0.5)" title="Geser posisi gambar ini ke kiri di hasil PDF">◀</button>';
+                        html += '<span>'+(img.offsetX||0)+'cm</span>';
+                        html += '<button type="button" onclick="nudgeImage(\''+type+'\','+idx+','+imgIdx+',0.5)" title="Geser posisi gambar ini ke kanan di hasil PDF">▶</button>';
+                        html += '</div>';
+                        html += '</div>';
                         html += '<input type="text" placeholder="Keterangan" value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:#111;box-sizing:border-box">';
                         html += '</div>';
                     });
@@ -645,6 +708,27 @@
         function deleteImg(type, idx, imgIdx) {
             sections[type][idx].images.splice(imgIdx, 1);
             renderSection(type, type+'Box');
+        }
+
+        // Buka ulang gambar yang sudah diupload untuk di-crop ulang (tanpa upload foto baru)
+        function reEditCrop(type, idx, imgIdx) {
+            var img = sections[type] && sections[type][idx] && sections[type][idx].images[imgIdx];
+            if (!img || !img.dataUrl) return;
+            cropModal._pending = {type:type, idx:idx, replaceIdx:imgIdx};
+            var preferredSize = (img.widthCm && img.heightCm) ? {w: img.widthCm, h: img.heightCm} : null;
+            openCropModal(img.dataUrl, preferredSize);
+        }
+
+        // Geser posisi horizontal gambar di hasil PDF (kekanan/kekiri), tanpa mengubah crop-nya.
+        function nudgeImage(type, idx, imgIdx, delta) {
+            var img = sections[type] && sections[type][idx] && sections[type][idx].images[imgIdx];
+            if (!img) return;
+            var next = Math.round(((img.offsetX || 0) + delta) * 10) / 10;
+            var LIMIT = 5; // cm, batas geser supaya gambar tidak keluar halaman
+            if (next > LIMIT) next = LIMIT;
+            if (next < -LIMIT) next = -LIMIT;
+            img.offsetX = next;
+            renderSection(type, type + 'Box');
         }
 
         function toggleSourceChoices(type, idx) {
@@ -705,10 +789,23 @@
         }
 
         // ── CROP MODAL ─────────────────────────────────────────────────────────────
-        function openCropModal(dataUrl) {
-            cropModal._orientation = 'landscape';
-            selectDefault();
-            setCropOrientation('landscape');
+        function openCropModal(dataUrl, preferredSize) {
+            cropModal._orientation = 'portrait';
+            cropModal._activePresetIdx = -1;
+            if (preferredSize && preferredSize.w && preferredSize.h) {
+                document.getElementById('cropWcm').value = preferredSize.w;
+                document.getElementById('cropHcm').value = preferredSize.h;
+                if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) {
+                    setCropMode('default');
+                } else {
+                    setCropMode('manual');
+                    setFreeSize(preferredSize.w, preferredSize.h);
+                }
+            } else {
+                document.getElementById('cropWcm').value = 5;
+                document.getElementById('cropHcm').value = 5;
+                setCropMode('default');
+            }
             var img = document.getElementById('cropImg');
             var token = Date.now() + '_' + Math.random();
             img._loadToken = token;
@@ -762,10 +859,6 @@
         }
 
         function cropAndSave() {
-            // Baca ulang & sinkronkan nilai cm terakhir sesuai mode aktif (Default/Preset/Bebas),
-            // memastikan tidak ada ketidaksesuaian meski event 'change' belum sempat terpicu.
-            finalizeCmBeforeSave();
-
             var img = document.getElementById('cropImg');
             var box = document.getElementById('cropBox');
             var p = cropModal._pending;
@@ -823,6 +916,7 @@
             var entry = {dataUrl: dataUrl, caption: existing && existing.caption ? existing.caption : ''};
             if (existing && existing.name) { entry.name = existing.name; }
             if (existing && existing.type) { entry.type = existing.type; }
+            if (existing && existing.offsetX) { entry.offsetX = existing.offsetX; }
             if (cropModal._cropWcm && cropModal._cropHcm) {
                 entry.widthCm = cropModal._cropWcm;
                 entry.heightCm = cropModal._cropHcm;
@@ -1046,6 +1140,14 @@
                 return;
             }
 
+            var totalImgs = ['findings','actions','restore'].reduce(function(sum, t) {
+                return sum + sections[t].reduce(function(s, it) { return s + (it.images ? it.images.length : 0); }, 0);
+            }, 0);
+            var loadingMsg = totalImgs > 0
+                ? '⏳ Membuat PDF... memproses ' + totalImgs + ' gambar, mohon tunggu'
+                : '⏳ Membuat PDF, mohon tunggu';
+            if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
+
             ensureReportBackground(function() {
                 try {
                     var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
@@ -1173,10 +1275,14 @@
                                         y = marginTop; rowX = rowStartX; rowMaxH = 0;
                                     }
 
-                                    try { doc.addImage(im.dataUrl, 'JPEG', rowX, y, imgW, imgH); } catch(e) {}
+                                    // Geser posisi horizontal sesuai pengaturan user, tetap dijaga agar tidak keluar halaman
+                                    var drawX = rowX + ((im.offsetX || 0) * 10);
+                                    drawX = Math.max(marginX, Math.min(drawX, pw - marginX - imgW));
+
+                                    try { doc.addImage(im.dataUrl, 'JPEG', drawX, y, imgW, imgH); } catch(e) {}
                                     if (im.caption) {
                                         doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(80,80,80);
-                                        doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, rowX, y+imgH+3+ci*3.5); });
+                                        doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, drawX, y+imgH+3+ci*3.5); });
                                     }
 
                                     rowMaxH = Math.max(rowMaxH, imgH + capH);
@@ -1213,13 +1319,51 @@
                     var adsc = safe(document.getElementById('assetDesc').value)|| 'desc';
                     var fn = [wo, date.replace(/-/g,''), atag, adsc].join('_').replace(/\s+/g,'_').replace(/[\\/:*?"<>|]+/g,'').toLowerCase()+'.pdf';
 
-                    doc.save(fn);
+                    if (typeof hideImgLoading === 'function') hideImgLoading();
+                    showPdfPreview(doc, fn);
 
                 } catch(err) {
+                    if (typeof hideImgLoading === 'function') hideImgLoading();
                     alert('PDF Error: '+err.message);
                     console.error(err);
                 }
             });
+        }
+
+        // ── PDF PREVIEW / KONFIRMASI SEBELUM DOWNLOAD ────────────────────────────────
+        var pdfPreviewState = { doc: null, filename: '', blobUrl: '' };
+
+        function showPdfPreview(doc, filename) {
+            if (pdfPreviewState.blobUrl) {
+                URL.revokeObjectURL(pdfPreviewState.blobUrl);
+                pdfPreviewState.blobUrl = '';
+            }
+            var blobUrl = doc.output('bloburl');
+            pdfPreviewState.doc = doc;
+            pdfPreviewState.filename = filename;
+            pdfPreviewState.blobUrl = blobUrl;
+
+            var modal = document.getElementById('pdfPreviewModal');
+            var frame = document.getElementById('pdfPreviewFrame');
+            frame.src = blobUrl;
+            modal.classList.add('show');
+        }
+
+        function confirmDownloadPdf() {
+            if (!pdfPreviewState.doc) return;
+            pdfPreviewState.doc.save(pdfPreviewState.filename);
+        }
+
+        function closePdfPreview() {
+            var modal = document.getElementById('pdfPreviewModal');
+            var frame = document.getElementById('pdfPreviewFrame');
+            modal.classList.remove('show');
+            frame.src = 'about:blank';
+            if (pdfPreviewState.blobUrl) {
+                URL.revokeObjectURL(pdfPreviewState.blobUrl);
+                pdfPreviewState.blobUrl = '';
+            }
+            pdfPreviewState.doc = null;
         }
     </script>
 </body>
