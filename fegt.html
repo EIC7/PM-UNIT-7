@@ -52,9 +52,9 @@
 /* ── EDIT GAMBAR (Insert Shape) ── */
 .editimg-dialog{width:98vw;height:96vh;max-width:1600px;max-height:1600px;display:flex;flex-direction:column}
 #editImgOuter{position:relative;flex:1 1 auto;min-height:0;background:#0c100d;overflow:auto;touch-action:none;display:flex;align-items:center;justify-content:center}
-#editImgWrap{position:relative;flex:none}
+#editImgWrap{position:relative;flex:none;touch-action:none}
 #editImg{position:absolute;left:0;top:0;user-select:none;-webkit-user-select:none;pointer-events:none;display:block}
-#editSvgOverlay{position:absolute;left:0;top:0;cursor:crosshair}
+#editSvgOverlay{position:absolute;left:0;top:0;cursor:crosshair;touch-action:none}
 .edit-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;flex:none}
 .edit-tool-btn{width:36px;height:36px;border-radius:7px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .edit-tool-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
@@ -586,17 +586,18 @@ function getSvgPoint(evt){
     return { x: x, y: y };
 }
 
+/* Pakai Pointer Events (bukan touchstart/mousedown terpisah) supaya drag di HP
+   (Chrome/Safari Android & iOS) lebih andal — menghindari konflik event
+   sentuh vs mouse sintetis yang kadang bikin drag "putus" di tengah jalan. */
 function ieAddDocListeners(onMove, onUp){
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('touchmove', onMove, {passive:false});
-    document.addEventListener('mouseup', onUp);
-    document.addEventListener('touchend', onUp);
+    document.addEventListener('pointermove', onMove, {passive:false});
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
 }
 function ieRemoveDocListeners(onMove, onUp){
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    document.removeEventListener('touchend', onUp);
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
 }
 
 /* ── Mulai gambar shape baru (drag dari kosong) ── */
@@ -688,8 +689,7 @@ function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
     c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1, r*0.18));
     c.style.cursor = cursor;
     var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
-    c.addEventListener('mousedown', start);
-    c.addEventListener('touchstart', start, {passive:false});
+    c.addEventListener('pointerdown', start);
     svg.appendChild(c);
 }
 
@@ -756,13 +756,25 @@ function renderAllShapes(){
         var visual = ieBuildShapeVisual(shape);
         if (!visual) return;
         g.appendChild(visual);
-        // Hit-area lebih lebar supaya mudah disentuh (untuk garis/panah tipis)
+        // Hit-area lebih lebar supaya mudah disentuh (untuk garis/panah tipis,
+        // dan bagian dalam kotak/oval yang defaultnya fill:none tidak bisa disentuh)
         if (shape.type === 'line' || shape.type === 'arrow') {
             var hit = document.createElementNS(NS_SVG, 'line');
             hit.setAttribute('x1', shape.x1); hit.setAttribute('y1', shape.y1);
             hit.setAttribute('x2', shape.x2); hit.setAttribute('y2', shape.y2);
             hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', Math.max(24, imgEditState.naturalW*0.02));
             g.insertBefore(hit, visual);
+        } else if (shape.type === 'rect' || shape.type === 'oval') {
+            var fhit = document.createElementNS(NS_SVG, shape.type === 'rect' ? 'rect' : 'ellipse');
+            if (shape.type === 'rect') {
+                fhit.setAttribute('x', shape.x); fhit.setAttribute('y', shape.y);
+                fhit.setAttribute('width', shape.w); fhit.setAttribute('height', shape.h);
+            } else {
+                fhit.setAttribute('cx', shape.x+shape.w/2); fhit.setAttribute('cy', shape.y+shape.h/2);
+                fhit.setAttribute('rx', shape.w/2); fhit.setAttribute('ry', shape.h/2);
+            }
+            fhit.setAttribute('fill', 'transparent');
+            g.insertBefore(fhit, visual);
         } else if (shape.type === 'text') {
             // <text> secara default cuma bisa "diklik" tepat di garis huruf. Tambahkan
             // hit-area kotak penuh (transparan) supaya teks mudah digeser/dipilih di HP.
@@ -780,8 +792,7 @@ function renderAllShapes(){
             ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
             startDragShape(shape.id, ev);
         };
-        g.addEventListener('mousedown', start);
-        g.addEventListener('touchstart', start, {passive:false});
+        g.addEventListener('pointerdown', start);
         svg.appendChild(g);
 
         if (shape.id === imgEditState.selectedId) {
@@ -828,8 +839,7 @@ function renderAllShapes(){
 (function initEditSvgEvents(){
     var svg = document.getElementById('editSvgOverlay');
     if (!svg) return;
-    svg.addEventListener('mousedown', onEditSvgPointerDown);
-    svg.addEventListener('touchstart', onEditSvgPointerDown, {passive:false});
+    svg.addEventListener('pointerdown', onEditSvgPointerDown);
 })();
 
 /* ── Terapkan semua anotasi: gabung ke gambar asli, kembalikan ke #cropImg ── */
