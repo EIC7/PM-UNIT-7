@@ -286,6 +286,52 @@
 
 </div>
 
+<!-- CROP MODAL (3-mode: Default/Preset/Manual) -->
+<div id="cropModal">
+    <div class="crop-dialog">
+        <div class="crop-header">
+            <div class="crop-header-title">✂️ Crop Gambar</div>
+            <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
+        </div>
+        <div id="cropWrap">
+            <img id="cropImg" src="">
+            <div id="cropBox">
+                <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
+                <div class="crop-handle sw"></div><div class="crop-handle se"></div>
+                <div class="crop-handle n"></div><div class="crop-handle s"></div>
+                <div class="crop-handle w"></div><div class="crop-handle e"></div>
+            </div>
+        </div>
+        <div class="crop-footer">
+            <div class="crop-size-panel">
+                <div class="crop-size-row" id="cropModeRow">
+                    <button type="button" class="crop-mode-btn" id="cropModeDefault" onclick="setCropMode('default')">⭐ Default</button>
+                    <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
+                    <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
+                </div>
+                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran: 7.2 × 5.18 cm (default, tidak perlu diatur)</div>
+                <div id="cropPresetControls" style="display:none">
+                    <div class="crop-size-row" id="cropPresetRow"></div>
+                    <div class="crop-size-row" style="margin-top:8px">
+                        <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
+                        <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
+                    </div>
+                </div>
+                <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
+                </div>
+            </div>
+            <div class="crop-btns">
+                <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
+                <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 /* ══════════════════════════════════════════════════════════════════════════
    FITUR REUSABLE: Crop 3-mode (Default/Preset/Manual) / Geser posisi foto /
@@ -2091,52 +2137,6 @@ initCropDrag();
   });
 })();
 </script>
-<!-- CROP MODAL (3-mode: Default/Preset/Manual) -->
-<div id="cropModal">
-    <div class="crop-dialog">
-        <div class="crop-header">
-            <div class="crop-header-title">✂️ Crop Gambar</div>
-            <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
-        </div>
-        <div id="cropWrap">
-            <img id="cropImg" src="">
-            <div id="cropBox">
-                <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
-                <div class="crop-handle sw"></div><div class="crop-handle se"></div>
-                <div class="crop-handle n"></div><div class="crop-handle s"></div>
-                <div class="crop-handle w"></div><div class="crop-handle e"></div>
-            </div>
-        </div>
-        <div class="crop-footer">
-            <div class="crop-size-panel">
-                <div class="crop-size-row" id="cropModeRow">
-                    <button type="button" class="crop-mode-btn" id="cropModeDefault" onclick="setCropMode('default')">⭐ Default</button>
-                    <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
-                    <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
-                </div>
-                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran: 7.2 × 5.18 cm (default, tidak perlu diatur)</div>
-                <div id="cropPresetControls" style="display:none">
-                    <div class="crop-size-row" id="cropPresetRow"></div>
-                    <div class="crop-size-row" style="margin-top:8px">
-                        <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
-                        <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
-                    </div>
-                </div>
-                <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
-                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
-                    <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
-                </div>
-            </div>
-            <div class="crop-btns">
-                <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
-                <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
-                <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- PDF PREVIEW MODAL -->
 <div id="pdfPreviewModal" class="pdf-preview-modal">
     <div class="pdf-preview-dialog">
