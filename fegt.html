@@ -2019,7 +2019,7 @@ function dbCollectData(modul) {
       after:  (ldCleaningImages[pk].after||[]).map(ki)
     };
   });
-  return {modul:'FEGT & Leak Detection', tanggal:metaInfo.tanggal, shift:metaInfo.shift, pic:metaInfo.operator, work_order:'', unit:'Unit 7',
+  return {modul:'FEGT & Leak Detection', tanggal:metaInfo.tanggal, pic:metaInfo.operator, work_order:'', unit:'Unit 7',
     data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), leakPaths:leakPaths, diagResults:diagResults, meta:metaInfo, cleaning:cleaningData, cleaningLd:cleaningLdData}};
 }
 
