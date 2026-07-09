@@ -42,7 +42,7 @@
         .img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
         .img-nudge-label{font-size:8px;color:#8a8a8a;text-align:center;line-height:1.2;max-width:78px}
         .img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
-        .img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
+        .img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
         .img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
         /* CROP MODAL */
         #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
@@ -678,7 +678,7 @@
                         html += '<button type="button" onclick="nudgeImage(\''+type+'\','+idx+','+imgIdx+',0.5)" title="Geser posisi gambar ini ke kanan di hasil PDF">▶</button>';
                         html += '</div>';
                         html += '</div>';
-                        html += '<input type="text" placeholder="Keterangan" value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:#fff;color:#111;box-sizing:border-box">';
+                        html += '<input type="text" placeholder="Keterangan" value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#111;box-sizing:border-box">';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -782,7 +782,12 @@
                     }
                 };
                 img.onerror = function() {
-                    alert('Format gambar tidak bisa diproses. Gunakan JPG atau PNG.');
+                    var ext = (file.name || '').split('.').pop().toLowerCase();
+                    if ((ext === 'heic' || ext === 'heif') && typeof showHeicWarning === 'function') {
+                        showHeicWarning();
+                    } else {
+                        alert('Format gambar tidak bisa diproses. Gunakan JPG atau PNG.');
+                    }
                     callback(null);
                 };
                 img.src = ev.target.result;
