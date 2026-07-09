@@ -49,6 +49,16 @@
 .crop-cm-field input{width:64px;padding:5px 6px;font-size:12px;border-radius:5px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8}
 .crop-size-label{font-size:11px;color:#7fd9a4;font-weight:600;margin-left:4px}
 .crop-default-label{font-size:12px;color:#7fd9a4;font-weight:600;padding:4px 2px}
+/* ── EDIT GAMBAR (Insert Shape) ── */
+#editImgWrap{position:relative;width:100%;height:min(58vw,420px);min-height:220px;background:#0c100d;overflow:hidden;touch-action:none}
+#editImg{position:absolute;user-select:none;-webkit-user-select:none;pointer-events:none;left:0;top:0}
+#editSvgOverlay{position:absolute;left:0;top:0;cursor:crosshair}
+.edit-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30}
+.edit-tool-btn{width:36px;height:36px;border-radius:7px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-tool-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+.edit-toolbar-sep{width:1px;align-self:stretch;background:#2a3a30;margin:2px 2px}
+.edit-color-swatch{width:24px;height:24px;border-radius:50%;border:2px solid #3a4f42;cursor:pointer;padding:0}
+.edit-color-swatch.active{border-color:#fff;box-shadow:0 0 0 2px #2ecc71}
 /* ── PDF PREVIEW MODAL ── */
 .pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
 .pdf-preview-modal.show{display:flex}
@@ -304,10 +314,46 @@
                 </div>
             </div>
             <div class="crop-btns">
+                <button class="crop-btn crop-btn-outline" onclick="openImageEditor()">🖍️ Edit Gambar</button>
                 <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
                 <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
                 <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ EDIT GAMBAR (Insert Shape: Teks/Panah/Garis/Kotak/Oval) ═══ -->
+<div id="editImgModal" class="pdf-preview-modal">
+    <div class="crop-dialog" style="width:min(96vw,640px);max-width:96vw">
+        <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closeImageEditor(true)" aria-label="Tutup">✕</button>
+            <div class="pdf-preview-title">🖍️ Edit Gambar</div>
+            <div class="pdf-preview-hint">Tambahkan teks, panah, garis, kotak, atau oval pada gambar</div>
+        </div>
+        <div id="editImgWrap">
+            <img id="editImg" src="" alt="">
+            <svg id="editSvgOverlay" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+        <div class="edit-toolbar" id="editToolbar">
+            <button type="button" class="edit-tool-btn active" data-tool="select" onclick="setEditTool('select')" title="Pilih / Pindah">↖</button>
+            <button type="button" class="edit-tool-btn" data-tool="text" onclick="setEditTool('text')" title="Tambah Teks">🅰</button>
+            <button type="button" class="edit-tool-btn" data-tool="arrow" onclick="setEditTool('arrow')" title="Panah">↗</button>
+            <button type="button" class="edit-tool-btn" data-tool="line" onclick="setEditTool('line')" title="Garis">╱</button>
+            <button type="button" class="edit-tool-btn" data-tool="rect" onclick="setEditTool('rect')" title="Kotak">▭</button>
+            <button type="button" class="edit-tool-btn" data-tool="oval" onclick="setEditTool('oval')" title="Oval">◯</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-color-swatch active" data-color="#e53935" style="background:#e53935" onclick="setEditColor('#e53935',this)" title="Merah"></button>
+            <button type="button" class="edit-color-swatch" data-color="#1a1a1a" style="background:#1a1a1a" onclick="setEditColor('#1a1a1a',this)" title="Hitam"></button>
+            <button type="button" class="edit-color-swatch" data-color="#1e88e5" style="background:#1e88e5" onclick="setEditColor('#1e88e5',this)" title="Biru"></button>
+            <button type="button" class="edit-color-swatch" data-color="#fdd835" style="background:#fdd835" onclick="setEditColor('#fdd835',this)" title="Kuning"></button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-tool-btn" id="editTextEditBtn" onclick="editSelectedText()" title="Edit Teks" style="display:none">✏️</button>
+            <button type="button" class="edit-tool-btn" id="editDeleteBtn" onclick="deleteSelectedShape()" title="Hapus" style="display:none">🗑️</button>
+        </div>
+        <div class="pdf-preview-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closeImageEditor(true)">Batal</button>
+            <button class="crop-btn crop-btn-save" onclick="applyImageEdits()">✓ Selesai</button>
         </div>
     </div>
 </div>
@@ -334,6 +380,397 @@ cropModalState._presetRatio = 1;
 var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
 var PRESET_DEFAULT_LONG_CM = 4;
 var MANUAL_MAX_CM = 7;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
+   Dipanggil dari dalam Crop Modal ("🖍️ Edit Gambar"). Bekerja di atas
+   gambar ASLI (sebelum crop), lalu hasil flatten (gambar + anotasi jadi
+   satu) dikembalikan ke #cropImg supaya alur crop selanjutnya normal.
+   Koordinat shape disimpan dalam ruang piksel ASLI gambar (naturalW/H)
+   supaya scaling ke layar & flatten ke canvas konsisten.
+   ══════════════════════════════════════════════════════════════════════════ */
+var NS_SVG = 'http://www.w3.org/2000/svg';
+var imgEditState = {
+    tool: 'select', color: '#e53935', shapes: [], selectedId: null,
+    naturalW: 0, naturalH: 0, nextId: 1, drawing: null, sourceUrl: null
+};
+
+function ieMinSize(){ return Math.max(20, imgEditState.naturalW * 0.02); }
+function ieHandleR(){ return Math.max(9, imgEditState.naturalW * 0.009); }
+function ieStrokeW(){ return Math.max(3, imgEditState.naturalW * 0.0045); }
+function ieFontDefault(){ return Math.max(18, imgEditState.naturalW * 0.035); }
+function ieColorId(c){ return 'ie_' + c.replace('#',''); }
+
+function openImageEditor(){
+    var cropImg = document.getElementById('cropImg');
+    if (!cropImg || !cropImg.src) { alert('Gambar belum siap untuk diedit.'); return; }
+    imgEditState.shapes = []; imgEditState.selectedId = null; imgEditState.nextId = 1;
+    imgEditState.tool = 'select'; imgEditState.color = '#e53935';
+    setEditTool('select');
+    var swatches = document.querySelectorAll('.edit-color-swatch');
+    swatches.forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color') === imgEditState.color); });
+    var editImg = document.getElementById('editImg');
+    editImg.onload = function(){
+        imgEditState.naturalW = editImg.naturalWidth;
+        imgEditState.naturalH = editImg.naturalHeight;
+        fitEditImageToWrap();
+        renderAllShapes();
+    };
+    imgEditState.sourceUrl = cropImg.src;
+    editImg.src = cropImg.src;
+    document.getElementById('editImgModal').classList.add('show');
+}
+
+function fitEditImageToWrap(){
+    var wrap = document.getElementById('editImgWrap');
+    var img = document.getElementById('editImg');
+    var svg = document.getElementById('editSvgOverlay');
+    var ww = wrap.clientWidth, wh = wrap.clientHeight;
+    var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
+    if (!nw || !nh || !ww || !wh) return;
+    var scale = Math.min(ww/nw, wh/nh);
+    var dw = nw*scale, dh = nh*scale;
+    var left = (ww-dw)/2, top = (wh-dh)/2;
+    img.style.width = dw+'px'; img.style.height = dh+'px';
+    img.style.left = left+'px'; img.style.top = top+'px';
+    svg.style.width = dw+'px'; svg.style.height = dh+'px';
+    svg.style.left = left+'px'; svg.style.top = top+'px';
+    svg.setAttribute('viewBox', '0 0 '+nw+' '+nh);
+}
+window.addEventListener('resize', function(){
+    if (document.getElementById('editImgModal').classList.contains('show')) fitEditImageToWrap();
+});
+
+function closeImageEditor(discard){
+    document.getElementById('editImgModal').classList.remove('show');
+    if (discard) { imgEditState.shapes = []; imgEditState.selectedId = null; }
+}
+
+function setEditTool(tool){
+    imgEditState.tool = tool;
+    deselectShape();
+    document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-tool') === tool);
+    });
+    var svg = document.getElementById('editSvgOverlay');
+    svg.style.cursor = (tool === 'select') ? 'default' : 'crosshair';
+}
+
+function setEditColor(color, btnEl){
+    imgEditState.color = color;
+    document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.remove('active'); });
+    if (btnEl) btnEl.classList.add('active');
+    var sel = getShapeById(imgEditState.selectedId);
+    if (sel) { sel.color = color; renderAllShapes(); }
+}
+
+function getShapeById(id){
+    for (var i=0;i<imgEditState.shapes.length;i++) if (imgEditState.shapes[i].id === id) return imgEditState.shapes[i];
+    return null;
+}
+function addShape(shape){
+    shape.id = imgEditState.nextId++;
+    imgEditState.shapes.push(shape);
+    imgEditState.selectedId = shape.id;
+    renderAllShapes();
+}
+function deselectShape(){
+    imgEditState.selectedId = null;
+    var db = document.getElementById('editDeleteBtn'); if (db) db.style.display = 'none';
+    var tb = document.getElementById('editTextEditBtn'); if (tb) tb.style.display = 'none';
+    renderAllShapes();
+}
+function setSelectedShape(id){
+    imgEditState.selectedId = id;
+    var shape = getShapeById(id);
+    var db = document.getElementById('editDeleteBtn'); if (db) db.style.display = shape ? 'flex' : 'none';
+    var tb = document.getElementById('editTextEditBtn'); if (tb) tb.style.display = (shape && shape.type==='text') ? 'flex' : 'none';
+    renderAllShapes();
+}
+function deleteSelectedShape(){
+    if (!imgEditState.selectedId) return;
+    imgEditState.shapes = imgEditState.shapes.filter(function(s){ return s.id !== imgEditState.selectedId; });
+    deselectShape();
+}
+function editSelectedText(){
+    var s = getShapeById(imgEditState.selectedId);
+    if (!s || s.type !== 'text') return;
+    var val = prompt('Edit teks:', s.text);
+    if (val !== null && val.trim()) { s.text = val.trim(); renderAllShapes(); }
+}
+
+function getSvgPoint(evt){
+    var svg = document.getElementById('editSvgOverlay');
+    var rect = svg.getBoundingClientRect();
+    var t = evt.touches ? (evt.touches[0] || evt.changedTouches[0]) : evt;
+    var x = (t.clientX - rect.left) * (imgEditState.naturalW / rect.width);
+    var y = (t.clientY - rect.top) * (imgEditState.naturalH / rect.height);
+    return { x: x, y: y };
+}
+
+function ieAddDocListeners(onMove, onUp){
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, {passive:false});
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+}
+function ieRemoveDocListeners(onMove, onUp){
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchend', onUp);
+}
+
+/* ── Mulai gambar shape baru (drag dari kosong) ── */
+function onEditSvgPointerDown(e){
+    var tool = imgEditState.tool;
+    if (tool === 'select') { if (e.target.id === 'editSvgOverlay') deselectShape(); return; }
+    if (e.cancelable) e.preventDefault();
+    var pt = getSvgPoint(e);
+    if (tool === 'text') {
+        var txt = prompt('Masukkan teks:');
+        if (txt && txt.trim()) addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
+        setEditTool('select');
+        return;
+    }
+    imgEditState.drawing = {type:tool, x1:pt.x, y1:pt.y, x2:pt.x, y2:pt.y, color:imgEditState.color};
+    renderAllShapes();
+    function onMove(mv){
+        if (mv.cancelable) mv.preventDefault();
+        var p = getSvgPoint(mv);
+        imgEditState.drawing.x2 = p.x; imgEditState.drawing.y2 = p.y;
+        renderAllShapes();
+    }
+    function onUp(){
+        ieRemoveDocListeners(onMove, onUp);
+        var d = imgEditState.drawing; imgEditState.drawing = null;
+        var dist = Math.hypot(d.x2-d.x1, d.y2-d.y1);
+        if (dist > Math.max(8, imgEditState.naturalW*0.008)) {
+            if (d.type === 'rect' || d.type === 'oval') {
+                addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color});
+            } else {
+                addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color});
+            }
+        } else { renderAllShapes(); }
+        setEditTool('select');
+    }
+    ieAddDocListeners(onMove, onUp);
+}
+
+/* ── Pindahkan shape yang ada (drag body) ── */
+function startDragShape(id, ev){
+    setSelectedShape(id);
+    var shape = getShapeById(id);
+    if (!shape) return;
+    var startPt = getSvgPoint(ev);
+    var orig = JSON.parse(JSON.stringify(shape));
+    function onMove(mv){
+        if (mv.cancelable) mv.preventDefault();
+        var p = getSvgPoint(mv);
+        var dx = p.x - startPt.x, dy = p.y - startPt.y;
+        if (shape.type === 'line' || shape.type === 'arrow') {
+            shape.x1 = orig.x1+dx; shape.y1 = orig.y1+dy; shape.x2 = orig.x2+dx; shape.y2 = orig.y2+dy;
+        } else {
+            shape.x = orig.x+dx; shape.y = orig.y+dy;
+        }
+        renderAllShapes();
+    }
+    function onUp(){ ieRemoveDocListeners(onMove, onUp); }
+    ieAddDocListeners(onMove, onUp);
+}
+
+/* ── Handle resize/endpoint drag ── */
+function startHandleDrag(onDragMove){
+    function onMove(mv){ if (mv.cancelable) mv.preventDefault(); onDragMove(getSvgPoint(mv)); renderAllShapes(); }
+    function onUp(){ ieRemoveDocListeners(onMove, onUp); }
+    ieAddDocListeners(onMove, onUp);
+}
+
+function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
+    var r = ieHandleR();
+    var c = document.createElementNS(NS_SVG, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1, r*0.18));
+    c.style.cursor = cursor;
+    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
+    c.addEventListener('mousedown', start);
+    c.addEventListener('touchstart', start, {passive:false});
+    svg.appendChild(c);
+}
+
+/* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */
+function ieBuildShapeVisual(shape){
+    var sw = ieStrokeW();
+    if (shape.type === 'line' || shape.type === 'arrow') {
+        var ln = document.createElementNS(NS_SVG, 'line');
+        ln.setAttribute('x1', shape.x1); ln.setAttribute('y1', shape.y1);
+        ln.setAttribute('x2', shape.x2); ln.setAttribute('y2', shape.y2);
+        ln.setAttribute('stroke', shape.color); ln.setAttribute('stroke-width', sw);
+        ln.setAttribute('stroke-linecap', 'round');
+        if (shape.type === 'arrow') ln.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
+        return ln;
+    }
+    if (shape.type === 'rect') {
+        var rc = document.createElementNS(NS_SVG, 'rect');
+        rc.setAttribute('x', shape.x); rc.setAttribute('y', shape.y);
+        rc.setAttribute('width', shape.w); rc.setAttribute('height', shape.h);
+        rc.setAttribute('stroke', shape.color); rc.setAttribute('stroke-width', sw); rc.setAttribute('fill', 'none');
+        return rc;
+    }
+    if (shape.type === 'oval') {
+        var el = document.createElementNS(NS_SVG, 'ellipse');
+        el.setAttribute('cx', shape.x+shape.w/2); el.setAttribute('cy', shape.y+shape.h/2);
+        el.setAttribute('rx', shape.w/2); el.setAttribute('ry', shape.h/2);
+        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', sw); el.setAttribute('fill', 'none');
+        return el;
+    }
+    if (shape.type === 'text') {
+        var tx = document.createElementNS(NS_SVG, 'text');
+        tx.setAttribute('x', shape.x); tx.setAttribute('y', shape.y);
+        tx.setAttribute('font-size', shape.fontSize); tx.setAttribute('fill', shape.color);
+        tx.setAttribute('font-family', 'Arial, sans-serif'); tx.setAttribute('font-weight', '700');
+        tx.setAttribute('dominant-baseline', 'hanging'); tx.setAttribute('stroke', '#fff');
+        tx.setAttribute('stroke-width', Math.max(1, shape.fontSize*0.04)); tx.setAttribute('paint-order', 'stroke');
+        tx.textContent = shape.text;
+        return tx;
+    }
+    return null;
+}
+
+function ieBuildDefs(svg){
+    var defs = document.createElementNS(NS_SVG, 'defs');
+    ['#e53935','#1a1a1a','#1e88e5','#fdd835'].forEach(function(c){
+        var m = document.createElementNS(NS_SVG, 'marker');
+        m.setAttribute('id', ieColorId(c)); m.setAttribute('markerWidth', 10); m.setAttribute('markerHeight', 10);
+        m.setAttribute('refX', 8); m.setAttribute('refY', 5); m.setAttribute('orient', 'auto'); m.setAttribute('markerUnits', 'userSpaceOnUse');
+        var p = document.createElementNS(NS_SVG, 'path');
+        p.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); p.setAttribute('fill', c);
+        m.appendChild(p); defs.appendChild(m);
+    });
+    svg.appendChild(defs);
+}
+
+/* ── Render ulang seluruh overlay interaktif (shapes + preview + handle seleksi) ── */
+function renderAllShapes(){
+    var svg = document.getElementById('editSvgOverlay');
+    if (!svg) return;
+    svg.innerHTML = '';
+    ieBuildDefs(svg);
+    imgEditState.shapes.forEach(function(shape){
+        var g = document.createElementNS(NS_SVG, 'g');
+        var visual = ieBuildShapeVisual(shape);
+        if (!visual) return;
+        g.appendChild(visual);
+        // Hit-area lebih lebar supaya mudah disentuh (untuk garis/panah tipis)
+        if (shape.type === 'line' || shape.type === 'arrow') {
+            var hit = document.createElementNS(NS_SVG, 'line');
+            hit.setAttribute('x1', shape.x1); hit.setAttribute('y1', shape.y1);
+            hit.setAttribute('x2', shape.x2); hit.setAttribute('y2', shape.y2);
+            hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', Math.max(24, imgEditState.naturalW*0.02));
+            g.insertBefore(hit, visual);
+        }
+        g.style.cursor = 'move';
+        var start = function(ev){
+            if (imgEditState.tool !== 'select') return;
+            ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
+            startDragShape(shape.id, ev);
+        };
+        g.addEventListener('mousedown', start);
+        g.addEventListener('touchstart', start, {passive:false});
+        svg.appendChild(g);
+
+        if (shape.id === imgEditState.selectedId) {
+            if (shape.type === 'rect' || shape.type === 'oval') {
+                var box = document.createElementNS(NS_SVG, 'rect');
+                box.setAttribute('x', shape.x); box.setAttribute('y', shape.y);
+                box.setAttribute('width', shape.w); box.setAttribute('height', shape.h);
+                box.setAttribute('fill', 'none'); box.setAttribute('stroke', '#2ecc71');
+                box.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                box.setAttribute('stroke-dasharray', '6,4'); box.setAttribute('pointer-events', 'none');
+                svg.appendChild(box);
+                ieMakeHandle(svg, shape.x+shape.w, shape.y+shape.h, 'nwse-resize', function(p){
+                    shape.w = Math.max(ieMinSize(), p.x-shape.x); shape.h = Math.max(ieMinSize(), p.y-shape.y);
+                });
+            } else if (shape.type === 'line' || shape.type === 'arrow') {
+                ieMakeHandle(svg, shape.x1, shape.y1, 'move', function(p){ shape.x1=p.x; shape.y1=p.y; });
+                ieMakeHandle(svg, shape.x2, shape.y2, 'move', function(p){ shape.x2=p.x; shape.y2=p.y; });
+            } else if (shape.type === 'text') {
+                var approxW = Math.max(20, (shape.text.length||1) * shape.fontSize * 0.55);
+                var box2 = document.createElementNS(NS_SVG, 'rect');
+                box2.setAttribute('x', shape.x); box2.setAttribute('y', shape.y);
+                box2.setAttribute('width', approxW); box2.setAttribute('height', shape.fontSize*1.2);
+                box2.setAttribute('fill', 'none'); box2.setAttribute('stroke', '#2ecc71');
+                box2.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                box2.setAttribute('stroke-dasharray', '6,4'); box2.setAttribute('pointer-events', 'none');
+                svg.appendChild(box2);
+                ieMakeHandle(svg, shape.x+approxW, shape.y+shape.fontSize*1.2, 'nwse-resize', function(p){
+                    shape.fontSize = Math.max(10, p.y-shape.y);
+                });
+            }
+        }
+    });
+    if (imgEditState.drawing) {
+        var dvisual = ieBuildShapeVisual(
+            (imgEditState.drawing.type==='rect'||imgEditState.drawing.type==='oval')
+            ? {type:imgEditState.drawing.type, x:Math.min(imgEditState.drawing.x1,imgEditState.drawing.x2), y:Math.min(imgEditState.drawing.y1,imgEditState.drawing.y2), w:Math.abs(imgEditState.drawing.x2-imgEditState.drawing.x1), h:Math.abs(imgEditState.drawing.y2-imgEditState.drawing.y1), color:imgEditState.drawing.color}
+            : imgEditState.drawing
+        );
+        if (dvisual) { dvisual.setAttribute('opacity','0.75'); svg.appendChild(dvisual); }
+    }
+}
+
+(function initEditSvgEvents(){
+    var svg = document.getElementById('editSvgOverlay');
+    if (!svg) return;
+    svg.addEventListener('mousedown', onEditSvgPointerDown);
+    svg.addEventListener('touchstart', onEditSvgPointerDown, {passive:false});
+})();
+
+/* ── Terapkan semua anotasi: gabung ke gambar asli, kembalikan ke #cropImg ── */
+function applyImageEdits(){
+    if (!imgEditState.shapes.length) { closeImageEditor(false); return; }
+    var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
+    var flatSvg = document.createElementNS(NS_SVG, 'svg');
+    flatSvg.setAttribute('xmlns', NS_SVG);
+    flatSvg.setAttribute('width', nw); flatSvg.setAttribute('height', nh);
+    flatSvg.setAttribute('viewBox', '0 0 '+nw+' '+nh);
+    ieBuildDefs(flatSvg);
+    imgEditState.shapes.forEach(function(shape){
+        var v = ieBuildShapeVisual(shape);
+        if (v) flatSvg.appendChild(v);
+    });
+    var svgStr = new XMLSerializer().serializeToString(flatSvg);
+    var svgImg = new Image();
+    svgImg.onload = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = nw; canvas.height = nh;
+        var ctx = canvas.getContext('2d');
+        var baseImg = document.getElementById('editImg');
+        var srcImg = new Image();
+        srcImg.onload = function(){
+            ctx.drawImage(srcImg, 0, 0, nw, nh);
+            ctx.drawImage(svgImg, 0, 0, nw, nh);
+            var outUrl = canvas.toDataURL('image/jpeg', 0.92);
+            var cropImg = document.getElementById('cropImg');
+            cropImg.onload = function(){
+                var wrap = document.getElementById('cropWrap');
+                var ww = wrap.clientWidth, wh = wrap.clientHeight;
+                var scale = Math.min(ww/cropImg.naturalWidth, wh/cropImg.naturalHeight);
+                var dw = cropImg.naturalWidth*scale, dh = cropImg.naturalHeight*scale;
+                cropImg.style.width = dw+'px'; cropImg.style.height = dh+'px';
+                cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
+                if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+                else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+            };
+            cropImg.src = outUrl;
+            closeImageEditor(false);
+        };
+        srcImg.src = imgEditState.sourceUrl;
+    };
+    svgImg.onerror = function(){ alert('Gagal menerapkan anotasi pada gambar. Coba lagi.'); };
+    svgImg.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+}
+
 var CROP_PRESETS = [
     {label:'1:1', w:1, h:1}, {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
     {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
