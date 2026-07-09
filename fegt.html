@@ -53,14 +53,17 @@
 .pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
 .pdf-preview-modal.show{display:flex}
 .pdf-preview-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,900px);height:min(92vh,1100px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
-.pdf-preview-header{background:#243228;padding:10px 16px;flex:0 0 auto}
+.pdf-preview-header{background:#243228;padding:10px 46px 10px 16px;flex:0 0 auto;position:relative}
 .pdf-preview-title{font-weight:700;font-size:14px;color:#e0f0e8}
 .pdf-preview-hint{font-size:11px;color:#8aab96;margin-top:2px}
+.pdf-preview-close-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid #3a4f42;background:#1a221e;color:#e0f0e8;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.pdf-preview-close-x:active{background:#2a3a30}
 .pdf-preview-body{flex:1 1 auto;background:#333;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .pdf-canvas-container{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
 .pdf-canvas-container canvas{max-width:100%;height:auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);background:#fff}
 .pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
-.pdf-preview-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
+.pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
+.pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
 </style>
 </head>
 <body>
@@ -116,7 +119,7 @@
           <div class="col-map-item"><label>Kolom Reading Temp / Suhu</label><select id="mapTemp"><option value="">— pilih kolom —</option></select></div>
           <div class="col-map-item"><label>Kolom Status</label><select id="mapStatus"><option value="">— pilih kolom —</option></select></div>
           <div class="col-map-item"><label>Kolom Tanggal <span style="color:#aaa;font-size:11px">(opsional)</span></label><select id="mapTanggal"><option value="">— pilih kolom —</option></select></div>
-          <div class="col-map-item"><label>Kolom Shift <span style="color:#aaa;font-size:11px">(opsional)</span></label><select id="mapShift"><option value="">— pilih kolom —</option></select></div>
+          <div class="col-map-item"><label>Kolom Workorder <span style="color:#aaa;font-size:11px">(opsional)</span></label><select id="mapWorkorder"><option value="">— pilih kolom —</option></select></div>
         </div>
         <div class="btn-row" style="margin-top:14px"><button class="btn btn-outline" onclick="applyMapping()">✓ Terapkan Mapping</button></div>
       </div>
@@ -130,13 +133,8 @@
     <div class="tab-content" id="tabManual">
       <div class="manual-meta">
         <div class="meta-field"><label>Tanggal</label><input type="date" id="manTanggal"></div>
-        <div class="meta-field"><label>Shift</label>
-          <select id="manShift">
-            <option value="">— pilih —</option>
-            <option value="Pagi">Pagi</option>
-            <option value="Sore">Sore</option>
-            <option value="Malam">Malam</option>
-          </select>
+        <div class="meta-field"><label>Workorder</label>
+          <input type="text" id="manWorkorder" placeholder="No. Workorder...">
         </div>
         <div class="meta-field"><label>Nama Operator</label><input type="text" id="manOperator" placeholder="Nama operator..."></div>
       </div>
@@ -150,8 +148,7 @@
 
     <!-- BUTTONS -->
     <div class="btn-row" style="margin-top:20px">
-      <button class="btn btn-primary" id="btnRun" onclick="runDiagnosis()" disabled>▶ Run Diagnosis</button>
-      <button class="btn btn-pdf"     id="btnPdf" onclick="downloadPdf()" disabled>⬇ Download PDF Report</button>
+      <button class="btn btn-pdf"     id="btnPdf" onclick="runDiagnosisAndPrint()" disabled>⬇ Diagnostic &amp; Print Preview</button>
       <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('fegt')" disabled>💾 Simpan ke Database</button>
       <button class="btn btn-danger"  onclick="resetAll()">✕ Reset</button>
     </div>
@@ -192,7 +189,7 @@
     <div class="section-label">Preview Data Path</div>
     <div class="meta-bar" id="metaBar">
       <div><span class="meta-key">Tanggal: </span><span class="meta-val" id="mTanggal">—</span></div>
-      <div><span class="meta-key">Shift: </span><span class="meta-val" id="mShift">—</span></div>
+      <div><span class="meta-key">Workorder: </span><span class="meta-val" id="mWorkorder">—</span></div>
       <div><span class="meta-key">Operator: </span><span class="meta-val" id="mOperator">—</span></div>
       <div><span class="meta-key">Unit: </span><span class="meta-val">Unit 7 — PLTU Paiton</span></div>
     </div>
@@ -201,22 +198,6 @@
         <thead><tr><th>Path</th><th>Tx → Rx</th><th>Reading Temp</th><th>Status</th></tr></thead>
         <tbody id="previewBody"></tbody>
       </table>
-    </div>
-  </div>
-
-  <!-- DIAGNOSIS -->
-  <div class="panel" id="diagPanel" style="display:none">
-    <div class="section-label">Sensor Diagnosis Result</div>
-    <div class="stat-row">
-      <div class="stat-chip total">Total Paths <span id="statTotal">21</span></div>
-      <div class="stat-chip ok">Valid <span id="statOk">—</span></div>
-      <div class="stat-chip fail">Data Fail <span id="statFail">—</span></div>
-      <div class="stat-chip hard">Hard Fail <span id="statHard">—</span></div>
-    </div>
-    <div class="diag-grid" id="diagGrid"></div>
-    <div class="conclusion-box waiting" id="conclusionBox">
-      <div class="conc-title">Menunggu Data</div>
-      <div id="conclusionText" style="color:var(--text3);font-size:13px">Upload file Excel atau isi data manual, lalu klik Run Diagnosis.</div>
     </div>
   </div>
 
@@ -230,7 +211,6 @@
       </table>
     </div>
     <div class="btn-row" style="margin-top:16px">
-      <button class="btn btn-primary" onclick="runLeakDiagnosis()">▶ Run Leak Diagnosis</button>
       <button class="btn btn-danger"  onclick="resetLeak()">✕ Reset Leak</button>
     </div>
     <div id="leakResult" style="margin-top:16px;display:none"></div>
@@ -309,7 +289,7 @@
                     <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
                     <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
                 </div>
-                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran: 7.2 × 5.18 cm (default, tidak perlu diatur)</div>
+                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran cetak: 7.2 × 5.18 cm — gambar penuh (tidak dipotong)</div>
                 <div id="cropPresetControls" style="display:none">
                     <div class="crop-size-row" id="cropPresetRow"></div>
                     <div class="crop-size-row" style="margin-top:8px">
@@ -414,9 +394,22 @@ function setCropMode(mode) {
     }
 }
 function applyDefaultSize() {
-    cropModalState._ratioLocked = true;
+    // Default: box crop menutupi SELURUH gambar (tidak memotong apapun).
+    // Ukuran cetak PDF tetap mengikuti DEFAULT_CROP_W_CM x DEFAULT_CROP_H_CM,
+    // terlepas dari rasio asli gambarnya.
+    cropModalState._ratioLocked = false;
     cropModalState._cropWcm = DEFAULT_CROP_W_CM; cropModalState._cropHcm = DEFAULT_CROP_H_CM;
-    updateSizeLabel(); reshapeCropBoxToRatio();
+    updateSizeLabel(); fitCropBoxToFullImage();
+}
+function fitCropBoxToFullImage() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img) return;
+    var iL = parseInt(img.style.left) || 0, iT = parseInt(img.style.top) || 0;
+    var iW = img.offsetWidth, iH = img.offsetHeight;
+    if (!iW || !iH) return;
+    box.style.left = iL + 'px'; box.style.top = iT + 'px';
+    box.style.width = iW + 'px'; box.style.height = iH + 'px';
 }
 function applyPreset(i) {
     var p = CROP_PRESETS[i];
@@ -532,7 +525,8 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
         var bw = Math.min(dw,dh)*0.8, bh = bw;
         box.style.width = bw+'px'; box.style.height = bh+'px';
         box.style.left = ((ww-bw)/2)+'px'; box.style.top = ((wh-bh)/2)+'px';
-        if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+        if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+        else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
     };
     img.src = dataUrl;
     cropModalState.classList.add('show');
@@ -757,7 +751,7 @@ var LEAK_PATHS = [
   {id:10, desc:'BS 10 — Lt.2 Bottom Slope Sisi Timur', defaultNA:true},
 ];
 
-var pathData = [], metaInfo = {tanggal:'—',shift:'—',operator:'—'}, diagResults = {};
+var pathData = [], metaInfo = {tanggal:'—',workorder:'—',operator:'—'}, diagResults = {};
 var rawHeaders = [], rawRows = [], wsData = null, activeTab = 'upload';
 
 function autoSetStatus(selectId, tempVal) {
@@ -776,15 +770,13 @@ function switchTab(tab) {
   document.getElementById('tabManual').classList.toggle('active', tab==='manual');
   if (tab === 'manual') {
     buildManualTable();
-    document.getElementById('btnRun').disabled = false;
+    document.getElementById('btnPdf').disabled = false;
     document.getElementById('btnSave').disabled = false;
   } else {
-    document.getElementById('btnRun').disabled = pathData.length === 0;
-    document.getElementById('btnSave').disabled = true;
+    document.getElementById('btnPdf').disabled = pathData.length === 0;
+    document.getElementById('btnSave').disabled = pathData.length === 0;
   }
   document.getElementById('previewPanel').style.display='none';
-  document.getElementById('diagPanel').style.display='none';
-  document.getElementById('btnPdf').disabled=true;
   pathData=[]; diagResults={};
   for(var s=1;s<=8;s++){var n=document.getElementById('snode-'+s);if(n)n.className='sensor-node unknown';}
   updateSvg();
@@ -841,7 +833,7 @@ function collectManualData() {
   if (rawDate) { var parts=rawDate.split('-'); tanggalStr=parts[2]+' '+BULAN[parseInt(parts[1])-1]+' '+parts[0]; }
   metaInfo = {
     tanggal: tanggalStr,
-    shift:    document.getElementById('manShift').value    || '—',
+    workorder: document.getElementById('manWorkorder').value || '—',
     operator: document.getElementById('manOperator').value || '—'
   };
   pathData = PATHS.map(function(p) {
@@ -850,7 +842,7 @@ function collectManualData() {
 }
 
 var TEMP_KEYS=['reading temp','reading','temp','suhu','temperature','°c','deg'];
-var STATUS_KEYS=['status'], DATE_KEYS=['tanggal','date','tgl'], SHIFT_KEYS=['shift'], PATH_KEYS=['path'];
+var STATUS_KEYS=['status'], DATE_KEYS=['tanggal','date','tgl'], WORKORDER_KEYS=['workorder','work order','wo','no wo'], PATH_KEYS=['path'];
 
 function matchHeader(h, keys) { var lower=h.toString().toLowerCase().trim(); return keys.some(function(k){return lower.includes(k);}); }
 
@@ -907,10 +899,10 @@ function handleFile(file){
       applyMeta(getCellSafe(ws,'B3')||'—',getCellSafe(ws,'D3')||'—',getCellSafe(ws,'F3')||'—');
       document.getElementById('fileInfo').classList.add('visible');
       document.getElementById('fileMeta').textContent=pathData.length+' path  '+(file.size/1024).toFixed(1)+' KB';
-      document.getElementById('btnRun').disabled=false;
+      document.getElementById('btnPdf').disabled=false;
+      document.getElementById('btnSave').disabled=false;
       buildPreview();
       document.getElementById('previewPanel').style.display='block';
-      document.getElementById('diagPanel').style.display='block';
       showNotice('&#10003; File berhasil dibaca.','ok');
       updateSvg();
     }catch(err){showNotice('Gagal membaca file.<br><small>'+err.message+'</small>','err');}
@@ -919,12 +911,12 @@ function handleFile(file){
 }
 
 function populateMapDropdowns(){
-  ['mapTemp','mapStatus','mapTanggal','mapShift'].forEach(function(id){
+  ['mapTemp','mapStatus','mapTanggal','mapWorkorder'].forEach(function(id){
     var sel=document.getElementById(id); sel.innerHTML='<option value="">— pilih kolom —</option>';
     rawHeaders.forEach(function(h,i){if(h)sel.innerHTML+='<option value="'+i+'">'+h+'</option>';});
   });
   autoSelectCol('mapTemp',TEMP_KEYS); autoSelectCol('mapStatus',STATUS_KEYS);
-  autoSelectCol('mapTanggal',DATE_KEYS); autoSelectCol('mapShift',SHIFT_KEYS);
+  autoSelectCol('mapTanggal',DATE_KEYS); autoSelectCol('mapWorkorder',WORKORDER_KEYS);
 }
 function autoSelectCol(selId,keys){var sel=document.getElementById(selId);var idx=rawHeaders.findIndex(function(h){return matchHeader(h,keys);});if(idx!==-1)sel.value=idx;}
 function applyMapping(){
@@ -933,20 +925,21 @@ function applyMapping(){
   if(isNaN(idxTemp)||isNaN(idxStatus)){showNotice('Pilih kolom Reading Temp dan Status.','err');return;}
   buildPathData(idxTemp,idxStatus);
   var idxDate=parseInt(document.getElementById('mapTanggal').value);
-  var idxShift=parseInt(document.getElementById('mapShift').value);
-  applyMeta(!isNaN(idxDate)&&rawRows[0]?String(rawRows[0][idxDate]||'—'):'—',!isNaN(idxShift)&&rawRows[0]?String(rawRows[0][idxShift]||'—'):'—','—');
+  var idxWorkorder=parseInt(document.getElementById('mapWorkorder').value);
+  applyMeta(!isNaN(idxDate)&&rawRows[0]?String(rawRows[0][idxDate]||'—'):'—',!isNaN(idxWorkorder)&&rawRows[0]?String(rawRows[0][idxWorkorder]||'—'):'—','—');
   document.getElementById('colMap').classList.remove('visible');
-  document.getElementById('btnRun').disabled=false;
-  buildPreview(); document.getElementById('previewPanel').style.display='block'; document.getElementById('diagPanel').style.display='block';
+  document.getElementById('btnPdf').disabled=false;
+  document.getElementById('btnSave').disabled=false;
+  buildPreview(); document.getElementById('previewPanel').style.display='block';
   showNotice('&#10003; Mapping diterapkan. '+pathData.length+' path berhasil dibaca.','ok'); updateSvg();
 }
 function buildPathData(idxTemp,idxStatus){
   pathData=PATHS.map(function(p,i){var row=rawRows[i]||[];return Object.assign({},p,{temp:parseFloat(row[idxTemp])||0,statusRaw:String(row[idxStatus]||'').trim()});});
 }
 function applyMeta(t,s,o){
-  metaInfo={tanggal:t||'—',shift:s||'—',operator:o||'—'};
+  metaInfo={tanggal:t||'—',workorder:s||'—',operator:o||'—'};
   document.getElementById('mTanggal').textContent=metaInfo.tanggal;
-  document.getElementById('mShift').textContent=metaInfo.shift;
+  document.getElementById('mWorkorder').textContent=metaInfo.workorder;
   document.getElementById('mOperator').textContent=metaInfo.operator;
   document.getElementById('metaBar').classList.add('visible');
 }
@@ -995,18 +988,12 @@ function runDiagnosis(){
   if(activeTab==='manual'){
     collectManualData();
     document.getElementById('mTanggal').textContent=metaInfo.tanggal;
-    document.getElementById('mShift').textContent=metaInfo.shift;
+    document.getElementById('mWorkorder').textContent=metaInfo.workorder;
     document.getElementById('mOperator').textContent=metaInfo.operator;
     document.getElementById('metaBar').classList.add('visible');
     buildPreview(); document.getElementById('previewPanel').style.display='block';
   }
   if(!pathData.length) return;
-  document.getElementById('diagPanel').style.display='block';
-  var cOk=0,cFail=0,cHard=0;
-  pathData.forEach(function(p){var e=effectiveStatus(p);if(e==='ok')cOk++;else if(e==='fail')cFail++;else if(e==='hard')cHard++;});
-  document.getElementById('statOk').textContent=cOk;
-  document.getElementById('statFail').textContent=cFail;
-  document.getElementById('statHard').textContent=cHard;
   var sensors={};
   for(var s=1;s<=8;s++) sensors[s]={asTx:[],asRx:[]};
   pathData.forEach(function(p){var eff=effectiveStatus(p);sensors[p.tx].asTx.push({path:p.id,partner:p.rx,status:eff});sensors[p.rx].asRx.push({path:p.id,partner:p.tx,status:eff});});
@@ -1041,62 +1028,20 @@ function runDiagnosis(){
       diagResults[s]={verdict:'warning',reason:'Semua path gagal namun status sensor pasangan belum terkonfirmasi'};
     }
   }
-  var grid=document.getElementById('diagGrid'); grid.innerHTML='';
+  // ─── Warnai node sensor di peta topologi sesuai hasil diagnosis (panel hasil diagnosis on-screen sudah dihilangkan — dipakai langsung saat Diagnostic & Print Preview) ───
   for(var s=1;s<=8;s++){
     var r=diagResults[s];
-    var all2=sensors[s].asTx.concat(sensors[s].asRx);
-    var okC=all2.filter(function(p){return p.status==='ok';}).length;
-    var fC=all2.filter(function(p){return p.status==='fail';}).length;
-    var hC=all2.filter(function(p){return p.status==='hard';}).length;
     var stTxt=r.verdict==='ok'?'OPERATIONAL':r.verdict==='warning'?'PERLU CEK':r.verdict==='error'?'BERMASALAH':'NO DATA';
-    var stIcon=r.verdict==='ok'?'&#10003;':r.verdict==='warning'?'&#9888;':r.verdict==='error'?'&#10005;':'—';
-    grid.innerHTML+='<div class="sensor-card '+r.verdict+'"><div class="sc-num">'+s+'</div><div class="sc-label">Sensor '+s+'</div><div class="sc-status">'+stIcon+' '+stTxt+'</div><div class="sc-detail">OK: '+okC+' | DataFail: '+fC+' | HardFail: '+hC+'<br><span style="font-size:11px">'+r.reason+'</span></div></div>';
     var node=document.getElementById('snode-'+s);
     if(node){node.className='sensor-node '+(r.verdict==='error'?'error':r.verdict==='warning'?'warning':r.verdict==='ok'?'ok':'unknown');var tip=document.getElementById('stip-'+s);if(tip)tip.textContent='S'+s+': '+stTxt;}
   }
-  var faulty=Object.entries(diagResults).filter(function(e){return e[1].verdict==='error';}).map(function(e){return e[0];});
-  var suspect=Object.entries(diagResults).filter(function(e){return e[1].verdict==='warning';}).map(function(e){return e[0];});
-
-  // ─────── ANALISIS FREKUENSI SENSOR PADA PATH FAIL/HARD FAIL ───────
-  var failFreq = computeFailFrequency(pathData);
-  var failRecommendations = buildFailRecommendations(failFreq);
-
-  var box=document.getElementById('conclusionBox');
-  var title=box.querySelector('.conc-title');
-  var text=document.getElementById('conclusionText');
-  var hasAnyIssue = faulty.length>0 || suspect.length>0 || hardFailPaths18.length>0;
-  if(!hasAnyIssue){
-    box.className='conclusion-box all-ok';title.textContent='Semua Sensor Operasional';
-    text.innerHTML='Tidak ditemukan indikasi kerusakan sensor. Sistem FEGT berfungsi normal.';
-  } else {
-    box.className='conclusion-box has-issue';title.textContent='Terdeteksi Indikasi Kerusakan Sensor';
-    var html='';
-    // ── Path 1-8 Hard Fail → ditampilkan paling atas ──
-    if(hardFailPaths18.length>0){
-      html+='<div style="margin-bottom:10px;padding:8px 10px;background:rgba(180,0,0,0.08);border-left:3px solid #c0392b;border-radius:4px">'+
-        '<strong style="color:#c0392b">&#9888; Hard Fail pada Path Utama (Path 1-8):</strong><br>'+
-        '<ol style="margin:6px 0 0 18px;padding:0">'+
-          hardFailPaths18.map(function(p){
-            return '<li><strong>Path '+p.id+' Hard Fail Low Transmit</strong> &mdash; Silahkan Cek Solenoid, IA Supply dan Sensor Probe</li>';
-          }).join('')+
-        '</ol>'+
-      '</div>';
-    }
-    if(faulty.length>0) html+='<strong>Sensor kemungkinan bermasalah:</strong> '+faulty.map(function(s){return '<strong>Sensor '+s+'</strong>';}).join(', ')+'<br>';
-    if(suspect.length>0) html+='<strong>Sensor perlu pengecekan:</strong> '+suspect.map(function(s){return 'Sensor '+s;}).join(', ');
-    if(failRecommendations.length>0){
-      html+='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,0,0,.15)">'+
-        '<strong>&#128295; Rekomendasi Pengecekan Path (berdasarkan frekuensi kemunculan sensor pada Data Fail/Hard Fail):</strong>'+
-        '<ol style="margin:6px 0 0 18px;padding:0">'+
-          failRecommendations.map(function(r){return '<li>Cek Path '+r.sensor+' pada solenoid valve, sensor, atau IA Supply <span style="color:var(--text3);font-size:11px">(muncul '+r.count+'x pada path fail)</span></li>';}).join('')+
-        '</ol>'+
-      '</div>';
-    }
-    text.innerHTML=html;
-  }
   updateSvg();
-  document.getElementById('btnPdf').disabled=false;
-  document.getElementById('btnSave').disabled=false;
+}
+
+/* ─── Jalankan diagnosis FEGT lalu langsung siapkan PDF (tombol "Diagnostic & Print Preview") ─── */
+function runDiagnosisAndPrint(){
+  runDiagnosis();
+  downloadPdf();
 }
 
 /* ─── Hitung frekuensi sensor (Tx & Rx) yang muncul pada path Data Fail / Hard Fail ─── */
@@ -1253,7 +1198,7 @@ function downloadPdf(){
       doc.setLineWidth(0.3);
       doc.rect(marginX, y, contentW, 22, 'S');
       var pairs = [
-        [marginX+3, [['Tanggal', safe(metaInfo.tanggal||'—')], ['Shift', safe(metaInfo.shift||'—')]]],
+        [marginX+3, [['Tanggal', safe(metaInfo.tanggal||'—')], ['Workorder', safe(metaInfo.workorder||'—')]]],
         [marginX+contentW/2+5, [['Operator', safe(metaInfo.operator||'—')], ['Dicetak', safe(nowStr)]]]
       ];
       pairs.forEach(function(pair){
@@ -1580,7 +1525,7 @@ function downloadPdf(){
 
 function resetAll(){
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
-  pathData=[];diagResults={};metaInfo={tanggal:'—',shift:'—',operator:'—'};rawHeaders=[];rawRows=[];
+  pathData=[];diagResults={};metaInfo={tanggal:'—',workorder:'—',operator:'—'};rawHeaders=[];rawRows=[];
   document.getElementById('fileInput').value='';
   document.getElementById('fileInfo').classList.remove('visible');
   document.getElementById('colMap').classList.remove('visible');
@@ -1589,15 +1534,12 @@ function resetAll(){
   document.getElementById('fileMeta').textContent='—';
   hideNotice();
   document.getElementById('manTanggal').value='';
-  document.getElementById('manShift').value='';
+  document.getElementById('manWorkorder').value='';
   document.getElementById('manOperator').value='';
   PATHS.forEach(function(p){var t=document.getElementById('mtemp-'+p.id);var s=document.getElementById('mstatus-'+p.id);if(t)t.value='';if(s)s.value='ok';});
-  document.getElementById('btnRun').disabled=activeTab==='manual'?false:true;
-  document.getElementById('btnPdf').disabled=true;
-  document.getElementById('btnSave').disabled=true;
+  document.getElementById('btnPdf').disabled=activeTab==='manual'?false:true;
+  document.getElementById('btnSave').disabled=activeTab==='manual'?false:true;
   document.getElementById('previewPanel').style.display='none';
-  document.getElementById('diagPanel').style.display='none';
-  document.getElementById('diagGrid').innerHTML='';
   for(var s=1;s<=8;s++){var n=document.getElementById('snode-'+s);if(n)n.className='sensor-node unknown';}
   updateSvg();
   // Reset cleaning images
@@ -1983,11 +1925,14 @@ function dbCollectData(modul) {
   if (rawDate) { var parts=rawDate.split('-'); tanggalStr=parts[2]+' '+BULAN[parseInt(parts[1])-1]+' '+parts[0]; }
   metaInfo = {
     tanggal: tanggalStr,
-    shift:    document.getElementById('manShift').value    || '—',
+    workorder: document.getElementById('manWorkorder').value || '—',
     operator: document.getElementById('manOperator').value || '—'
   };
   // Gunakan pathData yang sudah ada (dari upload atau manual)
   if (activeTab === 'manual') collectManualData();
+  // Pastikan diagResults selalu up-to-date saat disimpan, walau tombol
+  // "Diagnostic & Print Preview" belum pernah diklik sebelumnya.
+  runDiagnosis();
   var leakPaths = LEAK_PATHS.map(function(p) {
     var t = document.getElementById('lktemp-'+p.id);
     var s = document.getElementById('lkstatus-'+p.id);
@@ -2019,7 +1964,7 @@ function dbCollectData(modul) {
       after:  (ldCleaningImages[pk].after||[]).map(ki)
     };
   });
-  return {modul:'FEGT & Leak Detection', tanggal:metaInfo.tanggal, pic:metaInfo.operator, work_order:'', unit:'Unit 7',
+  return {modul:'FEGT & Leak Detection', tanggal:metaInfo.tanggal, pic:metaInfo.operator, work_order:(metaInfo.workorder&&metaInfo.workorder!=='—'?metaInfo.workorder:''), unit:'Unit 7',
     data:{paths:pathData.map(function(p){return {id:p.id,temp:p.temp,status:p.statusRaw};}), leakPaths:leakPaths, diagResults:diagResults, meta:metaInfo, cleaning:cleaningData, cleaningLd:cleaningLdData}};
 }
 
@@ -2044,8 +1989,8 @@ function applyRecordToForm(rec, editingId) {
       var el2 = document.getElementById('manTanggal'); if (el2) el2.value = yyyy+'-'+mm+'-'+dd;
     }
   }
-  var shVal = rec.shift || (data.meta && data.meta.shift) || '';
-  var shEl = document.getElementById('manShift'); if (shEl && shVal && shVal !== '—') shEl.value = shVal;
+  var woVal = rec.work_order || (data.meta && data.meta.workorder) || '';
+  var woEl = document.getElementById('manWorkorder'); if (woEl && woVal && woVal !== '—') woEl.value = woVal;
   var opVal = rec.pic || (data.meta && data.meta.operator) || '';
   var opEl = document.getElementById('manOperator'); if (opEl && opVal && opVal !== '—') opEl.value = opVal;
   if (data.paths) {
@@ -2097,7 +2042,7 @@ function applyRecordToForm(rec, editingId) {
     });
   }
   updateSvg();
-  document.getElementById('btnRun').disabled=false;
+  document.getElementById('btnPdf').disabled=false;
   document.getElementById('btnSave').disabled=false;
 }
 
@@ -2132,7 +2077,7 @@ initCropDrag();
     setTimeout(function(){
       applyRecordToForm(rec, id);
       dbShowToast('Data dimuat dari riwayat ✓');
-      if(doPrint)setTimeout(function(){runDiagnosis();setTimeout(downloadPdf,500);},500);
+      if(doPrint)setTimeout(function(){runDiagnosisAndPrint();},500);
     },400);
   });
 })();
@@ -2141,6 +2086,7 @@ initCropDrag();
 <div id="pdfPreviewModal" class="pdf-preview-modal">
     <div class="pdf-preview-dialog">
         <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closePdfPreview()" aria-label="Tutup">✕</button>
             <div class="pdf-preview-title">📄 Preview Hasil PDF</div>
             <div class="pdf-preview-hint">Ini tampilan asli file PDF-nya, cek dulu sebelum download</div>
         </div>
