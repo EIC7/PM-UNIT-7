@@ -567,7 +567,35 @@ function editSelectedText(){
     var s = getShapeById(imgEditState.selectedId);
     if (!s || s.type !== 'text') return;
     var val = prompt('Edit teks:', s.text);
+    ieForceHideKeyboard();
     if (val !== null && val.trim()) { s.text = val.trim(); renderAllShapes(); }
+}
+/* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
+   "menempel" (tidak ikut turun) karena tidak ada <input> asli di halaman yang
+   kehilangan fokus. Trik: fokuskan sebentar lalu blur input tersembunyi supaya
+   Android benar-benar mendeteksi ada elemen form yang di-blur dan menutup IME. */
+function ieForceHideKeyboard(){
+    if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) {
+        document.activeElement.blur();
+    }
+    var dummy = document.getElementById('ieKeyboardDismiss');
+    if (!dummy) {
+        dummy = document.createElement('input');
+        dummy.id = 'ieKeyboardDismiss';
+        dummy.setAttribute('type', 'text');
+        dummy.style.position = 'fixed';
+        dummy.style.top = '-1000px';
+        dummy.style.left = '0';
+        dummy.style.width = '1px';
+        dummy.style.height = '1px';
+        dummy.style.opacity = '0';
+        document.body.appendChild(dummy);
+    }
+    // readonly saat focus supaya Android TIDAK memunculkan keyboard baru di
+    // input dummy ini — cuma dipakai untuk memicu event blur yang sungguhan.
+    dummy.setAttribute('readonly', 'readonly');
+    dummy.focus();
+    setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
 }
 function ieResizeSelectedText(dir){
     var s = getShapeById(imgEditState.selectedId);
@@ -625,6 +653,7 @@ function onEditSvgPointerDown(e){
     var pt = getSvgPoint(e);
     if (tool === 'text') {
         var txt = prompt('Masukkan teks:');
+        ieForceHideKeyboard();
         if (txt && txt.trim()) addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
         ieBackToSelectKeepSelection();
         return;
