@@ -804,6 +804,144 @@
                 padding: 18px;
             }
         }
+
+        /* ═══ POPUP PILIHAN MODUL (mis. O2: Weekly vs Monthly) ═══ */
+        .pm-popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(17, 24, 39, 0.55);
+            backdrop-filter: blur(2px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .pm-popup-overlay.show {
+            display: flex;
+        }
+
+        .pm-popup {
+            background: var(--bg2);
+            border-radius: 16px;
+            width: min(440px, 100%);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            animation: popupIn .18s ease-out;
+        }
+
+        @keyframes popupIn {
+            from { transform: translateY(8px) scale(.98); opacity: 0; }
+            to   { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .pm-popup-header {
+            padding: 20px 22px 14px;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        .pm-popup-icon {
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+
+        .pm-popup-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .pm-popup-sub {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 3px;
+        }
+
+        .pm-popup-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+            color: var(--text-mid);
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .pm-popup-close:hover {
+            background: var(--border);
+        }
+
+        .pm-popup-body {
+            padding: 16px 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .pm-popup-option {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg3);
+            cursor: pointer;
+            text-align: left;
+            transition: all .15s ease;
+        }
+
+        .pm-popup-option:hover {
+            border-color: var(--primary-blue);
+            background: #eff6ff;
+            transform: translateX(2px);
+        }
+
+        .pm-popup-option-icon {
+            font-size: 22px;
+            flex: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--bg2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pm-popup-option-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pm-popup-option-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .pm-popup-option-desc {
+            font-size: 11.5px;
+            color: var(--text-mid);
+            margin-top: 2px;
+            line-height: 1.4;
+        }
+
+        .pm-popup-option-arrow {
+            font-size: 16px;
+            color: var(--text-light);
+            flex: none;
+        }
     </style>
 </head>
 <body>
@@ -914,7 +1052,7 @@
             </div>
 
             <!-- MOD-01 PM O2 Inlet & Outlet -->
-            <div class="pm-card" onclick="window.open('https://ahpm.figma.site/','_blank')">
+            <div class="pm-card" onclick="openO2Popup()">
                 <div class="card-index">MOD-01</div>
                 <div class="card-icon">🫧</div>
                 <div class="card-title">PM O2<br>Inlet & Outlet</div>
@@ -1142,6 +1280,36 @@
         </div>
     </div>
 
+    <!-- POPUP MODUL O2 -->
+    <div class="pm-popup-overlay" id="o2PopupOverlay" onclick="if(event.target===this)closeO2Popup()">
+        <div class="pm-popup">
+            <div class="pm-popup-header">
+                <button type="button" class="pm-popup-close" onclick="closeO2Popup()" aria-label="Tutup">✕</button>
+                <div class="pm-popup-icon">🫧</div>
+                <div class="pm-popup-title">PM O2 Inlet & Outlet</div>
+                <div class="pm-popup-sub">Pilih jenis form yang ingin dibuka</div>
+            </div>
+            <div class="pm-popup-body">
+                <div class="pm-popup-option" onclick="window.open('https://ahpm.figma.site/','_blank')">
+                    <div class="pm-popup-option-icon">📅</div>
+                    <div class="pm-popup-option-text">
+                        <div class="pm-popup-option-title">PM O2 Inlet & Outlet Weekly</div>
+                        <div class="pm-popup-option-desc">Form mingguan (link lama) — pemeriksaan rutin sensor O₂ inlet & outlet.</div>
+                    </div>
+                    <div class="pm-popup-option-arrow">↗</div>
+                </div>
+                <div class="pm-popup-option" onclick="window.location.href='form_o2_report.html'">
+                    <div class="pm-popup-option-icon">🗓️</div>
+                    <div class="pm-popup-option-text">
+                        <div class="pm-popup-option-title">Report PM Monthly O2 Inlet & Outlet</div>
+                        <div class="pm-popup-option-desc">Form bulanan — cleaning probe & recalibration, dokumentasi 8 channel, cetak PDF.</div>
+                    </div>
+                    <div class="pm-popup-option-arrow">↗</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- FOOTER -->
     <footer>
         <div class="fl">PT POMI · PLTU PAITON UNIT 7 · PREVENTIVE MAINTENANCE SYSTEM v2.1</div>
@@ -1149,6 +1317,17 @@
     </footer>
 
     <script>
+        // Popup MOD-01 (PM O2 Inlet & Outlet): pilih Weekly (link lama) atau Report Monthly (form_o2_report.html)
+        function openO2Popup() {
+            document.getElementById('o2PopupOverlay').classList.add('show');
+        }
+        function closeO2Popup() {
+            document.getElementById('o2PopupOverlay').classList.remove('show');
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeO2Popup();
+        });
+
         // Clock function
         function tick() {
             var now = new Date();
