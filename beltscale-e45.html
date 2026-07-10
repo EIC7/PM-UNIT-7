@@ -6,8 +6,58 @@
 <title>Belt Scale E4-E5 — Unit 7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
 <link rel="stylesheet" href="shared.css">
+<style>
+.img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
+.img-nudge-label{font-size:8px;color:#8a8a8a;text-align:center;line-height:1.2;max-width:100px}
+.img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
+.img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ccc;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
+.img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
+#cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+#cropModal.show{display:flex}
+.crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
+.crop-header-hint{font-size:10px;color:#8aab96}
+#cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+#cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
+#cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
+.crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
+.crop-handle.nw{top:-6px;left:-6px;cursor:nw-resize} .crop-handle.ne{top:-6px;right:-6px;cursor:ne-resize}
+.crop-handle.sw{bottom:-6px;left:-6px;cursor:sw-resize} .crop-handle.se{bottom:-6px;right:-6px;cursor:se-resize}
+.crop-handle.n{width:10px;height:10px;top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize}
+.crop-handle.s{width:10px;height:10px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize}
+.crop-handle.w{width:10px;height:10px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize}
+.crop-handle.e{width:10px;height:10px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize}
+.crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30}
+.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
+.crop-btn-save{background:#2ecc71;color:#fff}
+.crop-size-panel{border-top:1px solid #2a3a30;padding-top:8px;margin-top:2px}
+.crop-size-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.crop-preset-btn,.crop-orient-btn,.crop-mode-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
+.crop-preset-btn.active,.crop-orient-btn.active,.crop-mode-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+.crop-mode-btn{padding:6px 12px;font-size:12px}
+.crop-cm-field{display:flex;flex-direction:column;gap:2px}
+.crop-cm-field label{font-size:9px;color:#8aab96;font-weight:600}
+.crop-cm-field input{width:64px;padding:5px 6px;font-size:12px;border-radius:5px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8}
+.crop-size-label{font-size:11px;color:#7fd9a4;font-weight:600;margin-left:4px}
+.crop-default-label{font-size:12px;color:#7fd9a4;font-weight:600;padding:4px 2px}
+.pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+.pdf-preview-modal.show{display:flex}
+.pdf-preview-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,900px);height:min(92vh,1100px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
+.pdf-preview-header{background:#243228;padding:10px 16px;flex:0 0 auto}
+.pdf-preview-title{font-weight:700;font-size:14px;color:#e0f0e8}
+.pdf-preview-hint{font-size:11px;color:#8aab96;margin-top:2px}
+.pdf-preview-body{flex:1 1 auto;background:#333;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pdf-canvas-container{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
+.pdf-canvas-container canvas{max-width:100%;height:auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);background:#fff}
+.pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
+.pdf-preview-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
+</style>
 </head>
 <body>
 
@@ -128,41 +178,465 @@
 
 </div>
 
-<!-- CROP MODAL -->
-<div id="cropModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:16px">
-  <div style="background:#0f1e40;border:1px solid #1e2d5a;border-radius:10px;width:min(96vw,560px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
-    <div style="background:#0f1e40;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-weight:700;font-size:14px;color:#e8f0fb;letter-spacing:1px">&#9986;&#65039; Crop Gambar</div>
-      <div style="font-size:11px;color:#3a5a9a">Drag pojok/sisi untuk resize</div>
+<!-- CROP MODAL (3-mode: Default/Preset/Manual) -->
+<div id="cropModal">
+    <div class="crop-dialog">
+        <div class="crop-header">
+            <div class="crop-header-title">✂️ Crop Gambar</div>
+            <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
+        </div>
+        <div id="cropWrap">
+            <img id="cropImg" src="">
+            <div id="cropBox">
+                <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
+                <div class="crop-handle sw"></div><div class="crop-handle se"></div>
+                <div class="crop-handle n"></div><div class="crop-handle s"></div>
+                <div class="crop-handle w"></div><div class="crop-handle e"></div>
+            </div>
+        </div>
+        <div class="crop-footer">
+            <div class="crop-size-panel">
+                <div class="crop-size-row" id="cropModeRow">
+                    <button type="button" class="crop-mode-btn" id="cropModeDefault" onclick="setCropMode('default')">⭐ Default</button>
+                    <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
+                    <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
+                </div>
+                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran: 7.2 × 5.18 cm (default, tidak perlu diatur)</div>
+                <div id="cropPresetControls" style="display:none">
+                    <div class="crop-size-row" id="cropPresetRow"></div>
+                    <div class="crop-size-row" style="margin-top:8px">
+                        <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
+                        <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
+                    </div>
+                </div>
+                <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
+                </div>
+            </div>
+            <div class="crop-btns">
+                <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
+                <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
+            </div>
+        </div>
     </div>
-    <div id="cropWrap" style="position:relative;width:100%;height:min(55vw,340px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none">
-      <img id="cropImg" src="" style="position:absolute;max-width:none;pointer-events:none;display:block">
-      <div id="cropBox" style="position:absolute;border:2px solid #3b82f6;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px">
-        <div style="position:absolute;width:12px;height:12px;background:#3b82f6;border-radius:2px;top:-6px;left:-6px;cursor:nw-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#3b82f6;border-radius:2px;top:-6px;right:-6px;cursor:ne-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#3b82f6;border-radius:2px;bottom:-6px;left:-6px;cursor:sw-resize"></div>
-        <div style="position:absolute;width:12px;height:12px;background:#3b82f6;border-radius:2px;bottom:-6px;right:-6px;cursor:se-resize"></div>
-      </div>
+</div>
+
+<!-- PDF PREVIEW MODAL -->
+<div id="pdfPreviewModal" class="pdf-preview-modal">
+    <div class="pdf-preview-dialog">
+        <div class="pdf-preview-header">
+            <div class="pdf-preview-title">📄 Preview Hasil PDF</div>
+            <div class="pdf-preview-hint">Ini tampilan asli file PDF-nya, cek dulu sebelum download</div>
+        </div>
+        <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
+        <div class="pdf-preview-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+        </div>
     </div>
-    <div style="padding:10px 16px;background:#0f1e40;border-top:1px solid #1a2a50">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-        <span style="font-size:11px;color:#3a5a9a">Output:</span>
-        <input type="number" id="cropOutW" placeholder="W" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #1e2d5a;border-radius:4px;background:#0f1e40;color:#fff;text-align:center" oninput="cropLinkSize('w')">
-        <span style="color:#3a5a9a">&#215;</span>
-        <input type="number" id="cropOutH" placeholder="H" style="width:70px;padding:4px 6px;font-size:12px;border:1px solid #1e2d5a;border-radius:4px;background:#0f1e40;color:#fff;text-align:center" oninput="cropLinkSize('h')">
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:#3a5a9a;cursor:pointer"><input type="checkbox" id="cropLock" checked style="accent-color:#3b82f6"> Kunci rasio</label>
-        <span id="cropNatSize" style="font-size:10px;color:#3a5a9a"></span>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button onclick="cropReset()" style="padding:7px 14px;border:1px solid #1e2d5a;border-radius:6px;background:transparent;color:#7a9aca;cursor:pointer;font-size:12px">&#8635; Reset</button>
-        <button onclick="skipCrop()" style="padding:7px 14px;border:1px solid #1e2d5a;border-radius:6px;background:transparent;color:#7a9aca;cursor:pointer;font-size:12px">Lewati</button>
-        <button onclick="cropAndSave()" style="padding:7px 18px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:13px;font-weight:700">&#10003; Simpan</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
+/* ══════════════════════════════════════════════════════════════════════════
+   FITUR REUSABLE: Crop 3-mode (Default/Preset/Manual) / Geser posisi foto /
+   Preview PDF sebelum download / Loading overlay / Autosave draft.
+   imgOpenCropper/cropAndSave/skipCrop/cropReset pakai signature SAMA dengan
+   versi lama shared.js supaya semua pemanggil existing tetap jalan.
+   ══════════════════════════════════════════════════════════════════════════ */
+var cropModalState = document.getElementById('cropModal');
+cropModalState._pending = null;
+cropModalState._ratioLocked = false;
+cropModalState._cropWcm = null;
+cropModalState._cropHcm = null;
+cropModalState._orientation = 'portrait';
+cropModalState._activePresetIdx = -1;
+cropModalState._mode = 'default';
+cropModalState._presetRatio = 1;
+
+var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
+var PRESET_DEFAULT_LONG_CM = 4;
+var MANUAL_MAX_CM = 7;
+var CROP_PRESETS = [
+    {label:'1:1', w:1, h:1}, {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
+    {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
+];
+
+function renderPresetButtons() {
+    var row = document.getElementById('cropPresetRow');
+    if (!row) return;
+    row.innerHTML = '';
+    CROP_PRESETS.forEach(function(p, i) {
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'crop-preset-btn'; btn.id = 'cropPreset-'+i;
+        btn.textContent = p.label; btn.onclick = function () { applyPreset(i); };
+        row.appendChild(btn);
+    });
+}
+function highlightPreset(activeIdx) {
+    CROP_PRESETS.forEach(function (p, idx) {
+        var btn = document.getElementById('cropPreset-'+idx);
+        if (btn) btn.classList.toggle('active', idx === activeIdx);
+    });
+}
+function getMaxForField(field) {
+    if (cropModalState._mode === 'preset') {
+        var longMax=7, shortMax=5;
+        if (cropModalState._orientation === 'landscape') return field==='w' ? longMax : shortMax;
+        return field==='w' ? shortMax : longMax;
+    }
+    if (cropModalState._mode === 'manual') return MANUAL_MAX_CM;
+    return 99;
+}
+function clampCmValue(v, maxV) {
+    v = parseFloat(v);
+    if (!isFinite(v) || v<=0) v=0.5;
+    if (v>maxV) v=maxV;
+    if (v<0.5) v=0.5;
+    return Math.round(v*10)/10;
+}
+function setCropMode(mode) {
+    cropModalState._mode = mode;
+    ['Default','Preset','Manual'].forEach(function(m){
+        var b = document.getElementById('cropMode'+m);
+        if (b) b.classList.toggle('active', mode === m.toLowerCase());
+    });
+    var presetControls = document.getElementById('cropPresetControls');
+    var cmRow = document.getElementById('cropCmRow');
+    var defaultLabel = document.getElementById('cropDefaultLabel');
+    if (mode === 'default') {
+        presetControls.style.display='none'; cmRow.style.display='none'; defaultLabel.style.display='block';
+        highlightPreset(-1); applyDefaultSize();
+    } else if (mode === 'preset') {
+        presetControls.style.display='block'; cmRow.style.display='flex'; defaultLabel.style.display='none';
+        applyPreset(cropModalState._activePresetIdx < 0 ? 0 : cropModalState._activePresetIdx);
+    } else {
+        presetControls.style.display='none'; cmRow.style.display='flex'; defaultLabel.style.display='none';
+        highlightPreset(-1);
+        setFreeSize(cropModalState._cropWcm||5, cropModalState._cropHcm||5);
+    }
+}
+function applyDefaultSize() {
+    cropModalState._ratioLocked = true;
+    cropModalState._cropWcm = DEFAULT_CROP_W_CM; cropModalState._cropHcm = DEFAULT_CROP_H_CM;
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function applyPreset(i) {
+    var p = CROP_PRESETS[i];
+    var ratioValue = Math.max(p.w,p.h) / Math.min(p.w,p.h);
+    cropModalState._activePresetIdx = i;
+    var longSide = PRESET_DEFAULT_LONG_CM;
+    var shortSide = Math.round((longSide/ratioValue)*10)/10;
+    var w,h;
+    if (cropModalState._orientation === 'landscape') { w=longSide; h=shortSide; } else { h=longSide; w=shortSide; }
+    cropModalState._presetRatio = w/h;
+    setLockedSize(w,h); highlightPreset(i);
+}
+function setCropOrientation(orientation) {
+    cropModalState._orientation = orientation;
+    document.getElementById('cropOrientPotrait').classList.toggle('active', orientation==='portrait');
+    document.getElementById('cropOrientLandscape').classList.toggle('active', orientation==='landscape');
+    var w = cropModalState._cropWcm||1, h = cropModalState._cropHcm||1;
+    var longVal=Math.max(w,h), shortVal=Math.min(w,h), neww, newh;
+    if (orientation==='landscape') { neww=longVal; newh=shortVal; } else { newh=longVal; neww=shortVal; }
+    cropModalState._presetRatio = neww/newh;
+    setLockedSize(neww, newh);
+}
+function onCustomCmChange(field) {
+    if (cropModalState._mode === 'preset') { onPresetFieldChange(field); return; }
+    if (cropModalState._mode === 'manual') {
+        var w = clampCmValue(document.getElementById('cropWcm').value, getMaxForField('w'));
+        var h = clampCmValue(document.getElementById('cropHcm').value, getMaxForField('h'));
+        document.getElementById('cropWcm').value = w; document.getElementById('cropHcm').value = h;
+        setFreeSize(w, h, true);
+    }
+}
+function onPresetFieldChange(field) {
+    var ratio = cropModalState._presetRatio || 1;
+    var wEl=document.getElementById('cropWcm'), hEl=document.getElementById('cropHcm');
+    var w,h;
+    if (field==='w') { w=parseFloat(wEl.value)||0.5; h=w/ratio; } else { h=parseFloat(hEl.value)||0.5; w=h*ratio; }
+    var maxW=getMaxForField('w'), maxH=getMaxForField('h');
+    var scale = Math.min(1, maxW/w, maxH/h); w*=scale; h*=scale;
+    if (w<0.5) { w=0.5; h=w/ratio; }
+    if (h<0.5) { h=0.5; w=h*ratio; }
+    w=Math.round(w*10)/10; h=Math.round(h*10)/10;
+    wEl.value=w; hEl.value=h;
+    cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function setLockedSize(w,h,skipInputSync) {
+    w=clampCmValue(w,getMaxForField('w')); h=clampCmValue(h,getMaxForField('h'));
+    cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (!skipInputSync) { document.getElementById('cropWcm').value=w; document.getElementById('cropHcm').value=h; }
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function setFreeSize(w,h,skipInputSync) {
+    w=clampCmValue(w,getMaxForField('w')); h=clampCmValue(h,getMaxForField('h'));
+    cropModalState._ratioLocked=false; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (!skipInputSync) { document.getElementById('cropWcm').value=w; document.getElementById('cropHcm').value=h; }
+    updateSizeLabel();
+}
+function updateSizeLabel() {
+    var lbl = document.getElementById('cropSizeLabel'); if (!lbl) return;
+    var w=cropModalState._cropWcm, h=cropModalState._cropHcm;
+    lbl.textContent = cropModalState._mode==='preset'
+        ? 'Ukuran cetak: '+w+' cm × '+h+' cm (rasio terkunci)'
+        : 'Ukuran cetak: '+w+' cm × '+h+' cm (bebas, maks '+MANUAL_MAX_CM+'×'+MANUAL_MAX_CM+'cm)';
+}
+function clampNum(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+function reshapeCropBoxToRatio() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img || !cropModalState._cropWcm || !cropModalState._cropHcm) return;
+    var ratio = cropModalState._cropWcm / cropModalState._cropHcm;
+    var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    var bL=parseInt(box.style.left)||0, bT=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var cx=bL+bW/2, cy=bT+bH/2;
+    var newW=bW, newH=bW/ratio;
+    if (newH>bH*1.6||newH<bH*0.6) { newH=bH; newW=bH*ratio; }
+    newW = Math.min(newW, iW); newH = Math.min(newH, iH);
+    if (newW/newH > ratio) newW = newH*ratio; else newH = newW/ratio;
+    var nl = clampNum(cx-newW/2, iL, iL+iW-newW);
+    var nt = clampNum(cy-newH/2, iT, iT+iH-newH);
+    box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+}
+
+function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
+    cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
+    var existing = (replaceIdx>=0 && imgArr[replaceIdx]) ? imgArr[replaceIdx] : null;
+    var preferredSize = (existing && existing.widthCm && existing.heightCm) ? {w:existing.widthCm, h:existing.heightCm} : null;
+    cropModalState._orientation = 'portrait';
+    cropModalState._activePresetIdx = -1;
+    if (preferredSize) {
+        document.getElementById('cropWcm').value = preferredSize.w;
+        document.getElementById('cropHcm').value = preferredSize.h;
+        if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) setCropMode('default');
+        else { setCropMode('manual'); setFreeSize(preferredSize.w, preferredSize.h); }
+    } else {
+        document.getElementById('cropWcm').value = 5; document.getElementById('cropHcm').value = 5;
+        setCropMode('default');
+    }
+    var img = document.getElementById('cropImg');
+    img.onload = function() {
+        var wrap = document.getElementById('cropWrap');
+        var ww = wrap.clientWidth, wh = wrap.clientHeight;
+        var scale = Math.min(ww/img.naturalWidth, wh/img.naturalHeight);
+        var dw = img.naturalWidth*scale, dh = img.naturalHeight*scale;
+        img.style.width = dw+'px'; img.style.height = dh+'px';
+        img.style.left = ((ww-dw)/2)+'px'; img.style.top = ((wh-dh)/2)+'px';
+        var box = document.getElementById('cropBox');
+        var bw = Math.min(dw,dh)*0.8, bh = bw;
+        box.style.width = bw+'px'; box.style.height = bh+'px';
+        box.style.left = ((ww-bw)/2)+'px'; box.style.top = ((wh-bh)/2)+'px';
+        if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+    };
+    img.src = dataUrl;
+    cropModalState.classList.add('show');
+}
+function closeCropModal() {
+    cropModalState.classList.remove('show');
+    cropModalState._pending = null;
+}
+function cropReset() {
+    var img = document.getElementById('cropImg');
+    var p = cropModalState._pending;
+    if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
+}
+function skipCrop() { closeCropModal(); }
+
+function cropAndSave() {
+    var img = document.getElementById('cropImg');
+    var box = document.getElementById('cropBox');
+    var p = cropModalState._pending;
+    if (!p) { alert('Target upload tidak ditemukan. Coba upload ulang.'); closeCropModal(); return; }
+
+    var iLeft=parseInt(img.style.left)||0, iTop=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    if (!img.naturalWidth || !img.naturalHeight || !iW || !iH) { alert('Gambar belum siap diproses. Coba tunggu sebentar lalu simpan lagi.'); return; }
+    var bLeft=parseInt(box.style.left)||0, bTop=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var scale = img.naturalWidth / iW;
+    var sx=Math.max(0,(bLeft-iLeft)*scale), sy=Math.max(0,(bTop-iTop)*scale);
+    var sw=Math.min(img.naturalWidth-sx, bW*scale), sh=Math.min(img.naturalHeight-sy, bH*scale);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+    var imgArr = p.imgArr;
+    var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
+    var caption = existing ? (existing.caption||'') : '';
+    var offsetX = existing ? (existing.offsetX||0) : 0;
+    if (p.replaceIdx >= 0) imgArr.splice(p.replaceIdx, 1);
+
+    var MAX = 1*1024*1024;
+    var dataUrl;
+    for (var q=0.85; q>=0.25; q-=0.1) {
+        dataUrl = canvas.toDataURL('image/jpeg', q);
+        var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
+        var newSize = dataUrl.length*0.75;
+        if (currentTotal+newSize <= MAX) break;
+        if (q<=0.25) {
+            var factor = Math.sqrt(MAX/(currentTotal+newSize));
+            var c2 = document.createElement('canvas');
+            c2.width = Math.max(50, Math.floor(canvas.width*factor));
+            c2.height = Math.max(50, Math.floor(canvas.height*factor));
+            c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+            dataUrl = c2.toDataURL('image/jpeg', 0.7);
+            break;
+        }
+    }
+
+    var entry = {name:(p.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl: dataUrl, type:'image/jpeg', caption: caption};
+    if (offsetX) entry.offsetX = offsetX;
+    if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
+    imgArr.push(entry);
+
+    closeCropModal();
+    if (typeof bsRenderPreviews === 'function') bsRenderPreviews(p.side);
+}
+
+/* ── Geser posisi gambar (nudge) — generik untuk array manapun ── */
+function nudgeImageInArray(imgArr, imgIdx, delta, rerenderFn) {
+    var img = imgArr[imgIdx];
+    if (!img) return;
+    var next = Math.round(((img.offsetX||0)+delta)*10)/10;
+    var LIMIT = 5;
+    if (next>LIMIT) next=LIMIT; if (next<-LIMIT) next=-LIMIT;
+    img.offsetX = next;
+    if (typeof rerenderFn === 'function') rerenderFn();
+}
+
+/* ── Drag & resize kotak crop (mousedown+touchstart) ── */
+function initCropDrag() {
+    var box = document.getElementById('cropBox');
+    box.addEventListener('mousedown', onCropDragStart, false);
+    box.addEventListener('touchstart', onCropDragStart, {passive: false});
+}
+function onCropDragStart(e) {
+    e.preventDefault(); e.stopPropagation();
+    var box = document.getElementById('cropBox');
+    var t = e.touches ? e.touches[0] : e;
+    var startX=t.clientX, startY=t.clientY;
+    var startL=parseInt(box.style.left)||0, startT=parseInt(box.style.top)||0;
+    var startW=box.offsetWidth, startH=box.offsetHeight;
+    var rect=box.getBoundingClientRect();
+    var rx=t.clientX-rect.left, ry=t.clientY-rect.top, edge=22;
+    var edgeX = rx<edge?'l':rx>startW-edge?'r':'';
+    var edgeY = ry<edge?'t':ry>startH-edge?'b':'';
+    var mode = (edgeX||edgeY) ? edgeX+edgeY : 'move';
+    function onMove(ev) {
+        ev.preventDefault();
+        var mv = ev.touches?ev.touches[0]:ev;
+        var dx=mv.clientX-startX, dy=mv.clientY-startY;
+        var img=document.getElementById('cropImg');
+        var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+        var iW=img.offsetWidth, iH=img.offsetHeight;
+        if (mode==='move') {
+            box.style.left = clampNum(startL+dx, iL, iL+iW-startW)+'px';
+            box.style.top = clampNum(startT+dy, iT, iT+iH-startH)+'px';
+            return;
+        }
+        if (cropModalState._ratioLocked && cropModalState._cropWcm && cropModalState._cropHcm) {
+            var ratio = cropModalState._cropWcm / cropModalState._cropHcm;
+            var growRight=mode.indexOf('r')>=0, growLeftEdge=mode.indexOf('l')>=0;
+            var growBottom=mode.indexOf('b')>=0, growTopEdge=mode.indexOf('t')>=0;
+            var isCorner = mode.length===2;
+            var anchorX = growLeftEdge ? (startL+startW) : startL;
+            var anchorY = growTopEdge ? (startT+startH) : startT;
+            var dxSigned = growRight?dx:(growLeftEdge?-dx:0);
+            var dySigned = growBottom?dy:(growTopEdge?-dy:0);
+            var newW,newH;
+            if (isCorner) {
+                if (Math.abs(dxSigned)>=Math.abs(dySigned)) { newW=startW+dxSigned; newH=newW/ratio; }
+                else { newH=startH+dySigned; newW=newH*ratio; }
+            } else if (growLeftEdge||growRight) { newW=startW+dxSigned; newH=newW/ratio; }
+            else { newH=startH+dySigned; newW=newH*ratio; }
+            if (newW<40) { newW=40; newH=newW/ratio; }
+            if (newH<40) { newH=40; newW=newH*ratio; }
+            var maxW = growLeftEdge?(anchorX-iL):(iL+iW-anchorX);
+            var maxH = growTopEdge?(anchorY-iT):(iT+iH-anchorY);
+            var scaleDown = Math.min(1, maxW>0?maxW/newW:1, maxH>0?maxH/newH:1);
+            newW*=scaleDown; newH*=scaleDown;
+            var nl,nt;
+            if (isCorner||growLeftEdge||growRight) nl = growLeftEdge?(anchorX-newW):anchorX; else nl = startL+(startW-newW)/2;
+            if (isCorner||growTopEdge||growBottom) nt = growTopEdge?(anchorY-newH):anchorY; else nt = startT+(startH-newH)/2;
+            box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+        } else {
+            var growRight2=mode.indexOf('r')>=0, growLeftEdge2=mode.indexOf('l')>=0;
+            var growBottom2=mode.indexOf('b')>=0, growTopEdge2=mode.indexOf('t')>=0;
+            var nl2=startL, nt2=startT, nw2=startW, nh2=startH;
+            if (growRight2) nw2 = clampNum(startW+dx, 40, iL+iW-startL);
+            if (growLeftEdge2) { nw2 = clampNum(startW-dx, 40, startL+startW-iL); nl2 = startL+startW-nw2; }
+            if (growBottom2) nh2 = clampNum(startH+dy, 40, iT+iH-startT);
+            if (growTopEdge2) { nh2 = clampNum(startH-dy, 40, startT+startH-iT); nt2 = startT+startH-nh2; }
+            box.style.left=nl2+'px'; box.style.top=nt2+'px'; box.style.width=nw2+'px'; box.style.height=nh2+'px';
+        }
+    }
+    function onUp() {
+        document.removeEventListener('mousemove',onMove); document.removeEventListener('touchmove',onMove);
+        document.removeEventListener('mouseup',onUp); document.removeEventListener('touchend',onUp);
+    }
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
+}
+
+/* ── PDF PREVIEW (PDF.js canvas — aman untuk Chrome Android) ── */
+var pdfPreviewState = { doc: null, filename: '', blobUrl: '' };
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+function showPdfPreview(doc, filename) {
+    if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
+    pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
+    var modal = document.getElementById('pdfPreviewModal');
+    var container = document.getElementById('pdfPreviewFrame');
+    container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
+    modal.classList.add('show');
+    if (typeof pdfjsLib === 'undefined') {
+        container.innerHTML = '<div class="pdf-canvas-loading">Preview tidak tersedia di browser ini.<br>Silakan langsung download untuk melihat hasilnya.</div>';
+        return;
+    }
+    var arrayBuffer = doc.output('arraybuffer');
+    pdfjsLib.getDocument({data: arrayBuffer}).promise.then(function(pdf) {
+        container.innerHTML = '';
+        function renderPage(pageNum) {
+            pdf.getPage(pageNum).then(function(page) {
+                var viewport = page.getViewport({scale: 1.8});
+                var canvas = document.createElement('canvas');
+                canvas.width = viewport.width; canvas.height = viewport.height;
+                container.appendChild(canvas);
+                page.render({canvasContext: canvas.getContext('2d'), viewport: viewport}).promise.then(function() {
+                    if (pageNum < pdf.numPages) renderPage(pageNum+1);
+                });
+            });
+        }
+        renderPage(1);
+    }).catch(function(err) {
+        console.error(err);
+        container.innerHTML = '<div class="pdf-canvas-loading">Gagal menampilkan preview.<br>Silakan langsung download untuk melihat hasilnya.</div>';
+    });
+}
+function confirmDownloadPdf() { if (pdfPreviewState.doc) pdfPreviewState.doc.save(pdfPreviewState.filename); }
+function closePdfPreview() {
+    document.getElementById('pdfPreviewModal').classList.remove('show');
+    document.getElementById('pdfPreviewFrame').innerHTML = '';
+    if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
+    pdfPreviewState.doc = null;
+}
+
+// Kunci autosave draft dibuat unik per file (b12/e23/e45 semuanya pakai dbSave('beltscale')
+// yang sama, jadi draft-nya HARUS dibedakan lewat kunci ini, bukan lewat CURRENT_MODUL)
+function _autosaveKey() { return 'draft_beltscale_' + BS_KEY; }
+
 var BS_KEY = 'e45';
 var BS_CFG = {
   mod:'MOD-06', doc:'CJP-SCALE-CNVR-01',
@@ -323,9 +797,15 @@ function bsRenderPreviews(side) {
       : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(f.name)+'</div>';
     var cropBtn = isImg ? '<button onclick="bsReEdit('+side+','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">✂ Crop</button>' : '';
     var caption = bsAttr(f.caption||'');
+    var nudgeHtml = isImg ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
+      '<button type="button" onclick="nudgeImageInArray(bsImages['+JSON.stringify(side)+'],'+idx+',-0.5,function(){bsRenderPreviews('+JSON.stringify(side)+')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>' +
+      '<span>'+(f.offsetX||0)+'cm</span>' +
+      '<button type="button" onclick="nudgeImageInArray(bsImages['+JSON.stringify(side)+'],'+idx+',0.5,function(){bsRenderPreviews('+JSON.stringify(side)+')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>' +
+      '</div></div>') : '';
     wrap.innerHTML = thumb + cropBtn +
       '<button onclick="bsRemoveFile('+side+','+idx+')" style="position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:17px;text-align:center;padding:0">×</button>'+ 
       '<div style="font-size:9px;color:var(--text3);max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">'+safeName+'</div>'+ 
+      nudgeHtml +
       '<input id="bsImgCaption_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+caption+'" oninput="bsImages['+JSON.stringify(side)+']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
@@ -400,6 +880,9 @@ function drawCheckboxBs(doc, x, y, w, h, checked) {
 }
 
 function bsDownloadPdf() {
+  var totalImgs = (bsImages['1']?bsImages['1'].length:0) + (bsImages['2']?bsImages['2'].length:0);
+  var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
+  if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
   bsEnsureReportBackground(function() {
   try {
     bsSyncImageCaptions();
@@ -531,10 +1014,11 @@ function bsDownloadPdf() {
           var imgW=54,imgH=42,gap=4,perRow=3,x=marginX+3;
           imgs.forEach(function(img,i){
             if(y+imgH+12>ph-marginBottom){doc.addPage();bsDrawBg(doc,pw,ph);y=marginTop;x=marginX+3;}
-            try{doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH);}catch(e){}
+            var drawX = Math.max(marginX, Math.min(x + ((img.offsetX||0)*10), pw - marginX - imgW));
+            try{doc.addImage(img.dataUrl,'JPEG',drawX,y,imgW,imgH);}catch(e){}
             var cap=safe(img.caption||'');
-            if(cap){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(50,70,130);doc.text(doc.splitTextToSize(cap,imgW),x,y+imgH+3);}
-            x+=imgW+gap;
+            if(cap){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(50,70,130);doc.text(doc.splitTextToSize(cap,imgW),drawX,y+imgH+3);}
+            x=drawX+imgW+gap;
             if((i+1)%perRow===0){x=marginX+3;y+=imgH+12;}
           });
           if(imgs.length%perRow!==0) y+=imgH+12;
@@ -546,8 +1030,12 @@ function bsDownloadPdf() {
     }
 
     var dateStr=(gv('bsDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
-    doc.save('BeltScale_E45_'+dateStr+'.pdf');
-  } catch(err){ alert('PDF Error: '+err.message); console.error(err); }
+    if (typeof hideImgLoading === 'function') hideImgLoading();
+    showPdfPreview(doc, 'BeltScale_E45_'+dateStr+'.pdf');
+  } catch(err){
+    if (typeof hideImgLoading === 'function') hideImgLoading();
+    alert('PDF Error: '+err.message); console.error(err);
+  }
   });
 }
 function dbCollectData(modul) {
@@ -560,7 +1048,13 @@ function dbCollectData(modul) {
     var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
     checks[idx] = {a:aEl?(aEl.type==='checkbox'?aEl.checked:aEl.value):'', b:bEl?(bEl.type==='checkbox'?bEl.checked:bEl.value):''};
   });
-  var keepImage = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''}; };
+  var keepImage = function(img){
+    var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};
+    if (img.offsetX) o.offsetX = img.offsetX;
+    if (img.widthCm) o.widthCm = img.widthCm;
+    if (img.heightCm) o.heightCm = img.heightCm;
+    return o;
+  };
   var images = {
     '1': bsImages['1'].map(keepImage),
     '2': bsImages['2'].map(keepImage)
@@ -568,36 +1062,56 @@ function dbCollectData(modul) {
   return {modul:'BELT CONVEYOR E4-E5', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},images:images}};
 }
 
+/* ── AUTOSAVE DRAFT (pola shared.js) ── */
+window.CURRENT_MODUL = 'beltscale'; // HARUS sama persis dengan check di dbCollectData(modul)
+// (kunci penyimpanan draft-nya dibedakan lewat _autosaveKey() override di atas, pakai BS_KEY)
+
+function applyRecordToForm(rec, editingId) {
+  var data = rec.data || {};
+  if (editingId) window._editingId = editingId;
+  var gv = function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
+  gv('bsDate',rec.tanggal); gv('bsPIC',rec.pic); gv('bsWO',rec.work_order);
+  if (data.notes) { gv('bsNote1',data.notes.note1||''); gv('bsNote2',data.notes.note2||''); }
+  if (data.checks) {
+    Object.keys(data.checks).forEach(function(i){
+      var c=data.checks[i];
+      var aEl=document.getElementById('bsA_'+i), bEl=document.getElementById('bsB_'+i);
+      if(aEl){if(aEl.type==='checkbox')aEl.checked=!!c.a;else aEl.value=c.a||'';}
+      if(bEl){if(bEl.type==='checkbox')bEl.checked=!!c.b;else bEl.value=c.b||'';}
+    });
+    bsRefreshAllChecks();
+  }
+  if (data.images) {
+    var restoreImg = function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.offsetX)o.offsetX=img.offsetX;if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;return o;};
+    bsImages['1'] = (data.images['1']||[]).map(restoreImg);
+    bsImages['2'] = (data.images['2']||[]).map(restoreImg);
+    bsRenderPreviews('1'); bsRenderPreviews('2');
+  }
+}
+
+// Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
+function restoreDraftData(rec, editingId) {
+  if (!rec) return;
+  setTimeout(function(){
+    applyRecordToForm(rec, editingId);
+    if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
+  }, 400);
+}
+
 /* ── INIT ── */
 (function(){
   initPage();
   bsInitReportBackground();
+  renderPresetButtons();
+  initCropDrag();
 
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
   var doPrint = params.get('print') === '1';
   if (id) {
     dbLoad(id, function(rec){
-      var data = rec.data || {};
-      window._editingId = id;
       setTimeout(function(){
-        var gv = function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
-        gv('bsDate',rec.tanggal); gv('bsPIC',rec.pic); gv('bsWO',rec.work_order);
-        if (data.notes) { gv('bsNote1',data.notes.note1||''); gv('bsNote2',data.notes.note2||''); }
-        if (data.checks) {
-          Object.keys(data.checks).forEach(function(i){
-            var c=data.checks[i];
-            var aEl=document.getElementById('bsA_'+i), bEl=document.getElementById('bsB_'+i);
-            if(aEl){if(aEl.type==='checkbox')aEl.checked=!!c.a;else aEl.value=c.a||'';}
-            if(bEl){if(bEl.type==='checkbox')bEl.checked=!!c.b;else bEl.value=c.b||'';}
-          });
-          bsRefreshAllChecks();
-        }
-        if (data.images) {
-          bsImages['1'] = (data.images['1']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
-          bsImages['2'] = (data.images['2']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};});
-          bsRenderPreviews('1'); bsRenderPreviews('2');
-        }
+        applyRecordToForm(rec, id);
         dbShowToast('Data dimuat dari riwayat ✓');
         if (doPrint) bsEnsureReportBackground(function(){ setTimeout(bsDownloadPdf, 300); });
       }, 800);
