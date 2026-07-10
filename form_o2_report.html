@@ -1497,23 +1497,41 @@ function downloadPdf(){
       secHeader('MONTHLY MAINTENANCE OF OXYGEN ANALYZER (CLEANING PROBE & RECALIBRATION)');
 
       // INFO BOX — Work Order / Tanggal / PIC / Asset / Dicetak
-      var boxH = 26;
-      checkPage(boxH + 4);
-      doc.setDrawColor(180, 210, 185); doc.setLineWidth(0.3);
-      doc.rect(marginX, y, contentW, boxH, 'S');
-      var pairs = [
-        [marginX+3, [['Work Order', safe(workorder)], ['Tanggal', safe(tanggalStr)], ['PIC', safe(pic)]]],
-        [marginX+contentW/2+5, [['Asset', safe(asset)], ['Dicetak', safe(nowStr)]]]
-      ];
-      pairs.forEach(function(pair){
-        pair[1].forEach(function(it,i){
-          var iy = y+7+i*7;
-          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
-          doc.text(it[0]+':', pair[0], iy);
-          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
-          doc.text(String(it[1]).substring(0,42), pair[0]+26, iy);
+      // Border lebih jelas + tiap field otomatis wrap ke bawah kalau teksnya
+      // panjang (mis. Asset berisi banyak kode channel), jadi tidak
+      // meluber ke luar kotak.
+      var leftX = marginX+3, leftValueX = leftX+26;
+      var rightX = marginX+contentW/2+5, rightValueX = rightX+26;
+      var leftValW = (rightX - leftX) - 26 - 4;
+      var rightValW = (marginX+contentW - rightX) - 26 - 3;
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      var leftFields = [['Work Order', safe(workorder)], ['Tanggal', safe(tanggalStr)], ['PIC', safe(pic)]];
+      var rightFields = [['Asset', safe(asset)], ['Dicetak', safe(nowStr)]];
+      function computeInfoColumn(fields, valW) {
+        var rows = [], offset = 7;
+        fields.forEach(function(f){
+          var lines = doc.splitTextToSize(String(f[1]||''), valW);
+          rows.push({label:f[0], lines:lines, rowY:offset});
+          offset += 7 + Math.max(0, lines.length-1)*4;
         });
-      });
+        return {rows:rows, totalH:offset};
+      }
+      var leftCol = computeInfoColumn(leftFields, leftValW);
+      var rightCol = computeInfoColumn(rightFields, rightValW);
+      var boxH = Math.max(leftCol.totalH, rightCol.totalH) + 4;
+      checkPage(boxH + 4);
+      doc.setDrawColor(90, 130, 105); doc.setLineWidth(0.45);
+      doc.rect(marginX, y, contentW, boxH, 'S');
+      function drawInfoColumn(col, labelX, valueX) {
+        col.rows.forEach(function(r){
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+          doc.text(r.label+':', labelX, y+r.rowY);
+          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+          doc.text(r.lines, valueX, y+r.rowY);
+        });
+      }
+      drawInfoColumn(leftCol, leftX, leftValueX);
+      drawInfoColumn(rightCol, rightX, rightValueX);
       y += boxH + 6;
 
       // ASSET DESCRIPTION & WORK TO BE DONE (paragraf, word-wrap)
