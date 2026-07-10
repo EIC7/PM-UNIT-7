@@ -1902,6 +1902,18 @@ function downloadPdf(){
       var ldLines  = lkIssues.length===0 ? ['KESIMPULAN LD: Tidak Ada Indikasi Kebocoran','Semua path aktif terbaca normal.'] : ['KESIMPULAN LD: Terdeteksi Indikasi Kebocoran','Path bermasalah: '+lkIssues.map(function(r){return 'Path-'+r.id;}).join(', ')];
       conclusionBox(ldLines, lkIssues.length===0);
 
+      // Ukuran gambar aktual di PDF (mm) mengikuti cm yang dipilih user saat
+      // crop (entry.widthCm/heightCm — termasuk "Default" 7.2x5.18cm), BUKAN
+      // kotak grid seragam. Di-cap supaya tetap muat di lebar kolom & tinggi wajar.
+      function iePhotoDrawSize(entry, maxW, maxH) {
+        var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
+        var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+        var w = wCm * 10, h = hCm * 10; // cm -> mm
+        if (w > maxW) { h = h * (maxW / w); w = maxW; }
+        if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
+        return { w: w, h: h };
+      }
+
       // ─────── BAGIAN 3 — CLEANING HOLE FEGT ───────
       var hasCleaningPhotos = false;
       CLEANING_PORTS.forEach(function(p) {
@@ -1915,19 +1927,22 @@ function downloadPdf(){
         y = marginTop;
         secHeader('BAGIAN 3 — CLEANING HOLE FEGT (FOTO DOKUMENTASI)');
 
-        var imgW = 76, imgH = 57, gap = 6;
-        // 2 kolom: Before (kiri) dan After (kanan)
+        var gap = 6; // 2 kolom: Before (kiri) dan After (kanan)
         var colW = (contentW - gap) / 2;
-        var perRow = 2;
-        var fw = (colW - gap/2) / perRow - 2; // foto width dalam kolom
-        var fh = fw * 0.75;                    // 4:3 ratio
-        var firstBlockH3 = 10 + 5 + (fh + 9);  // port header + subheader + 1 baris foto pertama
+        var maxPhotoH = 90; // batas wajar tinggi 1 foto per baris
 
         CLEANING_PORTS.forEach(function(p) {
           var pk = 'port'+p.id;
           var befImgs = cleaningImages[pk].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
           var aftImgs = cleaningImages[pk].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
           if (!befImgs.length && !aftImgs.length) return;
+
+          // Estimasi tinggi baris foto pertama (dari ukuran cm aslinya) supaya
+          // header+subheader+foto pertama tidak terpisah halaman.
+          var firstB = befImgs[0] ? iePhotoDrawSize(befImgs[0], colW, maxPhotoH) : null;
+          var firstA = aftImgs[0] ? iePhotoDrawSize(aftImgs[0], colW, maxPhotoH) : null;
+          var firstRowH = Math.max(firstB ? firstB.h : 0, firstA ? firstA.h : 0, 20);
+          var firstBlockH3 = 10 + 5 + (firstRowH + 9);
 
           // Port header + subheader + baris foto pertama harus 1 paket (tidak terpisah halaman)
           if (firstBlockH3 <= (ph - marginTop - marginBottom) && (y + firstBlockH3 > ph - marginBottom)) {
@@ -1952,50 +1967,45 @@ function downloadPdf(){
           var xBef = marginX + 2;
           var xAft = marginX + colW + gap;
 
-          // Gambar Before dan After secara sinkron baris per baris
+          // Gambar Before dan After secara sinkron baris per baris, 1 foto per
+          // baris (ukuran tiap foto mengikuti cm yang dipilih user saat crop).
           var maxImgs = Math.max(befImgs.length, aftImgs.length);
-          var lxBef = xBef, lxAft = xAft;
           for (var ii = 0; ii < maxImgs; ii++) {
-            // Cek page break sebelum setiap foto
-            if (y + fh + 10 > ph - marginBottom) {
+            var bImg = befImgs[ii] || null, aImg = aftImgs[ii] || null;
+            var bDim = bImg ? iePhotoDrawSize(bImg, colW, maxPhotoH) : null;
+            var aDim = aImg ? iePhotoDrawSize(aImg, colW, maxPhotoH) : null;
+            var rowH = Math.max(bDim ? bDim.h : 0, aDim ? aDim.h : 0, 20);
+
+            // Cek page break sebelum setiap baris foto
+            if (y + rowH + 10 > ph - marginBottom) {
               doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
-              lxBef = xBef; lxAft = xAft;
             }
             // Gambar foto Before (jika ada)
-            var drawXBef = lxBef;
-            if (ii < befImgs.length) {
-              var bImg = befImgs[ii];
-              drawXBef = Math.max(marginX, Math.min(lxBef + ((bImg.offsetX||0)*10), pw - marginX - fw));
-              try { doc.addImage(bImg.dataUrl, 'JPEG', drawXBef, y, fw, fh); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(drawXBef, y, fw, fh, 'S');
+            if (bImg) {
+              var drawXBef = Math.max(marginX, Math.min(xBef + ((bImg.offsetX||0)*10), pw - marginX - bDim.w));
+              try { doc.addImage(bImg.dataUrl, 'JPEG', drawXBef, y, bDim.w, bDim.h); } catch(e) {
+                doc.setDrawColor(200,200,200); doc.rect(drawXBef, y, bDim.w, bDim.h, 'S');
               }
               var bcap = safe(bImg.caption || '');
               if (bcap) {
                 doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
-                doc.text(doc.splitTextToSize(bcap, fw), drawXBef, y + fh + 2.5);
+                doc.text(doc.splitTextToSize(bcap, bDim.w), drawXBef, y + bDim.h + 2.5);
               }
             }
             // Gambar foto After (jika ada)
-            var drawXAft = lxAft;
-            if (ii < aftImgs.length) {
-              var aImg = aftImgs[ii];
-              drawXAft = Math.max(marginX, Math.min(lxAft + ((aImg.offsetX||0)*10), pw - marginX - fw));
-              try { doc.addImage(aImg.dataUrl, 'JPEG', drawXAft, y, fw, fh); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(drawXAft, y, fw, fh, 'S');
+            if (aImg) {
+              var drawXAft = Math.max(marginX, Math.min(xAft + ((aImg.offsetX||0)*10), pw - marginX - aDim.w));
+              try { doc.addImage(aImg.dataUrl, 'JPEG', drawXAft, y, aDim.w, aDim.h); } catch(e) {
+                doc.setDrawColor(200,200,200); doc.rect(drawXAft, y, aDim.w, aDim.h, 'S');
               }
               var acap = safe(aImg.caption || '');
               if (acap) {
                 doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
-                doc.text(doc.splitTextToSize(acap, fw), drawXAft, y + fh + 2.5);
+                doc.text(doc.splitTextToSize(acap, aDim.w), drawXAft, y + aDim.h + 2.5);
               }
             }
-            lxBef = drawXBef + fw + 2; lxAft = drawXAft + fw + 2;
-            if ((ii + 1) % perRow === 0) {
-              lxBef = xBef; lxAft = xAft;
-              y += fh + 9;
-            }
+            y += rowH + 9;
           }
-          if (maxImgs % perRow !== 0) y += fh + 9;
 
           // Separator antar port
           checkPage(5);
@@ -2019,10 +2029,7 @@ function downloadPdf(){
         secHeader('BAGIAN 4 — CLEANING HOLE LEAK DETECTION (FOTO DOKUMENTASI)');
 
         var gap4 = 6; var colW4 = (contentW - gap4) / 2;
-        var perRow4 = 2;
-        var fw4 = (colW4 - gap4/2) / perRow4 - 2;
-        var fh4 = fw4 * 0.75;
-        var firstBlockH4 = 10 + 5 + (fh4 + 9); // port header + subheader + 1 baris foto pertama
+        var maxPhotoH4 = 90; // batas wajar tinggi 1 foto per baris
 
         LD_CLEANING_PORTS.forEach(function(p) {
           var pk = 'ldport'+p.id;
@@ -2030,6 +2037,11 @@ function downloadPdf(){
           var befImgs = ldCleaningImages[pk].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
           var aftImgs = ldCleaningImages[pk].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
           if (!befImgs.length && !aftImgs.length) return;
+
+          var firstB4 = befImgs[0] ? iePhotoDrawSize(befImgs[0], colW4, maxPhotoH4) : null;
+          var firstA4 = aftImgs[0] ? iePhotoDrawSize(aftImgs[0], colW4, maxPhotoH4) : null;
+          var firstRowH4 = Math.max(firstB4 ? firstB4.h : 0, firstA4 ? firstA4.h : 0, 20);
+          var firstBlockH4 = 10 + 5 + (firstRowH4 + 9); // port header + subheader + 1 baris foto pertama
 
           // Port header + subheader + baris foto pertama harus 1 paket (tidak terpisah halaman)
           if (firstBlockH4 <= (ph - marginTop - marginBottom) && (y + firstBlockH4 > ph - marginBottom)) {
@@ -2052,36 +2064,33 @@ function downloadPdf(){
           var xBef4 = marginX + 2;
           var xAft4 = marginX + colW4 + gap4;
           var maxImgs4 = Math.max(befImgs.length, aftImgs.length);
-          var lxBef4 = xBef4, lxAft4 = xAft4;
           for (var ii4 = 0; ii4 < maxImgs4; ii4++) {
-            if (y + fh4 + 10 > ph - marginBottom) {
+            var bImg4 = befImgs[ii4] || null, aImg4 = aftImgs[ii4] || null;
+            var bDim4 = bImg4 ? iePhotoDrawSize(bImg4, colW4, maxPhotoH4) : null;
+            var aDim4 = aImg4 ? iePhotoDrawSize(aImg4, colW4, maxPhotoH4) : null;
+            var rowH4 = Math.max(bDim4 ? bDim4.h : 0, aDim4 ? aDim4.h : 0, 20);
+
+            if (y + rowH4 + 10 > ph - marginBottom) {
               doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
-              lxBef4 = xBef4; lxAft4 = xAft4;
             }
-            var drawXBef4 = lxBef4;
-            if (ii4 < befImgs.length) {
-              var bImg4 = befImgs[ii4];
-              drawXBef4 = Math.max(marginX, Math.min(lxBef4 + ((bImg4.offsetX||0)*10), pw - marginX - fw4));
-              try { doc.addImage(bImg4.dataUrl, 'JPEG', drawXBef4, y, fw4, fh4); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(drawXBef4, y, fw4, fh4, 'S');
+            if (bImg4) {
+              var drawXBef4 = Math.max(marginX, Math.min(xBef4 + ((bImg4.offsetX||0)*10), pw - marginX - bDim4.w));
+              try { doc.addImage(bImg4.dataUrl, 'JPEG', drawXBef4, y, bDim4.w, bDim4.h); } catch(e) {
+                doc.setDrawColor(200,200,200); doc.rect(drawXBef4, y, bDim4.w, bDim4.h, 'S');
               }
               var bcap4 = safe(bImg4.caption || '');
-              if (bcap4) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(bcap4, fw4), drawXBef4, y+fh4+2.5); }
+              if (bcap4) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(bcap4, bDim4.w), drawXBef4, y+bDim4.h+2.5); }
             }
-            var drawXAft4 = lxAft4;
-            if (ii4 < aftImgs.length) {
-              var aImg4 = aftImgs[ii4];
-              drawXAft4 = Math.max(marginX, Math.min(lxAft4 + ((aImg4.offsetX||0)*10), pw - marginX - fw4));
-              try { doc.addImage(aImg4.dataUrl, 'JPEG', drawXAft4, y, fw4, fh4); } catch(e) {
-                doc.setDrawColor(200,200,200); doc.rect(drawXAft4, y, fw4, fh4, 'S');
+            if (aImg4) {
+              var drawXAft4 = Math.max(marginX, Math.min(xAft4 + ((aImg4.offsetX||0)*10), pw - marginX - aDim4.w));
+              try { doc.addImage(aImg4.dataUrl, 'JPEG', drawXAft4, y, aDim4.w, aDim4.h); } catch(e) {
+                doc.setDrawColor(200,200,200); doc.rect(drawXAft4, y, aDim4.w, aDim4.h, 'S');
               }
               var acap4 = safe(aImg4.caption || '');
-              if (acap4) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(acap4, fw4), drawXAft4, y+fh4+2.5); }
+              if (acap4) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(acap4, aDim4.w), drawXAft4, y+aDim4.h+2.5); }
             }
-            lxBef4 = drawXBef4 + fw4 + 2; lxAft4 = drawXAft4 + fw4 + 2;
-            if ((ii4 + 1) % perRow4 === 0) { lxBef4 = xBef4; lxAft4 = xAft4; y += fh4 + 9; }
+            y += rowH4 + 9;
           }
-          if (maxImgs4 % perRow4 !== 0) y += fh4 + 9;
 
           checkPage(5);
           doc.setDrawColor(160, 185, 220); doc.setLineWidth(0.3);

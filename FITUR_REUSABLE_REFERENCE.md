@@ -359,6 +359,26 @@ function updateSizeLabel() {
 - Apakah file tujuan MASIH pakai crop engine lama shared.js (`imgOpenCropper`)? Kalau iya, semua pemanggilnya perlu diarahkan ulang ke `openCropModal()`.
 - Apakah ukuran default 7.2×5.18cm masih relevan untuk jenis dokumen file itu, atau beda?
 
+**🐛 BUG PENTING yang sudah di-fix — ukuran cm crop tidak dipakai di PDF:**
+`cropAndSave()` menyimpan `entry.widthCm`/`entry.heightCm` per foto (sesuai cm yang dipilih user saat crop, termasuk "Default" 7.2×5.18cm) — **tapi di kode generate PDF (bagian yang nge-loop foto before/after ke `doc.addImage`), nilai ini SERING DIABAIKAN begitu saja**, diganti kotak grid seragam yang dihitung dari lebar kolom halaman (mis. `fw = (colW-gap/2)/perRow-2`). Akibatnya foto "Default 7.2×5.18cm" bisa muncul jauh lebih kecil di PDF daripada label ukurannya (pernah ketemu: label bilang 7.2×5.18cm, tapi yang ke-render cuma ~3.7×2.8cm) — user bisa mengira foto tidak ke-crop dengan benar padahal sebenarnya box PDF-nya yang tidak mengikuti cm.
+
+**Fix wajib dipakai di setiap file yang generate PDF dari foto hasil crop modal ini:** hitung ukuran gambar di PDF dari `entry.widthCm`/`heightCm` (fallback ke `DEFAULT_CROP_W_CM`/`H` kalau foto lama belum punya properti ini), di-cap ke lebar kolom yang tersedia (jaga aspect ratio):
+```js
+function iePhotoDrawSize(entry, maxW, maxH) {
+    var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
+    var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+    var w = wCm * 10, h = hCm * 10; // cm -> mm
+    if (w > maxW) { h = h * (maxW / w); w = maxW; }
+    if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
+    return { w: w, h: h };
+}
+```
+Lalu di loop `doc.addImage(...)`: panggil `iePhotoDrawSize(imgEntry, colW, maxPhotoH)` per foto (bukan pakai `fw`/`fh` konstan), dan pakai hasil `.w`/`.h` itu utk parameter width/height `addImage` — **karena tiap foto sekarang bisa punya ukuran berbeda, konsekuensinya:**
+- Loop grid "2 foto per baris dalam 1 kolom" (before/after masing² bisa 2 foto sejajar) **harus diganti jadi 1 foto per baris** (before & after tetap sejajar kiri-kanan, tapi kalau ada >1 foto per sisi, ditumpuk ke bawah) — supaya lebar-tinggi variabel antar foto tidak bikin foto lain overlap.
+- Tinggi baris (`rowH`) dipakai `Math.max(before.h, after.h, minH)` supaya before & after tetap align meski ukurannya beda, dan page-break check (`if (y+rowH+10>ph-marginBottom)`) pakai `rowH` ini per baris (bukan `fh` konstan).
+- Estimasi tinggi "blok pertama" (buat cek page-break biar header+subheader+foto pertama gak kepisah halaman) juga harus dihitung dari `iePhotoDrawSize` foto pertama, bukan angka konstan.
+- Fitur D (Geser Posisi Gambar / `offsetX`) tetap jalan normal — cuma clamp batasnya (`pw - marginX - fw`) ganti pakai `pw - marginX - dim.w` (lebar foto yg sebenarnya, bukan `fw` konstan lagi).
+
 ---
 
 ## C. Crop Ulang
@@ -1283,6 +1303,6 @@ Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditany
 
 ## ⚠️ Potensi Konflik Global
 Karena semua fitur di atas dan fungsi bawaan `shared.js` sama-sama pakai **global function declaration** (bukan modul/namespace), nama-nama berikut **rawan bentrok** kalau file tujuan sudah punya fungsi dengan nama sama tapi perilaku beda:
-`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `reEditCrop`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`.
+`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `reEditCrop`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`.
 
 **Sebelum menempel kode dari dokumen ini, selalu `grep` dulu nama-nama fungsi di atas pada file tujuan.** Kalau sudah ada dan isinya beda, diskusikan dulu ke user mana yang mau dipakai / digabung, jangan main timpa.
