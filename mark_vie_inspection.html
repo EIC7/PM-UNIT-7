@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mark VIe Alarm & Module Inspection — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── Fitur reusable: geser posisi foto ── */
+.img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
+.img-nudge-label{font-size:8px;color:#8a8a8a;text-align:center;line-height:1.2;max-width:100px}
+.img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
+.img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ccc;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
+.img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
+/* ── CROP MODAL (3-mode) ── */
+#cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+#cropModal.show{display:flex}
+.crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
+.crop-header-hint{font-size:10px;color:#8aab96}
+#cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+#cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
+#cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
+.crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
+.crop-handle.nw{top:-6px;left:-6px;cursor:nw-resize} .crop-handle.ne{top:-6px;right:-6px;cursor:ne-resize}
+.crop-handle.sw{bottom:-6px;left:-6px;cursor:sw-resize} .crop-handle.se{bottom:-6px;right:-6px;cursor:se-resize}
+.crop-handle.n{width:10px;height:10px;top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize}
+.crop-handle.s{width:10px;height:10px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize}
+.crop-handle.w{width:10px;height:10px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize}
+.crop-handle.e{width:10px;height:10px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize}
+.crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30}
+.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
+.crop-btn-save{background:#2ecc71;color:#fff}
+.crop-size-panel{border-top:1px solid #2a3a30;padding-top:8px;margin-top:2px}
+.crop-size-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.crop-preset-btn,.crop-orient-btn,.crop-mode-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
+.crop-preset-btn.active,.crop-orient-btn.active,.crop-mode-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+.crop-mode-btn{padding:6px 12px;font-size:12px}
+.crop-cm-field{display:flex;flex-direction:column;gap:2px}
+.crop-cm-field label{font-size:9px;color:#8aab96;font-weight:600}
+.crop-cm-field input{width:64px;padding:5px 6px;font-size:12px;border-radius:5px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8}
+.crop-size-label{font-size:11px;color:#7fd9a4;font-weight:600;margin-left:4px}
+.crop-default-label{font-size:12px;color:#7fd9a4;font-weight:600;padding:4px 2px}
+/* ── EDIT GAMBAR (Insert Shape) ── */
+.editimg-dialog{width:98vw;height:96vh;max-width:1600px;max-height:1600px;display:flex;flex-direction:column}
+#editImgOuter{position:relative;flex:1 1 auto;min-height:0;background:#0c100d;overflow:auto;touch-action:none;display:flex;align-items:center;justify-content:center}
+#editImgWrap{position:relative;flex:none;touch-action:none}
+#editImg{position:absolute;left:0;top:0;user-select:none;-webkit-user-select:none;pointer-events:none;display:block}
+#editSvgOverlay{position:absolute;left:0;top:0;cursor:crosshair;touch-action:none}
+.edit-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;flex:none}
+.edit-tool-btn{width:36px;height:36px;border-radius:7px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-tool-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+.edit-tool-btn.zoom-label{width:auto;padding:0 8px;font-size:12px;font-weight:700}
+.edit-toolbar-sep{width:1px;align-self:stretch;background:#2a3a30;margin:2px 2px}
+.edit-color-swatch{width:24px;height:24px;border-radius:50%;border:2px solid #3a4f42;cursor:pointer;padding:0}
+.edit-color-swatch.active{border-color:#fff;box-shadow:0 0 0 2px #2ecc71}
+.edit-thick-swatch{width:32px;height:36px;border-radius:7px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-thick-swatch.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+/* ── PDF PREVIEW MODAL ── */
+.pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+.pdf-preview-modal.show{display:flex}
+.pdf-preview-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,900px);height:min(92vh,1100px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
+.pdf-preview-header{background:#243228;padding:10px 46px 10px 16px;flex:0 0 auto;position:relative}
+.pdf-preview-title{font-weight:700;font-size:14px;color:#e0f0e8}
+.pdf-preview-hint{font-size:11px;color:#8aab96;margin-top:2px}
+.pdf-preview-close-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid #3a4f42;background:#1a221e;color:#e0f0e8;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.pdf-preview-close-x:active{background:#2a3a30}
+.pdf-preview-body{flex:1 1 auto;background:#333;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pdf-canvas-container{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
+.pdf-canvas-container canvas{max-width:100%;height:auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);background:#fff}
+.pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
+.pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
+.pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
+/* ── Mark VIe khusus: tabel checklist YES/NO ── */
+.mv-section-title{background:var(--bg2,#dde3de);font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:1.5px;color:var(--steel);padding:9px 14px}
+.mv-yn{width:20px;height:20px;cursor:pointer}
+.mv-remark{width:100%;padding:5px 7px;font-size:11.5px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">MARK VIe INSPECTION</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Alarm &amp; Module Inspection</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">4W PM Main Turbine Control Cabinet</div>
+      <div class="page-header-title">Mark VIe <span>Alarm &amp; Module</span> Inspection</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="section-label">Data Umum</div>
+    <div class="manual-meta">
+      <div class="meta-field"><label>Tanggal</label><input type="date" id="mvTanggal"></div>
+      <div class="meta-field"><label>Work Order</label><input type="text" id="mvWorkorder" placeholder="No. Work Order..."></div>
+      <div class="meta-field"><label>PIC / Inspector</label><input type="text" id="mvPIC" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Asset Tag</label><input type="text" id="mvAssetTag" placeholder="7TG-CAB-MKVI" value="7TG-CAB-MKVI"></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="mvAssetDesc" placeholder="Main Turbine Control Cabinet Unit 7 Mark VIe" value="Main Turbine Control Cabinet Unit 7 Mark VIe"></div>
+    </div>
+    <div class="notice info" style="display:block;margin-top:16px">
+      <b>Catatan:</b> Screenshot indikator alarm/status diagnostik sebagai evidence disimpan ke<br>
+      <code>Q:\Photo\Maintenance\P7\E&amp;IC\P7EIC\2026\Mark VIe Archive</code>
+    </div>
+  </div>
+
+  <!-- CHECKLIST SECTIONS (dibangun oleh JS dari MV_SECTIONS) -->
+  <div class="panel">
+    <div class="section-label">Checklist Inspeksi</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="mvTable" style="min-width:720px">
+        <thead><tr><th style="width:34px">No</th><th style="min-width:280px">Description</th><th style="width:56px">Yes</th><th style="width:56px">No</th><th style="min-width:180px">Remark</th></tr></thead>
+        <tbody id="mvTableBody"><!-- built by JS --></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EVIDENCE PHOTO (gallery umum, bukan per-baris) -->
+  <div class="panel">
+    <div class="section-label">Evidence Photo</div>
+    <div id="mvEvidenceSlot"><!-- built by JS via buildPhotoSlot --></div>
+  </div>
+
+  <div class="panel">
+    <div class="btn-row">
+      <button class="btn btn-pdf" id="btnPdf" onclick="downloadPdf()">&#11015; Diagnostic &amp; Print Preview</button>
+      <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('Mark VIe Alarm &amp; Module Inspection')">&#128190; Simpan ke Database</button>
+      <button class="btn btn-danger" onclick="resetAll()">&#10005; Reset</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- CROP MODAL (3-mode: Default/Preset/Manual) -->
+<div id="cropModal">
+    <div class="crop-dialog">
+        <div class="crop-header">
+            <div class="crop-header-title">✂️ Crop Gambar</div>
+            <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
+        </div>
+        <div id="cropWrap">
+            <img id="cropImg" src="">
+            <div id="cropBox">
+                <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
+                <div class="crop-handle sw"></div><div class="crop-handle se"></div>
+                <div class="crop-handle n"></div><div class="crop-handle s"></div>
+                <div class="crop-handle w"></div><div class="crop-handle e"></div>
+            </div>
+        </div>
+        <div class="crop-footer">
+            <div class="crop-size-panel">
+                <div class="crop-size-row" id="cropModeRow">
+                    <button type="button" class="crop-mode-btn" id="cropModeDefault" onclick="setCropMode('default')">⭐ Default</button>
+                    <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
+                    <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
+                </div>
+                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran cetak: 7.2 × 5.18 cm — gambar penuh (tidak dipotong)</div>
+                <div id="cropPresetControls" style="display:none">
+                    <div class="crop-size-row" id="cropPresetRow"></div>
+                    <div class="crop-size-row" style="margin-top:8px">
+                        <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
+                        <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
+                    </div>
+                </div>
+                <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
+                </div>
+            </div>
+            <div class="crop-btns">
+                <button class="crop-btn crop-btn-outline" onclick="openImageEditor()">🖍️ Edit Gambar</button>
+                <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
+                <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ EDIT GAMBAR (Insert Shape: Teks/Panah/Garis/Kotak/Oval) ═══ -->
+<div id="editImgModal" class="pdf-preview-modal">
+    <div class="crop-dialog editimg-dialog">
+        <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closeImageEditor(true)" aria-label="Tutup">✕</button>
+            <div class="pdf-preview-title">🖍️ Edit Gambar</div>
+            <div class="pdf-preview-hint">Tambah teks/panah/garis/kotak/oval • ✋ geser tampilan • 🔍 zoom</div>
+        </div>
+        <div id="editImgOuter">
+            <div id="editImgWrap">
+                <img id="editImg" src="" alt="">
+                <svg id="editSvgOverlay" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+        </div>
+        <div class="edit-toolbar" id="editToolbar">
+            <button type="button" class="edit-tool-btn active" data-tool="select" onclick="setEditTool('select')" title="Pilih / Pindah">↖</button>
+            <button type="button" class="edit-tool-btn" data-tool="text" onclick="setEditTool('text')" title="Tambah Teks">🅰</button>
+            <button type="button" class="edit-tool-btn" data-tool="arrow" onclick="setEditTool('arrow')" title="Panah">↗</button>
+            <button type="button" class="edit-tool-btn" data-tool="line" onclick="setEditTool('line')" title="Garis">╱</button>
+            <button type="button" class="edit-tool-btn" data-tool="rect" onclick="setEditTool('rect')" title="Kotak">▭</button>
+            <button type="button" class="edit-tool-btn" data-tool="oval" onclick="setEditTool('oval')" title="Oval">◯</button>
+            <button type="button" class="edit-tool-btn" data-tool="pan" onclick="setEditTool('pan')" title="Geser Tampilan">✋</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-color-swatch active" data-color="#e53935" style="background:#e53935" onclick="setEditColor('#e53935',this)" title="Merah"></button>
+            <button type="button" class="edit-color-swatch" data-color="#1a1a1a" style="background:#1a1a1a" onclick="setEditColor('#1a1a1a',this)" title="Hitam"></button>
+            <button type="button" class="edit-color-swatch" data-color="#1e88e5" style="background:#1e88e5" onclick="setEditColor('#1e88e5',this)" title="Biru"></button>
+            <button type="button" class="edit-color-swatch" data-color="#fdd835" style="background:#fdd835" onclick="setEditColor('#fdd835',this)" title="Kuning"></button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-thick-swatch" data-thick="S" onclick="setEditThickness('S',this)" title="Garis Tipis">▁</button>
+            <button type="button" class="edit-thick-swatch active" data-thick="M" onclick="setEditThickness('M',this)" title="Garis Sedang">▃</button>
+            <button type="button" class="edit-thick-swatch" data-thick="L" onclick="setEditThickness('L',this)" title="Garis Tebal">▅</button>
+            <button type="button" class="edit-thick-swatch" data-thick="XL" onclick="setEditThickness('XL',this)" title="Garis Sangat Tebal">▇</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-tool-btn" onclick="ieZoomOut()" title="Perkecil Tampilan">➖</button>
+            <button type="button" class="edit-tool-btn zoom-label" id="editZoomLabel" onclick="ieZoomReset()" title="Reset Zoom">100%</button>
+            <button type="button" class="edit-tool-btn" onclick="ieZoomIn()" title="Perbesar Tampilan">➕</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-tool-btn" id="editTextSmallerBtn" onclick="ieResizeSelectedText(-1)" title="Perkecil Teks" style="display:none">A−</button>
+            <button type="button" class="edit-tool-btn" id="editTextBiggerBtn" onclick="ieResizeSelectedText(1)" title="Perbesar Teks" style="display:none">A+</button>
+            <button type="button" class="edit-tool-btn" id="editTextEditBtn" onclick="editSelectedText()" title="Edit Teks" style="display:none">✏️</button>
+            <button type="button" class="edit-tool-btn" id="editDeleteBtn" onclick="deleteSelectedShape()" title="Hapus" style="display:none">🗑️</button>
+        </div>
+        <div class="pdf-preview-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closeImageEditor(true)">Batal</button>
+            <button class="crop-btn crop-btn-save" onclick="applyImageEdits()">✓ Selesai</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   FITUR REUSABLE: Crop 3-mode (Default/Preset/Manual) / Geser posisi foto /
+   Preview PDF sebelum download / Loading overlay / Autosave draft.
+   Disalin dari fegt.html supaya identik perilakunya di semua modul.
+   ══════════════════════════════════════════════════════════════════════════ */
+var cropModalState = document.getElementById('cropModal');
+cropModalState._pending = null;
+cropModalState._ratioLocked = false;
+cropModalState._cropWcm = null;
+cropModalState._cropHcm = null;
+cropModalState._orientation = 'portrait';
+cropModalState._activePresetIdx = -1;
+cropModalState._mode = 'default';
+cropModalState._presetRatio = 1;
+
+var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
+var PRESET_DEFAULT_LONG_CM = 4;
+var MANUAL_MAX_CM = 7;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
+   ══════════════════════════════════════════════════════════════════════════ */
+var NS_SVG = 'http://www.w3.org/2000/svg';
+var imgEditState = {
+    tool: 'select', color: '#e53935', thickness: 'M', zoom: 1, baseScale: 1, shapes: [], selectedId: null,
+    naturalW: 0, naturalH: 0, nextId: 1, drawing: null, sourceUrl: null
+};
+var IE_THICKNESS_FACTORS = { S: 0.0022, M: 0.0045, L: 0.0075, XL: 0.012 };
+var IE_ZOOM_MIN = 1, IE_ZOOM_MAX = 4, IE_ZOOM_STEP = 0.5;
+
+function ieMinSize(){ return Math.max(20, imgEditState.naturalW * 0.02); }
+function ieHandleR(){ return Math.max(9, imgEditState.naturalW * 0.009); }
+function ieHandleHitR(){
+    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
+    var minTouchPx = 22;
+    return Math.max(ieHandleR(), minTouchPx / scale);
+}
+function ieStrokeWFor(shape){
+    var key = (shape && shape.strokeSize) || imgEditState.thickness || 'M';
+    var f = IE_THICKNESS_FACTORS[key] || IE_THICKNESS_FACTORS.M;
+    return Math.max(2, imgEditState.naturalW * f);
+}
+function ieFontDefault(){ return Math.max(18, imgEditState.naturalW * 0.035); }
+function ieColorId(c){ return 'ie_' + c.replace('#',''); }
+function ieTextBoxSize(shape){
+    return { w: Math.max(20, (shape.text.length||1) * shape.fontSize * 0.55), h: shape.fontSize*1.2 };
+}
+
+function openImageEditor(){
+    var cropImg = document.getElementById('cropImg');
+    if (!cropImg || !cropImg.src) { alert('Gambar belum siap untuk diedit.'); return; }
+    imgEditState.shapes = []; imgEditState.selectedId = null; imgEditState.nextId = 1;
+    imgEditState.tool = 'select'; imgEditState.color = '#e53935'; imgEditState.thickness = 'M'; imgEditState.zoom = 1;
+    setEditTool('select');
+    var swatches = document.querySelectorAll('.edit-color-swatch');
+    swatches.forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color') === imgEditState.color); });
+    var tswatches = document.querySelectorAll('.edit-thick-swatch');
+    tswatches.forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-thick') === imgEditState.thickness); });
+    ieUpdateZoomLabel();
+    var editImg = document.getElementById('editImg');
+    editImg.onload = function(){
+        imgEditState.naturalW = editImg.naturalWidth;
+        imgEditState.naturalH = editImg.naturalHeight;
+        fitEditImageToWrap();
+        renderAllShapes();
+    };
+    imgEditState.sourceUrl = cropImg.src;
+    editImg.src = cropImg.src;
+    document.getElementById('editImgModal').classList.add('show');
+}
+
+function fitEditImageToWrap(){
+    var outer = document.getElementById('editImgOuter');
+    var wrap = document.getElementById('editImgWrap');
+    var img = document.getElementById('editImg');
+    var svg = document.getElementById('editSvgOverlay');
+    var ow = outer.clientWidth, oh = outer.clientHeight;
+    var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
+    if (!nw || !nh || !ow || !oh) return;
+    var baseScale = Math.min(ow/nw, oh/nh);
+    imgEditState.baseScale = baseScale;
+    var scale = baseScale * (imgEditState.zoom || 1);
+    var dw = nw*scale, dh = nh*scale;
+    wrap.style.width = dw+'px'; wrap.style.height = dh+'px';
+    img.style.width = dw+'px'; img.style.height = dh+'px';
+    svg.style.width = dw+'px'; svg.style.height = dh+'px';
+    svg.setAttribute('viewBox', '0 0 '+nw+' '+nh);
+    outer.style.justifyContent = (dw <= ow + 1) ? 'center' : 'flex-start';
+    outer.style.alignItems = (dh <= oh + 1) ? 'center' : 'flex-start';
+    if (dw > ow) outer.scrollLeft = Math.max(0, (dw-ow)/2);
+    if (dh > oh) outer.scrollTop = Math.max(0, (dh-oh)/2);
+}
+function ieUpdateZoomLabel(){
+    var lbl = document.getElementById('editZoomLabel');
+    if (lbl) lbl.textContent = Math.round((imgEditState.zoom||1)*100) + '%';
+}
+function ieSetZoom(z){
+    imgEditState.zoom = Math.max(IE_ZOOM_MIN, Math.min(IE_ZOOM_MAX, z));
+    ieUpdateZoomLabel();
+    fitEditImageToWrap();
+}
+function ieZoomIn(){ ieSetZoom((imgEditState.zoom||1) + IE_ZOOM_STEP); }
+function ieZoomOut(){ ieSetZoom((imgEditState.zoom||1) - IE_ZOOM_STEP); }
+function ieZoomReset(){ ieSetZoom(1); }
+window.addEventListener('resize', function(){
+    if (document.getElementById('editImgModal').classList.contains('show')) fitEditImageToWrap();
+});
+
+function closeImageEditor(discard){
+    document.getElementById('editImgModal').classList.remove('show');
+    if (discard) { imgEditState.shapes = []; imgEditState.selectedId = null; }
+}
+
+function setEditTool(tool){
+    imgEditState.tool = tool;
+    deselectShape();
+    document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-tool') === tool);
+    });
+    var svg = document.getElementById('editSvgOverlay');
+    svg.style.cursor = (tool === 'select') ? 'default' : (tool === 'pan' ? 'grab' : 'crosshair');
+}
+function ieBackToSelectKeepSelection(){
+    imgEditState.tool = 'select';
+    document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-tool') === 'select');
+    });
+    var svg = document.getElementById('editSvgOverlay');
+    svg.style.cursor = 'default';
+}
+
+function setEditColor(color, btnEl){
+    imgEditState.color = color;
+    document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.remove('active'); });
+    if (btnEl) btnEl.classList.add('active');
+    var sel = getShapeById(imgEditState.selectedId);
+    if (sel) { sel.color = color; renderAllShapes(); }
+}
+
+function setEditThickness(key, btnEl){
+    imgEditState.thickness = key;
+    document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.remove('active'); });
+    if (btnEl) btnEl.classList.add('active');
+    var sel = getShapeById(imgEditState.selectedId);
+    if (sel && sel.type !== 'text') { sel.strokeSize = key; renderAllShapes(); }
+}
+
+function getShapeById(id){
+    for (var i=0;i<imgEditState.shapes.length;i++) if (imgEditState.shapes[i].id === id) return imgEditState.shapes[i];
+    return null;
+}
+function addShape(shape){
+    shape.id = imgEditState.nextId++;
+    imgEditState.shapes.push(shape);
+    return shape;
+}
+function ieSetSelButtonsDisplay(shape){
+    var isText = !!(shape && shape.type === 'text');
+    var db = document.getElementById('editDeleteBtn'); if (db) db.style.display = shape ? 'flex' : 'none';
+    var tb = document.getElementById('editTextEditBtn'); if (tb) tb.style.display = isText ? 'flex' : 'none';
+    var sb = document.getElementById('editTextSmallerBtn'); if (sb) sb.style.display = isText ? 'flex' : 'none';
+    var bb = document.getElementById('editTextBiggerBtn'); if (bb) bb.style.display = isText ? 'flex' : 'none';
+}
+function deselectShape(){
+    imgEditState.selectedId = null;
+    ieSetSelButtonsDisplay(null);
+    renderAllShapes();
+}
+function setSelectedShape(id){
+    imgEditState.selectedId = id;
+    var shape = getShapeById(id);
+    ieSetSelButtonsDisplay(shape);
+    if (shape) {
+        document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color')===shape.color); });
+        if (shape.strokeSize) document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-thick')===shape.strokeSize); });
+    }
+    renderAllShapes();
+}
+function deleteSelectedShape(){
+    if (!imgEditState.selectedId) return;
+    imgEditState.shapes = imgEditState.shapes.filter(function(s){ return s.id !== imgEditState.selectedId; });
+    deselectShape();
+}
+function editSelectedText(){
+    var s = getShapeById(imgEditState.selectedId);
+    if (!s || s.type !== 'text') return;
+    var val = prompt('Edit teks:', s.text);
+    ieForceHideKeyboard();
+    if (val !== null && val.trim()) { s.text = val.trim(); renderAllShapes(); }
+}
+function ieForceHideKeyboard(){
+    if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) {
+        document.activeElement.blur();
+    }
+    var dummy = document.getElementById('ieKeyboardDismiss');
+    if (!dummy) {
+        dummy = document.createElement('input');
+        dummy.id = 'ieKeyboardDismiss';
+        dummy.setAttribute('type', 'text');
+        dummy.style.position = 'fixed';
+        dummy.style.top = '-1000px';
+        dummy.style.left = '0';
+        dummy.style.width = '1px';
+        dummy.style.height = '1px';
+        dummy.style.opacity = '0';
+        document.body.appendChild(dummy);
+    }
+    dummy.setAttribute('readonly', 'readonly');
+    dummy.focus();
+    setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
+}
+function ieResizeSelectedText(dir){
+    var s = getShapeById(imgEditState.selectedId);
+    if (!s || s.type !== 'text') return;
+    var step = Math.max(2, imgEditState.naturalW*0.006);
+    s.fontSize = Math.max(10, (s.fontSize||ieFontDefault()) + dir*step);
+    renderAllShapes();
+}
+
+function getSvgPoint(evt){
+    var svg = document.getElementById('editSvgOverlay');
+    var rect = svg.getBoundingClientRect();
+    var t = evt.touches ? (evt.touches[0] || evt.changedTouches[0]) : evt;
+    var x = (t.clientX - rect.left) * (imgEditState.naturalW / rect.width);
+    var y = (t.clientY - rect.top) * (imgEditState.naturalH / rect.height);
+    return { x: x, y: y };
+}
+
+function ieAddDocListeners(onMove, onUp){
+    document.addEventListener('pointermove', onMove, {passive:false});
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+}
+function ieRemoveDocListeners(onMove, onUp){
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+}
+
+function onEditSvgPointerDown(e){
+    var tool = imgEditState.tool;
+    if (tool === 'pan') {
+        if (e.cancelable) e.preventDefault();
+        var outer = document.getElementById('editImgOuter');
+        var t0 = e.touches ? e.touches[0] : e;
+        var startX = t0.clientX, startY = t0.clientY;
+        var startL = outer.scrollLeft, startT = outer.scrollTop;
+        var svgEl = document.getElementById('editSvgOverlay'); svgEl.style.cursor = 'grabbing';
+        function onMove(mv){
+            if (mv.cancelable) mv.preventDefault();
+            var t = mv.touches ? mv.touches[0] : mv;
+            outer.scrollLeft = startL - (t.clientX - startX);
+            outer.scrollTop = startT - (t.clientY - startY);
+        }
+        function onUp(){ ieRemoveDocListeners(onMove, onUp); svgEl.style.cursor = 'grab'; }
+        ieAddDocListeners(onMove, onUp);
+        return;
+    }
+    if (tool === 'select') { if (e.target.id === 'editSvgOverlay') deselectShape(); return; }
+    if (e.cancelable) e.preventDefault();
+    var pt = getSvgPoint(e);
+    if (tool === 'text') {
+        var txt = prompt('Masukkan teks:');
+        ieForceHideKeyboard();
+        if (txt && txt.trim()) {
+            var shapeT = addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
+            setSelectedShape(shapeT.id);
+        }
+        ieBackToSelectKeepSelection();
+        return;
+    }
+    imgEditState.drawing = {type:tool, x1:pt.x, y1:pt.y, x2:pt.x, y2:pt.y, color:imgEditState.color, strokeSize:imgEditState.thickness};
+    renderAllShapes();
+    function onMove(mv){
+        if (mv.cancelable) mv.preventDefault();
+        var p = getSvgPoint(mv);
+        imgEditState.drawing.x2 = p.x; imgEditState.drawing.y2 = p.y;
+        renderAllShapes();
+    }
+    function onUp(){
+        ieRemoveDocListeners(onMove, onUp);
+        var d = imgEditState.drawing; imgEditState.drawing = null;
+        var dist = Math.hypot(d.x2-d.x1, d.y2-d.y1);
+        if (dist > Math.max(8, imgEditState.naturalW*0.008)) {
+            var shape;
+            if (d.type === 'rect' || d.type === 'oval') {
+                shape = addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize, rotation:0});
+            } else {
+                shape = addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize});
+            }
+            setSelectedShape(shape.id);
+            ieBackToSelectKeepSelection();
+        } else { renderAllShapes(); }
+    }
+    ieAddDocListeners(onMove, onUp);
+}
+
+function startDragShape(id, ev){
+    setSelectedShape(id);
+    var shape = getShapeById(id);
+    if (!shape) return;
+    var startPt = getSvgPoint(ev);
+    var orig = JSON.parse(JSON.stringify(shape));
+    function onMove(mv){
+        if (mv.cancelable) mv.preventDefault();
+        var p = getSvgPoint(mv);
+        var dx = p.x - startPt.x, dy = p.y - startPt.y;
+        if (shape.type === 'line' || shape.type === 'arrow') {
+            shape.x1 = orig.x1+dx; shape.y1 = orig.y1+dy; shape.x2 = orig.x2+dx; shape.y2 = orig.y2+dy;
+        } else {
+            shape.x = orig.x+dx; shape.y = orig.y+dy;
+        }
+        renderAllShapes();
+    }
+    function onUp(){ ieRemoveDocListeners(onMove, onUp); }
+    ieAddDocListeners(onMove, onUp);
+}
+
+function startHandleDrag(onDragMove){
+    function onMove(mv){ if (mv.cancelable) mv.preventDefault(); onDragMove(getSvgPoint(mv)); renderAllShapes(); }
+    function onUp(){ ieRemoveDocListeners(onMove, onUp); }
+    ieAddDocListeners(onMove, onUp);
+}
+
+function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
+    var c = document.createElementNS(NS_SVG, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', ieHandleR());
+    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1,ieHandleR()*0.2));
+    c.style.cursor = cursor; c.style.touchAction = 'none'; c.style.pointerEvents = 'none';
+    svg.appendChild(c);
+    // Hit-area transparan yang lebih besar, ditumpuk di atas titik visual,
+    // supaya gampang dipencet di HP tanpa mengubah ukuran titik yang terlihat.
+    var hit = document.createElementNS(NS_SVG, 'circle');
+    hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', ieHandleHitR());
+    hit.setAttribute('fill', 'transparent');
+    hit.style.cursor = cursor; hit.style.touchAction = 'none'; hit.style.pointerEvents = 'all';
+    hit.addEventListener('pointerdown', function(e){ e.stopPropagation(); if (e.cancelable) e.preventDefault(); startHandleDrag(onDragMove); });
+    svg.appendChild(hit);
+}
+
+function ieBuildShapeVisual(shape){
+    var el;
+    if (shape.type === 'rect') {
+        el = document.createElementNS(NS_SVG, 'rect');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y);
+        el.setAttribute('width', shape.w); el.setAttribute('height', shape.h);
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'oval') {
+        el = document.createElementNS(NS_SVG, 'ellipse');
+        el.setAttribute('cx', shape.x+shape.w/2); el.setAttribute('cy', shape.y+shape.h/2);
+        el.setAttribute('rx', shape.w/2); el.setAttribute('ry', shape.h/2);
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'line' || shape.type === 'arrow') {
+        el = document.createElementNS(NS_SVG, 'line');
+        el.setAttribute('x1', shape.x1); el.setAttribute('y1', shape.y1);
+        el.setAttribute('x2', shape.x2); el.setAttribute('y2', shape.y2);
+        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape)); el.setAttribute('stroke-linecap', 'round');
+        if (shape.type === 'arrow') el.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
+    } else if (shape.type === 'text') {
+        el = document.createElementNS(NS_SVG, 'text');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y + shape.fontSize);
+        el.setAttribute('fill', shape.color); el.setAttribute('font-size', shape.fontSize);
+        el.setAttribute('font-family', 'Arial, sans-serif'); el.setAttribute('font-weight', '700');
+        el.textContent = shape.text;
+    }
+    return el;
+}
+
+function ieBuildDefs(svg){
+    var defs = document.createElementNS(NS_SVG, 'defs');
+    ['#e53935','#1a1a1a','#1e88e5','#fdd835'].forEach(function(c){
+        var marker = document.createElementNS(NS_SVG, 'marker');
+        marker.setAttribute('id', ieColorId(c)); marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '10');
+        marker.setAttribute('refX', '8'); marker.setAttribute('refY', '5'); marker.setAttribute('orient', 'auto');
+        var path = document.createElementNS(NS_SVG, 'path');
+        path.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); path.setAttribute('fill', c);
+        marker.appendChild(path); defs.appendChild(marker);
+    });
+    svg.appendChild(defs);
+}
+
+/* ── Rotasi titik (px,py) mengelilingi pusat (cx,cy) sejauh `deg` derajat ── */
+function ieRotatePoint(px, py, cx, cy, deg){
+    var rad = deg * Math.PI/180;
+    var cos = Math.cos(rad), sin = Math.sin(rad);
+    var dx = px-cx, dy = py-cy;
+    return { x: cx + dx*cos - dy*sin, y: cy + dx*sin + dy*cos };
+}
+
+function renderAllShapes(){
+    var svg = document.getElementById('editSvgOverlay');
+    if (!svg) return;
+    svg.innerHTML = '';
+    ieBuildDefs(svg);
+    imgEditState.shapes.forEach(function(shape){
+        var g = document.createElementNS(NS_SVG, 'g');
+        var visual = ieBuildShapeVisual(shape);
+        if (!visual) return;
+        g.appendChild(visual);
+        if (shape.type === 'line' || shape.type === 'arrow') {
+            var hit = document.createElementNS(NS_SVG, 'line');
+            hit.setAttribute('x1', shape.x1); hit.setAttribute('y1', shape.y1);
+            hit.setAttribute('x2', shape.x2); hit.setAttribute('y2', shape.y2);
+            hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', Math.max(24, imgEditState.naturalW*0.02));
+            g.insertBefore(hit, visual);
+        } else if (shape.type === 'rect' || shape.type === 'oval') {
+            var fhit = document.createElementNS(NS_SVG, shape.type === 'rect' ? 'rect' : 'ellipse');
+            if (shape.type === 'rect') {
+                fhit.setAttribute('x', shape.x); fhit.setAttribute('y', shape.y);
+                fhit.setAttribute('width', shape.w); fhit.setAttribute('height', shape.h);
+            } else {
+                fhit.setAttribute('cx', shape.x+shape.w/2); fhit.setAttribute('cy', shape.y+shape.h/2);
+                fhit.setAttribute('rx', shape.w/2); fhit.setAttribute('ry', shape.h/2);
+            }
+            fhit.setAttribute('fill', 'transparent');
+            g.insertBefore(fhit, visual);
+        } else if (shape.type === 'text') {
+            var tb = ieTextBoxSize(shape);
+            var padX = tb.w*0.08, padY = tb.h*0.15;
+            var thit = document.createElementNS(NS_SVG, 'rect');
+            thit.setAttribute('x', shape.x - padX); thit.setAttribute('y', shape.y - padY);
+            thit.setAttribute('width', tb.w + padX*2); thit.setAttribute('height', tb.h + padY*2);
+            thit.setAttribute('fill', 'transparent');
+            g.insertBefore(thit, visual);
+        }
+        g.style.cursor = 'move';
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var rcx = shape.x + shape.w/2, rcy = shape.y + shape.h/2;
+            g.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + rcx + ' ' + rcy + ')');
+        }
+        var start = (function(shapeId){ return function(ev){
+            if (imgEditState.tool !== 'select') return;
+            ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
+            startDragShape(shapeId, ev);
+        }; })(shape.id);
+        g.addEventListener('pointerdown', start);
+        svg.appendChild(g);
+
+        if (shape.id === imgEditState.selectedId) {
+            if (shape.type === 'rect' || shape.type === 'oval') {
+                var rot = shape.rotation || 0;
+                var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
+                var box = document.createElementNS(NS_SVG, 'rect');
+                box.setAttribute('x', shape.x); box.setAttribute('y', shape.y);
+                box.setAttribute('width', shape.w); box.setAttribute('height', shape.h);
+                box.setAttribute('fill', 'none'); box.setAttribute('stroke', '#2ecc71');
+                box.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                box.setAttribute('stroke-dasharray', '6,4'); box.setAttribute('pointer-events', 'none');
+                if (rot) box.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
+                svg.appendChild(box);
+                var cornerLocal = {x: shape.x+shape.w, y: shape.y+shape.h};
+                var cornerWorld = rot ? ieRotatePoint(cornerLocal.x, cornerLocal.y, cx, cy, rot) : cornerLocal;
+                ieMakeHandle(svg, cornerWorld.x, cornerWorld.y, 'nwse-resize', function(p){
+                    var local = rot ? ieRotatePoint(p.x, p.y, cx, cy, -rot) : p;
+                    shape.w = Math.max(ieMinSize(), local.x-shape.x); shape.h = Math.max(ieMinSize(), local.y-shape.y);
+                });
+                var rotDist = Math.max(24, imgEditState.naturalW*0.03);
+                var rotHandleLocal = {x: cx, y: shape.y - rotDist};
+                var rotHandleWorld = rot ? ieRotatePoint(rotHandleLocal.x, rotHandleLocal.y, cx, cy, rot) : rotHandleLocal;
+                var rotLine = document.createElementNS(NS_SVG, 'line');
+                rotLine.setAttribute('x1', cx); rotLine.setAttribute('y1', shape.y);
+                rotLine.setAttribute('x2', rotHandleLocal.x); rotLine.setAttribute('y2', rotHandleLocal.y);
+                rotLine.setAttribute('stroke', '#2ecc71'); rotLine.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                rotLine.setAttribute('pointer-events', 'none');
+                if (rot) rotLine.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
+                svg.appendChild(rotLine);
+                ieMakeHandle(svg, rotHandleWorld.x, rotHandleWorld.y, 'grab', function(p){
+                    var deg = Math.atan2(p.x-cx, -(p.y-cy)) * 180/Math.PI;
+                    shape.rotation = Math.round(deg);
+                });
+            } else if (shape.type === 'line' || shape.type === 'arrow') {
+                ieMakeHandle(svg, shape.x1, shape.y1, 'move', function(p){ shape.x1=p.x; shape.y1=p.y; });
+                ieMakeHandle(svg, shape.x2, shape.y2, 'move', function(p){ shape.x2=p.x; shape.y2=p.y; });
+            } else if (shape.type === 'text') {
+                var tbSel = ieTextBoxSize(shape);
+                var box2 = document.createElementNS(NS_SVG, 'rect');
+                box2.setAttribute('x', shape.x); box2.setAttribute('y', shape.y);
+                box2.setAttribute('width', tbSel.w); box2.setAttribute('height', tbSel.h);
+                box2.setAttribute('fill', 'none'); box2.setAttribute('stroke', '#2ecc71');
+                box2.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                box2.setAttribute('stroke-dasharray', '6,4'); box2.setAttribute('pointer-events', 'none');
+                svg.appendChild(box2);
+                ieMakeHandle(svg, shape.x+tbSel.w, shape.y+tbSel.h, 'nwse-resize', function(p){
+                    var newH = Math.max(10, p.y-shape.y);
+                    shape.fontSize = newH/1.2;
+                });
+            }
+        }
+    });
+    if (imgEditState.drawing) {
+        var dvisual = ieBuildShapeVisual(
+            (imgEditState.drawing.type==='rect'||imgEditState.drawing.type==='oval')
+            ? {type:imgEditState.drawing.type, x:Math.min(imgEditState.drawing.x1,imgEditState.drawing.x2), y:Math.min(imgEditState.drawing.y1,imgEditState.drawing.y2), w:Math.abs(imgEditState.drawing.x2-imgEditState.drawing.x1), h:Math.abs(imgEditState.drawing.y2-imgEditState.drawing.y1), color:imgEditState.drawing.color, strokeSize:imgEditState.drawing.strokeSize}
+            : imgEditState.drawing
+        );
+        if (dvisual) { dvisual.setAttribute('opacity','0.75'); svg.appendChild(dvisual); }
+    }
+}
+
+(function initEditSvgEvents(){
+    var svg = document.getElementById('editSvgOverlay');
+    if (!svg) return;
+    svg.addEventListener('pointerdown', onEditSvgPointerDown);
+})();
+
+function applyImageEdits(){
+    if (!imgEditState.shapes.length) { closeImageEditor(false); return; }
+    var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
+    var flatSvg = document.createElementNS(NS_SVG, 'svg');
+    flatSvg.setAttribute('xmlns', NS_SVG);
+    flatSvg.setAttribute('width', nw); flatSvg.setAttribute('height', nh);
+    flatSvg.setAttribute('viewBox', '0 0 '+nw+' '+nh);
+    ieBuildDefs(flatSvg);
+    imgEditState.shapes.forEach(function(shape){
+        var v = ieBuildShapeVisual(shape);
+        if (!v) return;
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
+            v.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + cx + ' ' + cy + ')');
+        }
+        flatSvg.appendChild(v);
+    });
+    var svgStr = new XMLSerializer().serializeToString(flatSvg);
+    var svgImg = new Image();
+    svgImg.onload = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = nw; canvas.height = nh;
+        var ctx = canvas.getContext('2d');
+        var srcImg = new Image();
+        srcImg.onload = function(){
+            ctx.drawImage(srcImg, 0, 0, nw, nh);
+            ctx.drawImage(svgImg, 0, 0, nw, nh);
+            var outUrl = canvas.toDataURL('image/jpeg', 0.92);
+            var cropImg = document.getElementById('cropImg');
+            cropImg.onload = function(){
+                var wrap = document.getElementById('cropWrap');
+                var ww = wrap.clientWidth, wh = wrap.clientHeight;
+                var scale = Math.min(ww/cropImg.naturalWidth, wh/cropImg.naturalHeight);
+                var dw = cropImg.naturalWidth*scale, dh = cropImg.naturalHeight*scale;
+                cropImg.style.width = dw+'px'; cropImg.style.height = dh+'px';
+                cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
+                if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+                else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+            };
+            cropImg.src = outUrl;
+            closeImageEditor(false);
+        };
+        srcImg.src = imgEditState.sourceUrl;
+    };
+    svgImg.onerror = function(){ alert('Gagal menerapkan anotasi pada gambar. Coba lagi.'); };
+    svgImg.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CROP ENGINE 3-MODE (Default / Preset / Manual)
+   ══════════════════════════════════════════════════════════════════════════ */
+var CROP_PRESETS = [
+    {label:'1:1', w:1, h:1}, {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
+    {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
+];
+
+function renderPresetButtons() {
+    var row = document.getElementById('cropPresetRow');
+    if (!row) return;
+    row.innerHTML = '';
+    CROP_PRESETS.forEach(function(p, i) {
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'crop-preset-btn'; btn.id = 'cropPreset-'+i;
+        btn.textContent = p.label; btn.onclick = function () { applyPreset(i); };
+        row.appendChild(btn);
+    });
+}
+function highlightPreset(activeIdx) {
+    CROP_PRESETS.forEach(function (p, idx) {
+        var btn = document.getElementById('cropPreset-'+idx);
+        if (btn) btn.classList.toggle('active', idx === activeIdx);
+    });
+}
+function getMaxForField(field) {
+    if (cropModalState._mode === 'preset') {
+        var longMax=7, shortMax=5;
+        if (cropModalState._orientation === 'landscape') return field==='w' ? longMax : shortMax;
+        return field==='w' ? shortMax : longMax;
+    }
+    if (cropModalState._mode === 'manual') return MANUAL_MAX_CM;
+    return 99;
+}
+function clampCmValue(v, maxV) {
+    v = parseFloat(v);
+    if (!isFinite(v) || v<=0) v=0.5;
+    if (v>maxV) v=maxV;
+    if (v<0.5) v=0.5;
+    return Math.round(v*10)/10;
+}
+function setCropMode(mode) {
+    cropModalState._mode = mode;
+    ['Default','Preset','Manual'].forEach(function(m){
+        var b = document.getElementById('cropMode'+m);
+        if (b) b.classList.toggle('active', mode === m.toLowerCase());
+    });
+    var presetControls = document.getElementById('cropPresetControls');
+    var cmRow = document.getElementById('cropCmRow');
+    var defaultLabel = document.getElementById('cropDefaultLabel');
+    if (mode === 'default') {
+        presetControls.style.display='none'; cmRow.style.display='none'; defaultLabel.style.display='block';
+        highlightPreset(-1); applyDefaultSize();
+    } else if (mode === 'preset') {
+        presetControls.style.display='block'; cmRow.style.display='flex'; defaultLabel.style.display='none';
+        applyPreset(cropModalState._activePresetIdx < 0 ? 0 : cropModalState._activePresetIdx);
+    } else {
+        presetControls.style.display='none'; cmRow.style.display='flex'; defaultLabel.style.display='none';
+        highlightPreset(-1);
+        setFreeSize(cropModalState._cropWcm||5, cropModalState._cropHcm||5);
+    }
+}
+function applyDefaultSize() {
+    cropModalState._ratioLocked = false;
+    cropModalState._cropWcm = DEFAULT_CROP_W_CM; cropModalState._cropHcm = DEFAULT_CROP_H_CM;
+    updateSizeLabel(); fitCropBoxToFullImage();
+}
+function fitCropBoxToFullImage() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img) return;
+    var iL = parseInt(img.style.left) || 0, iT = parseInt(img.style.top) || 0;
+    var iW = img.offsetWidth, iH = img.offsetHeight;
+    if (!iW || !iH) return;
+    box.style.left = iL + 'px'; box.style.top = iT + 'px';
+    box.style.width = iW + 'px'; box.style.height = iH + 'px';
+}
+function applyPreset(i) {
+    var p = CROP_PRESETS[i];
+    var ratioValue = Math.max(p.w,p.h) / Math.min(p.w,p.h);
+    cropModalState._activePresetIdx = i;
+    var longSide = PRESET_DEFAULT_LONG_CM;
+    var shortSide = Math.round((longSide/ratioValue)*10)/10;
+    var w,h;
+    if (cropModalState._orientation === 'landscape') { w=longSide; h=shortSide; } else { h=longSide; w=shortSide; }
+    cropModalState._presetRatio = w/h;
+    setLockedSize(w,h); highlightPreset(i);
+}
+function setCropOrientation(orientation) {
+    cropModalState._orientation = orientation;
+    document.getElementById('cropOrientPotrait').classList.toggle('active', orientation==='portrait');
+    document.getElementById('cropOrientLandscape').classList.toggle('active', orientation==='landscape');
+    var w = cropModalState._cropWcm||1, h = cropModalState._cropHcm||1;
+    var longVal=Math.max(w,h), shortVal=Math.min(w,h), neww, newh;
+    if (orientation==='landscape') { neww=longVal; newh=shortVal; } else { newh=longVal; neww=shortVal; }
+    cropModalState._presetRatio = neww/newh;
+    setLockedSize(neww, newh);
+}
+function onCustomCmChange(field) {
+    if (cropModalState._mode === 'preset') { onPresetFieldChange(field); return; }
+    if (cropModalState._mode === 'manual') {
+        var w = clampCmValue(document.getElementById('cropWcm').value, getMaxForField('w'));
+        var h = clampCmValue(document.getElementById('cropHcm').value, getMaxForField('h'));
+        document.getElementById('cropWcm').value = w; document.getElementById('cropHcm').value = h;
+        setFreeSize(w, h, true);
+    }
+}
+function onPresetFieldChange(field) {
+    var ratio = cropModalState._presetRatio || 1;
+    var wEl=document.getElementById('cropWcm'), hEl=document.getElementById('cropHcm');
+    var w,h;
+    if (field==='w') { w=parseFloat(wEl.value)||0.5; h=w/ratio; } else { h=parseFloat(hEl.value)||0.5; w=h*ratio; }
+    var maxW=getMaxForField('w'), maxH=getMaxForField('h');
+    var scale = Math.min(1, maxW/w, maxH/h); w*=scale; h*=scale;
+    if (w<0.5) { w=0.5; h=w/ratio; }
+    if (h<0.5) { h=0.5; w=h*ratio; }
+    w=Math.round(w*10)/10; h=Math.round(h*10)/10;
+    wEl.value=w; hEl.value=h;
+    cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function setLockedSize(w,h,skipInputSync) {
+    w=clampCmValue(w,getMaxForField('w')); h=clampCmValue(h,getMaxForField('h'));
+    cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (!skipInputSync) { document.getElementById('cropWcm').value=w; document.getElementById('cropHcm').value=h; }
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function setFreeSize(w,h,skipInputSync) {
+    w=clampCmValue(w,getMaxForField('w')); h=clampCmValue(h,getMaxForField('h'));
+    cropModalState._ratioLocked=false; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (!skipInputSync) { document.getElementById('cropWcm').value=w; document.getElementById('cropHcm').value=h; }
+    updateSizeLabel();
+}
+function updateSizeLabel() {
+    var lbl = document.getElementById('cropSizeLabel'); if (!lbl) return;
+    var w=cropModalState._cropWcm, h=cropModalState._cropHcm;
+    lbl.textContent = cropModalState._mode==='preset'
+        ? 'Ukuran cetak: '+w+' cm × '+h+' cm (rasio terkunci)'
+        : 'Ukuran cetak: '+w+' cm × '+h+' cm (bebas, maks '+MANUAL_MAX_CM+'×'+MANUAL_MAX_CM+'cm)';
+}
+function clampNum(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+function reshapeCropBoxToRatio() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img || !cropModalState._cropWcm || !cropModalState._cropHcm) return;
+    var ratio = cropModalState._cropWcm / cropModalState._cropHcm;
+    var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    var bL=parseInt(box.style.left)||0, bT=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var cx=bL+bW/2, cy=bT+bH/2;
+    var newW=bW, newH=bW/ratio;
+    if (newH>bH*1.6||newH<bH*0.6) { newH=bH; newW=bH*ratio; }
+    newW = Math.min(newW, iW); newH = Math.min(newH, iH);
+    if (newW/newH > ratio) newW = newH*ratio; else newH = newW/ratio;
+    var nl = clampNum(cx-newW/2, iL, iL+iW-newW);
+    var nt = clampNum(cy-newH/2, iT, iT+iH-newH);
+    box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+}
+
+/* imgOpenCropper: SAMA SIGNATURE dengan versi lama shared.js supaya semua
+   pemanggil existing (mvHandleFiles/mvReEdit/inline onclick) tetap jalan
+   tanpa diubah. */
+function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
+    cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
+    var existing = (replaceIdx>=0 && imgArr[replaceIdx]) ? imgArr[replaceIdx] : null;
+    var preferredSize = (existing && existing.widthCm && existing.heightCm) ? {w:existing.widthCm, h:existing.heightCm} : null;
+    cropModalState._orientation = 'portrait';
+    cropModalState._activePresetIdx = -1;
+    if (preferredSize) {
+        document.getElementById('cropWcm').value = preferredSize.w;
+        document.getElementById('cropHcm').value = preferredSize.h;
+        if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) setCropMode('default');
+        else { setCropMode('manual'); setFreeSize(preferredSize.w, preferredSize.h); }
+    } else {
+        document.getElementById('cropWcm').value = 5; document.getElementById('cropHcm').value = 5;
+        setCropMode('default');
+    }
+    var img = document.getElementById('cropImg');
+    img.onload = function() {
+        var wrap = document.getElementById('cropWrap');
+        var ww = wrap.clientWidth, wh = wrap.clientHeight;
+        var scale = Math.min(ww/img.naturalWidth, wh/img.naturalHeight);
+        var dw = img.naturalWidth*scale, dh = img.naturalHeight*scale;
+        img.style.width = dw+'px'; img.style.height = dh+'px';
+        img.style.left = ((ww-dw)/2)+'px'; img.style.top = ((wh-dh)/2)+'px';
+        var box = document.getElementById('cropBox');
+        var bw = Math.min(dw,dh)*0.8, bh = bw;
+        box.style.width = bw+'px'; box.style.height = bh+'px';
+        box.style.left = ((ww-bw)/2)+'px'; box.style.top = ((wh-bh)/2)+'px';
+        if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+        else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+    };
+    img.src = dataUrl;
+    cropModalState.classList.add('show');
+}
+function closeCropModal() {
+    cropModalState.classList.remove('show');
+    cropModalState._pending = null;
+}
+function cropReset() {
+    var img = document.getElementById('cropImg');
+    var p = cropModalState._pending;
+    if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
+}
+function skipCrop() { closeCropModal(); }
+
+function cropAndSave() {
+    var img = document.getElementById('cropImg');
+    var box = document.getElementById('cropBox');
+    var p = cropModalState._pending;
+    if (!p) { alert('Target upload tidak ditemukan. Coba upload ulang.'); closeCropModal(); return; }
+
+    var iLeft=parseInt(img.style.left)||0, iTop=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    if (!img.naturalWidth || !img.naturalHeight || !iW || !iH) { alert('Gambar belum siap diproses. Coba tunggu sebentar lalu simpan lagi.'); return; }
+    var bLeft=parseInt(box.style.left)||0, bTop=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var scale = img.naturalWidth / iW;
+    var sx=Math.max(0,(bLeft-iLeft)*scale), sy=Math.max(0,(bTop-iTop)*scale);
+    var sw=Math.min(img.naturalWidth-sx, bW*scale), sh=Math.min(img.naturalHeight-sy, bH*scale);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+    var imgArr = p.imgArr;
+    var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
+    var caption = existing ? (existing.caption||'') : '';
+    var offsetX = existing ? (existing.offsetX||0) : 0;
+    if (p.replaceIdx >= 0) imgArr.splice(p.replaceIdx, 1);
+
+    var MAX = 1*1024*1024;
+    var dataUrl;
+    for (var q=0.9; q>=0.25; q-=0.1) {
+        dataUrl = canvas.toDataURL('image/jpeg', q);
+        var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
+        var newSize = dataUrl.length*0.75;
+        if (currentTotal+newSize <= MAX) break;
+        if (q<=0.25) {
+            var factor = Math.sqrt(MAX/(currentTotal+newSize));
+            var c2 = document.createElement('canvas');
+            c2.width = Math.max(50, Math.floor(canvas.width*factor));
+            c2.height = Math.max(50, Math.floor(canvas.height*factor));
+            c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+            dataUrl = c2.toDataURL('image/jpeg', 0.7);
+            break;
+        }
+    }
+
+    var entry = {name:(p.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl: dataUrl, type:'image/jpeg', caption: caption};
+    if (offsetX) entry.offsetX = offsetX;
+    if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
+    imgArr.push(entry);
+
+    closeCropModal();
+    if (p.modulePrefix === 'mv' && typeof mvRenderPreviews === 'function') mvRenderPreviews(p.side);
+}
+
+/* ── Geser posisi gambar (nudge) — generik untuk array manapun ── */
+function nudgeImageInArray(imgArr, imgIdx, delta, rerenderFn) {
+    var img = imgArr[imgIdx];
+    if (!img) return;
+    var next = Math.round(((img.offsetX||0)+delta)*10)/10;
+    var LIMIT = 5;
+    if (next>LIMIT) next=LIMIT; if (next<-LIMIT) next=-LIMIT;
+    img.offsetX = next;
+    if (typeof rerenderFn === 'function') rerenderFn();
+}
+
+/* ── Drag & resize kotak crop (mousedown+touchstart) ── */
+function initCropDrag() {
+    var box = document.getElementById('cropBox');
+    box.addEventListener('mousedown', onCropDragStart, false);
+    box.addEventListener('touchstart', onCropDragStart, {passive: false});
+}
+function onCropDragStart(e) {
+    e.preventDefault(); e.stopPropagation();
+    var box = document.getElementById('cropBox');
+    var t = e.touches ? e.touches[0] : e;
+    var startX=t.clientX, startY=t.clientY;
+    var startL=parseInt(box.style.left)||0, startT=parseInt(box.style.top)||0;
+    var startW=box.offsetWidth, startH=box.offsetHeight;
+    var rect=box.getBoundingClientRect();
+    var rx=t.clientX-rect.left, ry=t.clientY-rect.top, edge=22;
+    var edgeX = rx<edge?'l':rx>startW-edge?'r':'';
+    var edgeY = ry<edge?'t':ry>startH-edge?'b':'';
+    var mode = (edgeX||edgeY) ? edgeX+edgeY : 'move';
+    function onMove(ev) {
+        ev.preventDefault();
+        var mv = ev.touches?ev.touches[0]:ev;
+        var dx=mv.clientX-startX, dy=mv.clientY-startY;
+        var img=document.getElementById('cropImg');
+        var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+        var iW=img.offsetWidth, iH=img.offsetHeight;
+        if (mode==='move') {
+            box.style.left = clampNum(startL+dx, iL, iL+iW-startW)+'px';
+            box.style.top = clampNum(startT+dy, iT, iT+iH-startH)+'px';
+            return;
+        }
+        if (cropModalState._ratioLocked && cropModalState._cropWcm && cropModalState._cropHcm) {
+            var ratio = cropModalState._cropWcm / cropModalState._cropHcm;
+            var growRight=mode.indexOf('r')>=0, growLeftEdge=mode.indexOf('l')>=0;
+            var growBottom=mode.indexOf('b')>=0, growTopEdge=mode.indexOf('t')>=0;
+            var isCorner = mode.length===2;
+            var anchorX = growLeftEdge ? (startL+startW) : startL;
+            var anchorY = growTopEdge ? (startT+startH) : startT;
+            var dxSigned = growRight?dx:(growLeftEdge?-dx:0);
+            var dySigned = growBottom?dy:(growTopEdge?-dy:0);
+            var newW,newH;
+            if (isCorner) {
+                if (Math.abs(dxSigned)>=Math.abs(dySigned)) { newW=startW+dxSigned; newH=newW/ratio; }
+                else { newH=startH+dySigned; newW=newH*ratio; }
+            } else if (growLeftEdge||growRight) { newW=startW+dxSigned; newH=newW/ratio; }
+            else { newH=startH+dySigned; newW=newH*ratio; }
+            if (newW<40) { newW=40; newH=newW/ratio; }
+            if (newH<40) { newH=40; newW=newH*ratio; }
+            var maxW = growLeftEdge?(anchorX-iL):(iL+iW-anchorX);
+            var maxH = growTopEdge?(anchorY-iT):(iT+iH-anchorY);
+            var scaleDown = Math.min(1, maxW>0?maxW/newW:1, maxH>0?maxH/newH:1);
+            newW*=scaleDown; newH*=scaleDown;
+            var nl,nt;
+            if (isCorner||growLeftEdge||growRight) nl = growLeftEdge?(anchorX-newW):anchorX; else nl = startL+(startW-newW)/2;
+            if (isCorner||growTopEdge||growBottom) nt = growTopEdge?(anchorY-newH):anchorY; else nt = startT+(startH-newH)/2;
+            box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+        } else {
+            var growRight2=mode.indexOf('r')>=0, growLeftEdge2=mode.indexOf('l')>=0;
+            var growBottom2=mode.indexOf('b')>=0, growTopEdge2=mode.indexOf('t')>=0;
+            var nl2=startL, nt2=startT, nw2=startW, nh2=startH;
+            if (growRight2) nw2 = clampNum(startW+dx, 40, iL+iW-startL);
+            if (growLeftEdge2) { nw2 = clampNum(startW-dx, 40, startL+startW-iL); nl2 = startL+startW-nw2; }
+            if (growBottom2) nh2 = clampNum(startH+dy, 40, iT+iH-startT);
+            if (growTopEdge2) { nh2 = clampNum(startH-dy, 40, startT+startH-iT); nt2 = startT+startH-nh2; }
+            box.style.left=nl2+'px'; box.style.top=nt2+'px'; box.style.width=nw2+'px'; box.style.height=nh2+'px';
+        }
+    }
+    function onUp() {
+        document.removeEventListener('mousemove',onMove); document.removeEventListener('touchmove',onMove);
+        document.removeEventListener('mouseup',onUp); document.removeEventListener('touchend',onUp);
+    }
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
+}
+
+/* ── PDF PREVIEW (PDF.js canvas — aman untuk Chrome Android) ── */
+var pdfPreviewState = { doc: null, filename: '', blobUrl: '' };
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+function showPdfPreview(doc, filename) {
+    if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
+    pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
+    var modal = document.getElementById('pdfPreviewModal');
+    var container = document.getElementById('pdfPreviewFrame');
+    container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
+    modal.classList.add('show');
+    if (typeof pdfjsLib === 'undefined') {
+        container.innerHTML = '<div class="pdf-canvas-loading">Preview tidak tersedia di browser ini.<br>Silakan langsung download untuk melihat hasilnya.</div>';
+        return;
+    }
+    var arrayBuffer = doc.output('arraybuffer');
+    pdfjsLib.getDocument({data: arrayBuffer}).promise.then(function(pdf) {
+        container.innerHTML = '';
+        function renderPage(pageNum) {
+            pdf.getPage(pageNum).then(function(page) {
+                var viewport = page.getViewport({scale: 1.8});
+                var canvas = document.createElement('canvas');
+                canvas.width = viewport.width; canvas.height = viewport.height;
+                container.appendChild(canvas);
+                page.render({canvasContext: canvas.getContext('2d'), viewport: viewport}).promise.then(function() {
+                    if (pageNum < pdf.numPages) renderPage(pageNum+1);
+                });
+            });
+        }
+        renderPage(1);
+    }).catch(function(err) {
+        console.error(err);
+        container.innerHTML = '<div class="pdf-canvas-loading">Gagal menampilkan preview.<br>Silakan langsung download untuk melihat hasilnya.</div>';
+    });
+}
+function confirmDownloadPdf() { if (pdfPreviewState.doc) pdfPreviewState.doc.save(pdfPreviewState.filename); }
+function closePdfPreview() {
+    document.getElementById('pdfPreviewModal').classList.remove('show');
+    document.getElementById('pdfPreviewFrame').innerHTML = '';
+    if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
+    pdfPreviewState.doc = null;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MODUL MARK VIe — Alarm & Module Inspection Procedure
+   Sumber: MarkVIeAlarm_ModuleInspectionProcedure.docx (4 section, checklist
+   Yes/No + Remark per item, tanpa foto per-baris — evidence photo satu
+   galeri umum di bagian bawah halaman).
+   ══════════════════════════════════════════════════════════════════════════ */
+var MV_MODUL_NAME = 'Mark VIe Alarm & Module Inspection';
+
+var MV_SECTIONS = [
+  { no:'1', title:'Alarm Viewer (Alarm Monitoring)', items:[
+    {label:'Open the Alarm Viewer application from the HMI desktop shortcut.'},
+    {label:'Classify alarms into Operation or Diagnostic.'},
+    {label:'Check the timestamp, description, and priority of each alarm.'},
+    {label:'Identify the alarm by Right-click on the alarm to view additional details if available (Go to Definition in Logic).'},
+    {label:'Compare alarms with the event log for further troubleshooting if required.'},
+    {label:'Record all critical alarms and raise a Service Request (SR) if necessary.'},
+    {label:'Take alarm screenshots and archive them on D:\\PM Data\\..year..\\Alarm for review. Save the file by name following format: "Alarm XX-YY-ZZZZ.png" (XX = Date, YY = Month, ZZZZ = Year)', remark:'Drive D is not available.'}
+  ]},
+  { no:'2', title:'ToolboxST (Module Diagnostics)', items:[
+    {label:'Open the ToolboxST application from the HMI desktop shortcut.'},
+    {label:'Navigate to folder S7 (Unit 7) or S8 (Unit 8).'},
+    {label:'Click the Hardware tab to display the module list.'},
+    {label:'Check for any exclamation marks (!) in the System Tree as an indication of module warnings.', remark:'See details picture'},
+    {label:'Click the module with an (!) to view detailed diagnostics and fault location.', remark:'See details picture'},
+    {label:"Verify module status: 'OK', 'Fault', 'Missing', or 'Degraded'.", remark:'See details picture'},
+    {label:'Check module health indicators: power supply voltage and internal temperature.', remark:'PS4,5,6 OK Led Normal'},
+    {label:'Record any modules with warning/fault status, including name and slot.'},
+    {label:'Take screenshots of warning indicators and diagnostic status as evidence and save to D:\\PM Data\\..year..\\Alarm for review. Save the file by name following format: "Alarm XX-YY-ZZZZ.png" (XX = Date, YY = Month, ZZZZ = Year)', remark:'Drive D not available'},
+    {label:'Go to the Event Viewer menu to check the module status change log.'}
+  ]},
+  { no:'3', title:'Cabinet Mark VIe Physical Inspection', items:[
+    {label:'Ensure there are no blinking red LEDs or FAULT status active at the Mark VIe module (IO, PSU, CPU, Switch).'},
+    {label:'Inspect connectors and cables (not loose, damaged, or disconnected).'},
+    {label:'Verify proper grounding of I/O and power supply connections.'},
+    {label:'Record the module name, location and serial number of any abnormal or faulty module.'},
+    {label:'Take photos of the module if physical damage is observed.'},
+    {label:'Ensure all modules are firmly seated in the rack (not tilted or loose).'},
+    {label:'Check the condition of Mark Vie HMI in Electronic Room U7/8 and on the MCR HMI.'},
+    {label:'Check the exhaust fan condition in all Mark VIe cabinets.'}
+  ]},
+  { no:'4', title:'Reporting', items:[
+    {label:'Report all findings to the Supervisor.'},
+    {label:'Raise a Service Request (SR) if required.'}
+  ]}
+];
+
+/* Flatten semua item jadi 1 array dengan index global (dipakai untuk state & tabel) */
+var MV_ITEMS = [];
+MV_SECTIONS.forEach(function(sec){
+  sec.items.forEach(function(it){ MV_ITEMS.push({sectionNo:sec.no, sectionTitle:sec.title, label:it.label, defaultRemark:it.remark||''}); });
+});
+
+var mvState = MV_ITEMS.map(function(it){ return {yes:false, no:false, remark: it.defaultRemark}; });
+var mvEvidence = [];
+
+function safe(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function buildMvTable() {
+  var body = document.getElementById('mvTableBody');
+  var html = '';
+  var globalIdx = 0;
+  MV_SECTIONS.forEach(function(sec){
+    html += '<tr><td colspan="5" class="mv-section-title">'+sec.no+'. '+safe(sec.title)+'</td></tr>';
+    sec.items.forEach(function(it){
+      var i = globalIdx;
+      html += '<tr>'+
+        '<td style="text-align:center;color:var(--text3)">&nbsp;</td>'+
+        '<td>'+safe(it.label)+'</td>'+
+        '<td style="text-align:center"><input type="checkbox" class="mv-yn" id="mvYes_'+i+'" onchange="mvSetYN('+i+',\'yes\')"></td>'+
+        '<td style="text-align:center"><input type="checkbox" class="mv-yn" id="mvNo_'+i+'" onchange="mvSetYN('+i+',\'no\')"></td>'+
+        '<td><input type="text" class="mv-remark" id="mvRemark_'+i+'" value="'+safe(mvState[i].remark)+'" oninput="mvState['+i+'].remark=this.value"></td>'+
+      '</tr>';
+      globalIdx++;
+    });
+  });
+  body.innerHTML = html;
+  // Sinkronkan checkbox dengan state (untuk kasus restore data / rebuild)
+  mvState.forEach(function(st, i){
+    var yEl = document.getElementById('mvYes_'+i), nEl = document.getElementById('mvNo_'+i);
+    if (yEl) yEl.checked = !!st.yes;
+    if (nEl) nEl.checked = !!st.no;
+  });
+}
+
+function mvSetYN(i, which) {
+  var yEl = document.getElementById('mvYes_'+i), nEl = document.getElementById('mvNo_'+i);
+  if (which === 'yes') {
+    mvState[i].yes = yEl.checked;
+    if (yEl.checked) { mvState[i].no = false; nEl.checked = false; }
+  } else {
+    mvState[i].no = nEl.checked;
+    if (nEl.checked) { mvState[i].yes = false; yEl.checked = false; }
+  }
+}
+
+/* ── EVIDENCE PHOTO (galeri umum, bukan per-baris/per-channel) ── */
+function buildMvEvidenceSlot() {
+  var uid = 'mv_ev';
+  document.getElementById('mvEvidenceSlot').innerHTML =
+    '<div id="'+uid+'_drop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:#fff;" '+
+      'onclick="mvToggleSource(\''+uid+'_src\')" '+
+      'ondragover="event.preventDefault()" '+
+      'ondrop="mvHandleDrop(event)">' +
+      '<input type="file" id="'+uid+'_input" accept="image/*,.heic,.heif" multiple style="display:none" onchange="mvHandleFiles(this.files)">'+
+      '<div style="font-size:24px;margin-bottom:4px">&#128247;</div>'+
+      '<div style="font-size:12px;color:var(--text3)">Klik pilih atau drag foto evidence</div>'+
+      '<div id="'+uid+'_src" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">'+
+        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'storage\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Penyimpanan</button>'+
+        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'camera\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Kamera</button>'+
+      '</div>'+
+    '</div>'+
+    '<div id="'+uid+'_preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:8px;overflow:visible;min-height:0"></div>'+
+    '<div id="'+uid+'_size" style="font-size:10px;color:var(--text3);margin-top:2px;font-family:\'Courier New\',monospace">0 KB / 1024 KB</div>';
+}
+
+function mvToggleSource(srcId) {
+  document.querySelectorAll('[id$="_src"]').forEach(function(el){ if (el.id !== srcId) el.style.display = 'none'; });
+  var el = document.getElementById(srcId);
+  if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
+function mvHandleDrop(e) { e.preventDefault(); mvHandleFiles(e.dataTransfer.files); }
+
+function mvHandleFiles(files) {
+  Array.from(files).forEach(function(file) {
+    if (!isImageFile(file)) {
+      var r = new FileReader();
+      r.onload = function(ev){ mvEvidence.push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''}); mvRenderPreviews(); };
+      r.readAsDataURL(file); return;
+    }
+    fileToJpegDataUrl(file, function(dataUrl){
+      if (!dataUrl) return;
+      var name = file.name.replace(/\.[^.]+$/,'.jpg');
+      imgOpenCropper(dataUrl, name, 'image/jpeg', mvEvidence, 'evidence', 'mv', -1);
+    });
+  });
+}
+
+function mvReEdit(idx) {
+  var img = mvEvidence[idx];
+  if (!img) return;
+  imgOpenCropper(img.dataUrl, img.name, img.type, mvEvidence, 'evidence', 'mv', idx);
+}
+
+function mvRenderPreviews() {
+  mvSyncCaptions();
+  var container = document.getElementById('mv_ev_preview');
+  if (!container) return;
+  container.innerHTML = '';
+  var arr = mvEvidence;
+  if (!arr.length) { var sizeEl0=document.getElementById('mv_ev_size'); if (sizeEl0) sizeEl0.textContent='0 KB / 1024 KB'; return; }
+  arr.forEach(function(img, idx) {
+    if (!img||!img.name) return;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px;vertical-align:top';
+    var isImg = IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
+    var fallback = '<span style=&quot;font-size:10px;color:#c0392b;padding:6px;text-align:center;line-height:1.35&quot;>Preview gagal<br>upload ulang</span>';
+    var thumbStyle = 'width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center';
+    var thumb = isImg
+      ? '<div style="'+thumbStyle+'"><img src="'+safe(img.dataUrl)+'" alt="" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="imgOpenCropper(mvEvidence['+idx+'].dataUrl,mvEvidence['+idx+'].name,mvEvidence['+idx+'].type,mvEvidence,\'evidence\',\'mv\','+idx+')" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\''+fallback+'\'" title="Klik untuk crop ulang"></div>'
+      : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
+    var cropBtn = isImg
+      ? '<button onclick="imgOpenCropper(mvEvidence['+idx+'].dataUrl,mvEvidence['+idx+'].name,mvEvidence['+idx+'].type,mvEvidence,\'evidence\',\'mv\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
+      : '';
+    var nudgeHtml = isImg ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
+      '<button type="button" onclick="nudgeImageInArray(mvEvidence,'+idx+',-0.5,function(){mvRenderPreviews()})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>' +
+      '<span>'+(img.offsetX||0)+'cm</span>' +
+      '<button type="button" onclick="nudgeImageInArray(mvEvidence,'+idx+',0.5,function(){mvRenderPreviews()})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>' +
+      '</div></div>') : '';
+    wrap.innerHTML = thumb + cropBtn
+      + '<button onclick="mvRemoveImg('+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
+      + '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'
+      + nudgeHtml
+      + '<input id="mv_cap_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="mvEvidence['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+    container.appendChild(wrap);
+  });
+  var totalKb = arr.reduce(function(a,img){return a+(img.dataUrl?Math.round(img.dataUrl.length*0.75/1024):0);},0);
+  var sizeEl = document.getElementById('mv_ev_size');
+  if (sizeEl) sizeEl.textContent = totalKb+' KB / 1024 KB';
+}
+
+function mvSyncCaptions() {
+  mvEvidence.forEach(function(img, idx){
+    var inp = document.getElementById('mv_cap_'+idx);
+    if (inp) img.caption = inp.value || '';
+  });
+}
+
+function mvRemoveImg(idx) {
+  mvEvidence.splice(idx,1);
+  mvRenderPreviews();
+}
+
+/* ─── BACKGROUND TEMPLATE PDF (sama seperti modul lain — DRAFT PM KOSONG.jpg) ─── */
+var mvBgImg = null, mvBgReady = false, mvBgCallbacks = [];
+function initMvBackground() {
+  if (mvBgImg) return;
+  mvBgImg = new Image();
+  mvBgImg.onload = function() { mvBgReady = true; var cbs = mvBgCallbacks.splice(0); for (var i=0;i<cbs.length;i++) cbs[i](); };
+  mvBgImg.onerror = function() { mvBgReady = false; var cbs = mvBgCallbacks.splice(0); for (var i=0;i<cbs.length;i++) cbs[i](); };
+  mvBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+function ensureMvBackground(callback) {
+  if (!mvBgImg) { mvBgCallbacks.push(callback); initMvBackground(); return; }
+  if (mvBgReady) { callback(); return; }
+  if (mvBgImg.complete && mvBgImg.naturalWidth > 0) { mvBgReady = true; callback(); return; }
+  mvBgCallbacks.push(callback);
+}
+function drawMvBg(doc, pw, ph) {
+  if (!mvBgImg || !mvBgImg.naturalWidth) return;
+  try { doc.addImage(mvBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+function iePhotoDrawSize(entry, maxW, maxH) {
+  var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
+  var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+  var w = wCm * 10, h = hCm * 10;
+  if (w > maxW) { h = h * (maxW / w); w = maxW; }
+  if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
+  return { w: w, h: h };
+}
+
+function mvDrawCheckbox(doc, x, y, w, h, checked) {
+  var size=3.5, cx=x+w/2, cy=y+h/2;
+  doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+  doc.rect(cx-size/2, cy-size/2, size, size, 'S');
+  if (checked) {
+    doc.setDrawColor(26,107,58); doc.setLineWidth(0.5);
+    doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.5);
+    doc.line(cx-size/2+size*0.38, cy+size/2-0.5, cx+size/2-0.3, cy-size/2+0.5);
+  }
+}
+
+function downloadPdf(){
+  mvSyncCaptions();
+  var totalImgs = mvEvidence.length;
+  var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
+  if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
+  ensureMvBackground(function() {
+    try {
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+      var pw = doc.internal.pageSize.getWidth();
+      var ph = doc.internal.pageSize.getHeight();
+      var marginX = 20, marginTop = 20, marginBottom = 20;
+      var contentW = pw - (marginX * 2);
+
+      var now = new Date();
+      var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      var dd = String(now.getDate()).padStart(2,'0');
+      var yy = now.getFullYear();
+      var nowStr = dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
+      function pdfSafe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
+
+      var y = marginTop;
+      function drawBg(doc, pw, ph) { drawMvBg(doc, pw, ph); }
+      function checkPage(h) { if (y + h > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; } return y; }
+      function secHeader(title) {
+        checkPage(16);
+        doc.setFillColor(44, 62, 48);
+        doc.rect(marginX, y, contentW, 8, 'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(210, 230, 215);
+        doc.text(title, pw/2, y+5.5, {align:'center'});
+        y += 11;
+      }
+
+      // ─────── BACA FORM ───────
+      var rawDate = document.getElementById('mvTanggal').value;
+      var tanggalStr = '—';
+      if (rawDate) { var parts=rawDate.split('-'); tanggalStr=parts[2]+' '+BULAN[parseInt(parts[1])-1]+' '+parts[0]; }
+      var workorder = document.getElementById('mvWorkorder').value || '—';
+      var pic = document.getElementById('mvPIC').value || '—';
+      var assetTag = document.getElementById('mvAssetTag').value || '—';
+      var assetDesc = document.getElementById('mvAssetDesc').value || '—';
+
+      drawBg(doc, pw, ph);
+      secHeader('MARK VIe ALARM & MODULE INSPECTION PROCEDURE');
+
+      // ═══ INFORMASI PEKERJAAN ═══
+      var padIn = 3, labelColW = 40;
+      var valueX = marginX + labelColW + padIn;
+      var valueW = contentW - labelColW - padIn*2;
+      var infoFields = [
+        ['Work Order', pdfSafe(workorder)],
+        ['Tanggal', pdfSafe(tanggalStr)],
+        ['PIC / Inspector', pdfSafe(pic)],
+        ['Asset Tag', pdfSafe(assetTag)],
+        ['Asset Description', pdfSafe(assetDesc)],
+        ['Dicetak', pdfSafe(nowStr)]
+      ];
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+      var infoRows = infoFields.map(function(f){
+        var lines = doc.splitTextToSize(String(f[1]||''), valueW);
+        var h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5);
+        return {label:f[0], lines:lines, h:h};
+      });
+      var totalH = infoRows.reduce(function(s,r){ return s + r.h; }, 0);
+      checkPage(totalH + 4);
+      doc.setFillColor(255, 251, 214);
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.35);
+      doc.rect(marginX, y, contentW, totalH, 'FD');
+      doc.line(marginX+labelColW, y, marginX+labelColW, y+totalH);
+      var rowY = y;
+      doc.setLineWidth(0.25); doc.setDrawColor(0, 0, 0);
+      infoRows.forEach(function(r, idx){
+        if (idx > 0) doc.line(marginX, rowY, marginX+contentW, rowY);
+        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
+        doc.text(r.label, marginX+padIn, rowY+4.6);
+        doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
+        doc.text(r.lines, valueX, rowY+4.6);
+        rowY += r.h;
+      });
+      y += totalH + 8;
+
+      // ═══ TABEL CHECKLIST (4 section, Yes/No checkbox + Remark) ═══
+      var body = [];
+      var sectionHeaderRows = [];
+      MV_SECTIONS.forEach(function(sec){
+        sectionHeaderRows.push(body.length);
+        body.push([sec.no+'. '+sec.title, '', '', '']);
+        sec.items.forEach(function(it){
+          var gi = MV_ITEMS.findIndex(function(x){ return x.sectionNo===sec.no && x.label===it.label; });
+          var st = mvState[gi] || {yes:false,no:false,remark:''};
+          body.push([pdfSafe(it.label), st.yes?'__CHK__':'__BOX__', st.no?'__CHK__':'__BOX__', pdfSafe(st.remark||'')]);
+        });
+      });
+      var CHK_COLS_MV = {1:true, 2:true};
+      doc.autoTable({
+        startY: y,
+        head: [['Description','Yes','No','Remark']],
+        body: body,
+        theme: 'grid',
+        margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
+        headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
+        bodyStyles: {fontSize:7.5, textColor:[20,30,25], font:'helvetica', cellPadding:2},
+        columnStyles: {0:{cellWidth:106}, 1:{cellWidth:16,halign:'center'}, 2:{cellWidth:16,halign:'center'}, 3:{cellWidth:contentW-106-16-16}},
+        alternateRowStyles: {fillColor:[246,249,247]},
+        didParseCell: function(data){
+          if (sectionHeaderRows.indexOf(data.row.index) !== -1 && data.section === 'body') {
+            data.cell.colSpan = 4;
+            data.cell.styles.fillColor = [221,227,222];
+            data.cell.styles.textColor = [30,50,40];
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fontSize = 8.5;
+            data.cell.styles.halign = 'left';
+          }
+        },
+        didDrawCell: function(data){
+          if (data.section !== 'body') return;
+          if (sectionHeaderRows.indexOf(data.row.index) !== -1) return;
+          if (!CHK_COLS_MV[data.column.index]) return;
+          var val = data.cell.raw;
+          if (val !== '__CHK__' && val !== '__BOX__') return;
+          var bg = (data.row.index%2===0)?[255,255,255]:[246,249,247];
+          doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(data.cell.x+0.2,data.cell.y+0.2,data.cell.width-0.4,data.cell.height-0.4,'F');
+          mvDrawCheckbox(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val==='__CHK__');
+        },
+        willDrawPage: function(data){ if (data.pageNumber>1) drawBg(doc,pw,ph); }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+
+      // ═══ EVIDENCE PHOTO (galeri umum, 2 foto per baris) ═══
+      var evImgs = mvEvidence.filter(function(f){ return f.dataUrl && f.type && f.type.indexOf('image/')===0; });
+      if (evImgs.length) {
+        var evGap = 6, evColW = (contentW - evGap) / 2, maxPhotoH = 90;
+        var firstDim = iePhotoDrawSize(evImgs[0], evColW, maxPhotoH);
+        var firstBlockH = 16 + 5 + firstDim.h + 9;
+        if (firstBlockH <= (ph - marginTop - marginBottom) && (y + firstBlockH > ph - marginBottom)) {
+          doc.addPage(); drawBg(doc,pw,ph); y = marginTop;
+        }
+        secHeader('EVIDENCE PHOTO');
+        for (var ei=0; ei<evImgs.length; ei+=2) {
+          var e1 = evImgs[ei], e2 = evImgs[ei+1] || null;
+          var d1 = iePhotoDrawSize(e1, evColW, maxPhotoH);
+          var d2 = e2 ? iePhotoDrawSize(e2, evColW, maxPhotoH) : null;
+          var rowH = Math.max(d1.h, d2 ? d2.h : 0, 20);
+          if (y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+          var x1 = Math.max(marginX, Math.min(marginX+2 + ((e1.offsetX||0)*10), pw - marginX - d1.w));
+          try { doc.addImage(e1.dataUrl, 'JPEG', x1, y, d1.w, d1.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x1,y,d1.w,d1.h,'S'); }
+          if (e1.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(e1.caption), d1.w), x1, y+d1.h+2.5); }
+          if (e2) {
+            var x2 = Math.max(marginX, Math.min(marginX + evColW + evGap + ((e2.offsetX||0)*10), pw - marginX - d2.w));
+            try { doc.addImage(e2.dataUrl, 'JPEG', x2, y, d2.w, d2.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x2,y,d2.w,d2.h,'S'); }
+            if (e2.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(e2.caption), d2.w), x2, y+d2.h+2.5); }
+          }
+          y += rowH + 9;
+        }
+      }
+
+      if (typeof hideImgLoading === 'function') hideImgLoading();
+      showPdfPreview(doc, 'MarkVIe_Inspection_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
+    } catch(e) {
+      if (typeof hideImgLoading === 'function') hideImgLoading();
+      alert('Gagal membuat PDF: ' + (e.message||e));
+      console.error(e);
+    }
+  });
+}
+
+/* ── dbCollectData — dipanggil shared.js saat Simpan / autosave ── */
+function dbCollectData(modul) {
+  if (modul !== MV_MODUL_NAME) return null;
+  var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  var rawDate = document.getElementById('mvTanggal').value;
+  var tanggalStr = '—';
+  if (rawDate) { var parts=rawDate.split('-'); tanggalStr=parts[2]+' '+BULAN[parseInt(parts[1])-1]+' '+parts[0]; }
+  var header = {
+    tanggal: tanggalStr,
+    workorder: document.getElementById('mvWorkorder').value || '—',
+    pic: document.getElementById('mvPIC').value || '—',
+    assetTag: document.getElementById('mvAssetTag').value || '—',
+    assetDesc: document.getElementById('mvAssetDesc').value || '—'
+  };
+  mvSyncCaptions();
+  var ki = function(img){
+    var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};
+    if (img.offsetX) o.offsetX = img.offsetX;
+    if (img.widthCm) o.widthCm = img.widthCm;
+    if (img.heightCm) o.heightCm = img.heightCm;
+    return o;
+  };
+  var items = mvState.map(function(st){ return {yes:!!st.yes, no:!!st.no, remark:st.remark||''}; });
+  return {
+    modul: MV_MODUL_NAME,
+    tanggal: header.tanggal,
+    pic: header.pic,
+    work_order: (header.workorder && header.workorder !== '—') ? header.workorder : '',
+    unit: 'Unit 7',
+    data: { header: header, items: items, evidence: mvEvidence.map(ki) }
+  };
+}
+
+window.CURRENT_MODUL = MV_MODUL_NAME; // HARUS sama persis dengan check di dbCollectData(modul)
+
+function applyRecordToForm(rec, editingId) {
+  var data = rec.data || {};
+  var header = data.header || {};
+  if (editingId) window._editingId = editingId;
+
+  var tRaw = rec.tanggal || header.tanggal || '';
+  var BULAN2 = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  if (tRaw && tRaw.length === 10 && tRaw.indexOf('-') > 0) {
+    var el = document.getElementById('mvTanggal'); if (el) el.value = tRaw;
+  } else if (tRaw && tRaw !== '—') {
+    var parts = tRaw.split(' ');
+    if (parts.length === 3) {
+      var dd = parts[0].padStart(2,'0');
+      var mm = String(BULAN2.indexOf(parts[1]) + 1).padStart(2,'0');
+      var yyyy = parts[2];
+      var el2 = document.getElementById('mvTanggal'); if (el2) el2.value = yyyy+'-'+mm+'-'+dd;
+    }
+  }
+  var woEl = document.getElementById('mvWorkorder'); var woVal = rec.work_order || header.workorder || '';
+  if (woEl && woVal && woVal !== '—') woEl.value = woVal;
+  var pcEl = document.getElementById('mvPIC'); var picVal = rec.pic || header.pic || '';
+  if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
+  var atEl = document.getElementById('mvAssetTag'); if (atEl && header.assetTag && header.assetTag !== '—') atEl.value = header.assetTag;
+  var adEl = document.getElementById('mvAssetDesc'); if (adEl && header.assetDesc && header.assetDesc !== '—') adEl.value = header.assetDesc;
+
+  if (data.items && data.items.length === mvState.length) {
+    data.items.forEach(function(it, i){ mvState[i] = {yes:!!it.yes, no:!!it.no, remark:it.remark||''}; });
+    buildMvTable();
+  }
+  if (data.evidence) {
+    mvEvidence = (data.evidence||[]).map(function(img){
+      var o = {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};
+      if (img.offsetX) o.offsetX = img.offsetX;
+      if (img.widthCm) o.widthCm = img.widthCm;
+      if (img.heightCm) o.heightCm = img.heightCm;
+      return o;
+    });
+    mvRenderPreviews();
+  }
+}
+
+// Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
+function restoreDraftData(rec, editingId) {
+  if (!rec) return;
+  setTimeout(function(){
+    applyRecordToForm(rec, editingId);
+    if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
+  }, 400);
+}
+
+function resetAll() {
+  if (!confirm('Reset semua isian form? Data yang belum disimpan akan hilang.')) return;
+  document.getElementById('mvWorkorder').value = '';
+  document.getElementById('mvTanggal').value = '';
+  document.getElementById('mvPIC').value = '';
+  document.getElementById('mvAssetTag').value = '7TG-CAB-MKVI';
+  document.getElementById('mvAssetDesc').value = 'Main Turbine Control Cabinet Unit 7 Mark VIe';
+  MV_ITEMS.forEach(function(it, i){ mvState[i] = {yes:false, no:false, remark: it.defaultRemark}; });
+  buildMvTable();
+  mvEvidence = [];
+  mvRenderPreviews();
+  window._editingId = null;
+  if (typeof autosaveClear === 'function') autosaveClear();
+  (function(){
+    var today=new Date();
+    var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    var el=document.getElementById('mvTanggal'); if(el)el.value=todayStr;
+  })();
+}
+
+/* ── INIT ── */
+setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
+buildMvTable();
+buildMvEvidenceSlot();
+initMvBackground();
+renderPresetButtons();
+initCropDrag();
+(function(){
+  var today=new Date();
+  var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var el=document.getElementById('mvTanggal'); if(el&&!el.value)el.value=todayStr;
+})();
+
+/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var id=params.get('id');
+  var doPrint=params.get('print')==='1';
+  if(!id) return;
+  dbLoad(id, function(rec){
+    setTimeout(function(){
+      applyRecordToForm(rec, id);
+      dbShowToast('Data dimuat dari riwayat ✓');
+      if(doPrint)setTimeout(function(){downloadPdf();},500);
+    },400);
+  });
+})();
+</script>
+
+<!-- PDF PREVIEW MODAL -->
+<div id="pdfPreviewModal" class="pdf-preview-modal">
+    <div class="pdf-preview-dialog">
+        <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closePdfPreview()" aria-label="Tutup">✕</button>
+            <div class="pdf-preview-title">📄 Preview Hasil PDF</div>
+            <div class="pdf-preview-hint">Ini tampilan asli file PDF-nya, cek dulu sebelum download</div>
+        </div>
+        <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
+        <div class="pdf-preview-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

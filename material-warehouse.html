@@ -2151,6 +2151,7 @@ function onEditSvgPointerDown(e){
     }
     if (tool === 'select') { if (e.target.id === 'editSvgOverlay') deselectShape(); return; }
     if (tool === 'text') {
+        if (e.cancelable) e.preventDefault();
         var p = getSvgPoint(e);
         var val = prompt('Masukkan teks:', '');
         ieForceHideKeyboard();
@@ -2275,6 +2276,7 @@ function ieRotatePoint(px, py, cx, cy, deg){
 }
 function renderAllShapes(){
     var svg = document.getElementById('editSvgOverlay');
+    if (!svg) return;
     svg.innerHTML = '';
     ieBuildDefs(svg);
     imgEditState.shapes.forEach(function(shape){

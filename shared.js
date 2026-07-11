@@ -215,6 +215,7 @@ function dbList(modul, callback) {
 function normalizeModul(name) {
   if (!name) return '';
   var n = name.toUpperCase();
+  if (n.indexOf('MARK VIE')>=0 || n.indexOf('MARK-VIE')>=0 || (n.indexOf('ALARM')>=0 && n.indexOf('MODULE')>=0)) return 'MARK_VIE';
   if (n.indexOf('GENERATOR')>=0 || n.indexOf('STATOR')>=0) return 'GENERATOR_STATOR_LEAK';
   if (n.indexOf('FEGT')>=0 || n.indexOf('LEAK')>=0) return 'FEGT';
   if (n.indexOf('SO2')>=0 || n.indexOf('SCRUBBER')>=0) return 'SO2';

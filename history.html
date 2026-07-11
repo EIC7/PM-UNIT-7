@@ -45,6 +45,7 @@
       <button class="btn btn-outline" onclick="loadHistory('PM HG Analyzer')" style="font-size:12px;padding:6px 14px;flex:none">PM HG Analyzer</button>
       <button class="btn btn-outline" onclick="loadHistory('O2')" style="font-size:12px;padding:6px 14px;flex:none">O2 Report</button>
       <button class="btn btn-outline" onclick="loadHistory('GENERATOR_STATOR_LEAK')" style="font-size:12px;padding:6px 14px;flex:none">Gen Stator Leak</button>
+      <button class="btn btn-outline" onclick="loadHistory('Mark VIe Alarm & Module Inspection')" style="font-size:12px;padding:6px 14px;flex:none">Mark VIe</button>
     </div>
     <div id="historyList" style="overflow-x:auto">
       <div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Memuat...</div>
@@ -72,6 +73,7 @@ function modulToUrl(modul, id) {
   if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id;
   if (norm === 'O2')                 return 'form_o2_report.html?id=' + id;
   if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
+  if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
   return 'index.html';
 }
 
@@ -92,6 +94,7 @@ function modulToPrintUrl(modul, id) {
   if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id + '&print=1';
   if (norm === 'O2')                 return 'form_o2_report.html?id=' + id + '&print=1';
   if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id + '&print=1';
+  if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id + '&print=1';
   return 'index.html';
 }
 
