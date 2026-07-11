@@ -711,15 +711,31 @@ function startHandleDrag(onDragMove){
     ieAddDocListeners(onMove, onUp);
 }
 
+/* Radius area sentuh (bukan visual) — minimal setara ~22px layar supaya
+   enak dipencet jari, meski titik hijaunya sendiri sengaja dibikin kecil
+   biar presisi. Dikonversi ke koordinat "natural" gambar sesuai skala
+   tampilan saat ini (baseScale x zoom). */
+function ieHandleHitR(){
+    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
+    var minTouchPx = 22;
+    return Math.max(ieHandleR(), minTouchPx / scale);
+}
 function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
     var r = ieHandleR();
     var c = document.createElementNS(NS_SVG, 'circle');
     c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
     c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1, r*0.18));
-    c.style.cursor = cursor;
-    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
-    c.addEventListener('pointerdown', start);
+    c.style.cursor = cursor; c.style.pointerEvents = 'none';
     svg.appendChild(c);
+    // Hit-area transparan yang lebih besar, ditumpuk di atas titik visual,
+    // supaya gampang dipencet di HP tanpa mengubah ukuran titik yang terlihat.
+    var hit = document.createElementNS(NS_SVG, 'circle');
+    hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', ieHandleHitR());
+    hit.setAttribute('fill', 'transparent');
+    hit.style.cursor = cursor; hit.style.pointerEvents = 'all';
+    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
+    hit.addEventListener('pointerdown', start);
+    svg.appendChild(hit);
 }
 
 /* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */

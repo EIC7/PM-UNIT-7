@@ -700,6 +700,8 @@ function closePdfPreview() {
 
 **Bug penting yang sudah di-fix — soft keyboard nyangkut:** teks dibuat/diedit lewat `window.prompt()` (dialog native). Di Android Chrome, setelah `prompt()` ditutup, soft keyboard sering **tidak ikut turun** karena tidak ada `<input>` asli di halaman yang kehilangan fokus (fokus sebelumnya ada di kotak dialog native, bukan elemen DOM) — dialognya sendiri berfungsi normal (teks berhasil masuk), cuma keyboard-nya nyangkut secara visual dan kadang tap di tempat lain pun tidak menutupnya. **Fix:** panggil `ieForceHideKeyboard()` tepat setelah setiap `prompt()` selesai — fungsi ini fokus-lalu-blur sebuah `<input readonly>` tersembunyi supaya Android mendapat sinyal blur yang nyata dan menutup IME (dibuat readonly saat fokus supaya tidak malah memunculkan keyboard baru). **Pola ini wajib dipakai di mana pun fitur ini pakai `prompt()`** — kalau nanti prompt() diganti custom input di halaman, fix ini tidak diperlukan lagi karena sudah ada `<input>` asli untuk di-blur.
 
+**Bug penting yang sudah di-fix — titik resize (handle) susah dipencet di HP:** `ieHandleR()` sengaja dibuat kecil (~9px) supaya titik hijau terlihat presisi dan tidak menutupi gambar, tapi ini bikin titiknya susah kena jari di layar HP, terutama untuk resize kotak teks. **Fix:** `ieMakeHandle()` sekarang menggambar 2 lingkaran SVG bertumpuk di titik yang sama — lingkaran visual kecil (`pointer-events:none`, cuma buat tampilan) dan lingkaran hit-area transparan yang lebih besar di atasnya (`pointer-events:all`, radius minimal ~22px layar via `ieHandleHitR()`, dikonversi ke koordinat natural gambar sesuai `baseScale × zoom` biar konsisten walau lagi di-zoom). Listener `pointerdown` dipasang di lingkaran hit-area, bukan lingkaran visual. **Jangan pasang listener langsung di lingkaran visual `c`** — itu yang bikin bug ini muncul lagi.
+
 ```css
 /* ── EDIT GAMBAR (Insert Shape) ── */
 .editimg-dialog{width:98vw;height:96vh;max-width:1600px;max-height:1600px;display:flex;flex-direction:column}
@@ -1075,15 +1077,31 @@ function startHandleDrag(onDragMove){
     ieAddDocListeners(onMove, onUp);
 }
 
+/* Radius area sentuh (bukan visual) — minimal setara ~22px layar supaya
+   enak dipencet jari, meski titik hijaunya sendiri sengaja dibikin kecil
+   biar presisi. Dikonversi ke koordinat "natural" gambar sesuai skala
+   tampilan saat ini (baseScale x zoom). */
+function ieHandleHitR(){
+    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
+    var minTouchPx = 22;
+    return Math.max(ieHandleR(), minTouchPx / scale);
+}
 function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
     var r = ieHandleR();
     var c = document.createElementNS(NS_SVG, 'circle');
     c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
     c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1, r*0.18));
-    c.style.cursor = cursor;
-    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
-    c.addEventListener('pointerdown', start);
+    c.style.cursor = cursor; c.style.pointerEvents = 'none';
     svg.appendChild(c);
+    // Hit-area transparan yang lebih besar, ditumpuk di atas titik visual,
+    // supaya gampang dipencet di HP tanpa mengubah ukuran titik yang terlihat.
+    var hit = document.createElementNS(NS_SVG, 'circle');
+    hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', ieHandleHitR());
+    hit.setAttribute('fill', 'transparent');
+    hit.style.cursor = cursor; hit.style.pointerEvents = 'all';
+    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
+    hit.addEventListener('pointerdown', start);
+    svg.appendChild(hit);
 }
 
 /* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */
