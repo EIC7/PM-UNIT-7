@@ -1523,8 +1523,7 @@ function initGenBackground() {
 }
 function ensureGenBackground(callback) {
   if (!genBgImg) { genBgCallbacks.push(callback); initGenBackground(); return; }
-  if (genBgReady) { callback(); return; }
-  if (genBgImg.complete && genBgImg.naturalWidth > 0) { genBgReady = true; callback(); return; }
+  if (genBgImg.complete) { callback(); return; } // sudah selesai dicoba (berhasil ATAU gagal) — jangan nunggu lagi
   genBgCallbacks.push(callback);
 }
 function drawGenBackground(doc, pw, ph) {
