@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator Stator Leak Monitoring — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── Fitur reusable: geser posisi foto ── */
+.img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
+.img-nudge-label{font-size:8px;color:#8a8a8a;text-align:center;line-height:1.2;max-width:100px}
+.img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
+.img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ccc;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
+.img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
+/* ── CROP MODAL (3-mode) ── */
+#cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+#cropModal.show{display:flex}
+.crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
+.crop-header-hint{font-size:10px;color:#8aab96}
+#cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+#cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
+#cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
+.crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
+.crop-handle.nw{top:-6px;left:-6px;cursor:nw-resize} .crop-handle.ne{top:-6px;right:-6px;cursor:ne-resize}
+.crop-handle.sw{bottom:-6px;left:-6px;cursor:sw-resize} .crop-handle.se{bottom:-6px;right:-6px;cursor:se-resize}
+.crop-handle.n{width:10px;height:10px;top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize}
+.crop-handle.s{width:10px;height:10px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize}
+.crop-handle.w{width:10px;height:10px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize}
+.crop-handle.e{width:10px;height:10px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize}
+.crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30}
+.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
+.crop-btn-save{background:#2ecc71;color:#fff}
+.crop-size-panel{border-top:1px solid #2a3a30;padding-top:8px;margin-top:2px}
+.crop-size-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.crop-preset-btn,.crop-orient-btn,.crop-mode-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
+.crop-preset-btn.active,.crop-orient-btn.active,.crop-mode-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+.crop-mode-btn{padding:6px 12px;font-size:12px}
+.crop-cm-field{display:flex;flex-direction:column;gap:2px}
+.crop-cm-field label{font-size:9px;color:#8aab96;font-weight:600}
+.crop-cm-field input{width:64px;padding:5px 6px;font-size:12px;border-radius:5px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8}
+.crop-size-label{font-size:11px;color:#7fd9a4;font-weight:600;margin-left:4px}
+.crop-default-label{font-size:12px;color:#7fd9a4;font-weight:600;padding:4px 2px}
+/* ── EDIT GAMBAR (Insert Shape) ── */
+.editimg-dialog{width:98vw;height:96vh;max-width:1600px;max-height:1600px;display:flex;flex-direction:column}
+#editImgOuter{position:relative;flex:1 1 auto;min-height:0;background:#0c100d;overflow:auto;touch-action:none;display:flex;align-items:center;justify-content:center}
+#editImgWrap{position:relative;flex:none;touch-action:none}
+#editImg{position:absolute;left:0;top:0;user-select:none;-webkit-user-select:none;pointer-events:none;display:block}
+#editSvgOverlay{position:absolute;left:0;top:0;cursor:crosshair;touch-action:none}
+.edit-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;flex:none}
+.edit-tool-btn{width:36px;height:36px;border-radius:7px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-tool-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+.edit-tool-btn.zoom-label{width:auto;padding:0 8px;font-size:12px;font-weight:700}
+.edit-toolbar-sep{width:1px;align-self:stretch;background:#2a3a30;margin:2px 2px}
+.edit-color-swatch{width:24px;height:24px;border-radius:50%;border:2px solid #3a4f42;cursor:pointer;padding:0}
+.edit-color-swatch.active{border-color:#fff;box-shadow:0 0 0 2px #2ecc71}
+.edit-thick-swatch{width:32px;height:36px;border-radius:7px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-thick-swatch.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+/* ── PDF PREVIEW MODAL ── */
+.pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+.pdf-preview-modal.show{display:flex}
+.pdf-preview-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,900px);height:min(92vh,1100px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
+.pdf-preview-header{background:#243228;padding:10px 46px 10px 16px;flex:0 0 auto;position:relative}
+.pdf-preview-title{font-weight:700;font-size:14px;color:#e0f0e8}
+.pdf-preview-hint{font-size:11px;color:#8aab96;margin-top:2px}
+.pdf-preview-close-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid #3a4f42;background:#1a221e;color:#e0f0e8;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.pdf-preview-close-x:active{background:#2a3a30}
+.pdf-preview-body{flex:1 1 auto;background:#333;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pdf-canvas-container{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
+.pdf-canvas-container canvas{max-width:100%;height:auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);background:#fff}
+.pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
+.pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
+.pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">GEN STATOR LEAK</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Generator Stator Leak Monitoring System</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Preventive Maintenance — Annual</div>
+      <div class="page-header-title">Generator Stator <span>Leak Monitoring</span></div>
+    </div>
+    <div style="margin-bottom:8px">
+      <span class="badge">GE VERNOVA</span>
+      &nbsp;
+      <span class="badge" style="background:#2d4a6a22;color:var(--steel);border-color:#2d4a6a44">STATOR LEAK MONITORING SYSTEM</span>
+    </div>
+  </div>
+
+  <!-- HEADER UMUM -->
+  <div class="panel">
+    <div class="section-label">Informasi Pekerjaan</div>
+    <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <div class="meta-field"><label>Work Order</label><input type="text" id="hWorkOrder" placeholder="No. Work Order..."></div>
+      <div class="meta-field"><label>PIC</label><input type="text" id="hPic" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Tanggal</label><input type="date" id="hTanggal"></div>
+      <div class="meta-field"><label>Asset Tag</label><input type="text" id="hAssetTag" placeholder="Contoh: 7BG-XXX-XXX"></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><input type="text" id="hAssetDesc" placeholder="Deskripsi asset..."></div>
+    </div>
+  </div>
+
+  <!-- TABLE 1 : PM COVER -->
+  <div class="panel">
+    <div class="section-label">Table 1 — PM Cover</div>
+    <div style="overflow-x:auto">
+      <table class="path-table" id="t1Table">
+        <tbody>
+          <tr><td class="path-label" style="width:180px">Plant</td><td><input type="text" id="t1Plant" value="PLTU Paiton" style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+          <tr><td class="path-label">Unit</td><td><input type="text" id="t1Unit" value="Unit 7" style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+          <tr><td class="path-label">Equipment</td><td><input type="text" id="t1Equipment" placeholder="Nama equipment..." style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+          <tr><td class="path-label">OEM</td><td><input type="text" id="t1Oem" placeholder="Nama OEM..." style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+          <tr><td class="path-label">Frequency</td><td><input type="text" id="t1Frequency" value="Annual" style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+          <tr><td class="path-label">Start Time</td><td><input type="time" id="t1StartTime" style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+          <tr><td class="path-label">Finish Time</td><td><input type="time" id="t1FinishTime" style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+          <tr><td class="path-label">Technician</td><td><input type="text" id="t1Technician" placeholder="Nama teknisi..." style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+          <tr><td class="path-label">Supervisor</td><td><input type="text" id="t1Supervisor" placeholder="Nama supervisor..." style="width:100%;border:none;background:transparent;font:inherit;color:inherit"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TABLE 2 : CHECKLIST -->
+  <div class="panel">
+    <div class="section-label">Table 2 — Checklist</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="t2Table" style="min-width:820px">
+        <thead><tr>
+          <th style="width:36px">No</th><th style="min-width:180px">Activity</th><th style="min-width:150px">Acceptance Criteria</th>
+          <th style="min-width:100px">As Found</th><th style="min-width:100px">As Left</th>
+          <th style="width:60px">Pass</th><th style="width:60px">Fail</th><th style="min-width:140px">Remarks</th>
+        </tr></thead>
+        <tbody id="t2Body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TABLE 3 : MEASUREMENT LOG -->
+  <div class="panel">
+    <div class="section-label">Table 3 — Measurement Log</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="t3Table" style="min-width:600px">
+        <thead><tr>
+          <th style="min-width:160px">Parameter</th><th style="width:70px">Unit</th>
+          <th style="min-width:110px">OEM Spec</th><th style="min-width:100px">Before</th><th style="min-width:100px">After</th>
+        </tr></thead>
+        <tbody id="t3Body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TABLE 4 : SPARE PARTS (tambah baris) -->
+  <div class="panel">
+    <div class="section-label">Table 4 — Spare Parts</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="t4Table" style="min-width:560px">
+        <thead><tr>
+          <th style="min-width:160px">Part Name</th><th style="min-width:130px">Part Number</th>
+          <th style="width:70px">Qty</th><th style="width:80px">Installed</th><th style="width:40px"></th>
+        </tr></thead>
+        <tbody id="t4Body"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-outline" onclick="addSparePartRow()">+ Tambah Baris</button>
+    </div>
+  </div>
+
+  <!-- APPROVAL (tanpa tabel) -->
+  <div class="panel">
+    <div class="section-label">Approval</div>
+    <div class="form-group full" style="margin-bottom:14px">
+      <label class="field-label" style="font-size:11px;color:var(--text3);margin-bottom:4px;display:block">Findings / Corrective Action</label>
+      <textarea id="apFindings" placeholder="Temuan dan tindakan perbaikan..." style="width:100%;min-height:90px;padding:10px;border:1px solid var(--border);border-radius:6px;font:inherit;color:inherit;background:#fff;box-sizing:border-box"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+      <div class="meta-field"><label>Technician</label><input type="text" id="apTechnician" placeholder="Nama..."></div>
+      <div class="meta-field"><label>Supervisor</label><input type="text" id="apSupervisor" placeholder="Nama..."></div>
+      <div class="meta-field"><label>Operations</label><input type="text" id="apOperations" placeholder="Nama..."></div>
+    </div>
+  </div>
+
+  <!-- UPLOAD EVIDENCE (pola material-warehouse) -->
+  <div class="panel">
+    <div class="section-label">Upload Evidence</div>
+    <div id="evList"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-outline" onclick="evAddSlot()">+ Tambah Evidence</button>
+    </div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="panel">
+    <div class="btn-row">
+      <button class="btn btn-pdf" id="btnPdf" onclick="runPdfPreview()">⬇ PDF Preview &amp; Download</button>
+      <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('generator_stator_leak_monitoring')">💾 Simpan ke Database</button>
+      <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
+    </div>
+  </div>
+
+
+</div>
+
+<!-- CROP MODAL (3-mode: Default/Preset/Manual) -->
+<div id="cropModal">
+    <div class="crop-dialog">
+        <div class="crop-header">
+            <div class="crop-header-title">✂️ Crop Gambar</div>
+            <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
+        </div>
+        <div id="cropWrap">
+            <img id="cropImg" src="">
+            <div id="cropBox">
+                <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
+                <div class="crop-handle sw"></div><div class="crop-handle se"></div>
+                <div class="crop-handle n"></div><div class="crop-handle s"></div>
+                <div class="crop-handle w"></div><div class="crop-handle e"></div>
+            </div>
+        </div>
+        <div class="crop-footer">
+            <div class="crop-size-panel">
+                <div class="crop-size-row" id="cropModeRow">
+                    <button type="button" class="crop-mode-btn" id="cropModeDefault" onclick="setCropMode('default')">⭐ Default</button>
+                    <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
+                    <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
+                </div>
+                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran cetak: 7.2 × 5.18 cm — gambar penuh (tidak dipotong)</div>
+                <div id="cropPresetControls" style="display:none">
+                    <div class="crop-size-row" id="cropPresetRow"></div>
+                    <div class="crop-size-row" style="margin-top:8px">
+                        <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
+                        <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
+                    </div>
+                </div>
+                <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
+                </div>
+            </div>
+            <div class="crop-btns">
+                <button class="crop-btn crop-btn-outline" onclick="openImageEditor()">🖍️ Edit Gambar</button>
+                <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
+                <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ EDIT GAMBAR (Insert Shape: Teks/Panah/Garis/Kotak/Oval) ═══ -->
+<div id="editImgModal" class="pdf-preview-modal">
+    <div class="crop-dialog editimg-dialog">
+        <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closeImageEditor(true)" aria-label="Tutup">✕</button>
+            <div class="pdf-preview-title">🖍️ Edit Gambar</div>
+            <div class="pdf-preview-hint">Tambah teks/panah/garis/kotak/oval • ✋ geser tampilan • 🔍 zoom</div>
+        </div>
+        <div id="editImgOuter">
+            <div id="editImgWrap">
+                <img id="editImg" src="" alt="">
+                <svg id="editSvgOverlay" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+        </div>
+        <div class="edit-toolbar" id="editToolbar">
+            <button type="button" class="edit-tool-btn active" data-tool="select" onclick="setEditTool('select')" title="Pilih / Pindah">↖</button>
+            <button type="button" class="edit-tool-btn" data-tool="text" onclick="setEditTool('text')" title="Tambah Teks">🅰</button>
+            <button type="button" class="edit-tool-btn" data-tool="arrow" onclick="setEditTool('arrow')" title="Panah">↗</button>
+            <button type="button" class="edit-tool-btn" data-tool="line" onclick="setEditTool('line')" title="Garis">╱</button>
+            <button type="button" class="edit-tool-btn" data-tool="rect" onclick="setEditTool('rect')" title="Kotak">▭</button>
+            <button type="button" class="edit-tool-btn" data-tool="oval" onclick="setEditTool('oval')" title="Oval">◯</button>
+            <button type="button" class="edit-tool-btn" data-tool="pan" onclick="setEditTool('pan')" title="Geser Tampilan">✋</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-color-swatch active" data-color="#e53935" style="background:#e53935" onclick="setEditColor('#e53935',this)" title="Merah"></button>
+            <button type="button" class="edit-color-swatch" data-color="#1a1a1a" style="background:#1a1a1a" onclick="setEditColor('#1a1a1a',this)" title="Hitam"></button>
+            <button type="button" class="edit-color-swatch" data-color="#1e88e5" style="background:#1e88e5" onclick="setEditColor('#1e88e5',this)" title="Biru"></button>
+            <button type="button" class="edit-color-swatch" data-color="#fdd835" style="background:#fdd835" onclick="setEditColor('#fdd835',this)" title="Kuning"></button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-thick-swatch" data-thick="S" onclick="setEditThickness('S',this)" title="Garis Tipis">▁</button>
+            <button type="button" class="edit-thick-swatch active" data-thick="M" onclick="setEditThickness('M',this)" title="Garis Sedang">▃</button>
+            <button type="button" class="edit-thick-swatch" data-thick="L" onclick="setEditThickness('L',this)" title="Garis Tebal">▅</button>
+            <button type="button" class="edit-thick-swatch" data-thick="XL" onclick="setEditThickness('XL',this)" title="Garis Sangat Tebal">▇</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-tool-btn" onclick="ieZoomOut()" title="Perkecil Tampilan">➖</button>
+            <button type="button" class="edit-tool-btn zoom-label" id="editZoomLabel" onclick="ieZoomReset()" title="Reset Zoom">100%</button>
+            <button type="button" class="edit-tool-btn" onclick="ieZoomIn()" title="Perbesar Tampilan">➕</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-tool-btn" id="editTextSmallerBtn" onclick="ieResizeSelectedText(-1)" title="Perkecil Teks" style="display:none">A−</button>
+            <button type="button" class="edit-tool-btn" id="editTextBiggerBtn" onclick="ieResizeSelectedText(1)" title="Perbesar Teks" style="display:none">A+</button>
+            <button type="button" class="edit-tool-btn" id="editTextEditBtn" onclick="editSelectedText()" title="Edit Teks" style="display:none">✏️</button>
+            <button type="button" class="edit-tool-btn" id="editDeleteBtn" onclick="deleteSelectedShape()" title="Hapus" style="display:none">🗑️</button>
+        </div>
+        <div class="pdf-preview-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closeImageEditor(true)">Batal</button>
+            <button class="crop-btn crop-btn-save" onclick="applyImageEdits()">✓ Selesai</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   FITUR REUSABLE: Crop 3-mode (Default/Preset/Manual) / Geser posisi foto /
+   Preview PDF sebelum download / Loading overlay / Autosave draft.
+   Fungsi imgOpenCropper/cropAndSave/skipCrop/cropReset di sini SENGAJA pakai
+   nama & signature yang SAMA dengan versi lama di shared.js supaya SEMUA
+   pemanggil yang sudah ada (ldHandleFiles, clHandleFiles, ldReEdit, clReEdit,
+   onclick di clRenderPreviews) tetap jalan tanpa perlu diubah satu-satu.
+   ══════════════════════════════════════════════════════════════════════════ */
+var cropModalState = document.getElementById('cropModal');
+cropModalState._pending = null;
+cropModalState._ratioLocked = false;
+cropModalState._cropWcm = null;
+cropModalState._cropHcm = null;
+cropModalState._orientation = 'portrait';
+cropModalState._activePresetIdx = -1;
+cropModalState._mode = 'default';
+cropModalState._presetRatio = 1;
+
+var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
+var PRESET_DEFAULT_LONG_CM = 4;
+var MANUAL_MAX_CM = 7;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
+   Dipanggil dari dalam Crop Modal ("🖍️ Edit Gambar"). Bekerja di atas
+   gambar ASLI (sebelum crop), lalu hasil flatten (gambar + anotasi jadi
+   satu) dikembalikan ke #cropImg supaya alur crop selanjutnya normal.
+   Koordinat shape disimpan dalam ruang piksel ASLI gambar (naturalW/H)
+   supaya scaling ke layar & flatten ke canvas konsisten.
+   ══════════════════════════════════════════════════════════════════════════ */
+var NS_SVG = 'http://www.w3.org/2000/svg';
+var imgEditState = {
+    tool: 'select', color: '#e53935', thickness: 'M', zoom: 1, baseScale: 1, shapes: [], selectedId: null,
+    naturalW: 0, naturalH: 0, nextId: 1, drawing: null, sourceUrl: null
+};
+var IE_THICKNESS_FACTORS = { S: 0.0022, M: 0.0045, L: 0.0075, XL: 0.012 };
+var IE_ZOOM_MIN = 1, IE_ZOOM_MAX = 4, IE_ZOOM_STEP = 0.5;
+
+function ieMinSize(){ return Math.max(20, imgEditState.naturalW * 0.02); }
+function ieHandleR(){ return Math.max(9, imgEditState.naturalW * 0.009); }
+function ieStrokeWFor(shape){
+    var key = (shape && shape.strokeSize) || imgEditState.thickness || 'M';
+    var f = IE_THICKNESS_FACTORS[key] || IE_THICKNESS_FACTORS.M;
+    return Math.max(2, imgEditState.naturalW * f);
+}
+function ieFontDefault(){ return Math.max(18, imgEditState.naturalW * 0.035); }
+function ieColorId(c){ return 'ie_' + c.replace('#',''); }
+function ieTextBoxSize(shape){
+    return { w: Math.max(20, (shape.text.length||1) * shape.fontSize * 0.55), h: shape.fontSize*1.2 };
+}
+
+function openImageEditor(){
+    var cropImg = document.getElementById('cropImg');
+    if (!cropImg || !cropImg.src) { alert('Gambar belum siap untuk diedit.'); return; }
+    imgEditState.shapes = []; imgEditState.selectedId = null; imgEditState.nextId = 1;
+    imgEditState.tool = 'select'; imgEditState.color = '#e53935'; imgEditState.thickness = 'M'; imgEditState.zoom = 1;
+    setEditTool('select');
+    var swatches = document.querySelectorAll('.edit-color-swatch');
+    swatches.forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color') === imgEditState.color); });
+    var tswatches = document.querySelectorAll('.edit-thick-swatch');
+    tswatches.forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-thick') === imgEditState.thickness); });
+    ieUpdateZoomLabel();
+    var editImg = document.getElementById('editImg');
+    editImg.onload = function(){
+        imgEditState.naturalW = editImg.naturalWidth;
+        imgEditState.naturalH = editImg.naturalHeight;
+        fitEditImageToWrap();
+        renderAllShapes();
+    };
+    imgEditState.sourceUrl = cropImg.src;
+    editImg.src = cropImg.src;
+    document.getElementById('editImgModal').classList.add('show');
+}
+
+function fitEditImageToWrap(){
+    var outer = document.getElementById('editImgOuter');
+    var wrap = document.getElementById('editImgWrap');
+    var img = document.getElementById('editImg');
+    var svg = document.getElementById('editSvgOverlay');
+    var ow = outer.clientWidth, oh = outer.clientHeight;
+    var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
+    if (!nw || !nh || !ow || !oh) return;
+    var baseScale = Math.min(ow/nw, oh/nh);
+    imgEditState.baseScale = baseScale;
+    var scale = baseScale * (imgEditState.zoom || 1);
+    var dw = nw*scale, dh = nh*scale;
+    wrap.style.width = dw+'px'; wrap.style.height = dh+'px';
+    img.style.width = dw+'px'; img.style.height = dh+'px';
+    svg.style.width = dw+'px'; svg.style.height = dh+'px';
+    svg.setAttribute('viewBox', '0 0 '+nw+' '+nh);
+    outer.style.justifyContent = (dw <= ow + 1) ? 'center' : 'flex-start';
+    outer.style.alignItems = (dh <= oh + 1) ? 'center' : 'flex-start';
+    if (dw > ow) outer.scrollLeft = Math.max(0, (dw-ow)/2);
+    if (dh > oh) outer.scrollTop = Math.max(0, (dh-oh)/2);
+}
+function ieUpdateZoomLabel(){
+    var lbl = document.getElementById('editZoomLabel');
+    if (lbl) lbl.textContent = Math.round((imgEditState.zoom||1)*100) + '%';
+}
+function ieSetZoom(z){
+    imgEditState.zoom = Math.max(IE_ZOOM_MIN, Math.min(IE_ZOOM_MAX, z));
+    ieUpdateZoomLabel();
+    fitEditImageToWrap();
+}
+function ieZoomIn(){ ieSetZoom((imgEditState.zoom||1) + IE_ZOOM_STEP); }
+function ieZoomOut(){ ieSetZoom((imgEditState.zoom||1) - IE_ZOOM_STEP); }
+function ieZoomReset(){ ieSetZoom(1); }
+window.addEventListener('resize', function(){
+    if (document.getElementById('editImgModal').classList.contains('show')) fitEditImageToWrap();
+});
+
+function closeImageEditor(discard){
+    document.getElementById('editImgModal').classList.remove('show');
+    if (discard) { imgEditState.shapes = []; imgEditState.selectedId = null; }
+}
+
+function setEditTool(tool){
+    imgEditState.tool = tool;
+    deselectShape();
+    document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-tool') === tool);
+    });
+    var svg = document.getElementById('editSvgOverlay');
+    svg.style.cursor = (tool === 'select') ? 'default' : (tool === 'pan' ? 'grab' : 'crosshair');
+}
+
+/* Kembali ke tool 'select' setelah shape baru dibuat, TANPA menghapus seleksi
+   shape yang baru saja dibuat (supaya langsung bisa digeser/resize). */
+function ieBackToSelectKeepSelection(){
+    imgEditState.tool = 'select';
+    document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-tool') === 'select');
+    });
+    var svg = document.getElementById('editSvgOverlay');
+    svg.style.cursor = 'default';
+}
+
+function setEditColor(color, btnEl){
+    imgEditState.color = color;
+    document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.remove('active'); });
+    if (btnEl) btnEl.classList.add('active');
+    var sel = getShapeById(imgEditState.selectedId);
+    if (sel) { sel.color = color; renderAllShapes(); }
+}
+
+function setEditThickness(key, btnEl){
+    imgEditState.thickness = key;
+    document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.remove('active'); });
+    if (btnEl) btnEl.classList.add('active');
+    var sel = getShapeById(imgEditState.selectedId);
+    if (sel && sel.type !== 'text') { sel.strokeSize = key; renderAllShapes(); }
+}
+
+function getShapeById(id){
+    for (var i=0;i<imgEditState.shapes.length;i++) if (imgEditState.shapes[i].id === id) return imgEditState.shapes[i];
+    return null;
+}
+function addShape(shape){
+    shape.id = imgEditState.nextId++;
+    imgEditState.shapes.push(shape);
+    setSelectedShape(shape.id);
+}
+function ieSetSelButtonsDisplay(shape){
+    var isText = !!(shape && shape.type === 'text');
+    var db = document.getElementById('editDeleteBtn'); if (db) db.style.display = shape ? 'flex' : 'none';
+    var tb = document.getElementById('editTextEditBtn'); if (tb) tb.style.display = isText ? 'flex' : 'none';
+    var sb = document.getElementById('editTextSmallerBtn'); if (sb) sb.style.display = isText ? 'flex' : 'none';
+    var bb = document.getElementById('editTextBiggerBtn'); if (bb) bb.style.display = isText ? 'flex' : 'none';
+}
+function deselectShape(){
+    imgEditState.selectedId = null;
+    ieSetSelButtonsDisplay(null);
+    renderAllShapes();
+}
+function setSelectedShape(id){
+    imgEditState.selectedId = id;
+    var shape = getShapeById(id);
+    ieSetSelButtonsDisplay(shape);
+    renderAllShapes();
+}
+function deleteSelectedShape(){
+    if (!imgEditState.selectedId) return;
+    imgEditState.shapes = imgEditState.shapes.filter(function(s){ return s.id !== imgEditState.selectedId; });
+    deselectShape();
+}
+function editSelectedText(){
+    var s = getShapeById(imgEditState.selectedId);
+    if (!s || s.type !== 'text') return;
+    var val = prompt('Edit teks:', s.text);
+    ieForceHideKeyboard();
+    if (val !== null && val.trim()) { s.text = val.trim(); renderAllShapes(); }
+}
+/* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
+   "menempel" (tidak ikut turun) karena tidak ada <input> asli di halaman yang
+   kehilangan fokus. Trik: fokuskan sebentar lalu blur input tersembunyi supaya
+   Android benar-benar mendeteksi ada elemen form yang di-blur dan menutup IME. */
+function ieForceHideKeyboard(){
+    if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) {
+        document.activeElement.blur();
+    }
+    var dummy = document.getElementById('ieKeyboardDismiss');
+    if (!dummy) {
+        dummy = document.createElement('input');
+        dummy.id = 'ieKeyboardDismiss';
+        dummy.setAttribute('type', 'text');
+        dummy.style.position = 'fixed';
+        dummy.style.top = '-1000px';
+        dummy.style.left = '0';
+        dummy.style.width = '1px';
+        dummy.style.height = '1px';
+        dummy.style.opacity = '0';
+        document.body.appendChild(dummy);
+    }
+    // readonly saat focus supaya Android TIDAK memunculkan keyboard baru di
+    // input dummy ini — cuma dipakai untuk memicu event blur yang sungguhan.
+    dummy.setAttribute('readonly', 'readonly');
+    dummy.focus();
+    setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
+}
+function ieResizeSelectedText(dir){
+    var s = getShapeById(imgEditState.selectedId);
+    if (!s || s.type !== 'text') return;
+    var step = Math.max(2, imgEditState.naturalW*0.006);
+    s.fontSize = Math.max(10, s.fontSize + dir*step);
+    renderAllShapes();
+}
+
+function getSvgPoint(evt){
+    var svg = document.getElementById('editSvgOverlay');
+    var rect = svg.getBoundingClientRect();
+    var t = evt.touches ? (evt.touches[0] || evt.changedTouches[0]) : evt;
+    var x = (t.clientX - rect.left) * (imgEditState.naturalW / rect.width);
+    var y = (t.clientY - rect.top) * (imgEditState.naturalH / rect.height);
+    return { x: x, y: y };
+}
+
+/* Pakai Pointer Events (bukan touchstart/mousedown terpisah) supaya drag di HP
+   (Chrome/Safari Android & iOS) lebih andal — menghindari konflik event
+   sentuh vs mouse sintetis yang kadang bikin drag "putus" di tengah jalan. */
+function ieAddDocListeners(onMove, onUp){
+    document.addEventListener('pointermove', onMove, {passive:false});
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+}
+function ieRemoveDocListeners(onMove, onUp){
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+}
+
+/* ── Mulai gambar shape baru (drag dari kosong) ── */
+function onEditSvgPointerDown(e){
+    var tool = imgEditState.tool;
+    if (tool === 'pan') {
+        if (e.cancelable) e.preventDefault();
+        var outer = document.getElementById('editImgOuter');
+        var t0 = e.touches ? e.touches[0] : e;
+        var startX = t0.clientX, startY = t0.clientY;
+        var startL = outer.scrollLeft, startT = outer.scrollTop;
+        var svgEl = document.getElementById('editSvgOverlay'); svgEl.style.cursor = 'grabbing';
+        function onMove(mv){
+            if (mv.cancelable) mv.preventDefault();
+            var t = mv.touches ? mv.touches[0] : mv;
+            outer.scrollLeft = startL - (t.clientX - startX);
+            outer.scrollTop = startT - (t.clientY - startY);
+        }
+        function onUp(){ ieRemoveDocListeners(onMove, onUp); svgEl.style.cursor = 'grab'; }
+        ieAddDocListeners(onMove, onUp);
+        return;
+    }
+    if (tool === 'select') { if (e.target.id === 'editSvgOverlay') deselectShape(); return; }
+    if (e.cancelable) e.preventDefault();
+    var pt = getSvgPoint(e);
+    if (tool === 'text') {
+        var txt = prompt('Masukkan teks:');
+        ieForceHideKeyboard();
+        if (txt && txt.trim()) addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
+        ieBackToSelectKeepSelection();
+        return;
+    }
+    imgEditState.drawing = {type:tool, x1:pt.x, y1:pt.y, x2:pt.x, y2:pt.y, color:imgEditState.color, strokeSize:imgEditState.thickness};
+    renderAllShapes();
+    function onMove(mv){
+        if (mv.cancelable) mv.preventDefault();
+        var p = getSvgPoint(mv);
+        imgEditState.drawing.x2 = p.x; imgEditState.drawing.y2 = p.y;
+        renderAllShapes();
+    }
+    function onUp(){
+        ieRemoveDocListeners(onMove, onUp);
+        var d = imgEditState.drawing; imgEditState.drawing = null;
+        var dist = Math.hypot(d.x2-d.x1, d.y2-d.y1);
+        if (dist > Math.max(8, imgEditState.naturalW*0.008)) {
+            if (d.type === 'rect' || d.type === 'oval') {
+                addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize});
+            } else {
+                addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize});
+            }
+        } else { renderAllShapes(); }
+        ieBackToSelectKeepSelection();
+    }
+    ieAddDocListeners(onMove, onUp);
+}
+
+/* ── Pindahkan shape yang ada (drag body) ── */
+function startDragShape(id, ev){
+    setSelectedShape(id);
+    var shape = getShapeById(id);
+    if (!shape) return;
+    var startPt = getSvgPoint(ev);
+    var orig = JSON.parse(JSON.stringify(shape));
+    function onMove(mv){
+        if (mv.cancelable) mv.preventDefault();
+        var p = getSvgPoint(mv);
+        var dx = p.x - startPt.x, dy = p.y - startPt.y;
+        if (shape.type === 'line' || shape.type === 'arrow') {
+            shape.x1 = orig.x1+dx; shape.y1 = orig.y1+dy; shape.x2 = orig.x2+dx; shape.y2 = orig.y2+dy;
+        } else {
+            shape.x = orig.x+dx; shape.y = orig.y+dy;
+        }
+        renderAllShapes();
+    }
+    function onUp(){ ieRemoveDocListeners(onMove, onUp); }
+    ieAddDocListeners(onMove, onUp);
+}
+
+/* ── Handle resize/endpoint drag ── */
+function startHandleDrag(onDragMove){
+    function onMove(mv){ if (mv.cancelable) mv.preventDefault(); onDragMove(getSvgPoint(mv)); renderAllShapes(); }
+    function onUp(){ ieRemoveDocListeners(onMove, onUp); }
+    ieAddDocListeners(onMove, onUp);
+}
+
+/* Radius area sentuh (bukan visual) — minimal setara ~22px layar supaya
+   enak dipencet jari, meski titik hijaunya sendiri sengaja dibikin kecil
+   biar presisi. Dikonversi ke koordinat "natural" gambar sesuai skala
+   tampilan saat ini (baseScale x zoom). */
+function ieHandleHitR(){
+    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
+    var minTouchPx = 22;
+    return Math.max(ieHandleR(), minTouchPx / scale);
+}
+function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
+    var r = ieHandleR();
+    var c = document.createElementNS(NS_SVG, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
+    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1, r*0.18));
+    c.style.cursor = cursor; c.style.pointerEvents = 'none';
+    svg.appendChild(c);
+    // Hit-area transparan yang lebih besar, ditumpuk di atas titik visual,
+    // supaya gampang dipencet di HP tanpa mengubah ukuran titik yang terlihat.
+    var hit = document.createElementNS(NS_SVG, 'circle');
+    hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', ieHandleHitR());
+    hit.setAttribute('fill', 'transparent');
+    hit.style.cursor = cursor; hit.style.pointerEvents = 'all';
+    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
+    hit.addEventListener('pointerdown', start);
+    svg.appendChild(hit);
+}
+
+/* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */
+function ieBuildShapeVisual(shape){
+    var sw = ieStrokeWFor(shape);
+    if (shape.type === 'line' || shape.type === 'arrow') {
+        var ln = document.createElementNS(NS_SVG, 'line');
+        ln.setAttribute('x1', shape.x1); ln.setAttribute('y1', shape.y1);
+        ln.setAttribute('x2', shape.x2); ln.setAttribute('y2', shape.y2);
+        ln.setAttribute('stroke', shape.color); ln.setAttribute('stroke-width', sw);
+        ln.setAttribute('stroke-linecap', 'round');
+        if (shape.type === 'arrow') ln.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
+        return ln;
+    }
+    if (shape.type === 'rect') {
+        var rc = document.createElementNS(NS_SVG, 'rect');
+        rc.setAttribute('x', shape.x); rc.setAttribute('y', shape.y);
+        rc.setAttribute('width', shape.w); rc.setAttribute('height', shape.h);
+        rc.setAttribute('stroke', shape.color); rc.setAttribute('stroke-width', sw); rc.setAttribute('fill', 'none');
+        return rc;
+    }
+    if (shape.type === 'oval') {
+        var el = document.createElementNS(NS_SVG, 'ellipse');
+        el.setAttribute('cx', shape.x+shape.w/2); el.setAttribute('cy', shape.y+shape.h/2);
+        el.setAttribute('rx', shape.w/2); el.setAttribute('ry', shape.h/2);
+        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', sw); el.setAttribute('fill', 'none');
+        return el;
+    }
+    if (shape.type === 'text') {
+        var tx = document.createElementNS(NS_SVG, 'text');
+        tx.setAttribute('x', shape.x); tx.setAttribute('y', shape.y);
+        tx.setAttribute('font-size', shape.fontSize); tx.setAttribute('fill', shape.color);
+        tx.setAttribute('font-family', 'Arial, sans-serif'); tx.setAttribute('font-weight', '700');
+        tx.setAttribute('dominant-baseline', 'hanging'); tx.setAttribute('stroke', '#fff');
+        tx.setAttribute('stroke-width', Math.max(1, shape.fontSize*0.04)); tx.setAttribute('paint-order', 'stroke');
+        tx.textContent = shape.text;
+        return tx;
+    }
+    return null;
+}
+
+function ieBuildDefs(svg){
+    var defs = document.createElementNS(NS_SVG, 'defs');
+    ['#e53935','#1a1a1a','#1e88e5','#fdd835'].forEach(function(c){
+        var m = document.createElementNS(NS_SVG, 'marker');
+        m.setAttribute('id', ieColorId(c)); m.setAttribute('markerWidth', 10); m.setAttribute('markerHeight', 10);
+        m.setAttribute('refX', 8); m.setAttribute('refY', 5); m.setAttribute('orient', 'auto'); m.setAttribute('markerUnits', 'userSpaceOnUse');
+        var p = document.createElementNS(NS_SVG, 'path');
+        p.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); p.setAttribute('fill', c);
+        m.appendChild(p); defs.appendChild(m);
+    });
+    svg.appendChild(defs);
+}
+
+/* ── Render ulang seluruh overlay interaktif (shapes + preview + handle seleksi) ── */
+function renderAllShapes(){
+    var svg = document.getElementById('editSvgOverlay');
+    if (!svg) return;
+    svg.innerHTML = '';
+    ieBuildDefs(svg);
+    imgEditState.shapes.forEach(function(shape){
+        var g = document.createElementNS(NS_SVG, 'g');
+        var visual = ieBuildShapeVisual(shape);
+        if (!visual) return;
+        g.appendChild(visual);
+        // Hit-area lebih lebar supaya mudah disentuh (untuk garis/panah tipis,
+        // dan bagian dalam kotak/oval yang defaultnya fill:none tidak bisa disentuh)
+        if (shape.type === 'line' || shape.type === 'arrow') {
+            var hit = document.createElementNS(NS_SVG, 'line');
+            hit.setAttribute('x1', shape.x1); hit.setAttribute('y1', shape.y1);
+            hit.setAttribute('x2', shape.x2); hit.setAttribute('y2', shape.y2);
+            hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', Math.max(24, imgEditState.naturalW*0.02));
+            g.insertBefore(hit, visual);
+        } else if (shape.type === 'rect' || shape.type === 'oval') {
+            var fhit = document.createElementNS(NS_SVG, shape.type === 'rect' ? 'rect' : 'ellipse');
+            if (shape.type === 'rect') {
+                fhit.setAttribute('x', shape.x); fhit.setAttribute('y', shape.y);
+                fhit.setAttribute('width', shape.w); fhit.setAttribute('height', shape.h);
+            } else {
+                fhit.setAttribute('cx', shape.x+shape.w/2); fhit.setAttribute('cy', shape.y+shape.h/2);
+                fhit.setAttribute('rx', shape.w/2); fhit.setAttribute('ry', shape.h/2);
+            }
+            fhit.setAttribute('fill', 'transparent');
+            g.insertBefore(fhit, visual);
+        } else if (shape.type === 'text') {
+            // <text> secara default cuma bisa "diklik" tepat di garis huruf. Tambahkan
+            // hit-area kotak penuh (transparan) supaya teks mudah digeser/dipilih di HP.
+            var tb = ieTextBoxSize(shape);
+            var padX = tb.w*0.08, padY = tb.h*0.15;
+            var thit = document.createElementNS(NS_SVG, 'rect');
+            thit.setAttribute('x', shape.x - padX); thit.setAttribute('y', shape.y - padY);
+            thit.setAttribute('width', tb.w + padX*2); thit.setAttribute('height', tb.h + padY*2);
+            thit.setAttribute('fill', 'transparent');
+            g.insertBefore(thit, visual);
+        }
+        g.style.cursor = 'move';
+        var start = function(ev){
+            if (imgEditState.tool !== 'select') return;
+            ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
+            startDragShape(shape.id, ev);
+        };
+        g.addEventListener('pointerdown', start);
+        svg.appendChild(g);
+
+        if (shape.id === imgEditState.selectedId) {
+            if (shape.type === 'rect' || shape.type === 'oval') {
+                var box = document.createElementNS(NS_SVG, 'rect');
+                box.setAttribute('x', shape.x); box.setAttribute('y', shape.y);
+                box.setAttribute('width', shape.w); box.setAttribute('height', shape.h);
+                box.setAttribute('fill', 'none'); box.setAttribute('stroke', '#2ecc71');
+                box.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                box.setAttribute('stroke-dasharray', '6,4'); box.setAttribute('pointer-events', 'none');
+                svg.appendChild(box);
+                ieMakeHandle(svg, shape.x+shape.w, shape.y+shape.h, 'nwse-resize', function(p){
+                    shape.w = Math.max(ieMinSize(), p.x-shape.x); shape.h = Math.max(ieMinSize(), p.y-shape.y);
+                });
+            } else if (shape.type === 'line' || shape.type === 'arrow') {
+                ieMakeHandle(svg, shape.x1, shape.y1, 'move', function(p){ shape.x1=p.x; shape.y1=p.y; });
+                ieMakeHandle(svg, shape.x2, shape.y2, 'move', function(p){ shape.x2=p.x; shape.y2=p.y; });
+            } else if (shape.type === 'text') {
+                var tbSel = ieTextBoxSize(shape);
+                var box2 = document.createElementNS(NS_SVG, 'rect');
+                box2.setAttribute('x', shape.x); box2.setAttribute('y', shape.y);
+                box2.setAttribute('width', tbSel.w); box2.setAttribute('height', tbSel.h);
+                box2.setAttribute('fill', 'none'); box2.setAttribute('stroke', '#2ecc71');
+                box2.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                box2.setAttribute('stroke-dasharray', '6,4'); box2.setAttribute('pointer-events', 'none');
+                svg.appendChild(box2);
+                ieMakeHandle(svg, shape.x+tbSel.w, shape.y+tbSel.h, 'nwse-resize', function(p){
+                    var newH = Math.max(10, p.y-shape.y);
+                    shape.fontSize = newH/1.2;
+                });
+            }
+        }
+    });
+    if (imgEditState.drawing) {
+        var dvisual = ieBuildShapeVisual(
+            (imgEditState.drawing.type==='rect'||imgEditState.drawing.type==='oval')
+            ? {type:imgEditState.drawing.type, x:Math.min(imgEditState.drawing.x1,imgEditState.drawing.x2), y:Math.min(imgEditState.drawing.y1,imgEditState.drawing.y2), w:Math.abs(imgEditState.drawing.x2-imgEditState.drawing.x1), h:Math.abs(imgEditState.drawing.y2-imgEditState.drawing.y1), color:imgEditState.drawing.color, strokeSize:imgEditState.drawing.strokeSize}
+            : imgEditState.drawing
+        );
+        if (dvisual) { dvisual.setAttribute('opacity','0.75'); svg.appendChild(dvisual); }
+    }
+}
+
+(function initEditSvgEvents(){
+    var svg = document.getElementById('editSvgOverlay');
+    if (!svg) return;
+    svg.addEventListener('pointerdown', onEditSvgPointerDown);
+})();
+
+/* ── Terapkan semua anotasi: gabung ke gambar asli, kembalikan ke #cropImg ── */
+function applyImageEdits(){
+    if (!imgEditState.shapes.length) { closeImageEditor(false); return; }
+    var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
+    var flatSvg = document.createElementNS(NS_SVG, 'svg');
+    flatSvg.setAttribute('xmlns', NS_SVG);
+    flatSvg.setAttribute('width', nw); flatSvg.setAttribute('height', nh);
+    flatSvg.setAttribute('viewBox', '0 0 '+nw+' '+nh);
+    ieBuildDefs(flatSvg);
+    imgEditState.shapes.forEach(function(shape){
+        var v = ieBuildShapeVisual(shape);
+        if (v) flatSvg.appendChild(v);
+    });
+    var svgStr = new XMLSerializer().serializeToString(flatSvg);
+    var svgImg = new Image();
+    svgImg.onload = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = nw; canvas.height = nh;
+        var ctx = canvas.getContext('2d');
+        var baseImg = document.getElementById('editImg');
+        var srcImg = new Image();
+        srcImg.onload = function(){
+            ctx.drawImage(srcImg, 0, 0, nw, nh);
+            ctx.drawImage(svgImg, 0, 0, nw, nh);
+            var outUrl = canvas.toDataURL('image/jpeg', 0.92);
+            var cropImg = document.getElementById('cropImg');
+            cropImg.onload = function(){
+                var wrap = document.getElementById('cropWrap');
+                var ww = wrap.clientWidth, wh = wrap.clientHeight;
+                var scale = Math.min(ww/cropImg.naturalWidth, wh/cropImg.naturalHeight);
+                var dw = cropImg.naturalWidth*scale, dh = cropImg.naturalHeight*scale;
+                cropImg.style.width = dw+'px'; cropImg.style.height = dh+'px';
+                cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
+                if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+                else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+            };
+            cropImg.src = outUrl;
+            closeImageEditor(false);
+        };
+        srcImg.src = imgEditState.sourceUrl;
+    };
+    svgImg.onerror = function(){ alert('Gagal menerapkan anotasi pada gambar. Coba lagi.'); };
+    svgImg.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+}
+
+var CROP_PRESETS = [
+    {label:'1:1', w:1, h:1}, {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
+    {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
+];
+
+function renderPresetButtons() {
+    var row = document.getElementById('cropPresetRow');
+    if (!row) return;
+    row.innerHTML = '';
+    CROP_PRESETS.forEach(function(p, i) {
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'crop-preset-btn'; btn.id = 'cropPreset-'+i;
+        btn.textContent = p.label; btn.onclick = function () { applyPreset(i); };
+        row.appendChild(btn);
+    });
+}
+function highlightPreset(activeIdx) {
+    CROP_PRESETS.forEach(function (p, idx) {
+        var btn = document.getElementById('cropPreset-'+idx);
+        if (btn) btn.classList.toggle('active', idx === activeIdx);
+    });
+}
+function getMaxForField(field) {
+    if (cropModalState._mode === 'preset') {
+        var longMax=7, shortMax=5;
+        if (cropModalState._orientation === 'landscape') return field==='w' ? longMax : shortMax;
+        return field==='w' ? shortMax : longMax;
+    }
+    if (cropModalState._mode === 'manual') return MANUAL_MAX_CM;
+    return 99;
+}
+function clampCmValue(v, maxV) {
+    v = parseFloat(v);
+    if (!isFinite(v) || v<=0) v=0.5;
+    if (v>maxV) v=maxV;
+    if (v<0.5) v=0.5;
+    return Math.round(v*10)/10;
+}
+function setCropMode(mode) {
+    cropModalState._mode = mode;
+    ['Default','Preset','Manual'].forEach(function(m){
+        var b = document.getElementById('cropMode'+m);
+        if (b) b.classList.toggle('active', mode === m.toLowerCase());
+    });
+    var presetControls = document.getElementById('cropPresetControls');
+    var cmRow = document.getElementById('cropCmRow');
+    var defaultLabel = document.getElementById('cropDefaultLabel');
+    if (mode === 'default') {
+        presetControls.style.display='none'; cmRow.style.display='none'; defaultLabel.style.display='block';
+        highlightPreset(-1); applyDefaultSize();
+    } else if (mode === 'preset') {
+        presetControls.style.display='block'; cmRow.style.display='flex'; defaultLabel.style.display='none';
+        applyPreset(cropModalState._activePresetIdx < 0 ? 0 : cropModalState._activePresetIdx);
+    } else {
+        presetControls.style.display='none'; cmRow.style.display='flex'; defaultLabel.style.display='none';
+        highlightPreset(-1);
+        setFreeSize(cropModalState._cropWcm||5, cropModalState._cropHcm||5);
+    }
+}
+function applyDefaultSize() {
+    // Default: box crop menutupi SELURUH gambar (tidak memotong apapun).
+    // Ukuran cetak PDF tetap mengikuti DEFAULT_CROP_W_CM x DEFAULT_CROP_H_CM,
+    // terlepas dari rasio asli gambarnya.
+    cropModalState._ratioLocked = false;
+    cropModalState._cropWcm = DEFAULT_CROP_W_CM; cropModalState._cropHcm = DEFAULT_CROP_H_CM;
+    updateSizeLabel(); fitCropBoxToFullImage();
+}
+function fitCropBoxToFullImage() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img) return;
+    var iL = parseInt(img.style.left) || 0, iT = parseInt(img.style.top) || 0;
+    var iW = img.offsetWidth, iH = img.offsetHeight;
+    if (!iW || !iH) return;
+    box.style.left = iL + 'px'; box.style.top = iT + 'px';
+    box.style.width = iW + 'px'; box.style.height = iH + 'px';
+}
+function applyPreset(i) {
+    var p = CROP_PRESETS[i];
+    var ratioValue = Math.max(p.w,p.h) / Math.min(p.w,p.h);
+    cropModalState._activePresetIdx = i;
+    var longSide = PRESET_DEFAULT_LONG_CM;
+    var shortSide = Math.round((longSide/ratioValue)*10)/10;
+    var w,h;
+    if (cropModalState._orientation === 'landscape') { w=longSide; h=shortSide; } else { h=longSide; w=shortSide; }
+    cropModalState._presetRatio = w/h;
+    setLockedSize(w,h); highlightPreset(i);
+}
+function setCropOrientation(orientation) {
+    cropModalState._orientation = orientation;
+    document.getElementById('cropOrientPotrait').classList.toggle('active', orientation==='portrait');
+    document.getElementById('cropOrientLandscape').classList.toggle('active', orientation==='landscape');
+    var w = cropModalState._cropWcm||1, h = cropModalState._cropHcm||1;
+    var longVal=Math.max(w,h), shortVal=Math.min(w,h), neww, newh;
+    if (orientation==='landscape') { neww=longVal; newh=shortVal; } else { newh=longVal; neww=shortVal; }
+    cropModalState._presetRatio = neww/newh;
+    setLockedSize(neww, newh);
+}
+function onCustomCmChange(field) {
+    if (cropModalState._mode === 'preset') { onPresetFieldChange(field); return; }
+    if (cropModalState._mode === 'manual') {
+        var w = clampCmValue(document.getElementById('cropWcm').value, getMaxForField('w'));
+        var h = clampCmValue(document.getElementById('cropHcm').value, getMaxForField('h'));
+        document.getElementById('cropWcm').value = w; document.getElementById('cropHcm').value = h;
+        setFreeSize(w, h, true);
+    }
+}
+function onPresetFieldChange(field) {
+    var ratio = cropModalState._presetRatio || 1;
+    var wEl=document.getElementById('cropWcm'), hEl=document.getElementById('cropHcm');
+    var w,h;
+    if (field==='w') { w=parseFloat(wEl.value)||0.5; h=w/ratio; } else { h=parseFloat(hEl.value)||0.5; w=h*ratio; }
+    var maxW=getMaxForField('w'), maxH=getMaxForField('h');
+    var scale = Math.min(1, maxW/w, maxH/h); w*=scale; h*=scale;
+    if (w<0.5) { w=0.5; h=w/ratio; }
+    if (h<0.5) { h=0.5; w=h*ratio; }
+    w=Math.round(w*10)/10; h=Math.round(h*10)/10;
+    wEl.value=w; hEl.value=h;
+    cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function setLockedSize(w,h,skipInputSync) {
+    w=clampCmValue(w,getMaxForField('w')); h=clampCmValue(h,getMaxForField('h'));
+    cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (!skipInputSync) { document.getElementById('cropWcm').value=w; document.getElementById('cropHcm').value=h; }
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function setFreeSize(w,h,skipInputSync) {
+    w=clampCmValue(w,getMaxForField('w')); h=clampCmValue(h,getMaxForField('h'));
+    cropModalState._ratioLocked=false; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (!skipInputSync) { document.getElementById('cropWcm').value=w; document.getElementById('cropHcm').value=h; }
+    updateSizeLabel();
+}
+function updateSizeLabel() {
+    var lbl = document.getElementById('cropSizeLabel'); if (!lbl) return;
+    var w=cropModalState._cropWcm, h=cropModalState._cropHcm;
+    lbl.textContent = cropModalState._mode==='preset'
+        ? 'Ukuran cetak: '+w+' cm × '+h+' cm (rasio terkunci)'
+        : 'Ukuran cetak: '+w+' cm × '+h+' cm (bebas, maks '+MANUAL_MAX_CM+'×'+MANUAL_MAX_CM+'cm)';
+}
+function clampNum(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+function reshapeCropBoxToRatio() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img || !cropModalState._cropWcm || !cropModalState._cropHcm) return;
+    var ratio = cropModalState._cropWcm / cropModalState._cropHcm;
+    var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    var bL=parseInt(box.style.left)||0, bT=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var cx=bL+bW/2, cy=bT+bH/2;
+    var newW=bW, newH=bW/ratio;
+    if (newH>bH*1.6||newH<bH*0.6) { newH=bH; newW=bH*ratio; }
+    newW = Math.min(newW, iW); newH = Math.min(newH, iH);
+    if (newW/newH > ratio) newW = newH*ratio; else newH = newW/ratio;
+    var nl = clampNum(cx-newW/2, iL, iL+iW-newW);
+    var nt = clampNum(cy-newH/2, iT, iT+iH-newH);
+    box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+}
+
+/* imgOpenCropper: SAMA SIGNATURE dengan versi lama shared.js supaya semua
+   pemanggil existing (ldHandleFiles/clHandleFiles/ldReEdit/clReEdit/inline
+   onclick) tetap jalan tanpa diubah. */
+function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
+    cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
+    var existing = (replaceIdx>=0 && imgArr[replaceIdx]) ? imgArr[replaceIdx] : null;
+    var preferredSize = (existing && existing.widthCm && existing.heightCm) ? {w:existing.widthCm, h:existing.heightCm} : null;
+    cropModalState._orientation = 'portrait';
+    cropModalState._activePresetIdx = -1;
+    if (preferredSize) {
+        document.getElementById('cropWcm').value = preferredSize.w;
+        document.getElementById('cropHcm').value = preferredSize.h;
+        if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) setCropMode('default');
+        else { setCropMode('manual'); setFreeSize(preferredSize.w, preferredSize.h); }
+    } else {
+        document.getElementById('cropWcm').value = 5; document.getElementById('cropHcm').value = 5;
+        setCropMode('default');
+    }
+    var img = document.getElementById('cropImg');
+    img.onload = function() {
+        var wrap = document.getElementById('cropWrap');
+        var ww = wrap.clientWidth, wh = wrap.clientHeight;
+        var scale = Math.min(ww/img.naturalWidth, wh/img.naturalHeight);
+        var dw = img.naturalWidth*scale, dh = img.naturalHeight*scale;
+        img.style.width = dw+'px'; img.style.height = dh+'px';
+        img.style.left = ((ww-dw)/2)+'px'; img.style.top = ((wh-dh)/2)+'px';
+        var box = document.getElementById('cropBox');
+        var bw = Math.min(dw,dh)*0.8, bh = bw;
+        box.style.width = bw+'px'; box.style.height = bh+'px';
+        box.style.left = ((ww-bw)/2)+'px'; box.style.top = ((wh-bh)/2)+'px';
+        if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+        else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+    };
+    img.src = dataUrl;
+    cropModalState.classList.add('show');
+}
+function closeCropModal() {
+    cropModalState.classList.remove('show');
+    cropModalState._pending = null;
+}
+function cropReset() {
+    var img = document.getElementById('cropImg');
+    var p = cropModalState._pending;
+    if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
+}
+function skipCrop() { closeCropModal(); }
+
+function cropAndSave() {
+    var img = document.getElementById('cropImg');
+    var box = document.getElementById('cropBox');
+    var p = cropModalState._pending;
+    if (!p) { alert('Target upload tidak ditemukan. Coba upload ulang.'); closeCropModal(); return; }
+
+    var iLeft=parseInt(img.style.left)||0, iTop=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    if (!img.naturalWidth || !img.naturalHeight || !iW || !iH) { alert('Gambar belum siap diproses. Coba tunggu sebentar lalu simpan lagi.'); return; }
+    var bLeft=parseInt(box.style.left)||0, bTop=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var scale = img.naturalWidth / iW;
+    var sx=Math.max(0,(bLeft-iLeft)*scale), sy=Math.max(0,(bTop-iTop)*scale);
+    var sw=Math.min(img.naturalWidth-sx, bW*scale), sh=Math.min(img.naturalHeight-sy, bH*scale);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+    var imgArr = p.imgArr;
+    var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
+    var caption = existing ? (existing.caption||'') : '';
+    var offsetX = existing ? (existing.offsetX||0) : 0;
+    if (p.replaceIdx >= 0) imgArr.splice(p.replaceIdx, 1);
+
+    var MAX = 1*1024*1024;
+    var dataUrl;
+    for (var q=0.85; q>=0.25; q-=0.1) {
+        dataUrl = canvas.toDataURL('image/jpeg', q);
+        var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
+        var newSize = dataUrl.length*0.75;
+        if (currentTotal+newSize <= MAX) break;
+        if (q<=0.25) {
+            var factor = Math.sqrt(MAX/(currentTotal+newSize));
+            var c2 = document.createElement('canvas');
+            c2.width = Math.max(50, Math.floor(canvas.width*factor));
+            c2.height = Math.max(50, Math.floor(canvas.height*factor));
+            c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+            dataUrl = c2.toDataURL('image/jpeg', 0.7);
+            break;
+        }
+    }
+
+    var entry = {name:(p.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl: dataUrl, type:'image/jpeg', caption: caption};
+    if (offsetX) entry.offsetX = offsetX;
+    if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
+    imgArr.push(entry);
+
+    closeCropModal();
+    // panggil render callback modul terkait (sama seperti imgCompressAndStore lama di shared.js)
+    if (p.modulePrefix === 'cl' && typeof clRenderPreviews === 'function') clRenderPreviews(p.side);
+    else if (p.modulePrefix === 'ld' && typeof ldRenderPreviews === 'function') ldRenderPreviews(p.side);
+    else if (p.modulePrefix === 'ev' && typeof evRenderPreview === 'function') evRenderPreview(p.side);
+}
+
+/* ── Geser posisi gambar (nudge) — generik untuk array manapun ── */
+function nudgeImageInArray(imgArr, imgIdx, delta, rerenderFn) {
+    var img = imgArr[imgIdx];
+    if (!img) return;
+    var next = Math.round(((img.offsetX||0)+delta)*10)/10;
+    var LIMIT = 5;
+    if (next>LIMIT) next=LIMIT; if (next<-LIMIT) next=-LIMIT;
+    img.offsetX = next;
+    if (typeof rerenderFn === 'function') rerenderFn();
+}
+
+/* ── Drag & resize kotak crop (mousedown+touchstart) ── */
+function initCropDrag() {
+    var box = document.getElementById('cropBox');
+    box.addEventListener('mousedown', onCropDragStart, false);
+    box.addEventListener('touchstart', onCropDragStart, {passive: false});
+}
+function onCropDragStart(e) {
+    e.preventDefault(); e.stopPropagation();
+    var box = document.getElementById('cropBox');
+    var t = e.touches ? e.touches[0] : e;
+    var startX=t.clientX, startY=t.clientY;
+    var startL=parseInt(box.style.left)||0, startT=parseInt(box.style.top)||0;
+    var startW=box.offsetWidth, startH=box.offsetHeight;
+    var rect=box.getBoundingClientRect();
+    var rx=t.clientX-rect.left, ry=t.clientY-rect.top, edge=22;
+    var edgeX = rx<edge?'l':rx>startW-edge?'r':'';
+    var edgeY = ry<edge?'t':ry>startH-edge?'b':'';
+    var mode = (edgeX||edgeY) ? edgeX+edgeY : 'move';
+    function onMove(ev) {
+        ev.preventDefault();
+        var mv = ev.touches?ev.touches[0]:ev;
+        var dx=mv.clientX-startX, dy=mv.clientY-startY;
+        var img=document.getElementById('cropImg');
+        var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+        var iW=img.offsetWidth, iH=img.offsetHeight;
+        if (mode==='move') {
+            box.style.left = clampNum(startL+dx, iL, iL+iW-startW)+'px';
+            box.style.top = clampNum(startT+dy, iT, iT+iH-startH)+'px';
+            return;
+        }
+        if (cropModalState._ratioLocked && cropModalState._cropWcm && cropModalState._cropHcm) {
+            var ratio = cropModalState._cropWcm / cropModalState._cropHcm;
+            var growRight=mode.indexOf('r')>=0, growLeftEdge=mode.indexOf('l')>=0;
+            var growBottom=mode.indexOf('b')>=0, growTopEdge=mode.indexOf('t')>=0;
+            var isCorner = mode.length===2;
+            var anchorX = growLeftEdge ? (startL+startW) : startL;
+            var anchorY = growTopEdge ? (startT+startH) : startT;
+            var dxSigned = growRight?dx:(growLeftEdge?-dx:0);
+            var dySigned = growBottom?dy:(growTopEdge?-dy:0);
+            var newW,newH;
+            if (isCorner) {
+                if (Math.abs(dxSigned)>=Math.abs(dySigned)) { newW=startW+dxSigned; newH=newW/ratio; }
+                else { newH=startH+dySigned; newW=newH*ratio; }
+            } else if (growLeftEdge||growRight) { newW=startW+dxSigned; newH=newW/ratio; }
+            else { newH=startH+dySigned; newW=newH*ratio; }
+            if (newW<40) { newW=40; newH=newW/ratio; }
+            if (newH<40) { newH=40; newW=newH*ratio; }
+            var maxW = growLeftEdge?(anchorX-iL):(iL+iW-anchorX);
+            var maxH = growTopEdge?(anchorY-iT):(iT+iH-anchorY);
+            var scaleDown = Math.min(1, maxW>0?maxW/newW:1, maxH>0?maxH/newH:1);
+            newW*=scaleDown; newH*=scaleDown;
+            var nl,nt;
+            if (isCorner||growLeftEdge||growRight) nl = growLeftEdge?(anchorX-newW):anchorX; else nl = startL+(startW-newW)/2;
+            if (isCorner||growTopEdge||growBottom) nt = growTopEdge?(anchorY-newH):anchorY; else nt = startT+(startH-newH)/2;
+            box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+        } else {
+            var growRight2=mode.indexOf('r')>=0, growLeftEdge2=mode.indexOf('l')>=0;
+            var growBottom2=mode.indexOf('b')>=0, growTopEdge2=mode.indexOf('t')>=0;
+            var nl2=startL, nt2=startT, nw2=startW, nh2=startH;
+            if (growRight2) nw2 = clampNum(startW+dx, 40, iL+iW-startL);
+            if (growLeftEdge2) { nw2 = clampNum(startW-dx, 40, startL+startW-iL); nl2 = startL+startW-nw2; }
+            if (growBottom2) nh2 = clampNum(startH+dy, 40, iT+iH-startT);
+            if (growTopEdge2) { nh2 = clampNum(startH-dy, 40, startT+startH-iT); nt2 = startT+startH-nh2; }
+            box.style.left=nl2+'px'; box.style.top=nt2+'px'; box.style.width=nw2+'px'; box.style.height=nh2+'px';
+        }
+    }
+    function onUp() {
+        document.removeEventListener('mousemove',onMove); document.removeEventListener('touchmove',onMove);
+        document.removeEventListener('mouseup',onUp); document.removeEventListener('touchend',onUp);
+    }
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
+}
+
+/* ── PDF PREVIEW (PDF.js canvas — aman untuk Chrome Android) ── */
+var pdfPreviewState = { doc: null, filename: '', blobUrl: '' };
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+function showPdfPreview(doc, filename) {
+    if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
+    pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
+    var modal = document.getElementById('pdfPreviewModal');
+    var container = document.getElementById('pdfPreviewFrame');
+    container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
+    modal.classList.add('show');
+    if (typeof pdfjsLib === 'undefined') {
+        container.innerHTML = '<div class="pdf-canvas-loading">Preview tidak tersedia di browser ini.<br>Silakan langsung download untuk melihat hasilnya.</div>';
+        return;
+    }
+    var arrayBuffer = doc.output('arraybuffer');
+    pdfjsLib.getDocument({data: arrayBuffer}).promise.then(function(pdf) {
+        container.innerHTML = '';
+        function renderPage(pageNum) {
+            pdf.getPage(pageNum).then(function(page) {
+                var viewport = page.getViewport({scale: 1.8});
+                var canvas = document.createElement('canvas');
+                canvas.width = viewport.width; canvas.height = viewport.height;
+                container.appendChild(canvas);
+                page.render({canvasContext: canvas.getContext('2d'), viewport: viewport}).promise.then(function() {
+                    if (pageNum < pdf.numPages) renderPage(pageNum+1);
+                });
+            });
+        }
+        renderPage(1);
+    }).catch(function(err) {
+        console.error(err);
+        container.innerHTML = '<div class="pdf-canvas-loading">Gagal menampilkan preview.<br>Silakan langsung download untuk melihat hasilnya.</div>';
+    });
+}
+function confirmDownloadPdf() { if (pdfPreviewState.doc) pdfPreviewState.doc.save(pdfPreviewState.filename); }
+function closePdfPreview() {
+    document.getElementById('pdfPreviewModal').classList.remove('show');
+    document.getElementById('pdfPreviewFrame').innerHTML = '';
+    if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
+    pdfPreviewState.doc = null;
+}
+
+/* ═══ DATA MODUL — GENERATOR STATOR LEAK MONITORING ═══ */
+
+/* Table 2 — Checklist (16 aktivitas, sesuai sheet "Checklist") */
+var CHECKLIST_DATA = [
+  {no:1,  activity:'Visual inspect flow rate'},
+  {no:2,  activity:'Visual inspect purge air flow'},
+  {no:3,  activity:'Check IA pressure'},
+  {no:4,  activity:'Inspect condensate trap'},
+  {no:5,  activity:'Check calibration bottle pressure'},
+  {no:6,  activity:'Replace BX filter'},
+  {no:7,  activity:'Replace DX filter'},
+  {no:8,  activity:'Replace Hankinson SPX air dryer filter'},
+  {no:9,  activity:'Replace hydrogen inlet filter'},
+  {no:10, activity:'Check DO probe cap life'},
+  {no:11, activity:'Verify H2 auto calibration (<90 days)'},
+  {no:12, activity:'Verify DO auto calibration (<90 days)'},
+  {no:13, activity:'Flow meter calibration'},
+  {no:14, activity:'Leak test sample gas system'},
+  {no:15, activity:'Manual calibration if required'},
+  {no:16, activity:'Restore system and verify no alarms'}
+].map(function(r){
+  return {no:r.no, activity:r.activity, acceptance:'', asFound:'', asLeft:'', pass:false, fail:false, remarks:''};
+});
+
+/* Table 3 — Measurement Log (7 parameter, sesuai sheet "Measurement Log") */
+var MEASUREMENT_DATA = [
+  {parameter:'Flow Rate', unit:'L/min'},
+  {parameter:'Purge Air Flow', unit:'L/min'},
+  {parameter:'IA Pressure', unit:'bar'},
+  {parameter:'Calibration Bottle Pressure', unit:'bar'},
+  {parameter:'DO Probe Life', unit:'%'},
+  {parameter:'H2 Reading', unit:'%'},
+  {parameter:'DO Reading', unit:'ppb'}
+].map(function(r){
+  return {parameter:r.parameter, unit:r.unit, oemSpec:'', before:'', after:''};
+});
+
+/* Table 4 — Spare Parts (mode tambah baris, mulai kosong) */
+var SPAREPARTS_DATA = [];
+var sparePartNextId = 1;
+
+/* Upload Evidence (pola material-warehouse: 1 gambar per slot, bisa tambah slot) */
+var evidenceItems = [];
+var evNextId = 1;
+
+/* ══════════════════ TABLE 2 — CHECKLIST ══════════════════ */
+function buildChecklistTable() {
+  var tbody = document.getElementById('t2Body');
+  tbody.innerHTML = '';
+  CHECKLIST_DATA.forEach(function(row, idx) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td style="text-align:center">'+row.no+'</td>'+
+      '<td>'+escapeHtmlG(row.activity)+'</td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.acceptance)+'" oninput="CHECKLIST_DATA['+idx+'].acceptance=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.asFound)+'" oninput="CHECKLIST_DATA['+idx+'].asFound=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.asLeft)+'" oninput="CHECKLIST_DATA['+idx+'].asLeft=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
+      '<td style="text-align:center"><input type="checkbox" id="chkPass'+idx+'" '+(row.pass?'checked':'')+' onchange="toggleChecklistFlag('+idx+',\'pass\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--ok,#16a34a)"></td>'+
+      '<td style="text-align:center"><input type="checkbox" id="chkFail'+idx+'" '+(row.fail?'checked':'')+' onchange="toggleChecklistFlag('+idx+',\'fail\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--fail,#dc2626)"></td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.remarks)+'" oninput="CHECKLIST_DATA['+idx+'].remarks=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>';
+    tbody.appendChild(tr);
+  });
+}
+function toggleChecklistFlag(idx, key, checked) {
+  var row = CHECKLIST_DATA[idx];
+  row[key] = checked;
+  if (checked) row[key === 'pass' ? 'fail' : 'pass'] = false; // Pass & Fail saling eksklusif
+  buildChecklistTable();
+}
+
+/* ══════════════════ TABLE 3 — MEASUREMENT LOG ══════════════════ */
+function buildMeasurementTable() {
+  var tbody = document.getElementById('t3Body');
+  tbody.innerHTML = '';
+  MEASUREMENT_DATA.forEach(function(row, idx) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>'+escapeHtmlG(row.parameter)+'</td>'+
+      '<td style="text-align:center">'+escapeHtmlG(row.unit)+'</td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.oemSpec)+'" oninput="MEASUREMENT_DATA['+idx+'].oemSpec=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.before)+'" oninput="MEASUREMENT_DATA['+idx+'].before=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.after)+'" oninput="MEASUREMENT_DATA['+idx+'].after=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+/* ══════════════════ TABLE 4 — SPARE PARTS (tambah baris) ══════════════════ */
+function addSparePartRow() {
+  SPAREPARTS_DATA.push({id: sparePartNextId++, partName:'', partNumber:'', qty:'', installed:false});
+  buildSparePartsTable();
+}
+function removeSparePartRow(id) {
+  SPAREPARTS_DATA = SPAREPARTS_DATA.filter(function(r){ return r.id !== id; });
+  buildSparePartsTable();
+}
+function buildSparePartsTable() {
+  var tbody = document.getElementById('t4Body');
+  tbody.innerHTML = '';
+  if (!SPAREPARTS_DATA.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Belum ada baris. Klik "+ Tambah Baris" untuk menambahkan spare part.</td></tr>';
+    return;
+  }
+  SPAREPARTS_DATA.forEach(function(row) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="text" value="'+escapeHtmlG(row.partName)+'" oninput="updateSparePart('+row.id+',\'partName\',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.partNumber)+'" oninput="updateSparePart('+row.id+',\'partNumber\',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box;font-family:\'Courier New\',monospace"></td>'+
+      '<td><input type="number" min="0" value="'+escapeHtmlG(row.qty)+'" oninput="updateSparePart('+row.id+',\'qty\',this.value)" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
+      '<td style="text-align:center"><input type="checkbox" '+(row.installed?'checked':'')+' onchange="updateSparePart('+row.id+',\'installed\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--ok,#16a34a)"></td>'+
+      '<td style="text-align:center"><button onclick="removeSparePartRow('+row.id+')" style="width:24px;height:24px;border-radius:50%;background:var(--fail,#dc2626);color:#fff;border:none;cursor:pointer;font-size:12px;line-height:24px;padding:0">&#215;</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+function updateSparePart(id, key, val) {
+  var row = SPAREPARTS_DATA.find(function(r){ return r.id === id; });
+  if (row) row[key] = val;
+}
+
+/* ══════════════════ UPLOAD EVIDENCE (pola material-warehouse) ══════════════════ */
+function evAddSlot() {
+  evidenceItems.push({id: evNextId++, caption:'', images:[]});
+  renderEvidenceList();
+}
+function evRemoveSlot(id) {
+  evidenceItems = evidenceItems.filter(function(it){ return it.id !== id; });
+  renderEvidenceList();
+}
+function renderEvidenceList() {
+  var wrap = document.getElementById('evList');
+  wrap.innerHTML = '';
+  if (!evidenceItems.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Belum ada evidence. Klik "+ Tambah Evidence" untuk menambahkan foto.</div>';
+    return;
+  }
+  evidenceItems.forEach(function(item) {
+    wrap.appendChild(buildEvidenceSlotEl(item));
+  });
+}
+function buildEvidenceSlotEl(item) {
+  var hasImg = item.images.length > 0;
+  var div = document.createElement('div');
+  div.id = 'evSlot_' + item.id;
+  div.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:#fafafa;position:relative';
+  div.innerHTML =
+    '<button onclick="evRemoveSlot('+item.id+')" title="Hapus slot ini" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--fail,#dc2626);color:#fff;border:none;cursor:pointer;font-size:11px;line-height:22px;padding:0;z-index:2">&#215;</button>'+
+    '<div class="img-upload-area" id="evUploadArea_'+item.id+'" onclick="evTriggerPick('+item.id+')" style="'+(hasImg?'border-style:solid;border-color:var(--accent,#0f766e);background:#fff;padding:10px;':'')+'border:2px dashed var(--border);border-radius:6px;padding:20px;text-align:center;cursor:pointer">'+
+      '<div id="evPlaceholder_'+item.id+'" style="display:'+(hasImg?'none':'block')+'">'+
+        '<div style="font-size:28px;margin-bottom:6px">&#128247;</div>'+
+        '<div style="font-size:13px;font-weight:600;color:var(--text-mid,#475569)">Klik untuk Upload Gambar</div>'+
+        '<div style="font-size:11px;color:var(--text-light,#94a3b8);margin-top:4px">Pilih dari Kamera atau Penyimpanan &rarr; Crop &rarr; Simpan</div>'+
+      '</div>'+
+      '<div id="evPreviewWrap_'+item.id+'" style="display:'+(hasImg?'block':'none')+';position:relative">'+
+        '<img id="evPreview_'+item.id+'" src="'+(hasImg?item.images[0].dataUrl:'')+'" alt="Preview" style="max-width:100%;max-height:260px;border-radius:6px;display:block;margin:0 auto">'+
+        '<button type="button" onclick="event.stopPropagation();evReEditCrop('+item.id+')" title="Crop ulang" style="position:absolute;top:6px;right:34px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer">&#9986;&#65039;</button>'+
+        '<button type="button" onclick="event.stopPropagation();evRemoveImage('+item.id+')" title="Hapus Gambar" style="position:absolute;top:6px;right:4px;width:26px;height:26px;border-radius:50%;background:var(--fail,#dc2626);color:#fff;border:none;cursor:pointer">&#215;</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="source-choices" id="evSrcChoices_'+item.id+'" style="display:none;gap:8px;margin-top:8px;justify-content:center">'+
+      '<button type="button" onclick="event.stopPropagation();evTriggerSource('+item.id+',\'camera\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>'+
+      '<button type="button" onclick="event.stopPropagation();evTriggerSource('+item.id+',\'storage\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>'+
+    '</div>'+
+    '<input type="file" id="evFileInput_'+item.id+'" accept="image/*" style="display:none" onchange="evOnFileSelected('+item.id+',event)">'+
+    '<input type="text" placeholder="Keterangan evidence..." value="'+escapeHtmlG(item.caption)+'" oninput="evUpdateCaption('+item.id+',this.value)" style="width:100%;margin-top:8px;padding:7px 8px;font-size:12px;border:1px solid var(--border);border-radius:5px;box-sizing:border-box">';
+  return div;
+}
+function evUpdateCaption(id, val) {
+  var item = evidenceItems.find(function(it){ return it.id === id; });
+  if (item) item.caption = val;
+}
+function evTriggerPick(id) {
+  var item = evidenceItems.find(function(it){ return it.id === id; });
+  if (item && item.images.length) return; // sudah ada gambar, klik gambar sendiri untuk crop ulang
+  var el = document.getElementById('evSrcChoices_'+id);
+  if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+function evTriggerSource(id, source) {
+  document.getElementById('evSrcChoices_'+id).style.display = 'none';
+  openFileInputSource('evFileInput_'+id, source); // openFileInputSource dari shared.js
+}
+function evOnFileSelected(id, e) {
+  var file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  var item = evidenceItems.find(function(it){ return it.id === id; });
+  if (!item) return;
+  var replaceIdx = item.images.length ? 0 : -1;
+  if (typeof fileToJpegDataUrl === 'function') {
+    fileToJpegDataUrl(file, function(dataUrl) {
+      if (dataUrl) imgOpenCropper(dataUrl, file.name, 'image/jpeg', item.images, 'ev_'+id, 'ev', replaceIdx);
+    });
+  } else {
+    var reader = new FileReader();
+    reader.onload = function(ev) { imgOpenCropper(ev.target.result, file.name, file.type, item.images, 'ev_'+id, 'ev', replaceIdx); };
+    reader.readAsDataURL(file);
+  }
+}
+function evReEditCrop(id) {
+  var item = evidenceItems.find(function(it){ return it.id === id; });
+  if (!item || !item.images.length) return;
+  var img = item.images[0];
+  imgOpenCropper(img.dataUrl, img.name, img.type, item.images, 'ev_'+id, 'ev', 0);
+}
+function evRemoveImage(id) {
+  var item = evidenceItems.find(function(it){ return it.id === id; });
+  if (!item) return;
+  item.images = [];
+  renderEvidenceList();
+}
+/* Dipanggil dari cropAndSave() setelah crop selesai, side = 'ev_<id>' */
+function evRenderPreview(side) {
+  var id = parseInt(String(side).replace('ev_',''), 10);
+  renderEvidenceList();
+}
+
+/* ══════════════════ UTIL ══════════════════ */
+function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+/* ══════════════════ RESET ══════════════════ */
+function resetAll() {
+  if (!confirm('Reset semua data pada form ini?')) return;
+  ['hWorkOrder','hPic','hAssetTag','hAssetDesc'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('hTanggal').value = todayStrG();
+  document.getElementById('t1Equipment').value = '';
+  document.getElementById('t1Oem').value = '';
+  document.getElementById('t1Frequency').value = 'Annual';
+  document.getElementById('t1StartTime').value = '';
+  document.getElementById('t1FinishTime').value = '';
+  document.getElementById('t1Technician').value = '';
+  document.getElementById('t1Supervisor').value = '';
+  document.getElementById('t1Plant').value = 'PLTU Paiton';
+  document.getElementById('t1Unit').value = 'Unit 7';
+  CHECKLIST_DATA.forEach(function(r){ r.acceptance=''; r.asFound=''; r.asLeft=''; r.pass=false; r.fail=false; r.remarks=''; });
+  MEASUREMENT_DATA.forEach(function(r){ r.oemSpec=''; r.before=''; r.after=''; });
+  SPAREPARTS_DATA = []; sparePartNextId = 1;
+  evidenceItems = []; evNextId = 1;
+  document.getElementById('apFindings').value = '';
+  document.getElementById('apTechnician').value = '';
+  document.getElementById('apSupervisor').value = '';
+  document.getElementById('apOperations').value = '';
+  buildChecklistTable(); buildMeasurementTable(); buildSparePartsTable(); renderEvidenceList();
+}
+function todayStrG() {
+  var d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* ══════════════════ PDF EXPORT ══════════════════ */
+function runPdfPreview() {
+  var doc = new jspdf.jsPDF({unit:'mm', format:'a4'});
+  var pageW = doc.internal.pageSize.getWidth();
+  var margin = 12, y = 16;
+
+  doc.setFontSize(13); doc.setFont(undefined,'bold');
+  doc.text('ANNUAL PM LOG SHEET — GENERATOR STATOR LEAK MONITORING SYSTEM', pageW/2, y, {align:'center'});
+  y += 8;
+
+  doc.setFontSize(9); doc.setFont(undefined,'normal');
+  var hdr = [
+    ['Work Order', document.getElementById('hWorkOrder').value || '-', 'PIC', document.getElementById('hPic').value || '-'],
+    ['Tanggal', document.getElementById('hTanggal').value || '-', 'Asset Tag', document.getElementById('hAssetTag').value || '-'],
+    ['Asset Description', document.getElementById('hAssetDesc').value || '-', '', '']
+  ];
+  doc.autoTable({ startY:y, theme:'plain', styles:{fontSize:9, cellPadding:1.5}, body: hdr,
+    columnStyles:{0:{fontStyle:'bold',cellWidth:32},2:{fontStyle:'bold',cellWidth:28}} });
+  y = doc.lastAutoTable.finalY + 4;
+
+  // TABLE 1 - PM COVER
+  var t1 = [
+    ['Plant', document.getElementById('t1Plant').value||'-'],
+    ['Unit', document.getElementById('t1Unit').value||'-'],
+    ['Equipment', document.getElementById('t1Equipment').value||'-'],
+    ['OEM', document.getElementById('t1Oem').value||'-'],
+    ['Frequency', document.getElementById('t1Frequency').value||'-'],
+    ['Start Time', document.getElementById('t1StartTime').value||'-'],
+    ['Finish Time', document.getElementById('t1FinishTime').value||'-'],
+    ['Technician', document.getElementById('t1Technician').value||'-'],
+    ['Supervisor', document.getElementById('t1Supervisor').value||'-']
+  ];
+  doc.setFont(undefined,'bold'); doc.text('Table 1 — PM Cover', margin, y); y += 2;
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:margin,right:margin},
+    body: t1, columnStyles:{0:{fontStyle:'bold',cellWidth:45}} });
+  y = doc.lastAutoTable.finalY + 6;
+
+  // TABLE 2 - CHECKLIST
+  doc.setFont(undefined,'bold'); doc.text('Table 2 — Checklist', margin, y); y += 2;
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:7.5, cellPadding:1.5}, margin:{left:margin,right:margin},
+    head: [['No','Activity','Acceptance Criteria','As Found','As Left','Pass','Fail','Remarks']],
+    body: CHECKLIST_DATA.map(function(r){ return [r.no, r.activity, r.acceptance, r.asFound, r.asLeft, r.pass?'✓':'', r.fail?'✓':'', r.remarks]; }),
+    columnStyles:{0:{cellWidth:8,halign:'center'},5:{cellWidth:10,halign:'center'},6:{cellWidth:10,halign:'center'}} });
+  y = doc.lastAutoTable.finalY + 6;
+
+  if (y > 250) { doc.addPage(); y = 16; }
+
+  // TABLE 3 - MEASUREMENT LOG
+  doc.setFont(undefined,'bold'); doc.text('Table 3 — Measurement Log', margin, y); y += 2;
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:margin,right:margin},
+    head: [['Parameter','Unit','OEM Spec','Before','After']],
+    body: MEASUREMENT_DATA.map(function(r){ return [r.parameter, r.unit, r.oemSpec, r.before, r.after]; }) });
+  y = doc.lastAutoTable.finalY + 6;
+
+  // TABLE 4 - SPARE PARTS
+  doc.setFont(undefined,'bold'); doc.text('Table 4 — Spare Parts', margin, y); y += 2;
+  var sp = SPAREPARTS_DATA.length ? SPAREPARTS_DATA.map(function(r){ return [r.partName, r.partNumber, r.qty, r.installed?'✓':'']; }) : [['-','-','-','-']];
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:margin,right:margin},
+    head: [['Part Name','Part Number','Qty','Installed']], body: sp });
+  y = doc.lastAutoTable.finalY + 6;
+
+  if (y > 240) { doc.addPage(); y = 16; }
+
+  // APPROVAL
+  doc.setFont(undefined,'bold'); doc.text('Approval', margin, y); y += 5;
+  doc.setFont(undefined,'normal'); doc.setFontSize(8);
+  doc.text('Findings / Corrective Action:', margin, y); y += 4;
+  var findingsLines = doc.splitTextToSize(document.getElementById('apFindings').value || '-', pageW - margin*2);
+  doc.text(findingsLines, margin, y); y += findingsLines.length*4 + 6;
+
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:3, halign:'center'}, margin:{left:margin,right:margin},
+    head: [['Technician','Supervisor','Operations']],
+    body: [[document.getElementById('apTechnician').value||'-', document.getElementById('apSupervisor').value||'-', document.getElementById('apOperations').value||'-']] });
+  y = doc.lastAutoTable.finalY + 8;
+
+  // EVIDENCE PHOTOS
+  var photosWithImg = evidenceItems.filter(function(it){ return it.images.length > 0; });
+  if (photosWithImg.length) {
+    if (y > 230) { doc.addPage(); y = 16; }
+    doc.setFont(undefined,'bold'); doc.setFontSize(11); doc.text('Upload Evidence', margin, y); y += 6;
+    var picW = 80, picH = 60, gap = 6, colX = margin, startXRight = margin + picW + gap;
+    photosWithImg.forEach(function(item, i) {
+      if (y + picH + 8 > 285) { doc.addPage(); y = 16; }
+      var x = (i % 2 === 0) ? colX : startXRight;
+      try { doc.addImage(item.images[0].dataUrl, 'JPEG', x, y, picW, picH); } catch(e) {}
+      doc.setFontSize(7.5); doc.setFont(undefined,'normal');
+      var capLines = doc.splitTextToSize(item.caption || '-', picW);
+      doc.text(capLines, x, y + picH + 4);
+      if (i % 2 === 1) y += picH + 12;
+    });
+  }
+
+  showPdfPreview(doc, 'Generator_Stator_Leak_Monitoring_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');
+}
+
+/* ══════════════════ DB SAVE / LOAD (pola shared.js) ══════════════════ */
+window.CURRENT_MODUL = 'GENERATOR_STATOR_LEAK'; // HARUS sama persis dengan check di dbCollectData(modul)
+
+function dbCollectData(modul) {
+  if (modul !== 'generator_stator_leak_monitoring') return null;
+  return {
+    modul: window.CURRENT_MODUL,
+    tanggal: document.getElementById('hTanggal').value || '',
+    pic: document.getElementById('hPic').value || '',
+    work_order: document.getElementById('hWorkOrder').value || '',
+    asset_tag: document.getElementById('hAssetTag').value || '',
+    asset_description: document.getElementById('hAssetDesc').value || '',
+    table1: {
+      plant: document.getElementById('t1Plant').value,
+      unit: document.getElementById('t1Unit').value,
+      equipment: document.getElementById('t1Equipment').value,
+      oem: document.getElementById('t1Oem').value,
+      frequency: document.getElementById('t1Frequency').value,
+      startTime: document.getElementById('t1StartTime').value,
+      finishTime: document.getElementById('t1FinishTime').value,
+      technician: document.getElementById('t1Technician').value,
+      supervisor: document.getElementById('t1Supervisor').value
+    },
+    checklist: CHECKLIST_DATA,
+    measurement: MEASUREMENT_DATA,
+    spareParts: SPAREPARTS_DATA,
+    approval: {
+      findings: document.getElementById('apFindings').value,
+      technician: document.getElementById('apTechnician').value,
+      supervisor: document.getElementById('apSupervisor').value,
+      operations: document.getElementById('apOperations').value
+    },
+    evidence: evidenceItems
+  };
+}
+
+function applyRecordToForm(rec, editingId) {
+  if (!rec) return;
+  document.getElementById('hTanggal').value = rec.tanggal || '';
+  document.getElementById('hPic').value = rec.pic || '';
+  document.getElementById('hWorkOrder').value = rec.work_order || '';
+  document.getElementById('hAssetTag').value = rec.asset_tag || '';
+  document.getElementById('hAssetDesc').value = rec.asset_description || '';
+  var t1 = rec.table1 || {};
+  document.getElementById('t1Plant').value = t1.plant || 'PLTU Paiton';
+  document.getElementById('t1Unit').value = t1.unit || 'Unit 7';
+  document.getElementById('t1Equipment').value = t1.equipment || '';
+  document.getElementById('t1Oem').value = t1.oem || '';
+  document.getElementById('t1Frequency').value = t1.frequency || 'Annual';
+  document.getElementById('t1StartTime').value = t1.startTime || '';
+  document.getElementById('t1FinishTime').value = t1.finishTime || '';
+  document.getElementById('t1Technician').value = t1.technician || '';
+  document.getElementById('t1Supervisor').value = t1.supervisor || '';
+
+  if (Array.isArray(rec.checklist) && rec.checklist.length) {
+    CHECKLIST_DATA.forEach(function(row, idx) {
+      var src = rec.checklist[idx];
+      if (src) { row.acceptance=src.acceptance||''; row.asFound=src.asFound||''; row.asLeft=src.asLeft||''; row.pass=!!src.pass; row.fail=!!src.fail; row.remarks=src.remarks||''; }
+    });
+  }
+  if (Array.isArray(rec.measurement) && rec.measurement.length) {
+    MEASUREMENT_DATA.forEach(function(row, idx) {
+      var src = rec.measurement[idx];
+      if (src) { row.oemSpec=src.oemSpec||''; row.before=src.before||''; row.after=src.after||''; }
+    });
+  }
+  SPAREPARTS_DATA = Array.isArray(rec.spareParts) ? rec.spareParts : [];
+  sparePartNextId = SPAREPARTS_DATA.reduce(function(m,r){ return Math.max(m, (r.id||0)+1); }, 1);
+
+  var ap = rec.approval || {};
+  document.getElementById('apFindings').value = ap.findings || '';
+  document.getElementById('apTechnician').value = ap.technician || '';
+  document.getElementById('apSupervisor').value = ap.supervisor || '';
+  document.getElementById('apOperations').value = ap.operations || '';
+
+  evidenceItems = Array.isArray(rec.evidence) ? rec.evidence : [];
+  evNextId = evidenceItems.reduce(function(m,r){ return Math.max(m, (r.id||0)+1); }, 1);
+
+  buildChecklistTable(); buildMeasurementTable(); buildSparePartsTable(); renderEvidenceList();
+}
+
+// Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
+function restoreDraftData(rec, editingId) {
+  if (!rec) return;
+  setTimeout(function(){
+    applyRecordToForm(rec, editingId);
+    if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
+  }, 400);
+}
+
+/* ══════════════════ INIT ══════════════════ */
+setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
+buildChecklistTable(); buildMeasurementTable(); buildSparePartsTable(); renderEvidenceList();
+renderPresetButtons();
+initCropDrag();
+(function(){ var el=document.getElementById('hTanggal'); if(el && !el.value) el.value = todayStrG(); })();
+
+/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  var doPrint = params.get('print') === '1';
+  if (!id) return;
+  dbLoad(id, function(rec){
+    setTimeout(function(){
+      applyRecordToForm(rec, id);
+      dbShowToast('Data dimuat dari riwayat ✓');
+      if (doPrint) setTimeout(function(){ runPdfPreview(); }, 500);
+    }, 400);
+  });
+})();
+</script>
+<!-- PDF PREVIEW MODAL -->
+<div id="pdfPreviewModal" class="pdf-preview-modal">
+    <div class="pdf-preview-dialog">
+        <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closePdfPreview()" aria-label="Tutup">✕</button>
+            <div class="pdf-preview-title">📄 Preview Hasil PDF</div>
+            <div class="pdf-preview-hint">Ini tampilan asli file PDF-nya, cek dulu sebelum download</div>
+        </div>
+        <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
+        <div class="pdf-preview-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
