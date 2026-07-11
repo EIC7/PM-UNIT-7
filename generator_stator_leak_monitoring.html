@@ -1538,91 +1538,137 @@ function runPdfPreview() {
 }
 function buildAndShowPdf() {
   var doc = new jspdf.jsPDF({unit:'mm', format:'a4'});
-  var pageW = doc.internal.pageSize.getWidth();
-  var pageH = doc.internal.pageSize.getHeight();
-  var margin = 12, y = 16;
-  drawGenBackground(doc, pageW, pageH);
+  var pw = doc.internal.pageSize.getWidth();
+  var ph = doc.internal.pageSize.getHeight();
+  var marginX = 14, marginTop = 16, marginBottom = 16;
+  var contentW = pw - (marginX * 2);
+  var y = marginTop;
 
-  doc.setFontSize(13); doc.setFont(undefined,'bold');
-  doc.text('ANNUAL PM LOG SHEET — GENERATOR STATOR LEAK MONITORING SYSTEM', pageW/2, y, {align:'center'});
+  function safe(s) { return String(s==null?'':s); }
+  function drawBg() { drawGenBackground(doc, pw, ph); }
+  function checkPage(h) {
+    if (y + h > ph - marginBottom) { doc.addPage(); drawBg(); y = marginTop; }
+    return y;
+  }
+  function secHeader(title) {
+    checkPage(16);
+    doc.setFillColor(44, 62, 48);
+    doc.rect(marginX, y, contentW, 8, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(210, 230, 215);
+    doc.text(title, pw/2, y+5.5, {align:'center'});
+    y += 11;
+    doc.setTextColor(20,30,25);
+  }
+  /* Table Label|Value grid full-width, gaya Work Activity Report (pola form_o2_report.html) */
+  function drawInfoGrid(fields, labelColW) {
+    labelColW = labelColW || 40;
+    var padIn = 3;
+    var valueX = marginX + labelColW + padIn;
+    var valueW = contentW - labelColW - padIn*2;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+    var rows = fields.map(function(f){
+      var lines = doc.splitTextToSize(safe(f[1]) || '-', valueW);
+      var h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5);
+      return {label:f[0], lines:lines, h:h};
+    });
+    var totalH = rows.reduce(function(s,r){ return s+r.h; }, 0);
+    checkPage(totalH + 4);
+    doc.setFillColor(255, 251, 214);
+    doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
+    doc.rect(marginX, y, contentW, totalH, 'FD');
+    doc.line(marginX+labelColW, y, marginX+labelColW, y+totalH);
+    var rowY = y;
+    doc.setLineWidth(0.25); doc.setDrawColor(0,0,0);
+    rows.forEach(function(r, idx){
+      if (idx > 0) doc.line(marginX, rowY, marginX+contentW, rowY);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
+      doc.text(r.label, marginX+padIn, rowY+4.6);
+      doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
+      doc.text(r.lines, valueX, rowY+4.6);
+      rowY += r.h;
+    });
+    y += totalH + 6;
+    doc.setTextColor(20,30,25);
+  }
+
+  drawBg();
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(20,30,25);
+  doc.text('ANNUAL PM LOG SHEET — GENERATOR STATOR LEAK MONITORING SYSTEM', pw/2, y, {align:'center'});
   y += 8;
 
-  doc.setFontSize(9); doc.setFont(undefined,'normal');
-  var hdr = [
-    ['Work Order', document.getElementById('hWorkOrder').value || '-', 'PIC', document.getElementById('hPic').value || '-'],
-    ['Tanggal', document.getElementById('hTanggal').value || '-', 'Asset Tag', document.getElementById('hAssetTag').value || '-'],
-    ['Asset Description', document.getElementById('hAssetDesc').value || '-', '', '']
-  ];
-  doc.autoTable({ startY:y, theme:'plain', styles:{fontSize:9, cellPadding:1.5}, body: hdr,
-    columnStyles:{0:{fontStyle:'bold',cellWidth:32},2:{fontStyle:'bold',cellWidth:28}} });
-  y = doc.lastAutoTable.finalY + 4;
+  // ═══ INFORMASI PEKERJAAN — grid full-width Label|Value ═══
+  drawInfoGrid([
+    ['Work Order', document.getElementById('hWorkOrder').value],
+    ['PIC', document.getElementById('hPic').value],
+    ['Tanggal', document.getElementById('hTanggal').value],
+    ['Asset Tag', document.getElementById('hAssetTag').value],
+    ['Asset Description', document.getElementById('hAssetDesc').value]
+  ], 40);
 
-  // TABLE 1 - PM COVER
-  var t1 = [
-    ['Plant', document.getElementById('t1Plant').value||'-'],
-    ['Unit', document.getElementById('t1Unit').value||'-'],
-    ['Equipment', document.getElementById('t1Equipment').value||'-'],
-    ['OEM', document.getElementById('t1Oem').value||'-'],
-    ['Frequency', document.getElementById('t1Frequency').value||'-'],
-    ['Start Time', document.getElementById('t1StartTime').value||'-'],
-    ['Finish Time', document.getElementById('t1FinishTime').value||'-'],
-    ['Technician', document.getElementById('t1Technician').value||'-'],
-    ['Supervisor', document.getElementById('t1Supervisor').value||'-']
-  ];
-  doc.setFont(undefined,'bold'); doc.text('Table 1 — PM Cover', margin, y); y += 2;
-  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:margin,right:margin},
-    body: t1, columnStyles:{0:{fontStyle:'bold',cellWidth:45}} });
-  y = doc.lastAutoTable.finalY + 6;
+  // TABLE 1 - PM COVER — pakai grid Label|Value yang sama
+  secHeader('TABLE 1 — PM COVER');
+  drawInfoGrid([
+    ['Plant', document.getElementById('t1Plant').value],
+    ['Unit', document.getElementById('t1Unit').value],
+    ['Equipment', document.getElementById('t1Equipment').value],
+    ['OEM', document.getElementById('t1Oem').value],
+    ['Frequency', document.getElementById('t1Frequency').value],
+    ['Start Time', document.getElementById('t1StartTime').value],
+    ['Finish Time', document.getElementById('t1FinishTime').value],
+    ['Technician', document.getElementById('t1Technician').value],
+    ['Supervisor', document.getElementById('t1Supervisor').value]
+  ], 40);
 
   // TABLE 2 - CHECKLIST
-  doc.setFont(undefined,'bold'); doc.text('Table 2 — Checklist', margin, y); y += 2;
-  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:7.5, cellPadding:1.5}, margin:{left:margin,right:margin},
+  secHeader('TABLE 2 — CHECKLIST');
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:7.5, cellPadding:1.5}, margin:{left:marginX,right:marginX},
     head: [['No','Activity','Acceptance Criteria','As Found','As Left','Pass','Fail','Remarks']],
     body: CHECKLIST_DATA.map(function(r){ return [r.no, r.activity, r.acceptance, r.asFound, r.asLeft, r.pass?'✓':'', r.fail?'✓':'', r.remarks]; }),
-    columnStyles:{0:{cellWidth:8,halign:'center'},5:{cellWidth:10,halign:'center'},6:{cellWidth:10,halign:'center'}} });
+    columnStyles:{0:{cellWidth:8,halign:'center'},5:{cellWidth:10,halign:'center'},6:{cellWidth:10,halign:'center'}},
+    didDrawPage:function(){ drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
-  if (y > 250) { doc.addPage(); drawGenBackground(doc, pageW, pageH); y = 16; }
-
   // TABLE 3 - MEASUREMENT LOG
-  doc.setFont(undefined,'bold'); doc.text('Table 3 — Measurement Log', margin, y); y += 2;
-  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:margin,right:margin},
+  secHeader('TABLE 3 — MEASUREMENT LOG');
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:marginX,right:marginX},
     head: [['Parameter','Unit','OEM Spec','Before','After']],
-    body: MEASUREMENT_DATA.map(function(r){ return [r.parameter, r.unit, r.oemSpec, r.before, r.after]; }) });
+    body: MEASUREMENT_DATA.map(function(r){ return [r.parameter, r.unit, r.oemSpec, r.before, r.after]; }),
+    didDrawPage:function(){ drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
   // TABLE 4 - SPARE PARTS
-  doc.setFont(undefined,'bold'); doc.text('Table 4 — Spare Parts', margin, y); y += 2;
+  secHeader('TABLE 4 — SPARE PARTS');
   var sp = SPAREPARTS_DATA.length ? SPAREPARTS_DATA.map(function(r){ return [r.partName, r.partNumber, r.qty, r.installed?'✓':'']; }) : [['-','-','-','-']];
-  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:margin,right:margin},
-    head: [['Part Name','Part Number','Qty','Installed']], body: sp });
-  y = doc.lastAutoTable.finalY + 6;
-
-  if (y > 240) { doc.addPage(); drawGenBackground(doc, pageW, pageH); y = 16; }
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:marginX,right:marginX},
+    head: [['Part Name','Part Number','Qty','Installed']], body: sp,
+    didDrawPage:function(){ drawBg(); } });
+  y = doc.lastAutoTable.finalY + 8;
 
   // APPROVAL
-  doc.setFont(undefined,'bold'); doc.text('Approval', margin, y); y += 5;
-  doc.setFont(undefined,'normal'); doc.setFontSize(8);
-  doc.text('Findings / Corrective Action:', margin, y); y += 4;
-  var findingsLines = doc.splitTextToSize(document.getElementById('apFindings').value || '-', pageW - margin*2);
-  doc.text(findingsLines, margin, y); y += findingsLines.length*4 + 6;
+  secHeader('APPROVAL');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
+  doc.text('Findings / Corrective Action:', marginX, y); y += 4.5;
+  doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
+  var findingsLines = doc.splitTextToSize(document.getElementById('apFindings').value || '-', contentW);
+  checkPage(findingsLines.length*4 + 4);
+  doc.text(findingsLines, marginX, y); y += findingsLines.length*4 + 6;
 
-  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:3, halign:'center'}, margin:{left:margin,right:margin},
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:3, halign:'center'}, margin:{left:marginX,right:marginX},
     head: [['Technician','Supervisor','Operations']],
-    body: [[document.getElementById('apTechnician').value||'-', document.getElementById('apSupervisor').value||'-', document.getElementById('apOperations').value||'-']] });
+    body: [[document.getElementById('apTechnician').value||'-', document.getElementById('apSupervisor').value||'-', document.getElementById('apOperations').value||'-']],
+    didDrawPage:function(){ drawBg(); } });
   y = doc.lastAutoTable.finalY + 8;
 
   // EVIDENCE PHOTOS
   var photosWithImg = evidenceItems.filter(function(it){ return it.images.length > 0; });
   if (photosWithImg.length) {
-    if (y > 230) { doc.addPage(); drawGenBackground(doc, pageW, pageH); y = 16; }
-    doc.setFont(undefined,'bold'); doc.setFontSize(11); doc.text('Upload Evidence', margin, y); y += 6;
-    var picW = 80, picH = 60, gap = 6, colX = margin, startXRight = margin + picW + gap;
+    secHeader('UPLOAD EVIDENCE');
+    var picW = (contentW - 6) / 2, picH = 60, gap = 6, colX = marginX, startXRight = marginX + picW + gap;
     photosWithImg.forEach(function(item, i) {
-      if (y + picH + 8 > 285) { doc.addPage(); drawGenBackground(doc, pageW, pageH); y = 16; }
+      checkPage(picH + 10);
       var x = (i % 2 === 0) ? colX : startXRight;
       try { doc.addImage(item.images[0].dataUrl, 'JPEG', x, y, picW, picH); } catch(e) {}
-      doc.setFontSize(7.5); doc.setFont(undefined,'normal');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
       var capLines = doc.splitTextToSize(item.caption || '-', picW);
       doc.text(capLines, x, y + picH + 4);
       if (i % 2 === 1) y += picH + 12;
