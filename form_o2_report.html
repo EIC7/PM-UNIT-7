@@ -1574,14 +1574,15 @@ function downloadPdf(){
       var totalH = infoRows.reduce(function(s,r){ return s + r.h; }, 0);
       checkPage(totalH + 4);
 
-      // Border luar (satu kotak utuh)
-      doc.setDrawColor(90, 130, 105); doc.setLineWidth(0.45);
-      doc.rect(marginX, y, contentW, totalH, 'S');
+      // Latar belakang tabel (kuning pucat) + border luar (satu kotak utuh)
+      doc.setFillColor(255, 251, 214);
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.35);
+      doc.rect(marginX, y, contentW, totalH, 'FD');
       // Garis vertikal pemisah kolom label | value (sepanjang tabel)
       doc.line(marginX+labelColW, y, marginX+labelColW, y+totalH);
 
       var rowY = y;
-      doc.setLineWidth(0.25); doc.setDrawColor(150, 175, 160);
+      doc.setLineWidth(0.25); doc.setDrawColor(0, 0, 0);
       infoRows.forEach(function(r, idx){
         if (idx > 0) doc.line(marginX, rowY, marginX+contentW, rowY);
         doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
