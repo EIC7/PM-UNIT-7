@@ -999,6 +999,14 @@ function bsDownloadPdf() {
         imgs2=bsImages['2'].filter(function(f){return f.type&&f.type.startsWith('image/');});
     if(n1||n2||imgs1.length||imgs2.length){
       secHeader('CATATAN & EVIDENCE PHOTO');
+      function iePhotoDrawSize(entry, maxW, maxH) {
+        var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
+        var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+        var w = wCm * 10, h = hCm * 10;
+        if (w > maxW) { h = h * (maxW / w); w = maxW; }
+        if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
+        return { w: w, h: h };
+      }
       function addSide(label,note,imgs){
         if(!note&&!imgs.length) return;
         checkPage(10);
@@ -1011,18 +1019,22 @@ function bsDownloadPdf() {
           y+=2;
         }
         if(imgs.length){
-          var imgW=54,imgH=42,gap=4,perRow=3,x=marginX+3;
-          imgs.forEach(function(img,i){
-            if(y+imgH+12>ph-marginBottom){doc.addPage();bsDrawBg(doc,pw,ph);y=marginTop;x=marginX+3;}
-            var drawX = Math.max(marginX, Math.min(x + ((img.offsetX||0)*10), pw - marginX - imgW));
-            try{doc.addImage(img.dataUrl,'JPEG',drawX,y,imgW,imgH);}catch(e){}
+          var rowStartX = marginX+3, maxRowRight = marginX + contentW - 3;
+          var maxPhotoW = contentW - 6, maxPhotoH = 60, gap=4;
+          var rowX = rowStartX, rowMaxH = 0;
+          imgs.forEach(function(img){
+            var dim = iePhotoDrawSize(img, maxPhotoW, maxPhotoH);
+            var capH = img.caption ? 6 : 0;
+            if (rowX + dim.w > maxRowRight && rowX > rowStartX) { y += rowMaxH + gap + 8; rowX = rowStartX; rowMaxH = 0; }
+            if (y + dim.h + capH + 10 > ph - marginBottom) { doc.addPage(); bsDrawBg(doc,pw,ph); y=marginTop; rowX=rowStartX; rowMaxH=0; }
+            var drawX = Math.max(marginX, Math.min(rowX + ((img.offsetX||0)*10), pw - marginX - dim.w));
+            try{doc.addImage(img.dataUrl,'JPEG',drawX,y,dim.w,dim.h);}catch(e){}
             var cap=safe(img.caption||'');
-            if(cap){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(50,70,130);doc.text(doc.splitTextToSize(cap,imgW),drawX,y+imgH+3);}
-            x=drawX+imgW+gap;
-            if((i+1)%perRow===0){x=marginX+3;y+=imgH+12;}
+            if(cap){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(50,70,130);doc.text(doc.splitTextToSize(cap,dim.w),drawX,y+dim.h+3);}
+            rowMaxH = Math.max(rowMaxH, dim.h + capH);
+            rowX = drawX + dim.w + gap;
           });
-          if(imgs.length%perRow!==0) y+=imgH+12;
-          y+=3;
+          y += rowMaxH + gap + 8;
         }
       }
       addSide('Note '+safe(BS_CFG.a.note)+' ('+safe(BS_CFG.a.code)+'):', n1, imgs1);
