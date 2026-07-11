@@ -1,6 +1,6 @@
 > **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek semua fitur di bawah. Apabila ditemukan perbedaan atau ada yang kurang dari semua revisi ataupun pembaruan (dibanding kondisi HTML yang sedang dikerjakan), maka terapkan ke HTML tersebut.
 
-# Fitur Reusable — Referensi dari `maintenance_report_form.html`
+# Fitur Reusable — Referensi dari `fegt.html`
 
 > **Cara pakai dokumen ini (untuk Claude):** Saat user upload HTML lain dan minta salah satu/semua fitur di bawah diterapkan:
 > 1. Baca dulu file yang diupload SECARA UTUH — cek struktur tabel/checksheet dan CSS/tema warnanya. **JANGAN diubah/disentuh.**
@@ -350,9 +350,9 @@ function updateSizeLabel() {
         : 'Ukuran cetak: '+w+' cm × '+h+' cm (bebas, maks '+MANUAL_MAX_CM+'×'+MANUAL_MAX_CM+'cm)';
 }
 
-// openCropModal, cropReset, closeCropModal, cropAndSave, reshapeCropBoxToRatio → lihat file
-// maintenance_report_form.html baris ~795-935 untuk kode utuhnya (termasuk kompresi
-// adaptif total-cap 1MB — sudah dipastikan bagus, jangan diringkas ulang, salin langsung).
+// openCropModal, cropReset, closeCropModal, cropAndSave, reshapeCropBoxToRatio → kode LENGKAP
+// dan terbaru (termasuk kompresi adaptif total-cap 1MB) sudah ada utuh di dump Fitur J
+// di bawah (sumber: fegt.html / form_o2_report.html) — salin dari situ, bukan dari sini.
 
 // INIT (panggil di DOMContentLoaded):
 // renderPresetButtons();
@@ -534,7 +534,7 @@ function initCropDrag() {
     }
 }
 ```
-> ⚠️ Cabang resize bebas (mode Manual, tidak ratio-locked) sengaja tidak diringkas di sini karena cukup panjang — **salin langsung dari `maintenance_report_form.html` baris ±1010–1046** saat implementasi supaya tidak ada logika yang kelewat/salah ketik.
+> ⚠️ Cabang resize bebas (mode Manual, tidak ratio-locked) sengaja tidak diringkas di sini karena cukup panjang — kode lengkapnya (fungsi `onCropDragStart`) sudah tersalin utuh di dump Fitur J di bawah (sumber: `fegt.html`), **salin dari situ** saat implementasi supaya tidak ada logika yang kelewat/salah ketik.
 
 ---
 
@@ -691,7 +691,9 @@ function closePdfPreview() {
 ---
 
 ## J. Edit Gambar (Insert Shape: Teks/Panah/Garis/Kotak/Oval)
-**Tujuan:** dari dalam Crop Modal, user bisa tap "🖍️ Edit Gambar" untuk membuka editor anotasi ala Insert Shape Word — tambah teks, panah, garis, kotak, oval di atas foto ASLI (sebelum crop). Semua anotasi bisa digeser, di-resize, warna & ketebalan garis bisa dipilih. Editor tampil hampir full-screen dengan zoom (➖/➕) dan tool geser tampilan (✋ pan). Saat selesai, anotasi di-flatten (digabung jadi satu bitmap) ke `#cropImg` lewat `<canvas>`, supaya alur crop selanjutnya tetap normal.
+**Sumber terkini:** `form_o2_report.html` (menggantikan `fegt.html` sebagai acuan utama fitur ini — `fegt.html` masih punya versi lebih lama tanpa fix-fix di bawah). Kalau minta diterapkan ke file baru dan tidak disebutkan sumbernya, **pakai kode dari dokumen ini** (sudah versi `form_o2_report.html`), bukan salin manual dari `fegt.html`.
+
+**Tujuan:** dari dalam Crop Modal, user bisa tap "🖍️ Edit Gambar" untuk membuka editor anotasi ala Insert Shape Word — tambah teks, panah, garis, kotak, oval di atas foto ASLI (sebelum crop), termasuk **rotasi** untuk kotak & oval (lihat detail di bagian bawah dump kode — sudah menyatu, bukan terpisah lagi). Semua anotasi bisa digeser, di-resize, warna & ketebalan garis bisa dipilih. Editor tampil hampir full-screen dengan zoom (➖/➕) dan tool geser tampilan (✋ pan). Saat selesai, anotasi di-flatten (digabung jadi satu bitmap) ke `#cropImg` lewat `<canvas>`, supaya alur crop selanjutnya tetap normal.
 
 **Trigger dari Crop Modal** (taruh di `.crop-btns` footer crop modal yang sudah ada):
 ```html
@@ -704,7 +706,17 @@ function closePdfPreview() {
 
 **Bug penting yang sudah di-fix — soft keyboard nyangkut:** teks dibuat/diedit lewat `window.prompt()` (dialog native). Di Android Chrome, setelah `prompt()` ditutup, soft keyboard sering **tidak ikut turun** karena tidak ada `<input>` asli di halaman yang kehilangan fokus (fokus sebelumnya ada di kotak dialog native, bukan elemen DOM) — dialognya sendiri berfungsi normal (teks berhasil masuk), cuma keyboard-nya nyangkut secara visual dan kadang tap di tempat lain pun tidak menutupnya. **Fix:** panggil `ieForceHideKeyboard()` tepat setelah setiap `prompt()` selesai — fungsi ini fokus-lalu-blur sebuah `<input readonly>` tersembunyi supaya Android mendapat sinyal blur yang nyata dan menutup IME (dibuat readonly saat fokus supaya tidak malah memunculkan keyboard baru). **Pola ini wajib dipakai di mana pun fitur ini pakai `prompt()`** — kalau nanti prompt() diganti custom input di halaman, fix ini tidak diperlukan lagi karena sudah ada `<input>` asli untuk di-blur.
 
-**Bug penting yang sudah di-fix — titik resize (handle) susah dipencet di HP:** `ieHandleR()` sengaja dibuat kecil (~9px) supaya titik hijau terlihat presisi dan tidak menutupi gambar, tapi ini bikin titiknya susah kena jari di layar HP, terutama untuk resize kotak teks. **Fix:** `ieMakeHandle()` sekarang menggambar 2 lingkaran SVG bertumpuk di titik yang sama — lingkaran visual kecil (`pointer-events:none`, cuma buat tampilan) dan lingkaran hit-area transparan yang lebih besar di atasnya (`pointer-events:all`, radius minimal ~22px layar via `ieHandleHitR()`, dikonversi ke koordinat natural gambar sesuai `baseScale × zoom` biar konsisten walau lagi di-zoom). Listener `pointerdown` dipasang di lingkaran hit-area, bukan lingkaran visual. **Jangan pasang listener langsung di lingkaran visual `c`** — itu yang bikin bug ini muncul lagi.
+**Bug penting yang sudah di-fix — titik resize (handle) & titik ujung garis/panah susah dipencet di HP:** `ieHandleR()` sengaja dibuat kecil (~9px) supaya titik hijau terlihat presisi dan tidak menutupi gambar, tapi ini bikin titiknya susah kena jari di layar HP — berlaku untuk **semua** jenis handle yang lewat `ieMakeHandle()`: resize kotak/oval/teks, DAN titik ujung garis/panah (`x1,y1`/`x2,y2`, dipakai buat mengubah arah garis). **Fix:** `ieMakeHandle()` sekarang menggambar 2 lingkaran SVG bertumpuk di titik yang sama — lingkaran visual kecil (`pointer-events:none`, cuma buat tampilan) dan lingkaran hit-area transparan yang lebih besar di atasnya (`pointer-events:all`, `touch-action:none` biar gesture browser tidak ikut campur, radius minimal ~22px layar via `ieHandleHitR()`, dikonversi ke koordinat natural gambar sesuai `baseScale × zoom` biar konsisten walau lagi di-zoom). Listener `pointerdown` dipasang di lingkaran hit-area, bukan lingkaran visual. **Jangan pasang listener langsung di lingkaran visual `c`** — itu yang bikin bug ini muncul lagi.
+
+**Bug lain yang sudah di-fix (revisi `form_o2_report.html`):**
+- **Shape baru tidak otomatis terpilih** — sebelumnya setelah bikin teks/garis/kotak/oval baru, usernya harus tap lagi buat pilih shape itu (misal buat langsung geser/resize). Sekarang `addShape(...)` yang mengembalikan objek shape-nya, langsung dipanggil `setSelectedShape(shape.id)` sesudahnya di semua jalur pembuatan shape (teks lewat prompt, drag-selesai untuk garis/panah/kotak/oval).
+- **Closure salah nangkep `shape.id` pas drag** — pemanggil `startDragShape(shape.id, ev)` di dalam `forEach` shape dibungkus IIFE `(function(shapeId){ return function(ev){...}; })(shape.id)` supaya id-nya "dibekukan" per-shape dengan aman, menghindari kemungkinan drag salah shape kalau ada re-render di tengah interaksi.
+- **Edit teks kosong ke-cancel padahal harusnya boleh dikosongkan jadi spasi** — `editSelectedText()` sekarang treat `val === null` (user tekan Cancel) beda dari string kosong (`s.text = val || ' '`, supaya shape teks tidak hilang total kalau dikosongkan).
+- **Ukuran font naik/turun tanpa fallback** — `fontSize` pakai `(s.fontSize || ieFontDefault()) + dir*step` supaya tidak `NaN` kalau shape lama belum punya `fontSize`.
+- **Kompresi hasil flatten sedikit dinaikkan** — loop kualitas kompresi mulai dari `q=0.9` (sebelumnya `0.85`) sebagai upaya awal sebelum turun bertahap, supaya hasil rata-rata sedikit lebih tajam sebelum kena penurunan kualitas.
+- **`ieBuildShapeVisual()` dirapikan** — sekarang satu variabel `el` dipakai untuk semua tipe shape (if/else-if), bukan banyak `return` di tengah — mempermudah rotasi (Fitur K) ditempel di satu titik keluar fungsi tanpa duplikasi.
+- **Render callback modul saat crop selesai (`cropAndSave`) dibuat generik** — dipanggil dinamis lewat `window[modulePrefix + 'RenderPreviews'](side)`, bukan daftar `if/else` per modul (`cl`/`ld`/`op`/dst) yang harus ditambah manual tiap ada modul baru. **Ini penyesuaian di luar `form_o2_report.html` asli** (di sana masih `if/else` manual) — dipakai supaya kode di dokumen ini langsung kompatibel untuk modul apa pun tanpa diedit tiap kali; kalau nge-diff langsung ke `form_o2_report.html`, bagian ini akan terlihat beda.
+
 
 ```css
 /* ── EDIT GAMBAR (Insert Shape) ── */
@@ -788,6 +800,11 @@ var IE_ZOOM_MIN = 1, IE_ZOOM_MAX = 4, IE_ZOOM_STEP = 0.5;
 
 function ieMinSize(){ return Math.max(20, imgEditState.naturalW * 0.02); }
 function ieHandleR(){ return Math.max(9, imgEditState.naturalW * 0.009); }
+function ieHandleHitR(){
+    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
+    var minTouchPx = 22;
+    return Math.max(ieHandleR(), minTouchPx / scale);
+}
 function ieStrokeWFor(shape){
     var key = (shape && shape.strokeSize) || imgEditState.thickness || 'M';
     var f = IE_THICKNESS_FACTORS[key] || IE_THICKNESS_FACTORS.M;
@@ -908,7 +925,7 @@ function getShapeById(id){
 function addShape(shape){
     shape.id = imgEditState.nextId++;
     imgEditState.shapes.push(shape);
-    setSelectedShape(shape.id);
+    return shape;
 }
 function ieSetSelButtonsDisplay(shape){
     var isText = !!(shape && shape.type === 'text');
@@ -926,6 +943,10 @@ function setSelectedShape(id){
     imgEditState.selectedId = id;
     var shape = getShapeById(id);
     ieSetSelButtonsDisplay(shape);
+    if (shape) {
+        document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color')===shape.color); });
+        if (shape.strokeSize) document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-thick')===shape.strokeSize); });
+    }
     renderAllShapes();
 }
 function deleteSelectedShape(){
@@ -938,7 +959,9 @@ function editSelectedText(){
     if (!s || s.type !== 'text') return;
     var val = prompt('Edit teks:', s.text);
     ieForceHideKeyboard();
-    if (val !== null && val.trim()) { s.text = val.trim(); renderAllShapes(); }
+    if (val === null) return;
+    s.text = val || ' ';
+    renderAllShapes();
 }
 /* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
    "menempel" (tidak ikut turun) karena tidak ada <input> asli di halaman yang
@@ -971,7 +994,7 @@ function ieResizeSelectedText(dir){
     var s = getShapeById(imgEditState.selectedId);
     if (!s || s.type !== 'text') return;
     var step = Math.max(2, imgEditState.naturalW*0.006);
-    s.fontSize = Math.max(10, s.fontSize + dir*step);
+    s.fontSize = Math.max(10, (s.fontSize||ieFontDefault()) + dir*step);
     renderAllShapes();
 }
 
@@ -1024,7 +1047,10 @@ function onEditSvgPointerDown(e){
     if (tool === 'text') {
         var txt = prompt('Masukkan teks:');
         ieForceHideKeyboard();
-        if (txt && txt.trim()) addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
+        if (txt && txt.trim()) {
+            var shapeT = addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
+            setSelectedShape(shapeT.id);
+        }
         ieBackToSelectKeepSelection();
         return;
     }
@@ -1039,15 +1065,16 @@ function onEditSvgPointerDown(e){
     function onUp(){
         ieRemoveDocListeners(onMove, onUp);
         var d = imgEditState.drawing; imgEditState.drawing = null;
-        var dist = Math.hypot(d.x2-d.x1, d.y2-d.y1);
-        if (dist > Math.max(8, imgEditState.naturalW*0.008)) {
+        if (d && (Math.abs(d.x2-d.x1) > 4 || Math.abs(d.y2-d.y1) > 4)) {
+            var shape;
             if (d.type === 'rect' || d.type === 'oval') {
-                addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize});
+                shape = addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize, rotation:0});
             } else {
-                addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize});
+                shape = addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize});
             }
+            setSelectedShape(shape.id);
+            ieBackToSelectKeepSelection();
         } else { renderAllShapes(); }
-        ieBackToSelectKeepSelection();
     }
     ieAddDocListeners(onMove, onUp);
 }
@@ -1081,83 +1108,70 @@ function startHandleDrag(onDragMove){
     ieAddDocListeners(onMove, onUp);
 }
 
-/* Radius area sentuh (bukan visual) — minimal setara ~22px layar supaya
-   enak dipencet jari, meski titik hijaunya sendiri sengaja dibikin kecil
-   biar presisi. Dikonversi ke koordinat "natural" gambar sesuai skala
-   tampilan saat ini (baseScale x zoom). */
-function ieHandleHitR(){
-    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
-    var minTouchPx = 22;
-    return Math.max(ieHandleR(), minTouchPx / scale);
-}
 function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
-    var r = ieHandleR();
     var c = document.createElementNS(NS_SVG, 'circle');
-    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
-    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1, r*0.18));
-    c.style.cursor = cursor; c.style.pointerEvents = 'none';
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', ieHandleR());
+    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1,ieHandleR()*0.2));
+    c.style.cursor = cursor; c.style.touchAction = 'none'; c.style.pointerEvents = 'none';
     svg.appendChild(c);
     // Hit-area transparan yang lebih besar, ditumpuk di atas titik visual,
     // supaya gampang dipencet di HP tanpa mengubah ukuran titik yang terlihat.
     var hit = document.createElementNS(NS_SVG, 'circle');
     hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', ieHandleHitR());
     hit.setAttribute('fill', 'transparent');
-    hit.style.cursor = cursor; hit.style.pointerEvents = 'all';
-    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
-    hit.addEventListener('pointerdown', start);
+    hit.style.cursor = cursor; hit.style.touchAction = 'none'; hit.style.pointerEvents = 'all';
+    hit.addEventListener('pointerdown', function(e){ e.stopPropagation(); if (e.cancelable) e.preventDefault(); startHandleDrag(onDragMove); });
     svg.appendChild(hit);
 }
 
 /* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */
 function ieBuildShapeVisual(shape){
-    var sw = ieStrokeWFor(shape);
-    if (shape.type === 'line' || shape.type === 'arrow') {
-        var ln = document.createElementNS(NS_SVG, 'line');
-        ln.setAttribute('x1', shape.x1); ln.setAttribute('y1', shape.y1);
-        ln.setAttribute('x2', shape.x2); ln.setAttribute('y2', shape.y2);
-        ln.setAttribute('stroke', shape.color); ln.setAttribute('stroke-width', sw);
-        ln.setAttribute('stroke-linecap', 'round');
-        if (shape.type === 'arrow') ln.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
-        return ln;
-    }
+    var el;
     if (shape.type === 'rect') {
-        var rc = document.createElementNS(NS_SVG, 'rect');
-        rc.setAttribute('x', shape.x); rc.setAttribute('y', shape.y);
-        rc.setAttribute('width', shape.w); rc.setAttribute('height', shape.h);
-        rc.setAttribute('stroke', shape.color); rc.setAttribute('stroke-width', sw); rc.setAttribute('fill', 'none');
-        return rc;
-    }
-    if (shape.type === 'oval') {
-        var el = document.createElementNS(NS_SVG, 'ellipse');
+        el = document.createElementNS(NS_SVG, 'rect');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y);
+        el.setAttribute('width', shape.w); el.setAttribute('height', shape.h);
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'oval') {
+        el = document.createElementNS(NS_SVG, 'ellipse');
         el.setAttribute('cx', shape.x+shape.w/2); el.setAttribute('cy', shape.y+shape.h/2);
         el.setAttribute('rx', shape.w/2); el.setAttribute('ry', shape.h/2);
-        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', sw); el.setAttribute('fill', 'none');
-        return el;
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'line' || shape.type === 'arrow') {
+        el = document.createElementNS(NS_SVG, 'line');
+        el.setAttribute('x1', shape.x1); el.setAttribute('y1', shape.y1);
+        el.setAttribute('x2', shape.x2); el.setAttribute('y2', shape.y2);
+        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape)); el.setAttribute('stroke-linecap', 'round');
+        if (shape.type === 'arrow') el.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
+    } else if (shape.type === 'text') {
+        el = document.createElementNS(NS_SVG, 'text');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y + shape.fontSize);
+        el.setAttribute('fill', shape.color); el.setAttribute('font-size', shape.fontSize);
+        el.setAttribute('font-family', 'Arial, sans-serif'); el.setAttribute('font-weight', '700');
+        el.textContent = shape.text;
     }
-    if (shape.type === 'text') {
-        var tx = document.createElementNS(NS_SVG, 'text');
-        tx.setAttribute('x', shape.x); tx.setAttribute('y', shape.y);
-        tx.setAttribute('font-size', shape.fontSize); tx.setAttribute('fill', shape.color);
-        tx.setAttribute('font-family', 'Arial, sans-serif'); tx.setAttribute('font-weight', '700');
-        tx.setAttribute('dominant-baseline', 'hanging'); tx.setAttribute('stroke', '#fff');
-        tx.setAttribute('stroke-width', Math.max(1, shape.fontSize*0.04)); tx.setAttribute('paint-order', 'stroke');
-        tx.textContent = shape.text;
-        return tx;
-    }
-    return null;
+    return el;
 }
 
 function ieBuildDefs(svg){
     var defs = document.createElementNS(NS_SVG, 'defs');
     ['#e53935','#1a1a1a','#1e88e5','#fdd835'].forEach(function(c){
-        var m = document.createElementNS(NS_SVG, 'marker');
-        m.setAttribute('id', ieColorId(c)); m.setAttribute('markerWidth', 10); m.setAttribute('markerHeight', 10);
-        m.setAttribute('refX', 8); m.setAttribute('refY', 5); m.setAttribute('orient', 'auto'); m.setAttribute('markerUnits', 'userSpaceOnUse');
-        var p = document.createElementNS(NS_SVG, 'path');
-        p.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); p.setAttribute('fill', c);
-        m.appendChild(p); defs.appendChild(m);
+        var marker = document.createElementNS(NS_SVG, 'marker');
+        marker.setAttribute('id', ieColorId(c)); marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '10');
+        marker.setAttribute('refX', '8'); marker.setAttribute('refY', '5'); marker.setAttribute('orient', 'auto');
+        var path = document.createElementNS(NS_SVG, 'path');
+        path.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); path.setAttribute('fill', c);
+        marker.appendChild(path); defs.appendChild(marker);
     });
     svg.appendChild(defs);
+}
+
+/* ── Rotasi titik (px,py) mengelilingi pusat (cx,cy) sejauh `deg` derajat ── */
+function ieRotatePoint(px, py, cx, cy, deg){
+    var rad = deg * Math.PI/180;
+    var cos = Math.cos(rad), sin = Math.sin(rad);
+    var dx = px-cx, dy = py-cy;
+    return { x: cx + dx*cos - dy*sin, y: cy + dx*sin + dy*cos };
 }
 
 /* ── Render ulang seluruh overlay interaktif (shapes + preview + handle seleksi) ── */
@@ -1202,25 +1216,53 @@ function renderAllShapes(){
             g.insertBefore(thit, visual);
         }
         g.style.cursor = 'move';
-        var start = function(ev){
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var rcx = shape.x + shape.w/2, rcy = shape.y + shape.h/2;
+            g.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + rcx + ' ' + rcy + ')');
+        }
+        var start = (function(shapeId){ return function(ev){
             if (imgEditState.tool !== 'select') return;
             ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
-            startDragShape(shape.id, ev);
-        };
+            startDragShape(shapeId, ev);
+        }; })(shape.id);
         g.addEventListener('pointerdown', start);
         svg.appendChild(g);
 
         if (shape.id === imgEditState.selectedId) {
             if (shape.type === 'rect' || shape.type === 'oval') {
+                var rot = shape.rotation || 0;
+                var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
                 var box = document.createElementNS(NS_SVG, 'rect');
                 box.setAttribute('x', shape.x); box.setAttribute('y', shape.y);
                 box.setAttribute('width', shape.w); box.setAttribute('height', shape.h);
                 box.setAttribute('fill', 'none'); box.setAttribute('stroke', '#2ecc71');
                 box.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
                 box.setAttribute('stroke-dasharray', '6,4'); box.setAttribute('pointer-events', 'none');
+                if (rot) box.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
                 svg.appendChild(box);
-                ieMakeHandle(svg, shape.x+shape.w, shape.y+shape.h, 'nwse-resize', function(p){
-                    shape.w = Math.max(ieMinSize(), p.x-shape.x); shape.h = Math.max(ieMinSize(), p.y-shape.y);
+                // Handle resize di pojok kanan-bawah — posisinya dihitung ulang sesuai
+                // rotasi saat ini, dan resize dihitung di ruang LOKAL (belum dirotasi)
+                // supaya tetap membesar/mengecil mengikuti arah kotaknya sendiri.
+                var cornerLocal = {x: shape.x+shape.w, y: shape.y+shape.h};
+                var cornerWorld = rot ? ieRotatePoint(cornerLocal.x, cornerLocal.y, cx, cy, rot) : cornerLocal;
+                ieMakeHandle(svg, cornerWorld.x, cornerWorld.y, 'nwse-resize', function(p){
+                    var local = rot ? ieRotatePoint(p.x, p.y, cx, cy, -rot) : p;
+                    shape.w = Math.max(ieMinSize(), local.x-shape.x); shape.h = Math.max(ieMinSize(), local.y-shape.y);
+                });
+                // Handle rotasi — bulatan di atas tengah kotak, tarik memutar sekeliling pusat.
+                var rotDist = Math.max(24, imgEditState.naturalW*0.03);
+                var rotHandleLocal = {x: cx, y: shape.y - rotDist};
+                var rotHandleWorld = rot ? ieRotatePoint(rotHandleLocal.x, rotHandleLocal.y, cx, cy, rot) : rotHandleLocal;
+                var rotLine = document.createElementNS(NS_SVG, 'line');
+                rotLine.setAttribute('x1', cx); rotLine.setAttribute('y1', shape.y);
+                rotLine.setAttribute('x2', rotHandleLocal.x); rotLine.setAttribute('y2', rotHandleLocal.y);
+                rotLine.setAttribute('stroke', '#2ecc71'); rotLine.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                rotLine.setAttribute('pointer-events', 'none');
+                if (rot) rotLine.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
+                svg.appendChild(rotLine);
+                ieMakeHandle(svg, rotHandleWorld.x, rotHandleWorld.y, 'grab', function(p){
+                    var deg = Math.atan2(p.x-cx, -(p.y-cy)) * 180/Math.PI;
+                    shape.rotation = Math.round(deg);
                 });
             } else if (shape.type === 'line' || shape.type === 'arrow') {
                 ieMakeHandle(svg, shape.x1, shape.y1, 'move', function(p){ shape.x1=p.x; shape.y1=p.y; });
@@ -1268,7 +1310,12 @@ function applyImageEdits(){
     ieBuildDefs(flatSvg);
     imgEditState.shapes.forEach(function(shape){
         var v = ieBuildShapeVisual(shape);
-        if (v) flatSvg.appendChild(v);
+        if (!v) return;
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
+            v.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + cx + ' ' + cy + ')');
+        }
+        flatSvg.appendChild(v);
     });
     var svgStr = new XMLSerializer().serializeToString(flatSvg);
     var svgImg = new Image();
@@ -1276,7 +1323,6 @@ function applyImageEdits(){
         var canvas = document.createElement('canvas');
         canvas.width = nw; canvas.height = nh;
         var ctx = canvas.getContext('2d');
-        var baseImg = document.getElementById('editImg');
         var srcImg = new Image();
         srcImg.onload = function(){
             ctx.drawImage(srcImg, 0, 0, nw, nh);
@@ -1309,8 +1355,10 @@ function applyImageEdits(){
 
 ---
 
-## K. Rotasi Kotak & Oval (ekstensi — belum ada di fegt.html)
-**Status:** fitur ini ditambahkan di `material-warehouse.html`, **belum ada** di `fegt.html` (sumber asli Fitur J). Garis/panah sudah bisa "diputar" tanpa fitur tambahan — cukup tarik salah satu titik ujungnya (sudah otomatis mengubah arah). Teks sengaja **tidak** dikasih rotasi (belum diminta, dan `<text>` SVG butuh penanganan bounding-box ekstra kalau mau diputar).
+## K. Rotasi Kotak & Oval
+**Status: ✅ SUDAH terintegrasi penuh** ke dalam dump kode Fitur J di atas, sejak sumber Fitur J diganti ke `form_o2_report.html`. **Tidak perlu ditempel terpisah** — kode rotasi (`ieRotatePoint`, transform di `renderAllShapes()`/`applyImageEdits()`, handle rotasi baru) sudah menyatu langsung di kode Fitur J. Bagian di bawah ini cuma penjelasan cara kerjanya buat referensi/debug, bukan kode tempel terpisah lagi. (Awalnya fitur ini datang dari `material-warehouse.html` sebelum ikut dibawa masuk ke `form_o2_report.html`.)
+
+Garis/panah sudah bisa "diputar" tanpa fitur tambahan — cukup tarik salah satu titik ujungnya (sudah otomatis mengubah arah). Teks sengaja **tidak** dikasih rotasi (belum diminta, dan `<text>` SVG butuh penanganan bounding-box ekstra kalau mau diputar).
 
 **Cara kerja:** setiap shape kotak/oval punya field `rotation` (derajat, default `0`). Rotasi diterapkan sebagai atribut `transform="rotate(deg cx cy)"` pada elemen `<g>` pembungkus shape (bukan pada elemen visual `<rect>`/`<ellipse>` itu sendiri) — ini otomatis ikut merotasi hit-area transparannya juga (Fitur J) tanpa perlu perubahan lain.
 
@@ -1330,7 +1378,7 @@ function ieRotatePoint(px, py, cx, cy, deg){
 
 **Di `applyImageEdits()` (flatten ke bitmap final),** transform rotasi yang sama harus ditempel manual ke elemen visual hasil `ieBuildShapeVisual(shape)` sebelum di-append ke `flatSvg` — kalau lupa, hasil PDF/gambar akhir shape kotak/oval-nya tidak akan ikut berputar meskipun tampilan di editor sudah benar.
 
-**⚠️ Kalau fitur ini mau di-port ke `fegt.html` atau file lain:** field `rotation` di objek shape kotak/oval perlu default `0` saat dibuat (`addShape({..., rotation:0})`), jangan `undefined` — beberapa pengecekan pakai `if (shape.rotation)` yang akan salah treat `undefined` sama dengan `0` (aman) tapi lebih rapi eksplisit.
+**⚠️ Detail teknis yang perlu diingat:** field `rotation` di objek shape kotak/oval perlu default `0` saat dibuat (`addShape({..., rotation:0})`), jangan `undefined` — beberapa pengecekan pakai `if (shape.rotation)` yang akan salah treat `undefined` sama dengan `0` (aman) tapi lebih rapi eksplisit.
 
 ---
 
@@ -1413,6 +1461,6 @@ Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditany
 
 ## ⚠️ Potensi Konflik Global
 Karena semua fitur di atas dan fungsi bawaan `shared.js` sama-sama pakai **global function declaration** (bukan modul/namespace), nama-nama berikut **rawan bentrok** kalau file tujuan sudah punya fungsi dengan nama sama tapi perilaku beda:
-`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `reEditCrop`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`.
+`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`.
 
 **Sebelum menempel kode dari dokumen ini, selalu `grep` dulu nama-nama fungsi di atas pada file tujuan.** Kalau sudah ada dan isinya beda, diskusikan dulu ke user mana yang mau dipakai / digabung, jangan main timpa.

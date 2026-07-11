@@ -418,6 +418,11 @@ var IE_ZOOM_MIN = 1, IE_ZOOM_MAX = 4, IE_ZOOM_STEP = 0.5;
 
 function ieMinSize(){ return Math.max(20, imgEditState.naturalW * 0.02); }
 function ieHandleR(){ return Math.max(9, imgEditState.naturalW * 0.009); }
+function ieHandleHitR(){
+    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
+    var minTouchPx = 22;
+    return Math.max(ieHandleR(), minTouchPx / scale);
+}
 function ieStrokeWFor(shape){
     var key = (shape && shape.strokeSize) || imgEditState.thickness || 'M';
     var f = IE_THICKNESS_FACTORS[key] || IE_THICKNESS_FACTORS.M;
@@ -538,7 +543,7 @@ function getShapeById(id){
 function addShape(shape){
     shape.id = imgEditState.nextId++;
     imgEditState.shapes.push(shape);
-    setSelectedShape(shape.id);
+    return shape;
 }
 function ieSetSelButtonsDisplay(shape){
     var isText = !!(shape && shape.type === 'text');
@@ -556,6 +561,10 @@ function setSelectedShape(id){
     imgEditState.selectedId = id;
     var shape = getShapeById(id);
     ieSetSelButtonsDisplay(shape);
+    if (shape) {
+        document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color')===shape.color); });
+        if (shape.strokeSize) document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-thick')===shape.strokeSize); });
+    }
     renderAllShapes();
 }
 function deleteSelectedShape(){
@@ -568,7 +577,9 @@ function editSelectedText(){
     if (!s || s.type !== 'text') return;
     var val = prompt('Edit teks:', s.text);
     ieForceHideKeyboard();
-    if (val !== null && val.trim()) { s.text = val.trim(); renderAllShapes(); }
+    if (val === null) return;
+    s.text = val || ' ';
+    renderAllShapes();
 }
 /* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
    "menempel" (tidak ikut turun) karena tidak ada <input> asli di halaman yang
@@ -601,7 +612,7 @@ function ieResizeSelectedText(dir){
     var s = getShapeById(imgEditState.selectedId);
     if (!s || s.type !== 'text') return;
     var step = Math.max(2, imgEditState.naturalW*0.006);
-    s.fontSize = Math.max(10, s.fontSize + dir*step);
+    s.fontSize = Math.max(10, (s.fontSize||ieFontDefault()) + dir*step);
     renderAllShapes();
 }
 
@@ -654,7 +665,10 @@ function onEditSvgPointerDown(e){
     if (tool === 'text') {
         var txt = prompt('Masukkan teks:');
         ieForceHideKeyboard();
-        if (txt && txt.trim()) addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
+        if (txt && txt.trim()) {
+            var shapeT = addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
+            setSelectedShape(shapeT.id);
+        }
         ieBackToSelectKeepSelection();
         return;
     }
@@ -669,15 +683,16 @@ function onEditSvgPointerDown(e){
     function onUp(){
         ieRemoveDocListeners(onMove, onUp);
         var d = imgEditState.drawing; imgEditState.drawing = null;
-        var dist = Math.hypot(d.x2-d.x1, d.y2-d.y1);
-        if (dist > Math.max(8, imgEditState.naturalW*0.008)) {
+        if (d && (Math.abs(d.x2-d.x1) > 4 || Math.abs(d.y2-d.y1) > 4)) {
+            var shape;
             if (d.type === 'rect' || d.type === 'oval') {
-                addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize});
+                shape = addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize, rotation:0});
             } else {
-                addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize});
+                shape = addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize});
             }
+            setSelectedShape(shape.id);
+            ieBackToSelectKeepSelection();
         } else { renderAllShapes(); }
-        ieBackToSelectKeepSelection();
     }
     ieAddDocListeners(onMove, onUp);
 }
@@ -711,83 +726,70 @@ function startHandleDrag(onDragMove){
     ieAddDocListeners(onMove, onUp);
 }
 
-/* Radius area sentuh (bukan visual) — minimal setara ~22px layar supaya
-   enak dipencet jari, meski titik hijaunya sendiri sengaja dibikin kecil
-   biar presisi. Dikonversi ke koordinat "natural" gambar sesuai skala
-   tampilan saat ini (baseScale x zoom). */
-function ieHandleHitR(){
-    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
-    var minTouchPx = 22;
-    return Math.max(ieHandleR(), minTouchPx / scale);
-}
 function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
-    var r = ieHandleR();
     var c = document.createElementNS(NS_SVG, 'circle');
-    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
-    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1, r*0.18));
-    c.style.cursor = cursor; c.style.pointerEvents = 'none';
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', ieHandleR());
+    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1,ieHandleR()*0.2));
+    c.style.cursor = cursor; c.style.touchAction = 'none'; c.style.pointerEvents = 'none';
     svg.appendChild(c);
     // Hit-area transparan yang lebih besar, ditumpuk di atas titik visual,
     // supaya gampang dipencet di HP tanpa mengubah ukuran titik yang terlihat.
     var hit = document.createElementNS(NS_SVG, 'circle');
     hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', ieHandleHitR());
     hit.setAttribute('fill', 'transparent');
-    hit.style.cursor = cursor; hit.style.pointerEvents = 'all';
-    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
-    hit.addEventListener('pointerdown', start);
+    hit.style.cursor = cursor; hit.style.touchAction = 'none'; hit.style.pointerEvents = 'all';
+    hit.addEventListener('pointerdown', function(e){ e.stopPropagation(); if (e.cancelable) e.preventDefault(); startHandleDrag(onDragMove); });
     svg.appendChild(hit);
 }
 
 /* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */
 function ieBuildShapeVisual(shape){
-    var sw = ieStrokeWFor(shape);
-    if (shape.type === 'line' || shape.type === 'arrow') {
-        var ln = document.createElementNS(NS_SVG, 'line');
-        ln.setAttribute('x1', shape.x1); ln.setAttribute('y1', shape.y1);
-        ln.setAttribute('x2', shape.x2); ln.setAttribute('y2', shape.y2);
-        ln.setAttribute('stroke', shape.color); ln.setAttribute('stroke-width', sw);
-        ln.setAttribute('stroke-linecap', 'round');
-        if (shape.type === 'arrow') ln.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
-        return ln;
-    }
+    var el;
     if (shape.type === 'rect') {
-        var rc = document.createElementNS(NS_SVG, 'rect');
-        rc.setAttribute('x', shape.x); rc.setAttribute('y', shape.y);
-        rc.setAttribute('width', shape.w); rc.setAttribute('height', shape.h);
-        rc.setAttribute('stroke', shape.color); rc.setAttribute('stroke-width', sw); rc.setAttribute('fill', 'none');
-        return rc;
-    }
-    if (shape.type === 'oval') {
-        var el = document.createElementNS(NS_SVG, 'ellipse');
+        el = document.createElementNS(NS_SVG, 'rect');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y);
+        el.setAttribute('width', shape.w); el.setAttribute('height', shape.h);
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'oval') {
+        el = document.createElementNS(NS_SVG, 'ellipse');
         el.setAttribute('cx', shape.x+shape.w/2); el.setAttribute('cy', shape.y+shape.h/2);
         el.setAttribute('rx', shape.w/2); el.setAttribute('ry', shape.h/2);
-        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', sw); el.setAttribute('fill', 'none');
-        return el;
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'line' || shape.type === 'arrow') {
+        el = document.createElementNS(NS_SVG, 'line');
+        el.setAttribute('x1', shape.x1); el.setAttribute('y1', shape.y1);
+        el.setAttribute('x2', shape.x2); el.setAttribute('y2', shape.y2);
+        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape)); el.setAttribute('stroke-linecap', 'round');
+        if (shape.type === 'arrow') el.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
+    } else if (shape.type === 'text') {
+        el = document.createElementNS(NS_SVG, 'text');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y + shape.fontSize);
+        el.setAttribute('fill', shape.color); el.setAttribute('font-size', shape.fontSize);
+        el.setAttribute('font-family', 'Arial, sans-serif'); el.setAttribute('font-weight', '700');
+        el.textContent = shape.text;
     }
-    if (shape.type === 'text') {
-        var tx = document.createElementNS(NS_SVG, 'text');
-        tx.setAttribute('x', shape.x); tx.setAttribute('y', shape.y);
-        tx.setAttribute('font-size', shape.fontSize); tx.setAttribute('fill', shape.color);
-        tx.setAttribute('font-family', 'Arial, sans-serif'); tx.setAttribute('font-weight', '700');
-        tx.setAttribute('dominant-baseline', 'hanging'); tx.setAttribute('stroke', '#fff');
-        tx.setAttribute('stroke-width', Math.max(1, shape.fontSize*0.04)); tx.setAttribute('paint-order', 'stroke');
-        tx.textContent = shape.text;
-        return tx;
-    }
-    return null;
+    return el;
 }
 
 function ieBuildDefs(svg){
     var defs = document.createElementNS(NS_SVG, 'defs');
     ['#e53935','#1a1a1a','#1e88e5','#fdd835'].forEach(function(c){
-        var m = document.createElementNS(NS_SVG, 'marker');
-        m.setAttribute('id', ieColorId(c)); m.setAttribute('markerWidth', 10); m.setAttribute('markerHeight', 10);
-        m.setAttribute('refX', 8); m.setAttribute('refY', 5); m.setAttribute('orient', 'auto'); m.setAttribute('markerUnits', 'userSpaceOnUse');
-        var p = document.createElementNS(NS_SVG, 'path');
-        p.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); p.setAttribute('fill', c);
-        m.appendChild(p); defs.appendChild(m);
+        var marker = document.createElementNS(NS_SVG, 'marker');
+        marker.setAttribute('id', ieColorId(c)); marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '10');
+        marker.setAttribute('refX', '8'); marker.setAttribute('refY', '5'); marker.setAttribute('orient', 'auto');
+        var path = document.createElementNS(NS_SVG, 'path');
+        path.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); path.setAttribute('fill', c);
+        marker.appendChild(path); defs.appendChild(marker);
     });
     svg.appendChild(defs);
+}
+
+/* ── Rotasi titik (px,py) mengelilingi pusat (cx,cy) sejauh `deg` derajat ── */
+function ieRotatePoint(px, py, cx, cy, deg){
+    var rad = deg * Math.PI/180;
+    var cos = Math.cos(rad), sin = Math.sin(rad);
+    var dx = px-cx, dy = py-cy;
+    return { x: cx + dx*cos - dy*sin, y: cy + dx*sin + dy*cos };
 }
 
 /* ── Render ulang seluruh overlay interaktif (shapes + preview + handle seleksi) ── */
@@ -832,25 +834,53 @@ function renderAllShapes(){
             g.insertBefore(thit, visual);
         }
         g.style.cursor = 'move';
-        var start = function(ev){
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var rcx = shape.x + shape.w/2, rcy = shape.y + shape.h/2;
+            g.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + rcx + ' ' + rcy + ')');
+        }
+        var start = (function(shapeId){ return function(ev){
             if (imgEditState.tool !== 'select') return;
             ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
-            startDragShape(shape.id, ev);
-        };
+            startDragShape(shapeId, ev);
+        }; })(shape.id);
         g.addEventListener('pointerdown', start);
         svg.appendChild(g);
 
         if (shape.id === imgEditState.selectedId) {
             if (shape.type === 'rect' || shape.type === 'oval') {
+                var rot = shape.rotation || 0;
+                var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
                 var box = document.createElementNS(NS_SVG, 'rect');
                 box.setAttribute('x', shape.x); box.setAttribute('y', shape.y);
                 box.setAttribute('width', shape.w); box.setAttribute('height', shape.h);
                 box.setAttribute('fill', 'none'); box.setAttribute('stroke', '#2ecc71');
                 box.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
                 box.setAttribute('stroke-dasharray', '6,4'); box.setAttribute('pointer-events', 'none');
+                if (rot) box.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
                 svg.appendChild(box);
-                ieMakeHandle(svg, shape.x+shape.w, shape.y+shape.h, 'nwse-resize', function(p){
-                    shape.w = Math.max(ieMinSize(), p.x-shape.x); shape.h = Math.max(ieMinSize(), p.y-shape.y);
+                // Handle resize di pojok kanan-bawah — posisinya dihitung ulang sesuai
+                // rotasi saat ini, dan resize dihitung di ruang LOKAL (belum dirotasi)
+                // supaya tetap membesar/mengecil mengikuti arah kotaknya sendiri.
+                var cornerLocal = {x: shape.x+shape.w, y: shape.y+shape.h};
+                var cornerWorld = rot ? ieRotatePoint(cornerLocal.x, cornerLocal.y, cx, cy, rot) : cornerLocal;
+                ieMakeHandle(svg, cornerWorld.x, cornerWorld.y, 'nwse-resize', function(p){
+                    var local = rot ? ieRotatePoint(p.x, p.y, cx, cy, -rot) : p;
+                    shape.w = Math.max(ieMinSize(), local.x-shape.x); shape.h = Math.max(ieMinSize(), local.y-shape.y);
+                });
+                // Handle rotasi — bulatan di atas tengah kotak, tarik memutar sekeliling pusat.
+                var rotDist = Math.max(24, imgEditState.naturalW*0.03);
+                var rotHandleLocal = {x: cx, y: shape.y - rotDist};
+                var rotHandleWorld = rot ? ieRotatePoint(rotHandleLocal.x, rotHandleLocal.y, cx, cy, rot) : rotHandleLocal;
+                var rotLine = document.createElementNS(NS_SVG, 'line');
+                rotLine.setAttribute('x1', cx); rotLine.setAttribute('y1', shape.y);
+                rotLine.setAttribute('x2', rotHandleLocal.x); rotLine.setAttribute('y2', rotHandleLocal.y);
+                rotLine.setAttribute('stroke', '#2ecc71'); rotLine.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                rotLine.setAttribute('pointer-events', 'none');
+                if (rot) rotLine.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
+                svg.appendChild(rotLine);
+                ieMakeHandle(svg, rotHandleWorld.x, rotHandleWorld.y, 'grab', function(p){
+                    var deg = Math.atan2(p.x-cx, -(p.y-cy)) * 180/Math.PI;
+                    shape.rotation = Math.round(deg);
                 });
             } else if (shape.type === 'line' || shape.type === 'arrow') {
                 ieMakeHandle(svg, shape.x1, shape.y1, 'move', function(p){ shape.x1=p.x; shape.y1=p.y; });
@@ -898,7 +928,12 @@ function applyImageEdits(){
     ieBuildDefs(flatSvg);
     imgEditState.shapes.forEach(function(shape){
         var v = ieBuildShapeVisual(shape);
-        if (v) flatSvg.appendChild(v);
+        if (!v) return;
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
+            v.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + cx + ' ' + cy + ')');
+        }
+        flatSvg.appendChild(v);
     });
     var svgStr = new XMLSerializer().serializeToString(flatSvg);
     var svgImg = new Image();
@@ -906,7 +941,6 @@ function applyImageEdits(){
         var canvas = document.createElement('canvas');
         canvas.width = nw; canvas.height = nh;
         var ctx = canvas.getContext('2d');
-        var baseImg = document.getElementById('editImg');
         var srcImg = new Image();
         srcImg.onload = function(){
             ctx.drawImage(srcImg, 0, 0, nw, nh);
@@ -1167,7 +1201,7 @@ function cropAndSave() {
 
     var MAX = 1*1024*1024;
     var dataUrl;
-    for (var q=0.85; q>=0.25; q-=0.1) {
+    for (var q=0.9; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);
         var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
         var newSize = dataUrl.length*0.75;
@@ -1190,8 +1224,9 @@ function cropAndSave() {
 
     closeCropModal();
     // panggil render callback modul terkait (sama seperti imgCompressAndStore lama di shared.js)
-    if (p.modulePrefix === 'cl' && typeof clRenderPreviews === 'function') clRenderPreviews(p.side);
-    else if (p.modulePrefix === 'ld' && typeof ldRenderPreviews === 'function') ldRenderPreviews(p.side);
+    // Panggil render callback modul terkait secara dinamis: {prefix}RenderPreviews(side)
+    var renderFnName = p.modulePrefix + 'RenderPreviews';
+    if (typeof window[renderFnName] === 'function') window[renderFnName](p.side);
 }
 
 /* ── Geser posisi gambar (nudge) — generik untuk array manapun ── */
