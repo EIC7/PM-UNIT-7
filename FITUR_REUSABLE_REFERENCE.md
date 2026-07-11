@@ -1,3 +1,5 @@
+> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek semua fitur di bawah. Apabila ditemukan perbedaan atau ada yang kurang dari semua revisi ataupun pembaruan (dibanding kondisi HTML yang sedang dikerjakan), maka terapkan ke HTML tersebut.
+
 # Fitur Reusable — Referensi dari `maintenance_report_form.html`
 
 > **Cara pakai dokumen ini (untuk Claude):** Saat user upload HTML lain dan minta salah satu/semua fitur di bawah diterapkan:
@@ -30,6 +32,8 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 - [H. Background Template PDF](#h-background-template-pdf)
 - [I. Preview PDF Sebelum Download (PDF.js canvas, mobile-safe)](#i-preview-pdf)
 - [J. Edit Gambar (Insert Shape: Teks/Panah/Garis/Kotak/Oval)](#j-edit-gambar-insert-shape-teksfoto)
+- [K. Rotasi Kotak & Oval](#k-rotasi-kotak--oval-ekstensi--belum-ada-di-fegthtml)
+- [L. Tabel Info Pekerjaan — Grid Full-Width (Label | Value)](#l-tabel-info-pekerjaan--grid-full-width-label--value)
 - [Checklist Konfigurasi per File Baru](#checklist-konfigurasi)
 - [⚠️ Potensi Konflik Global](#potensi-konflik-global)
 
@@ -1327,6 +1331,69 @@ function ieRotatePoint(px, py, cx, cy, deg){
 **Di `applyImageEdits()` (flatten ke bitmap final),** transform rotasi yang sama harus ditempel manual ke elemen visual hasil `ieBuildShapeVisual(shape)` sebelum di-append ke `flatSvg` — kalau lupa, hasil PDF/gambar akhir shape kotak/oval-nya tidak akan ikut berputar meskipun tampilan di editor sudah benar.
 
 **⚠️ Kalau fitur ini mau di-port ke `fegt.html` atau file lain:** field `rotation` di objek shape kotak/oval perlu default `0` saat dibuat (`addShape({..., rotation:0})`), jangan `undefined` — beberapa pengecekan pakai `if (shape.rotation)` yang akan salah treat `undefined` sama dengan `0` (aman) tapi lebih rapi eksplisit.
+
+---
+
+## L. Tabel Info Pekerjaan — Grid Full-Width (Label | Value)
+**Sumber:** `form_o2_report.html` (Form O2 Report — PLTU Paiton Unit 7), hasil revisi bertahap.
+
+**Tujuan:** ganti layout header info form (Work Order/Tanggal/PIC/Asset/dst) dari "2 kolom bersebelahan" jadi **1 tabel grid penuh selebar halaman**, gaya "Work Activity Report" — tiap field = 1 baris penuh, kolom label di kiri dan kolom value di kanan, dengan grid garis lengkap (bukan cuma border luar).
+
+**Spesifikasi visual final (jangan dikurangi lagi tanpa diminta user):**
+- Tiap field jadi satu baris penuh selebar `contentW`. Kolom label lebar tetap (`labelColW`, di O2 report = 40mm), kolom value mengisi sisanya.
+- Grid: border luar + garis vertikal (pemisah label|value) + garis horizontal (antar baris) — semua **hitam** `RGB(0,0,0)`. Lebar garis luar `0.35`, garis dalam `0.25`.
+- Background tabel: **kuning pucat** `RGB(255,251,214)` (fill pakai `doc.rect(...,'FD')` — fill+stroke sekaligus).
+- Semua teks (label maupun value) **bold** (`helvetica`, `bold`, size `8.5`) — termasuk saat `splitTextToSize` dipanggil (font bold harus di-set SEBELUM hitung wrap, supaya lebar wrap-nya akurat).
+- Label tetap dibedakan warna (biru `55,80,140`) dari value (`20,30,25`) meski sama-sama bold, supaya masih ada pembeda visual.
+- Tinggi baris dikompres (row height ringkas, tidak terlalu tinggi): `h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5)`, baseline teks di `rowY + 4.6`.
+- Baris pertama TIDAK digambar garis horizontal (border luar tabel sudah jadi batas atasnya); baris ke-2 dst baru digambar garis pemisah horizontal SEBELUM teks baris itu digambar.
+
+**Kode inti (jsPDF, ditaruh setelah `secHeader(...)` judul form, sebelum bagian dokumentasi/channel/isi lain):**
+```js
+var padIn = 3;
+var labelColW = 40; // sesuaikan lebar kolom label per form
+var valueX = marginX + labelColW + padIn;
+var valueW = contentW - labelColW - padIn*2;
+
+var infoFields = [
+  ['{{Label1}}', safe(value1)],
+  ['{{Label2}}', safe(value2)]
+  // ... field lain, urutkan sesuai form tujuan
+];
+
+doc.setFont('helvetica','bold'); doc.setFontSize(8.5); // font bold dulu SEBELUM wrap dihitung
+var infoRows = infoFields.map(function(f){
+  var lines = doc.splitTextToSize(String(f[1]||''), valueW);
+  var h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5);
+  return {label:f[0], lines:lines, h:h};
+});
+var totalH = infoRows.reduce(function(s,r){ return s + r.h; }, 0);
+checkPage(totalH + 4);
+
+// Background kuning pucat + border luar (FD = fill + stroke sekaligus)
+doc.setFillColor(255, 251, 214);
+doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.35);
+doc.rect(marginX, y, contentW, totalH, 'FD');
+// Garis vertikal pemisah kolom label | value, sepanjang tabel
+doc.line(marginX+labelColW, y, marginX+labelColW, y+totalH);
+
+var rowY = y;
+doc.setLineWidth(0.25); doc.setDrawColor(0, 0, 0);
+infoRows.forEach(function(r, idx){
+  if (idx > 0) doc.line(marginX, rowY, marginX+contentW, rowY); // garis antar baris
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
+  doc.text(r.label, marginX+padIn, rowY+4.6);
+  doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
+  doc.text(r.lines, valueX, rowY+4.6);
+  rowY += r.h;
+});
+
+y += totalH + 6;
+```
+
+**⚠️ Potensi Konflik:** ini menggantikan pola lama "2 kolom bersebelahan + 1 garis vertikal tengah + garis section besar" yang sempat dipakai di revisi sebelumnya pada file yang sama — **JANGAN gabung/pakai bareng** pola lama itu di tabel yang sama, pilih salah satu (pola grid full-width ini yang terbaru/disetujui user).
+
+**Butuh dari user:** daftar `infoFields` (nama label + urutan) persis sesuai form tujuan, dan lebar `labelColW` kalau label form itu jauh lebih panjang/pendek dari 40mm — **jangan menebak**, baca dari form yang diupload atau tanya user.
 
 ---
 
