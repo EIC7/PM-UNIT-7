@@ -1802,7 +1802,7 @@ function downloadPdf(){
       var infoFields = [
         ['Tanggal', safe(metaInfo.tanggal||'—')],
         ['Workorder', safe(metaInfo.workorder||'—')],
-        ['Operator', safe(metaInfo.operator||'—')],
+        ['PIC', safe(metaInfo.operator||'—')],
         ['Dicetak', safe(nowStr)]
       ];
 
@@ -1890,7 +1890,7 @@ function downloadPdf(){
       var suspect= Object.entries(diagResults).filter(function(e){return e[1].verdict==='warning';}).map(function(e){return 'Sensor '+e[0];});
       var pdfHardPaths18 = pathData.filter(function(p){ return p.id<=8 && effectiveStatus(p)==='hard'; });
       var fEgtOk  = faulty.length===0 && suspect.length===0 && pdfHardPaths18.length===0;
-      var fEgtLines= fEgtOk ? ['KESIMPULAN FEGT: Semua Sensor Operasional','Tidak ditemukan indikasi kerusakan sensor.'] : ['KESIMPULAN FEGT: Terdeteksi Indikasi Kerusakan'];
+      var fEgtLines= fEgtOk ? ['KESIMPULAN FEGT: Semua Sensor Operasional','Tidak ditemukan indikasi kerusakan sensor.'] : ['KESIMPULAN FEGT: Terdeteksi Path Leak Detection Bermasalah'];
       if(pdfHardPaths18.length>0){
         fEgtLines.push('HARD FAIL PATH UTAMA (Path 1-8):');
         pdfHardPaths18.forEach(function(p){ fEgtLines.push('- Path '+p.id+' Hard Fail Low Transmit - Cek Solenoid, IA Supply dan Sensor Probe'); });
@@ -1938,7 +1938,7 @@ function downloadPdf(){
       y = doc.lastAutoTable.finalY + 8;
 
       var lkIssues = leakResults.filter(function(r){return r.status!=='ok'&&r.status!=='na';});
-      var ldLines  = lkIssues.length===0 ? ['KESIMPULAN LD: Tidak Ada Indikasi Kebocoran','Semua path aktif terbaca normal.'] : ['KESIMPULAN LD: Terdeteksi Indikasi Kebocoran','Path bermasalah: '+lkIssues.map(function(r){return 'Path-'+r.id;}).join(', ')];
+      var ldLines  = lkIssues.length===0 ? ['KESIMPULAN LD: Tidak Ada Indikasi Kebocoran','Semua path aktif terbaca normal.'] : ['KESIMPULAN LD: Terdeteksi Path Bermasalah','Path bermasalah: '+lkIssues.map(function(r){return 'Path-'+r.id;}).join(', ')];
       conclusionBox(ldLines, lkIssues.length===0);
 
       // Ukuran gambar aktual di PDF (mm) mengikuti cm yang dipilih user saat
