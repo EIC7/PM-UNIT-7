@@ -1602,6 +1602,17 @@ function downloadPdf(){
       drawInfoColumn(leftCol, leftX, leftValueX);
       drawInfoColumn(rightCol, rightX, rightValueX);
 
+      // Garis pemisah antar baris (Work Order / Tanggal / PIC dan Asset / Dicetak)
+      doc.setDrawColor(150, 175, 160); doc.setLineWidth(0.25);
+      for (var li = 1; li < leftCol.rows.length; li++) {
+        var leftLineY = y + (leftCol.rows[li].rowY - 7);
+        doc.line(marginX, leftLineY, centerX, leftLineY);
+      }
+      for (var ri = 1; ri < rightCol.rows.length; ri++) {
+        var rightLineY = y + (rightCol.rows[ri].rowY - 7);
+        doc.line(centerX, rightLineY, marginX + contentW, rightLineY);
+      }
+
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(40,60,45);
       doc.text('Asset Description:', marginX+padIn, y+topH+5);
       doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
