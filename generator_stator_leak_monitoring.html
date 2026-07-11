@@ -1510,16 +1510,15 @@ function todayStrG() {
 }
 
 /* ══════════════════ BACKGROUND TEMPLATE PDF (pola Section H) ══════════════════ */
-/* Belum ada file template yang disediakan untuk modul ini — ini akan gagal-diam
-   (fallback ke halaman putih polos) sampai file 'GENERATOR_STATOR_LEAK_TEMPLATE.jpg'
-   benar-benar diupload ke folder yang sama dengan HTML ini. */
+/* Pakai file background yang SAMA dengan modul lain (fegt.html, maintenance_report_form.html)
+   supaya konsisten — bukan file terpisah per modul. */
 var genBgImg = null, genBgReady = false, genBgCallbacks = [];
 function initGenBackground() {
   if (genBgImg) return;
   genBgImg = new Image();
   genBgImg.onload = function() { genBgReady = true; genBgCallbacks.splice(0).forEach(function(cb){cb();}); };
   genBgImg.onerror = function() { genBgReady = false; genBgCallbacks.splice(0).forEach(function(cb){cb();}); };
-  genBgImg.src = 'GENERATOR_STATOR_LEAK_TEMPLATE.jpg';
+  genBgImg.src = 'DRAFT PM KOSONG.jpg';
 }
 function ensureGenBackground(callback) {
   if (!genBgImg) { genBgCallbacks.push(callback); initGenBackground(); return; }
@@ -1533,7 +1532,17 @@ function drawGenBackground(doc, pw, ph) {
 
 /* ══════════════════ PDF EXPORT ══════════════════ */
 function runPdfPreview() {
-  ensureGenBackground(function() { buildAndShowPdf(); });
+  try {
+    ensureGenBackground(function() {
+      try {
+        buildAndShowPdf();
+      } catch (err) {
+        alert('❌ GAGAL BUAT PDF (di dalam buildAndShowPdf):\n\n' + (err && err.stack ? err.stack : err));
+      }
+    });
+  } catch (err) {
+    alert('❌ GAGAL BUAT PDF (di ensureGenBackground):\n\n' + (err && err.stack ? err.stack : err));
+  }
 }
 function buildAndShowPdf() {
   var doc = new jspdf.jsPDF({unit:'mm', format:'a4'});
