@@ -1305,6 +1305,31 @@ function applyImageEdits(){
 
 ---
 
+## K. Rotasi Kotak & Oval (ekstensi — belum ada di fegt.html)
+**Status:** fitur ini ditambahkan di `material-warehouse.html`, **belum ada** di `fegt.html` (sumber asli Fitur J). Garis/panah sudah bisa "diputar" tanpa fitur tambahan — cukup tarik salah satu titik ujungnya (sudah otomatis mengubah arah). Teks sengaja **tidak** dikasih rotasi (belum diminta, dan `<text>` SVG butuh penanganan bounding-box ekstra kalau mau diputar).
+
+**Cara kerja:** setiap shape kotak/oval punya field `rotation` (derajat, default `0`). Rotasi diterapkan sebagai atribut `transform="rotate(deg cx cy)"` pada elemen `<g>` pembungkus shape (bukan pada elemen visual `<rect>`/`<ellipse>` itu sendiri) — ini otomatis ikut merotasi hit-area transparannya juga (Fitur J) tanpa perlu perubahan lain.
+
+```js
+function ieRotatePoint(px, py, cx, cy, deg){
+    var rad = deg * Math.PI / 180;
+    var dx = px - cx, dy = py - cy;
+    return { x: cx + dx*Math.cos(rad) - dy*Math.sin(rad), y: cy + dx*Math.sin(rad) + dy*Math.cos(rad) };
+}
+```
+
+**Di `renderAllShapes()`,** untuk shape kotak/oval:
+1. `g.setAttribute('transform', 'rotate('+shape.rotation+' '+cx+' '+cy+')')` — `cx,cy` = titik tengah shape (`shape.x+shape.w/2`, `shape.y+shape.h/2`).
+2. Kotak seleksi (dashed box) dapat `transform` yang sama supaya ikut berputar visual.
+3. **Handle resize** (pojok kanan-bawah) posisinya dihitung ulang tiap render pakai `ieRotatePoint()` supaya mengikuti rotasi saat ini, dan callback resize-nya me-rotate balik posisi pointer (`ieRotatePoint(p.x,p.y,cx,cy,-rot)`) ke ruang lokal (belum dirotasi) sebelum dipakai hitung `shape.w`/`shape.h` — **wajib**, kalau tidak resize akan "salah arah" begitu shape sedang dalam keadaan berotasi.
+4. **Handle rotasi baru** — bulatan hijau muncul di atas tengah kotak (jarak `Math.max(24, naturalW*0.03)` dari sisi atas), dihubungkan garis tipis ke pusat shape. Drag handle ini menghitung sudut lewat `Math.atan2(p.x-cx, -(p.y-cy)) * 180/Math.PI` lalu simpan ke `shape.rotation`.
+
+**Di `applyImageEdits()` (flatten ke bitmap final),** transform rotasi yang sama harus ditempel manual ke elemen visual hasil `ieBuildShapeVisual(shape)` sebelum di-append ke `flatSvg` — kalau lupa, hasil PDF/gambar akhir shape kotak/oval-nya tidak akan ikut berputar meskipun tampilan di editor sudah benar.
+
+**⚠️ Kalau fitur ini mau di-port ke `fegt.html` atau file lain:** field `rotation` di objek shape kotak/oval perlu default `0` saat dibuat (`addShape({..., rotation:0})`), jangan `undefined` — beberapa pengecekan pakai `if (shape.rotation)` yang akan salah treat `undefined` sama dengan `0` (aman) tapi lebih rapi eksplisit.
+
+---
+
 ## Checklist Konfigurasi per File Baru
 Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditanyakan:
 
