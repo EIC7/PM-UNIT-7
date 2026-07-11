@@ -342,12 +342,12 @@ var PRESET_DEFAULT_LONG_CM = 4;
 var MANUAL_MAX_CM = 7;
 
 /* ══════════════════════════════════════════════════════════════════════════
+
+/* ══════════════════════════════════════════════════════════════════════════
    EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
    Dipanggil dari dalam Crop Modal ("🖍️ Edit Gambar"). Bekerja di atas
    gambar ASLI (sebelum crop), lalu hasil flatten (gambar + anotasi jadi
    satu) dikembalikan ke #cropImg supaya alur crop selanjutnya normal.
-   Koordinat shape disimpan dalam ruang piksel ASLI gambar (naturalW/H)
-   supaya scaling ke layar & flatten ke canvas konsisten.
    ══════════════════════════════════════════════════════════════════════════ */
 var NS_SVG = 'http://www.w3.org/2000/svg';
 var imgEditState = {
@@ -442,11 +442,8 @@ function setEditTool(tool){
         b.classList.toggle('active', b.getAttribute('data-tool') === tool);
     });
     var svg = document.getElementById('editSvgOverlay');
-    svg.style.cursor = (tool === 'select') ? 'default' : (tool === 'pan' ? 'grab' : 'crosshair');
+    svg.style.cursor = (tool === 'select') ? 'default' : (tool === 'pan') ? 'grab' : 'crosshair';
 }
-
-/* Kembali ke tool 'select' setelah shape baru dibuat, TANPA menghapus seleksi
-   shape yang baru saja dibuat (supaya langsung bisa digeser/resize). */
 function ieBackToSelectKeepSelection(){
     imgEditState.tool = 'select';
     document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
@@ -455,7 +452,6 @@ function ieBackToSelectKeepSelection(){
     var svg = document.getElementById('editSvgOverlay');
     svg.style.cursor = 'default';
 }
-
 function setEditColor(color, btnEl){
     imgEditState.color = color;
     document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.remove('active'); });
@@ -463,7 +459,6 @@ function setEditColor(color, btnEl){
     var sel = getShapeById(imgEditState.selectedId);
     if (sel) { sel.color = color; renderAllShapes(); }
 }
-
 function setEditThickness(key, btnEl){
     imgEditState.thickness = key;
     document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.remove('active'); });
@@ -471,7 +466,6 @@ function setEditThickness(key, btnEl){
     var sel = getShapeById(imgEditState.selectedId);
     if (sel && sel.type !== 'text') { sel.strokeSize = key; renderAllShapes(); }
 }
-
 function getShapeById(id){
     for (var i=0;i<imgEditState.shapes.length;i++) if (imgEditState.shapes[i].id === id) return imgEditState.shapes[i];
     return null;
@@ -479,14 +473,14 @@ function getShapeById(id){
 function addShape(shape){
     shape.id = imgEditState.nextId++;
     imgEditState.shapes.push(shape);
-    setSelectedShape(shape.id);
+    return shape;
 }
 function ieSetSelButtonsDisplay(shape){
-    var isText = !!(shape && shape.type === 'text');
-    var db = document.getElementById('editDeleteBtn'); if (db) db.style.display = shape ? 'flex' : 'none';
-    var tb = document.getElementById('editTextEditBtn'); if (tb) tb.style.display = isText ? 'flex' : 'none';
-    var sb = document.getElementById('editTextSmallerBtn'); if (sb) sb.style.display = isText ? 'flex' : 'none';
-    var bb = document.getElementById('editTextBiggerBtn'); if (bb) bb.style.display = isText ? 'flex' : 'none';
+    var isText = shape && shape.type === 'text';
+    document.getElementById('editTextSmallerBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editTextBiggerBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editTextEditBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editDeleteBtn').style.display = shape ? 'flex' : 'none';
 }
 function deselectShape(){
     imgEditState.selectedId = null;
@@ -497,19 +491,26 @@ function setSelectedShape(id){
     imgEditState.selectedId = id;
     var shape = getShapeById(id);
     ieSetSelButtonsDisplay(shape);
+    if (shape) {
+        document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color')===shape.color); });
+        if (shape.strokeSize) document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-thick')===shape.strokeSize); });
+    }
     renderAllShapes();
 }
 function deleteSelectedShape(){
-    if (!imgEditState.selectedId) return;
-    imgEditState.shapes = imgEditState.shapes.filter(function(s){ return s.id !== imgEditState.selectedId; });
+    var id = imgEditState.selectedId;
+    if (!id) return;
+    imgEditState.shapes = imgEditState.shapes.filter(function(s){ return s.id !== id; });
     deselectShape();
 }
 function editSelectedText(){
-    var s = getShapeById(imgEditState.selectedId);
-    if (!s || s.type !== 'text') return;
-    var val = prompt('Edit teks:', s.text);
+    var shape = getShapeById(imgEditState.selectedId);
+    if (!shape || shape.type !== 'text') return;
+    var val = prompt('Edit teks:', shape.text);
     ieForceHideKeyboard();
-    if (val !== null && val.trim()) { s.text = val.trim(); renderAllShapes(); }
+    if (val === null) return;
+    shape.text = val || ' ';
+    renderAllShapes();
 }
 /* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
    "menempel" (tidak ikut turun) karena tidak ada <input> asli di halaman yang
@@ -539,13 +540,12 @@ function ieForceHideKeyboard(){
     setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
 }
 function ieResizeSelectedText(dir){
-    var s = getShapeById(imgEditState.selectedId);
-    if (!s || s.type !== 'text') return;
-    var step = Math.max(2, imgEditState.naturalW*0.006);
-    s.fontSize = Math.max(10, s.fontSize + dir*step);
+    var shape = getShapeById(imgEditState.selectedId);
+    if (!shape || shape.type !== 'text') return;
+    var step = Math.max(2, imgEditState.naturalW * 0.006);
+    shape.fontSize = Math.max(10, (shape.fontSize||ieFontDefault()) + dir*step);
     renderAllShapes();
 }
-
 function getSvgPoint(evt){
     var svg = document.getElementById('editSvgOverlay');
     var rect = svg.getBoundingClientRect();
@@ -554,10 +554,6 @@ function getSvgPoint(evt){
     var y = (t.clientY - rect.top) * (imgEditState.naturalH / rect.height);
     return { x: x, y: y };
 }
-
-/* Pakai Pointer Events (bukan touchstart/mousedown terpisah) supaya drag di HP
-   (Chrome/Safari Android & iOS) lebih andal — menghindari konflik event
-   sentuh vs mouse sintetis yang kadang bikin drag "putus" di tengah jalan. */
 function ieAddDocListeners(onMove, onUp){
     document.addEventListener('pointermove', onMove, {passive:false});
     document.addEventListener('pointerup', onUp);
@@ -568,90 +564,74 @@ function ieRemoveDocListeners(onMove, onUp){
     document.removeEventListener('pointerup', onUp);
     document.removeEventListener('pointercancel', onUp);
 }
-
-/* ── Mulai gambar shape baru (drag dari kosong) ── */
 function onEditSvgPointerDown(e){
     var tool = imgEditState.tool;
     if (tool === 'pan') {
         if (e.cancelable) e.preventDefault();
         var outer = document.getElementById('editImgOuter');
-        var t0 = e.touches ? e.touches[0] : e;
-        var startX = t0.clientX, startY = t0.clientY;
-        var startL = outer.scrollLeft, startT = outer.scrollTop;
+        var startX = e.clientX, startY = e.clientY, startL = outer.scrollLeft, startT = outer.scrollTop;
         var svgEl = document.getElementById('editSvgOverlay'); svgEl.style.cursor = 'grabbing';
-        function onMove(mv){
-            if (mv.cancelable) mv.preventDefault();
-            var t = mv.touches ? mv.touches[0] : mv;
-            outer.scrollLeft = startL - (t.clientX - startX);
-            outer.scrollTop = startT - (t.clientY - startY);
-        }
-        function onUp(){ ieRemoveDocListeners(onMove, onUp); svgEl.style.cursor = 'grab'; }
+        function onMove(ev){ if (ev.cancelable) ev.preventDefault(); outer.scrollLeft = startL-(ev.clientX-startX); outer.scrollTop = startT-(ev.clientY-startY); }
+        function onUp(){ svgEl.style.cursor = 'grab'; ieRemoveDocListeners(onMove, onUp); }
         ieAddDocListeners(onMove, onUp);
         return;
     }
     if (tool === 'select') { if (e.target.id === 'editSvgOverlay') deselectShape(); return; }
-    if (e.cancelable) e.preventDefault();
-    var pt = getSvgPoint(e);
     if (tool === 'text') {
-        var txt = prompt('Masukkan teks:');
+        var p = getSvgPoint(e);
+        var val = prompt('Masukkan teks:', '');
         ieForceHideKeyboard();
-        if (txt && txt.trim()) addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
+        if (!val) return;
+        var shape = addShape({ type:'text', x:p.x, y:p.y, text:val, color:imgEditState.color, fontSize:ieFontDefault() });
+        setSelectedShape(shape.id);
         ieBackToSelectKeepSelection();
         return;
     }
-    imgEditState.drawing = {type:tool, x1:pt.x, y1:pt.y, x2:pt.x, y2:pt.y, color:imgEditState.color, strokeSize:imgEditState.thickness};
-    renderAllShapes();
-    function onMove(mv){
-        if (mv.cancelable) mv.preventDefault();
-        var p = getSvgPoint(mv);
-        imgEditState.drawing.x2 = p.x; imgEditState.drawing.y2 = p.y;
-        renderAllShapes();
+    if (tool === 'line' || tool === 'arrow' || tool === 'rect' || tool === 'oval') {
+        if (e.cancelable) e.preventDefault();
+        var p0 = getSvgPoint(e);
+        imgEditState.drawing = { type: tool, x1:p0.x, y1:p0.y, x2:p0.x, y2:p0.y, color: imgEditState.color, strokeSize: imgEditState.thickness };
+        function onMove(ev){ if (ev.cancelable) ev.preventDefault(); var pm = getSvgPoint(ev); imgEditState.drawing.x2 = pm.x; imgEditState.drawing.y2 = pm.y; renderAllShapes(); }
+        function onUp(){
+            var d = imgEditState.drawing; imgEditState.drawing = null;
+            if (d && (Math.abs(d.x2-d.x1) > 4 || Math.abs(d.y2-d.y1) > 4)) {
+                var shape;
+                if (d.type === 'rect' || d.type === 'oval') {
+                    shape = addShape({ type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize, rotation:0 });
+                } else {
+                    shape = addShape({ type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize });
+                }
+                setSelectedShape(shape.id);
+                ieBackToSelectKeepSelection();
+            } else { renderAllShapes(); }
+            ieRemoveDocListeners(onMove, onUp);
+        }
+        ieAddDocListeners(onMove, onUp);
     }
-    function onUp(){
-        ieRemoveDocListeners(onMove, onUp);
-        var d = imgEditState.drawing; imgEditState.drawing = null;
-        var dist = Math.hypot(d.x2-d.x1, d.y2-d.y1);
-        if (dist > Math.max(8, imgEditState.naturalW*0.008)) {
-            if (d.type === 'rect' || d.type === 'oval') {
-                addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize});
-            } else {
-                addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize});
-            }
-        } else { renderAllShapes(); }
-        ieBackToSelectKeepSelection();
-    }
-    ieAddDocListeners(onMove, onUp);
 }
-
-/* ── Pindahkan shape yang ada (drag body) ── */
 function startDragShape(id, ev){
     setSelectedShape(id);
     var shape = getShapeById(id);
     if (!shape) return;
-    var startPt = getSvgPoint(ev);
+    var p0 = getSvgPoint(ev);
     var orig = JSON.parse(JSON.stringify(shape));
-    function onMove(mv){
-        if (mv.cancelable) mv.preventDefault();
-        var p = getSvgPoint(mv);
-        var dx = p.x - startPt.x, dy = p.y - startPt.y;
-        if (shape.type === 'line' || shape.type === 'arrow') {
-            shape.x1 = orig.x1+dx; shape.y1 = orig.y1+dy; shape.x2 = orig.x2+dx; shape.y2 = orig.y2+dy;
-        } else {
-            shape.x = orig.x+dx; shape.y = orig.y+dy;
-        }
+    function onMove(e){
+        if (e.cancelable) e.preventDefault();
+        var p = getSvgPoint(e);
+        var dx = p.x-p0.x, dy = p.y-p0.y;
+        if (shape.type === 'line' || shape.type === 'arrow') { shape.x1=orig.x1+dx; shape.y1=orig.y1+dy; shape.x2=orig.x2+dx; shape.y2=orig.y2+dy; }
+        else { shape.x = orig.x+dx; shape.y = orig.y+dy; }
         renderAllShapes();
     }
     function onUp(){ ieRemoveDocListeners(onMove, onUp); }
     ieAddDocListeners(onMove, onUp);
 }
-
-/* ── Handle resize/endpoint drag ── */
 function startHandleDrag(onDragMove){
-    function onMove(mv){ if (mv.cancelable) mv.preventDefault(); onDragMove(getSvgPoint(mv)); renderAllShapes(); }
+    function onMove(e){ if (e.cancelable) e.preventDefault(); onDragMove(getSvgPoint(e)); renderAllShapes(); }
     function onUp(){ ieRemoveDocListeners(onMove, onUp); }
     ieAddDocListeners(onMove, onUp);
+    return { onMove: onMove, onUp: onUp };
 }
-
 /* Radius area sentuh (bukan visual) — minimal setara ~22px layar supaya
    enak dipencet jari, meski titik hijaunya sendiri sengaja dibikin kecil
    biar presisi. Dikonversi ke koordinat "natural" gambar sesuai skala
@@ -662,79 +642,66 @@ function ieHandleHitR(){
     return Math.max(ieHandleR(), minTouchPx / scale);
 }
 function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
-    var r = ieHandleR();
     var c = document.createElementNS(NS_SVG, 'circle');
-    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', r);
-    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1, r*0.18));
-    c.style.cursor = cursor; c.style.pointerEvents = 'none';
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', ieHandleR());
+    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1,ieHandleR()*0.2));
+    c.style.cursor = cursor; c.style.touchAction = 'none'; c.style.pointerEvents = 'none';
     svg.appendChild(c);
     // Hit-area transparan yang lebih besar, ditumpuk di atas titik visual,
     // supaya gampang dipencet di HP tanpa mengubah ukuran titik yang terlihat.
     var hit = document.createElementNS(NS_SVG, 'circle');
     hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', ieHandleHitR());
     hit.setAttribute('fill', 'transparent');
-    hit.style.cursor = cursor; hit.style.pointerEvents = 'all';
-    var start = function(ev){ ev.stopPropagation(); if (ev.cancelable) ev.preventDefault(); startHandleDrag(onDragMove); };
-    hit.addEventListener('pointerdown', start);
+    hit.style.cursor = cursor; hit.style.touchAction = 'none'; hit.style.pointerEvents = 'all';
+    hit.addEventListener('pointerdown', function(e){ e.stopPropagation(); if (e.cancelable) e.preventDefault(); startHandleDrag(onDragMove); });
     svg.appendChild(hit);
 }
-
-/* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */
 function ieBuildShapeVisual(shape){
-    var sw = ieStrokeWFor(shape);
-    if (shape.type === 'line' || shape.type === 'arrow') {
-        var ln = document.createElementNS(NS_SVG, 'line');
-        ln.setAttribute('x1', shape.x1); ln.setAttribute('y1', shape.y1);
-        ln.setAttribute('x2', shape.x2); ln.setAttribute('y2', shape.y2);
-        ln.setAttribute('stroke', shape.color); ln.setAttribute('stroke-width', sw);
-        ln.setAttribute('stroke-linecap', 'round');
-        if (shape.type === 'arrow') ln.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
-        return ln;
-    }
+    var el;
     if (shape.type === 'rect') {
-        var rc = document.createElementNS(NS_SVG, 'rect');
-        rc.setAttribute('x', shape.x); rc.setAttribute('y', shape.y);
-        rc.setAttribute('width', shape.w); rc.setAttribute('height', shape.h);
-        rc.setAttribute('stroke', shape.color); rc.setAttribute('stroke-width', sw); rc.setAttribute('fill', 'none');
-        return rc;
-    }
-    if (shape.type === 'oval') {
-        var el = document.createElementNS(NS_SVG, 'ellipse');
+        el = document.createElementNS(NS_SVG, 'rect');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y);
+        el.setAttribute('width', shape.w); el.setAttribute('height', shape.h);
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'oval') {
+        el = document.createElementNS(NS_SVG, 'ellipse');
         el.setAttribute('cx', shape.x+shape.w/2); el.setAttribute('cy', shape.y+shape.h/2);
         el.setAttribute('rx', shape.w/2); el.setAttribute('ry', shape.h/2);
-        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', sw); el.setAttribute('fill', 'none');
-        return el;
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'line' || shape.type === 'arrow') {
+        el = document.createElementNS(NS_SVG, 'line');
+        el.setAttribute('x1', shape.x1); el.setAttribute('y1', shape.y1);
+        el.setAttribute('x2', shape.x2); el.setAttribute('y2', shape.y2);
+        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape)); el.setAttribute('stroke-linecap', 'round');
+        if (shape.type === 'arrow') el.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
+    } else if (shape.type === 'text') {
+        el = document.createElementNS(NS_SVG, 'text');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y + shape.fontSize);
+        el.setAttribute('fill', shape.color); el.setAttribute('font-size', shape.fontSize);
+        el.setAttribute('font-family', 'Arial, sans-serif'); el.setAttribute('font-weight', '700');
+        el.textContent = shape.text;
     }
-    if (shape.type === 'text') {
-        var tx = document.createElementNS(NS_SVG, 'text');
-        tx.setAttribute('x', shape.x); tx.setAttribute('y', shape.y);
-        tx.setAttribute('font-size', shape.fontSize); tx.setAttribute('fill', shape.color);
-        tx.setAttribute('font-family', 'Arial, sans-serif'); tx.setAttribute('font-weight', '700');
-        tx.setAttribute('dominant-baseline', 'hanging'); tx.setAttribute('stroke', '#fff');
-        tx.setAttribute('stroke-width', Math.max(1, shape.fontSize*0.04)); tx.setAttribute('paint-order', 'stroke');
-        tx.textContent = shape.text;
-        return tx;
-    }
-    return null;
+    return el;
 }
-
 function ieBuildDefs(svg){
     var defs = document.createElementNS(NS_SVG, 'defs');
     ['#e53935','#1a1a1a','#1e88e5','#fdd835'].forEach(function(c){
-        var m = document.createElementNS(NS_SVG, 'marker');
-        m.setAttribute('id', ieColorId(c)); m.setAttribute('markerWidth', 10); m.setAttribute('markerHeight', 10);
-        m.setAttribute('refX', 8); m.setAttribute('refY', 5); m.setAttribute('orient', 'auto'); m.setAttribute('markerUnits', 'userSpaceOnUse');
-        var p = document.createElementNS(NS_SVG, 'path');
-        p.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); p.setAttribute('fill', c);
-        m.appendChild(p); defs.appendChild(m);
+        var marker = document.createElementNS(NS_SVG, 'marker');
+        marker.setAttribute('id', ieColorId(c)); marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '10');
+        marker.setAttribute('refX', '8'); marker.setAttribute('refY', '5'); marker.setAttribute('orient', 'auto');
+        var path = document.createElementNS(NS_SVG, 'path');
+        path.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); path.setAttribute('fill', c);
+        marker.appendChild(path); defs.appendChild(marker);
     });
     svg.appendChild(defs);
 }
-
-/* ── Render ulang seluruh overlay interaktif (shapes + preview + handle seleksi) ── */
+function ieRotatePoint(px, py, cx, cy, deg){
+    var rad = deg * Math.PI / 180;
+    var dx = px - cx, dy = py - cy;
+    return { x: cx + dx*Math.cos(rad) - dy*Math.sin(rad), y: cy + dx*Math.sin(rad) + dy*Math.cos(rad) };
+}
 function renderAllShapes(){
     var svg = document.getElementById('editSvgOverlay');
-    if (!svg) return;
     svg.innerHTML = '';
     ieBuildDefs(svg);
     imgEditState.shapes.forEach(function(shape){
@@ -773,25 +740,49 @@ function renderAllShapes(){
             g.insertBefore(thit, visual);
         }
         g.style.cursor = 'move';
-        var start = function(ev){
-            if (imgEditState.tool !== 'select') return;
-            ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
-            startDragShape(shape.id, ev);
-        };
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var rcx = shape.x + shape.w/2, rcy = shape.y + shape.h/2;
+            g.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + rcx + ' ' + rcy + ')');
+        }
+        var start = function(shapeId){ return function(e){ if (imgEditState.tool !== 'select') return; e.stopPropagation(); if (e.cancelable) e.preventDefault(); startDragShape(shapeId, e); }; }(shape.id);
         g.addEventListener('pointerdown', start);
         svg.appendChild(g);
 
         if (shape.id === imgEditState.selectedId) {
             if (shape.type === 'rect' || shape.type === 'oval') {
+                var rot = shape.rotation || 0;
+                var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
                 var box = document.createElementNS(NS_SVG, 'rect');
                 box.setAttribute('x', shape.x); box.setAttribute('y', shape.y);
                 box.setAttribute('width', shape.w); box.setAttribute('height', shape.h);
                 box.setAttribute('fill', 'none'); box.setAttribute('stroke', '#2ecc71');
                 box.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
                 box.setAttribute('stroke-dasharray', '6,4'); box.setAttribute('pointer-events', 'none');
+                if (rot) box.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
                 svg.appendChild(box);
-                ieMakeHandle(svg, shape.x+shape.w, shape.y+shape.h, 'nwse-resize', function(p){
-                    shape.w = Math.max(ieMinSize(), p.x-shape.x); shape.h = Math.max(ieMinSize(), p.y-shape.y);
+                // Handle resize di pojok kanan-bawah — posisinya dihitung ulang sesuai
+                // rotasi saat ini, dan resize dihitung di ruang LOKAL (belum dirotasi)
+                // supaya tetap membesar/mengecil mengikuti arah kotaknya sendiri.
+                var cornerLocal = {x: shape.x+shape.w, y: shape.y+shape.h};
+                var cornerWorld = rot ? ieRotatePoint(cornerLocal.x, cornerLocal.y, cx, cy, rot) : cornerLocal;
+                ieMakeHandle(svg, cornerWorld.x, cornerWorld.y, 'nwse-resize', function(p){
+                    var local = rot ? ieRotatePoint(p.x, p.y, cx, cy, -rot) : p;
+                    shape.w = Math.max(ieMinSize(), local.x-shape.x); shape.h = Math.max(ieMinSize(), local.y-shape.y);
+                });
+                // Handle rotasi — bulatan di atas tengah kotak, tarik memutar sekeliling pusat.
+                var rotDist = Math.max(24, imgEditState.naturalW*0.03);
+                var rotHandleLocal = {x: cx, y: shape.y - rotDist};
+                var rotHandleWorld = rot ? ieRotatePoint(rotHandleLocal.x, rotHandleLocal.y, cx, cy, rot) : rotHandleLocal;
+                var rotLine = document.createElementNS(NS_SVG, 'line');
+                rotLine.setAttribute('x1', cx); rotLine.setAttribute('y1', shape.y);
+                rotLine.setAttribute('x2', rotHandleLocal.x); rotLine.setAttribute('y2', rotHandleLocal.y);
+                rotLine.setAttribute('stroke', '#2ecc71'); rotLine.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                rotLine.setAttribute('pointer-events', 'none');
+                if (rot) rotLine.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
+                svg.appendChild(rotLine);
+                ieMakeHandle(svg, rotHandleWorld.x, rotHandleWorld.y, 'grab', function(p){
+                    var deg = Math.atan2(p.x-cx, -(p.y-cy)) * 180/Math.PI;
+                    shape.rotation = Math.round(deg);
                 });
             } else if (shape.type === 'line' || shape.type === 'arrow') {
                 ieMakeHandle(svg, shape.x1, shape.y1, 'move', function(p){ shape.x1=p.x; shape.y1=p.y; });
@@ -839,7 +830,12 @@ function applyImageEdits(){
     ieBuildDefs(flatSvg);
     imgEditState.shapes.forEach(function(shape){
         var v = ieBuildShapeVisual(shape);
-        if (v) flatSvg.appendChild(v);
+        if (!v) return;
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
+            v.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + cx + ' ' + cy + ')');
+        }
+        flatSvg.appendChild(v);
     });
     var svgStr = new XMLSerializer().serializeToString(flatSvg);
     var svgImg = new Image();
@@ -847,7 +843,6 @@ function applyImageEdits(){
         var canvas = document.createElement('canvas');
         canvas.width = nw; canvas.height = nh;
         var ctx = canvas.getContext('2d');
-        var baseImg = document.getElementById('editImg');
         var srcImg = new Image();
         srcImg.onload = function(){
             ctx.drawImage(srcImg, 0, 0, nw, nh);
@@ -872,6 +867,7 @@ function applyImageEdits(){
     svgImg.onerror = function(){ alert('Gagal menerapkan anotasi pada gambar. Coba lagi.'); };
     svgImg.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
 }
+
 
 var CROP_PRESETS = [
     {label:'1:1', w:1, h:1}, {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
@@ -1513,11 +1509,39 @@ function todayStrG() {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+/* ══════════════════ BACKGROUND TEMPLATE PDF (pola Section H) ══════════════════ */
+/* Belum ada file template yang disediakan untuk modul ini — ini akan gagal-diam
+   (fallback ke halaman putih polos) sampai file 'GENERATOR_STATOR_LEAK_TEMPLATE.jpg'
+   benar-benar diupload ke folder yang sama dengan HTML ini. */
+var genBgImg = null, genBgReady = false, genBgCallbacks = [];
+function initGenBackground() {
+  if (genBgImg) return;
+  genBgImg = new Image();
+  genBgImg.onload = function() { genBgReady = true; genBgCallbacks.splice(0).forEach(function(cb){cb();}); };
+  genBgImg.onerror = function() { genBgReady = false; genBgCallbacks.splice(0).forEach(function(cb){cb();}); };
+  genBgImg.src = 'GENERATOR_STATOR_LEAK_TEMPLATE.jpg';
+}
+function ensureGenBackground(callback) {
+  if (!genBgImg) { genBgCallbacks.push(callback); initGenBackground(); return; }
+  if (genBgReady) { callback(); return; }
+  if (genBgImg.complete && genBgImg.naturalWidth > 0) { genBgReady = true; callback(); return; }
+  genBgCallbacks.push(callback);
+}
+function drawGenBackground(doc, pw, ph) {
+  if (!genBgImg || !genBgReady || !genBgImg.naturalWidth) return;
+  try { doc.addImage(genBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+
 /* ══════════════════ PDF EXPORT ══════════════════ */
 function runPdfPreview() {
+  ensureGenBackground(function() { buildAndShowPdf(); });
+}
+function buildAndShowPdf() {
   var doc = new jspdf.jsPDF({unit:'mm', format:'a4'});
   var pageW = doc.internal.pageSize.getWidth();
+  var pageH = doc.internal.pageSize.getHeight();
   var margin = 12, y = 16;
+  drawGenBackground(doc, pageW, pageH);
 
   doc.setFontSize(13); doc.setFont(undefined,'bold');
   doc.text('ANNUAL PM LOG SHEET — GENERATOR STATOR LEAK MONITORING SYSTEM', pageW/2, y, {align:'center'});
@@ -1558,7 +1582,7 @@ function runPdfPreview() {
     columnStyles:{0:{cellWidth:8,halign:'center'},5:{cellWidth:10,halign:'center'},6:{cellWidth:10,halign:'center'}} });
   y = doc.lastAutoTable.finalY + 6;
 
-  if (y > 250) { doc.addPage(); y = 16; }
+  if (y > 250) { doc.addPage(); drawGenBackground(doc, pageW, pageH); y = 16; }
 
   // TABLE 3 - MEASUREMENT LOG
   doc.setFont(undefined,'bold'); doc.text('Table 3 — Measurement Log', margin, y); y += 2;
@@ -1574,7 +1598,7 @@ function runPdfPreview() {
     head: [['Part Name','Part Number','Qty','Installed']], body: sp });
   y = doc.lastAutoTable.finalY + 6;
 
-  if (y > 240) { doc.addPage(); y = 16; }
+  if (y > 240) { doc.addPage(); drawGenBackground(doc, pageW, pageH); y = 16; }
 
   // APPROVAL
   doc.setFont(undefined,'bold'); doc.text('Approval', margin, y); y += 5;
@@ -1591,11 +1615,11 @@ function runPdfPreview() {
   // EVIDENCE PHOTOS
   var photosWithImg = evidenceItems.filter(function(it){ return it.images.length > 0; });
   if (photosWithImg.length) {
-    if (y > 230) { doc.addPage(); y = 16; }
+    if (y > 230) { doc.addPage(); drawGenBackground(doc, pageW, pageH); y = 16; }
     doc.setFont(undefined,'bold'); doc.setFontSize(11); doc.text('Upload Evidence', margin, y); y += 6;
     var picW = 80, picH = 60, gap = 6, colX = margin, startXRight = margin + picW + gap;
     photosWithImg.forEach(function(item, i) {
-      if (y + picH + 8 > 285) { doc.addPage(); y = 16; }
+      if (y + picH + 8 > 285) { doc.addPage(); drawGenBackground(doc, pageW, pageH); y = 16; }
       var x = (i % 2 === 0) ? colX : startXRight;
       try { doc.addImage(item.images[0].dataUrl, 'JPEG', x, y, picW, picH); } catch(e) {}
       doc.setFontSize(7.5); doc.setFont(undefined,'normal');
@@ -1618,42 +1642,46 @@ function dbCollectData(modul) {
     tanggal: document.getElementById('hTanggal').value || '',
     pic: document.getElementById('hPic').value || '',
     work_order: document.getElementById('hWorkOrder').value || '',
-    asset_tag: document.getElementById('hAssetTag').value || '',
-    asset_description: document.getElementById('hAssetDesc').value || '',
-    table1: {
-      plant: document.getElementById('t1Plant').value,
-      unit: document.getElementById('t1Unit').value,
-      equipment: document.getElementById('t1Equipment').value,
-      oem: document.getElementById('t1Oem').value,
-      frequency: document.getElementById('t1Frequency').value,
-      startTime: document.getElementById('t1StartTime').value,
-      finishTime: document.getElementById('t1FinishTime').value,
-      technician: document.getElementById('t1Technician').value,
-      supervisor: document.getElementById('t1Supervisor').value
-    },
-    checklist: CHECKLIST_DATA,
-    measurement: MEASUREMENT_DATA,
-    spareParts: SPAREPARTS_DATA,
-    approval: {
-      findings: document.getElementById('apFindings').value,
-      technician: document.getElementById('apTechnician').value,
-      supervisor: document.getElementById('apSupervisor').value,
-      operations: document.getElementById('apOperations').value
-    },
-    evidence: evidenceItems
+    unit: document.getElementById('t1Unit').value || 'Unit 7',
+    data: {
+      assetTag: document.getElementById('hAssetTag').value || '',
+      assetDescription: document.getElementById('hAssetDesc').value || '',
+      table1: {
+        plant: document.getElementById('t1Plant').value,
+        unit: document.getElementById('t1Unit').value,
+        equipment: document.getElementById('t1Equipment').value,
+        oem: document.getElementById('t1Oem').value,
+        frequency: document.getElementById('t1Frequency').value,
+        startTime: document.getElementById('t1StartTime').value,
+        finishTime: document.getElementById('t1FinishTime').value,
+        technician: document.getElementById('t1Technician').value,
+        supervisor: document.getElementById('t1Supervisor').value
+      },
+      checklist: CHECKLIST_DATA,
+      measurement: MEASUREMENT_DATA,
+      spareParts: SPAREPARTS_DATA,
+      approval: {
+        findings: document.getElementById('apFindings').value,
+        technician: document.getElementById('apTechnician').value,
+        supervisor: document.getElementById('apSupervisor').value,
+        operations: document.getElementById('apOperations').value
+      },
+      evidence: evidenceItems
+    }
   };
 }
 
 function applyRecordToForm(rec, editingId) {
   if (!rec) return;
+  var d = rec.data || {};
   document.getElementById('hTanggal').value = rec.tanggal || '';
   document.getElementById('hPic').value = rec.pic || '';
   document.getElementById('hWorkOrder').value = rec.work_order || '';
-  document.getElementById('hAssetTag').value = rec.asset_tag || '';
-  document.getElementById('hAssetDesc').value = rec.asset_description || '';
-  var t1 = rec.table1 || {};
+  document.getElementById('hAssetTag').value = d.assetTag || '';
+  document.getElementById('hAssetDesc').value = d.assetDescription || '';
+  var t1 = d.table1 || {};
   document.getElementById('t1Plant').value = t1.plant || 'PLTU Paiton';
-  document.getElementById('t1Unit').value = t1.unit || 'Unit 7';
+  document.getElementById('t1Unit').value = t1.unit || rec.unit || 'Unit 7';
   document.getElementById('t1Equipment').value = t1.equipment || '';
   document.getElementById('t1Oem').value = t1.oem || '';
   document.getElementById('t1Frequency').value = t1.frequency || 'Annual';
@@ -1662,28 +1690,28 @@ function applyRecordToForm(rec, editingId) {
   document.getElementById('t1Technician').value = t1.technician || '';
   document.getElementById('t1Supervisor').value = t1.supervisor || '';
 
-  if (Array.isArray(rec.checklist) && rec.checklist.length) {
+  if (Array.isArray(d.checklist) && d.checklist.length) {
     CHECKLIST_DATA.forEach(function(row, idx) {
-      var src = rec.checklist[idx];
+      var src = d.checklist[idx];
       if (src) { row.acceptance=src.acceptance||''; row.asFound=src.asFound||''; row.asLeft=src.asLeft||''; row.pass=!!src.pass; row.fail=!!src.fail; row.remarks=src.remarks||''; }
     });
   }
-  if (Array.isArray(rec.measurement) && rec.measurement.length) {
+  if (Array.isArray(d.measurement) && d.measurement.length) {
     MEASUREMENT_DATA.forEach(function(row, idx) {
-      var src = rec.measurement[idx];
+      var src = d.measurement[idx];
       if (src) { row.oemSpec=src.oemSpec||''; row.before=src.before||''; row.after=src.after||''; }
     });
   }
-  SPAREPARTS_DATA = Array.isArray(rec.spareParts) ? rec.spareParts : [];
+  SPAREPARTS_DATA = Array.isArray(d.spareParts) ? d.spareParts : [];
   sparePartNextId = SPAREPARTS_DATA.reduce(function(m,r){ return Math.max(m, (r.id||0)+1); }, 1);
 
-  var ap = rec.approval || {};
+  var ap = d.approval || {};
   document.getElementById('apFindings').value = ap.findings || '';
   document.getElementById('apTechnician').value = ap.technician || '';
   document.getElementById('apSupervisor').value = ap.supervisor || '';
   document.getElementById('apOperations').value = ap.operations || '';
 
-  evidenceItems = Array.isArray(rec.evidence) ? rec.evidence : [];
+  evidenceItems = Array.isArray(d.evidence) ? d.evidence : [];
   evNextId = evidenceItems.reduce(function(m,r){ return Math.max(m, (r.id||0)+1); }, 1);
 
   buildChecklistTable(); buildMeasurementTable(); buildSparePartsTable(); renderEvidenceList();
@@ -1703,6 +1731,7 @@ setInterval(function(){var el=document.getElementById('clock');if(el)el.textCont
 buildChecklistTable(); buildMeasurementTable(); buildSparePartsTable(); renderEvidenceList();
 renderPresetButtons();
 initCropDrag();
+initGenBackground();
 (function(){ var el=document.getElementById('hTanggal'); if(el && !el.value) el.value = todayStrG(); })();
 
 /* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
