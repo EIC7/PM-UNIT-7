@@ -1931,7 +1931,7 @@ var IE_THICKNESS_FACTORS = { S: 0.0022, M: 0.0045, L: 0.0075, XL: 0.012 };
 var IE_ZOOM_MIN = 1, IE_ZOOM_MAX = 4, IE_ZOOM_STEP = 0.5;
 
 function ieMinSize(){ return Math.max(20, imgEditState.naturalW * 0.02); }
-function ieHandleR(){ return Math.max(12, imgEditState.naturalW * 0.011); }
+function ieHandleR(){ return Math.max(9, imgEditState.naturalW * 0.009); }
 function ieStrokeWFor(shape){
     var key = (shape && shape.strokeSize) || imgEditState.thickness || 'M';
     var f = IE_THICKNESS_FACTORS[key] || IE_THICKNESS_FACTORS.M;
@@ -2080,12 +2080,37 @@ function editSelectedText(){
     var shape = getShapeById(imgEditState.selectedId);
     if (!shape || shape.type !== 'text') return;
     var val = prompt('Edit teks:', shape.text);
+    ieForceHideKeyboard();
     if (val === null) return;
     shape.text = val || ' ';
     renderAllShapes();
 }
+/* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
+   "menempel" (tidak ikut turun) karena tidak ada <input> asli di halaman yang
+   kehilangan fokus. Trik: fokuskan sebentar lalu blur input tersembunyi supaya
+   Android benar-benar mendeteksi ada elemen form yang di-blur dan menutup IME. */
 function ieForceHideKeyboard(){
-    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) {
+        document.activeElement.blur();
+    }
+    var dummy = document.getElementById('ieKeyboardDismiss');
+    if (!dummy) {
+        dummy = document.createElement('input');
+        dummy.id = 'ieKeyboardDismiss';
+        dummy.setAttribute('type', 'text');
+        dummy.style.position = 'fixed';
+        dummy.style.top = '-1000px';
+        dummy.style.left = '0';
+        dummy.style.width = '1px';
+        dummy.style.height = '1px';
+        dummy.style.opacity = '0';
+        document.body.appendChild(dummy);
+    }
+    // readonly saat focus supaya Android TIDAK memunculkan keyboard baru di
+    // input dummy ini — cuma dipakai untuk memicu event blur yang sungguhan.
+    dummy.setAttribute('readonly', 'readonly');
+    dummy.focus();
+    setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
 }
 function ieResizeSelectedText(dir){
     var shape = getShapeById(imgEditState.selectedId);
@@ -2097,12 +2122,13 @@ function ieResizeSelectedText(dir){
 function getSvgPoint(evt){
     var svg = document.getElementById('editSvgOverlay');
     var rect = svg.getBoundingClientRect();
-    var scaleX = imgEditState.naturalW / rect.width, scaleY = imgEditState.naturalH / rect.height;
-    var t = evt.touches ? evt.touches[0] : evt;
-    return { x: (t.clientX - rect.left) * scaleX, y: (t.clientY - rect.top) * scaleY };
+    var t = evt.touches ? (evt.touches[0] || evt.changedTouches[0]) : evt;
+    var x = (t.clientX - rect.left) * (imgEditState.naturalW / rect.width);
+    var y = (t.clientY - rect.top) * (imgEditState.naturalH / rect.height);
+    return { x: x, y: y };
 }
 function ieAddDocListeners(onMove, onUp){
-    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointermove', onMove, {passive:false});
     document.addEventListener('pointerup', onUp);
     document.addEventListener('pointercancel', onUp);
 }
@@ -2114,11 +2140,11 @@ function ieRemoveDocListeners(onMove, onUp){
 function onEditSvgPointerDown(e){
     var tool = imgEditState.tool;
     if (tool === 'pan') {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         var outer = document.getElementById('editImgOuter');
         var startX = e.clientX, startY = e.clientY, startL = outer.scrollLeft, startT = outer.scrollTop;
         var svgEl = document.getElementById('editSvgOverlay'); svgEl.style.cursor = 'grabbing';
-        function onMove(ev){ outer.scrollLeft = startL-(ev.clientX-startX); outer.scrollTop = startT-(ev.clientY-startY); }
+        function onMove(ev){ if (ev.cancelable) ev.preventDefault(); outer.scrollLeft = startL-(ev.clientX-startX); outer.scrollTop = startT-(ev.clientY-startY); }
         function onUp(){ svgEl.style.cursor = 'grab'; ieRemoveDocListeners(onMove, onUp); }
         ieAddDocListeners(onMove, onUp);
         return;
@@ -2127,6 +2153,7 @@ function onEditSvgPointerDown(e){
     if (tool === 'text') {
         var p = getSvgPoint(e);
         var val = prompt('Masukkan teks:', '');
+        ieForceHideKeyboard();
         if (!val) return;
         var shape = addShape({ type:'text', x:p.x, y:p.y, text:val, color:imgEditState.color, fontSize:ieFontDefault() });
         setSelectedShape(shape.id);
@@ -2134,10 +2161,10 @@ function onEditSvgPointerDown(e){
         return;
     }
     if (tool === 'line' || tool === 'arrow' || tool === 'rect' || tool === 'oval') {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         var p0 = getSvgPoint(e);
         imgEditState.drawing = { type: tool, x1:p0.x, y1:p0.y, x2:p0.x, y2:p0.y, color: imgEditState.color, strokeSize: imgEditState.thickness };
-        function onMove(ev){ var pm = getSvgPoint(ev); imgEditState.drawing.x2 = pm.x; imgEditState.drawing.y2 = pm.y; renderAllShapes(); }
+        function onMove(ev){ if (ev.cancelable) ev.preventDefault(); var pm = getSvgPoint(ev); imgEditState.drawing.x2 = pm.x; imgEditState.drawing.y2 = pm.y; renderAllShapes(); }
         function onUp(){
             var d = imgEditState.drawing; imgEditState.drawing = null;
             if (d && (Math.abs(d.x2-d.x1) > 4 || Math.abs(d.y2-d.y1) > 4)) {
@@ -2156,12 +2183,13 @@ function onEditSvgPointerDown(e){
     }
 }
 function startDragShape(id, ev){
-    ev.preventDefault(); ev.stopPropagation();
     setSelectedShape(id);
     var shape = getShapeById(id);
+    if (!shape) return;
     var p0 = getSvgPoint(ev);
     var orig = JSON.parse(JSON.stringify(shape));
     function onMove(e){
+        if (e.cancelable) e.preventDefault();
         var p = getSvgPoint(e);
         var dx = p.x-p0.x, dy = p.y-p0.y;
         if (shape.type === 'line' || shape.type === 'arrow') { shape.x1=orig.x1+dx; shape.y1=orig.y1+dy; shape.x2=orig.x2+dx; shape.y2=orig.y2+dy; }
@@ -2172,7 +2200,7 @@ function startDragShape(id, ev){
     ieAddDocListeners(onMove, onUp);
 }
 function startHandleDrag(onDragMove){
-    function onMove(e){ onDragMove(getSvgPoint(e)); renderAllShapes(); }
+    function onMove(e){ if (e.cancelable) e.preventDefault(); onDragMove(getSvgPoint(e)); renderAllShapes(); }
     function onUp(){ ieRemoveDocListeners(onMove, onUp); }
     ieAddDocListeners(onMove, onUp);
     return { onMove: onMove, onUp: onUp };
@@ -2182,7 +2210,7 @@ function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
     c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', ieHandleR());
     c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1,ieHandleR()*0.2));
     c.style.cursor = cursor; c.style.touchAction = 'none';
-    c.addEventListener('pointerdown', function(e){ e.preventDefault(); e.stopPropagation(); startHandleDrag(onDragMove); });
+    c.addEventListener('pointerdown', function(e){ e.stopPropagation(); if (e.cancelable) e.preventDefault(); startHandleDrag(onDragMove); });
     svg.appendChild(c);
 }
 function ieBuildShapeVisual(shape){
@@ -2234,7 +2262,7 @@ function renderAllShapes(){
         var g = document.createElementNS(NS_SVG, 'g');
         g.style.touchAction = 'none';
         g.appendChild(visual);
-        var start = function(shapeId){ return function(e){ if (imgEditState.tool === 'select') startDragShape(shapeId, e); }; }(shape.id);
+        var start = function(shapeId){ return function(e){ if (imgEditState.tool !== 'select') return; e.stopPropagation(); if (e.cancelable) e.preventDefault(); startDragShape(shapeId, e); }; }(shape.id);
         g.addEventListener('pointerdown', start);
         svg.appendChild(g);
 
