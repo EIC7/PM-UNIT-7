@@ -46,17 +46,35 @@
 .crop-cm-field input{width:64px;padding:5px 6px;font-size:12px;border-radius:5px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8}
 .crop-size-label{font-size:11px;color:#7fd9a4;font-weight:600;margin-left:4px}
 .crop-default-label{font-size:12px;color:#7fd9a4;font-weight:600;padding:4px 2px}
+/* ── EDIT GAMBAR (Insert Shape) ── */
+#editImgOuter{position:relative;flex:1 1 auto;min-height:0;background:#0c100d;overflow:auto;touch-action:none;display:flex;align-items:center;justify-content:center}
+#editImgWrap{position:relative;flex:none;touch-action:none}
+#editImg{position:absolute;left:0;top:0;user-select:none;-webkit-user-select:none;pointer-events:none;display:block}
+#editSvgOverlay{position:absolute;left:0;top:0;cursor:crosshair;touch-action:none}
+.edit-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;flex:none}
+.edit-tool-btn{width:36px;height:36px;border-radius:7px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-tool-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+.edit-tool-btn.zoom-label{width:auto;padding:0 8px;font-size:12px;font-weight:700}
+.edit-toolbar-sep{width:1px;align-self:stretch;background:#2a3a30;margin:2px 2px}
+.edit-color-swatch{width:24px;height:24px;border-radius:50%;border:2px solid #3a4f42;cursor:pointer;padding:0}
+.edit-color-swatch.active{border-color:#fff;box-shadow:0 0 0 2px #2ecc71}
+.edit-thick-swatch{width:32px;height:36px;border-radius:7px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.edit-thick-swatch.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+/* ── PDF PREVIEW MODAL ── */
 .pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
 .pdf-preview-modal.show{display:flex}
 .pdf-preview-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,900px);height:min(92vh,1100px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
-.pdf-preview-header{background:#243228;padding:10px 16px;flex:0 0 auto}
+.pdf-preview-header{background:#243228;padding:10px 46px 10px 16px;flex:0 0 auto;position:relative}
 .pdf-preview-title{font-weight:700;font-size:14px;color:#e0f0e8}
 .pdf-preview-hint{font-size:11px;color:#8aab96;margin-top:2px}
+.pdf-preview-close-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid #3a4f42;background:#1a221e;color:#e0f0e8;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.pdf-preview-close-x:active{background:#2a3a30}
 .pdf-preview-body{flex:1 1 auto;background:#333;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .pdf-canvas-container{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
 .pdf-canvas-container canvas{max-width:100%;height:auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);background:#fff}
 .pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
-.pdf-preview-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
+.pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
+.pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
 </style>
 </head>
 <body>
@@ -337,7 +355,7 @@
                     <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
                     <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
                 </div>
-                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran: 7.2 × 5.18 cm (default, tidak perlu diatur)</div>
+                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran cetak: 7.2 × 5.18 cm — gambar penuh (tidak dipotong)</div>
                 <div id="cropPresetControls" style="display:none">
                     <div class="crop-size-row" id="cropPresetRow"></div>
                     <div class="crop-size-row" style="margin-top:8px">
@@ -352,6 +370,7 @@
                 </div>
             </div>
             <div class="crop-btns">
+                <button class="crop-btn crop-btn-outline" onclick="openImageEditor()">🖍️ Edit Gambar</button>
                 <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
                 <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
                 <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
@@ -360,10 +379,61 @@
     </div>
 </div>
 
+<!-- ═══ EDIT GAMBAR (Insert Shape: Teks/Panah/Garis/Kotak/Oval) ═══ -->
+<div id="editImgModal" class="pdf-preview-modal">
+    <div class="crop-dialog editimg-dialog" style="width:98vw;height:96vh;max-width:1600px;max-height:1600px;display:flex;flex-direction:column">
+        <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closeImageEditor(true)" aria-label="Tutup">✕</button>
+            <div class="pdf-preview-title">🖍️ Edit Gambar</div>
+            <div class="pdf-preview-hint">Tambahkan teks, panah, garis, kotak, atau oval pada gambar</div>
+        </div>
+        <div id="editImgOuter">
+            <div id="editImgWrap">
+                <img id="editImg" src="" alt="">
+                <svg id="editSvgOverlay" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+        </div>
+        <div class="edit-toolbar" id="editToolbar">
+            <button type="button" class="edit-tool-btn active" data-tool="select" onclick="setEditTool('select')" title="Pilih / Pindah">↖</button>
+            <button type="button" class="edit-tool-btn" data-tool="pan" onclick="setEditTool('pan')" title="Geser Tampilan">✋</button>
+            <button type="button" class="edit-tool-btn" data-tool="text" onclick="setEditTool('text')" title="Tambah Teks">🅰</button>
+            <button type="button" class="edit-tool-btn" data-tool="arrow" onclick="setEditTool('arrow')" title="Panah">↗</button>
+            <button type="button" class="edit-tool-btn" data-tool="line" onclick="setEditTool('line')" title="Garis">╱</button>
+            <button type="button" class="edit-tool-btn" data-tool="rect" onclick="setEditTool('rect')" title="Kotak">▭</button>
+            <button type="button" class="edit-tool-btn" data-tool="oval" onclick="setEditTool('oval')" title="Oval">◯</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-color-swatch active" data-color="#e53935" style="background:#e53935" onclick="setEditColor('#e53935',this)" title="Merah"></button>
+            <button type="button" class="edit-color-swatch" data-color="#1a1a1a" style="background:#1a1a1a" onclick="setEditColor('#1a1a1a',this)" title="Hitam"></button>
+            <button type="button" class="edit-color-swatch" data-color="#1e88e5" style="background:#1e88e5" onclick="setEditColor('#1e88e5',this)" title="Biru"></button>
+            <button type="button" class="edit-color-swatch" data-color="#fdd835" style="background:#fdd835" onclick="setEditColor('#fdd835',this)" title="Kuning"></button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-thick-swatch active" data-thick="S" onclick="setEditThickness('S',this)" title="Tipis">S</button>
+            <button type="button" class="edit-thick-swatch" data-thick="M" onclick="setEditThickness('M',this)" title="Sedang">M</button>
+            <button type="button" class="edit-thick-swatch" data-thick="L" onclick="setEditThickness('L',this)" title="Tebal">L</button>
+            <button type="button" class="edit-thick-swatch" data-thick="XL" onclick="setEditThickness('XL',this)" title="Sangat Tebal">XL</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-tool-btn" onclick="ieZoomOut()" title="Zoom Out">－</button>
+            <div class="edit-tool-btn zoom-label" id="editZoomLabel">100%</div>
+            <button type="button" class="edit-tool-btn" onclick="ieZoomIn()" title="Zoom In">＋</button>
+            <button type="button" class="edit-tool-btn" onclick="ieZoomReset()" title="Reset Zoom">⤢</button>
+            <span class="edit-toolbar-sep"></span>
+            <button type="button" class="edit-tool-btn" id="editTextSmallerBtn" onclick="ieResizeSelectedText(-1)" title="Kecilkan Teks" style="display:none">A-</button>
+            <button type="button" class="edit-tool-btn" id="editTextBiggerBtn" onclick="ieResizeSelectedText(1)" title="Besarkan Teks" style="display:none">A+</button>
+            <button type="button" class="edit-tool-btn" id="editTextEditBtn" onclick="editSelectedText()" title="Edit Teks" style="display:none">✏️</button>
+            <button type="button" class="edit-tool-btn" id="editDeleteBtn" onclick="deleteSelectedShape()" title="Hapus" style="display:none">🗑️</button>
+        </div>
+        <div class="pdf-preview-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closeImageEditor(true)">Batal</button>
+            <button class="crop-btn crop-btn-save" onclick="applyImageEdits()">✓ Selesai</button>
+        </div>
+    </div>
+</div>
+
 <!-- PDF PREVIEW MODAL -->
 <div id="pdfPreviewModal" class="pdf-preview-modal">
     <div class="pdf-preview-dialog">
         <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closePdfPreview()" aria-label="Tutup">✕</button>
             <div class="pdf-preview-title">📄 Preview Hasil PDF</div>
             <div class="pdf-preview-hint">Ini tampilan asli file PDF-nya, cek dulu sebelum download</div>
         </div>
@@ -455,9 +525,22 @@ function setCropMode(mode) {
     }
 }
 function applyDefaultSize() {
-    cropModalState._ratioLocked = true;
+    // Default: box crop menutupi SELURUH gambar (tidak memotong apapun).
+    // Ukuran cetak PDF tetap mengikuti DEFAULT_CROP_W_CM x DEFAULT_CROP_H_CM,
+    // terlepas dari rasio asli gambarnya.
+    cropModalState._ratioLocked = false;
     cropModalState._cropWcm = DEFAULT_CROP_W_CM; cropModalState._cropHcm = DEFAULT_CROP_H_CM;
-    updateSizeLabel(); reshapeCropBoxToRatio();
+    updateSizeLabel(); fitCropBoxToFullImage();
+}
+function fitCropBoxToFullImage() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img) return;
+    var iL = parseInt(img.style.left) || 0, iT = parseInt(img.style.top) || 0;
+    var iW = img.offsetWidth, iH = img.offsetHeight;
+    if (!iW || !iH) return;
+    box.style.left = iL + 'px'; box.style.top = iT + 'px';
+    box.style.width = iW + 'px'; box.style.height = iH + 'px';
 }
 function applyPreset(i) {
     var p = CROP_PRESETS[i];
@@ -543,6 +626,526 @@ function reshapeCropBoxToRatio() {
     box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
 }
 
+var NS_SVG = 'http://www.w3.org/2000/svg';
+var imgEditState = {
+    tool: 'select', color: '#e53935', thickness: 'M', zoom: 1, baseScale: 1, shapes: [], selectedId: null,
+    naturalW: 0, naturalH: 0, nextId: 1, drawing: null, sourceUrl: null
+};
+var IE_THICKNESS_FACTORS = { S: 0.0022, M: 0.0045, L: 0.0075, XL: 0.012 };
+var IE_ZOOM_MIN = 1, IE_ZOOM_MAX = 4, IE_ZOOM_STEP = 0.5;
+
+function ieMinSize(){ return Math.max(20, imgEditState.naturalW * 0.02); }
+function ieHandleR(){ return Math.max(9, imgEditState.naturalW * 0.009); }
+function ieStrokeWFor(shape){
+    var key = (shape && shape.strokeSize) || imgEditState.thickness || 'M';
+    var f = IE_THICKNESS_FACTORS[key] || IE_THICKNESS_FACTORS.M;
+    return Math.max(2, imgEditState.naturalW * f);
+}
+function ieFontDefault(){ return Math.max(18, imgEditState.naturalW * 0.035); }
+function ieColorId(c){ return 'ie_' + c.replace('#',''); }
+function ieTextBoxSize(shape){
+    return { w: Math.max(20, (shape.text.length||1) * shape.fontSize * 0.55), h: shape.fontSize*1.2 };
+}
+
+function openImageEditor(){
+    var cropImg = document.getElementById('cropImg');
+    if (!cropImg || !cropImg.src) { alert('Gambar belum siap untuk diedit.'); return; }
+    imgEditState.shapes = []; imgEditState.selectedId = null; imgEditState.nextId = 1;
+    imgEditState.tool = 'select'; imgEditState.color = '#e53935'; imgEditState.thickness = 'M'; imgEditState.zoom = 1;
+    setEditTool('select');
+    var swatches = document.querySelectorAll('.edit-color-swatch');
+    swatches.forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color') === imgEditState.color); });
+    var tswatches = document.querySelectorAll('.edit-thick-swatch');
+    tswatches.forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-thick') === imgEditState.thickness); });
+    ieUpdateZoomLabel();
+    var editImg = document.getElementById('editImg');
+    editImg.onload = function(){
+        imgEditState.naturalW = editImg.naturalWidth;
+        imgEditState.naturalH = editImg.naturalHeight;
+        fitEditImageToWrap();
+        renderAllShapes();
+    };
+    imgEditState.sourceUrl = cropImg.src;
+    editImg.src = cropImg.src;
+    document.getElementById('editImgModal').classList.add('show');
+}
+
+function fitEditImageToWrap(){
+    var outer = document.getElementById('editImgOuter');
+    var wrap = document.getElementById('editImgWrap');
+    var img = document.getElementById('editImg');
+    var svg = document.getElementById('editSvgOverlay');
+    var ow = outer.clientWidth, oh = outer.clientHeight;
+    var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
+    if (!nw || !nh || !ow || !oh) return;
+    var baseScale = Math.min(ow/nw, oh/nh);
+    imgEditState.baseScale = baseScale;
+    var scale = baseScale * (imgEditState.zoom || 1);
+    var dw = nw*scale, dh = nh*scale;
+    wrap.style.width = dw+'px'; wrap.style.height = dh+'px';
+    img.style.width = dw+'px'; img.style.height = dh+'px';
+    svg.style.width = dw+'px'; svg.style.height = dh+'px';
+    svg.setAttribute('viewBox', '0 0 '+nw+' '+nh);
+    outer.style.justifyContent = (dw <= ow + 1) ? 'center' : 'flex-start';
+    outer.style.alignItems = (dh <= oh + 1) ? 'center' : 'flex-start';
+    if (dw > ow) outer.scrollLeft = Math.max(0, (dw-ow)/2);
+    if (dh > oh) outer.scrollTop = Math.max(0, (dh-oh)/2);
+}
+function ieUpdateZoomLabel(){
+    var lbl = document.getElementById('editZoomLabel');
+    if (lbl) lbl.textContent = Math.round((imgEditState.zoom||1)*100) + '%';
+}
+function ieSetZoom(z){
+    imgEditState.zoom = Math.max(IE_ZOOM_MIN, Math.min(IE_ZOOM_MAX, z));
+    ieUpdateZoomLabel();
+    fitEditImageToWrap();
+}
+function ieZoomIn(){ ieSetZoom((imgEditState.zoom||1) + IE_ZOOM_STEP); }
+function ieZoomOut(){ ieSetZoom((imgEditState.zoom||1) - IE_ZOOM_STEP); }
+function ieZoomReset(){ ieSetZoom(1); }
+window.addEventListener('resize', function(){
+    if (document.getElementById('editImgModal').classList.contains('show')) fitEditImageToWrap();
+});
+
+function closeImageEditor(discard){
+    document.getElementById('editImgModal').classList.remove('show');
+    if (discard) { imgEditState.shapes = []; imgEditState.selectedId = null; }
+}
+
+function setEditTool(tool){
+    imgEditState.tool = tool;
+    deselectShape();
+    document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-tool') === tool);
+    });
+    var svg = document.getElementById('editSvgOverlay');
+    svg.style.cursor = (tool === 'select') ? 'default' : (tool === 'pan') ? 'grab' : 'crosshair';
+}
+function ieBackToSelectKeepSelection(){
+    imgEditState.tool = 'select';
+    document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-tool') === 'select');
+    });
+    var svg = document.getElementById('editSvgOverlay');
+    svg.style.cursor = 'default';
+}
+function setEditColor(color, btnEl){
+    imgEditState.color = color;
+    document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.remove('active'); });
+    if (btnEl) btnEl.classList.add('active');
+    var sel = getShapeById(imgEditState.selectedId);
+    if (sel) { sel.color = color; renderAllShapes(); }
+}
+function setEditThickness(key, btnEl){
+    imgEditState.thickness = key;
+    document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.remove('active'); });
+    if (btnEl) btnEl.classList.add('active');
+    var sel = getShapeById(imgEditState.selectedId);
+    if (sel && sel.type !== 'text') { sel.strokeSize = key; renderAllShapes(); }
+}
+function getShapeById(id){
+    for (var i=0;i<imgEditState.shapes.length;i++) if (imgEditState.shapes[i].id === id) return imgEditState.shapes[i];
+    return null;
+}
+function addShape(shape){
+    shape.id = imgEditState.nextId++;
+    imgEditState.shapes.push(shape);
+    return shape;
+}
+function ieSetSelButtonsDisplay(shape){
+    var isText = shape && shape.type === 'text';
+    document.getElementById('editTextSmallerBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editTextBiggerBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editTextEditBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editDeleteBtn').style.display = shape ? 'flex' : 'none';
+}
+function deselectShape(){
+    imgEditState.selectedId = null;
+    ieSetSelButtonsDisplay(null);
+    renderAllShapes();
+}
+function setSelectedShape(id){
+    imgEditState.selectedId = id;
+    var shape = getShapeById(id);
+    ieSetSelButtonsDisplay(shape);
+    if (shape) {
+        document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-color')===shape.color); });
+        if (shape.strokeSize) document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-thick')===shape.strokeSize); });
+    }
+    renderAllShapes();
+}
+function deleteSelectedShape(){
+    var id = imgEditState.selectedId;
+    if (!id) return;
+    imgEditState.shapes = imgEditState.shapes.filter(function(s){ return s.id !== id; });
+    deselectShape();
+}
+function editSelectedText(){
+    var shape = getShapeById(imgEditState.selectedId);
+    if (!shape || shape.type !== 'text') return;
+    var val = prompt('Edit teks:', shape.text);
+    ieForceHideKeyboard();
+    if (val === null) return;
+    shape.text = val || ' ';
+    renderAllShapes();
+}
+/* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
+   "menempel" (tidak ikut turun) karena tidak ada <input> asli di halaman yang
+   kehilangan fokus. Trik: fokuskan sebentar lalu blur input tersembunyi supaya
+   Android benar-benar mendeteksi ada elemen form yang di-blur dan menutup IME. */
+function ieForceHideKeyboard(){
+    if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) {
+        document.activeElement.blur();
+    }
+    var dummy = document.getElementById('ieKeyboardDismiss');
+    if (!dummy) {
+        dummy = document.createElement('input');
+        dummy.id = 'ieKeyboardDismiss';
+        dummy.setAttribute('type', 'text');
+        dummy.style.position = 'fixed';
+        dummy.style.top = '-1000px';
+        dummy.style.left = '0';
+        dummy.style.width = '1px';
+        dummy.style.height = '1px';
+        dummy.style.opacity = '0';
+        document.body.appendChild(dummy);
+    }
+    // readonly saat focus supaya Android TIDAK memunculkan keyboard baru di
+    // input dummy ini — cuma dipakai untuk memicu event blur yang sungguhan.
+    dummy.setAttribute('readonly', 'readonly');
+    dummy.focus();
+    setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
+}
+function ieResizeSelectedText(dir){
+    var shape = getShapeById(imgEditState.selectedId);
+    if (!shape || shape.type !== 'text') return;
+    var step = Math.max(2, imgEditState.naturalW * 0.006);
+    shape.fontSize = Math.max(10, (shape.fontSize||ieFontDefault()) + dir*step);
+    renderAllShapes();
+}
+function getSvgPoint(evt){
+    var svg = document.getElementById('editSvgOverlay');
+    var rect = svg.getBoundingClientRect();
+    var t = evt.touches ? (evt.touches[0] || evt.changedTouches[0]) : evt;
+    var x = (t.clientX - rect.left) * (imgEditState.naturalW / rect.width);
+    var y = (t.clientY - rect.top) * (imgEditState.naturalH / rect.height);
+    return { x: x, y: y };
+}
+function ieAddDocListeners(onMove, onUp){
+    document.addEventListener('pointermove', onMove, {passive:false});
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+}
+function ieRemoveDocListeners(onMove, onUp){
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+}
+function onEditSvgPointerDown(e){
+    var tool = imgEditState.tool;
+    if (tool === 'pan') {
+        if (e.cancelable) e.preventDefault();
+        var outer = document.getElementById('editImgOuter');
+        var startX = e.clientX, startY = e.clientY, startL = outer.scrollLeft, startT = outer.scrollTop;
+        var svgEl = document.getElementById('editSvgOverlay'); svgEl.style.cursor = 'grabbing';
+        function onMove(ev){ if (ev.cancelable) ev.preventDefault(); outer.scrollLeft = startL-(ev.clientX-startX); outer.scrollTop = startT-(ev.clientY-startY); }
+        function onUp(){ svgEl.style.cursor = 'grab'; ieRemoveDocListeners(onMove, onUp); }
+        ieAddDocListeners(onMove, onUp);
+        return;
+    }
+    if (tool === 'select') { if (e.target.id === 'editSvgOverlay') deselectShape(); return; }
+    if (tool === 'text') {
+        var p = getSvgPoint(e);
+        var val = prompt('Masukkan teks:', '');
+        ieForceHideKeyboard();
+        if (!val) return;
+        var shape = addShape({ type:'text', x:p.x, y:p.y, text:val, color:imgEditState.color, fontSize:ieFontDefault() });
+        setSelectedShape(shape.id);
+        ieBackToSelectKeepSelection();
+        return;
+    }
+    if (tool === 'line' || tool === 'arrow' || tool === 'rect' || tool === 'oval') {
+        if (e.cancelable) e.preventDefault();
+        var p0 = getSvgPoint(e);
+        imgEditState.drawing = { type: tool, x1:p0.x, y1:p0.y, x2:p0.x, y2:p0.y, color: imgEditState.color, strokeSize: imgEditState.thickness };
+        function onMove(ev){ if (ev.cancelable) ev.preventDefault(); var pm = getSvgPoint(ev); imgEditState.drawing.x2 = pm.x; imgEditState.drawing.y2 = pm.y; renderAllShapes(); }
+        function onUp(){
+            var d = imgEditState.drawing; imgEditState.drawing = null;
+            if (d && (Math.abs(d.x2-d.x1) > 4 || Math.abs(d.y2-d.y1) > 4)) {
+                var shape;
+                if (d.type === 'rect' || d.type === 'oval') {
+                    shape = addShape({ type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize, rotation:0 });
+                } else {
+                    shape = addShape({ type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize });
+                }
+                setSelectedShape(shape.id);
+                ieBackToSelectKeepSelection();
+            } else { renderAllShapes(); }
+            ieRemoveDocListeners(onMove, onUp);
+        }
+        ieAddDocListeners(onMove, onUp);
+    }
+}
+function startDragShape(id, ev){
+    setSelectedShape(id);
+    var shape = getShapeById(id);
+    if (!shape) return;
+    var p0 = getSvgPoint(ev);
+    var orig = JSON.parse(JSON.stringify(shape));
+    function onMove(e){
+        if (e.cancelable) e.preventDefault();
+        var p = getSvgPoint(e);
+        var dx = p.x-p0.x, dy = p.y-p0.y;
+        if (shape.type === 'line' || shape.type === 'arrow') { shape.x1=orig.x1+dx; shape.y1=orig.y1+dy; shape.x2=orig.x2+dx; shape.y2=orig.y2+dy; }
+        else { shape.x = orig.x+dx; shape.y = orig.y+dy; }
+        renderAllShapes();
+    }
+    function onUp(){ ieRemoveDocListeners(onMove, onUp); }
+    ieAddDocListeners(onMove, onUp);
+}
+function startHandleDrag(onDragMove){
+    function onMove(e){ if (e.cancelable) e.preventDefault(); onDragMove(getSvgPoint(e)); renderAllShapes(); }
+    function onUp(){ ieRemoveDocListeners(onMove, onUp); }
+    ieAddDocListeners(onMove, onUp);
+    return { onMove: onMove, onUp: onUp };
+}
+/* Radius area sentuh (bukan visual) — minimal setara ~22px layar supaya
+   enak dipencet jari, meski titik hijaunya sendiri sengaja dibikin kecil
+   biar presisi. Dikonversi ke koordinat "natural" gambar sesuai skala
+   tampilan saat ini (baseScale x zoom). */
+function ieHandleHitR(){
+    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
+    var minTouchPx = 22;
+    return Math.max(ieHandleR(), minTouchPx / scale);
+}
+function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
+    var c = document.createElementNS(NS_SVG, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', ieHandleR());
+    c.setAttribute('fill', '#2ecc71'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', Math.max(1,ieHandleR()*0.2));
+    c.style.cursor = cursor; c.style.touchAction = 'none'; c.style.pointerEvents = 'none';
+    svg.appendChild(c);
+    // Hit-area transparan yang lebih besar, ditumpuk di atas titik visual,
+    // supaya gampang dipencet di HP tanpa mengubah ukuran titik yang terlihat.
+    var hit = document.createElementNS(NS_SVG, 'circle');
+    hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', ieHandleHitR());
+    hit.setAttribute('fill', 'transparent');
+    hit.style.cursor = cursor; hit.style.touchAction = 'none'; hit.style.pointerEvents = 'all';
+    hit.addEventListener('pointerdown', function(e){ e.stopPropagation(); if (e.cancelable) e.preventDefault(); startHandleDrag(onDragMove); });
+    svg.appendChild(hit);
+}
+function ieBuildShapeVisual(shape){
+    var el;
+    if (shape.type === 'rect') {
+        el = document.createElementNS(NS_SVG, 'rect');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y);
+        el.setAttribute('width', shape.w); el.setAttribute('height', shape.h);
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'oval') {
+        el = document.createElementNS(NS_SVG, 'ellipse');
+        el.setAttribute('cx', shape.x+shape.w/2); el.setAttribute('cy', shape.y+shape.h/2);
+        el.setAttribute('rx', shape.w/2); el.setAttribute('ry', shape.h/2);
+        el.setAttribute('fill', 'none'); el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape));
+    } else if (shape.type === 'line' || shape.type === 'arrow') {
+        el = document.createElementNS(NS_SVG, 'line');
+        el.setAttribute('x1', shape.x1); el.setAttribute('y1', shape.y1);
+        el.setAttribute('x2', shape.x2); el.setAttribute('y2', shape.y2);
+        el.setAttribute('stroke', shape.color); el.setAttribute('stroke-width', ieStrokeWFor(shape)); el.setAttribute('stroke-linecap', 'round');
+        if (shape.type === 'arrow') el.setAttribute('marker-end', 'url(#'+ieColorId(shape.color)+')');
+    } else if (shape.type === 'text') {
+        el = document.createElementNS(NS_SVG, 'text');
+        el.setAttribute('x', shape.x); el.setAttribute('y', shape.y + shape.fontSize);
+        el.setAttribute('fill', shape.color); el.setAttribute('font-size', shape.fontSize);
+        el.setAttribute('font-family', 'Arial, sans-serif'); el.setAttribute('font-weight', '700');
+        el.textContent = shape.text;
+    }
+    return el;
+}
+function ieBuildDefs(svg){
+    var defs = document.createElementNS(NS_SVG, 'defs');
+    ['#e53935','#1a1a1a','#1e88e5','#fdd835'].forEach(function(c){
+        var marker = document.createElementNS(NS_SVG, 'marker');
+        marker.setAttribute('id', ieColorId(c)); marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '10');
+        marker.setAttribute('refX', '8'); marker.setAttribute('refY', '5'); marker.setAttribute('orient', 'auto');
+        var path = document.createElementNS(NS_SVG, 'path');
+        path.setAttribute('d', 'M0,0 L10,5 L0,10 Z'); path.setAttribute('fill', c);
+        marker.appendChild(path); defs.appendChild(marker);
+    });
+    svg.appendChild(defs);
+}
+function ieRotatePoint(px, py, cx, cy, deg){
+    var rad = deg * Math.PI / 180;
+    var dx = px - cx, dy = py - cy;
+    return { x: cx + dx*Math.cos(rad) - dy*Math.sin(rad), y: cy + dx*Math.sin(rad) + dy*Math.cos(rad) };
+}
+function renderAllShapes(){
+    var svg = document.getElementById('editSvgOverlay');
+    svg.innerHTML = '';
+    ieBuildDefs(svg);
+    imgEditState.shapes.forEach(function(shape){
+        var g = document.createElementNS(NS_SVG, 'g');
+        var visual = ieBuildShapeVisual(shape);
+        if (!visual) return;
+        g.appendChild(visual);
+        // Hit-area lebih lebar supaya mudah disentuh (untuk garis/panah tipis,
+        // dan bagian dalam kotak/oval yang defaultnya fill:none tidak bisa disentuh)
+        if (shape.type === 'line' || shape.type === 'arrow') {
+            var hit = document.createElementNS(NS_SVG, 'line');
+            hit.setAttribute('x1', shape.x1); hit.setAttribute('y1', shape.y1);
+            hit.setAttribute('x2', shape.x2); hit.setAttribute('y2', shape.y2);
+            hit.setAttribute('stroke', 'transparent'); hit.setAttribute('stroke-width', Math.max(24, imgEditState.naturalW*0.02));
+            g.insertBefore(hit, visual);
+        } else if (shape.type === 'rect' || shape.type === 'oval') {
+            var fhit = document.createElementNS(NS_SVG, shape.type === 'rect' ? 'rect' : 'ellipse');
+            if (shape.type === 'rect') {
+                fhit.setAttribute('x', shape.x); fhit.setAttribute('y', shape.y);
+                fhit.setAttribute('width', shape.w); fhit.setAttribute('height', shape.h);
+            } else {
+                fhit.setAttribute('cx', shape.x+shape.w/2); fhit.setAttribute('cy', shape.y+shape.h/2);
+                fhit.setAttribute('rx', shape.w/2); fhit.setAttribute('ry', shape.h/2);
+            }
+            fhit.setAttribute('fill', 'transparent');
+            g.insertBefore(fhit, visual);
+        } else if (shape.type === 'text') {
+            // <text> secara default cuma bisa "diklik" tepat di garis huruf. Tambahkan
+            // hit-area kotak penuh (transparan) supaya teks mudah digeser/dipilih di HP.
+            var tb = ieTextBoxSize(shape);
+            var padX = tb.w*0.08, padY = tb.h*0.15;
+            var thit = document.createElementNS(NS_SVG, 'rect');
+            thit.setAttribute('x', shape.x - padX); thit.setAttribute('y', shape.y - padY);
+            thit.setAttribute('width', tb.w + padX*2); thit.setAttribute('height', tb.h + padY*2);
+            thit.setAttribute('fill', 'transparent');
+            g.insertBefore(thit, visual);
+        }
+        g.style.cursor = 'move';
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var rcx = shape.x + shape.w/2, rcy = shape.y + shape.h/2;
+            g.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + rcx + ' ' + rcy + ')');
+        }
+        var start = function(shapeId){ return function(e){ if (imgEditState.tool !== 'select') return; e.stopPropagation(); if (e.cancelable) e.preventDefault(); startDragShape(shapeId, e); }; }(shape.id);
+        g.addEventListener('pointerdown', start);
+        svg.appendChild(g);
+
+        if (shape.id === imgEditState.selectedId) {
+            if (shape.type === 'rect' || shape.type === 'oval') {
+                var rot = shape.rotation || 0;
+                var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
+                var box = document.createElementNS(NS_SVG, 'rect');
+                box.setAttribute('x', shape.x); box.setAttribute('y', shape.y);
+                box.setAttribute('width', shape.w); box.setAttribute('height', shape.h);
+                box.setAttribute('fill', 'none'); box.setAttribute('stroke', '#2ecc71');
+                box.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                box.setAttribute('stroke-dasharray', '6,4'); box.setAttribute('pointer-events', 'none');
+                if (rot) box.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
+                svg.appendChild(box);
+                // Handle resize di pojok kanan-bawah — posisinya dihitung ulang sesuai
+                // rotasi saat ini, dan resize dihitung di ruang LOKAL (belum dirotasi)
+                // supaya tetap membesar/mengecil mengikuti arah kotaknya sendiri.
+                var cornerLocal = {x: shape.x+shape.w, y: shape.y+shape.h};
+                var cornerWorld = rot ? ieRotatePoint(cornerLocal.x, cornerLocal.y, cx, cy, rot) : cornerLocal;
+                ieMakeHandle(svg, cornerWorld.x, cornerWorld.y, 'nwse-resize', function(p){
+                    var local = rot ? ieRotatePoint(p.x, p.y, cx, cy, -rot) : p;
+                    shape.w = Math.max(ieMinSize(), local.x-shape.x); shape.h = Math.max(ieMinSize(), local.y-shape.y);
+                });
+                // Handle rotasi — bulatan di atas tengah kotak, tarik memutar sekeliling pusat.
+                var rotDist = Math.max(24, imgEditState.naturalW*0.03);
+                var rotHandleLocal = {x: cx, y: shape.y - rotDist};
+                var rotHandleWorld = rot ? ieRotatePoint(rotHandleLocal.x, rotHandleLocal.y, cx, cy, rot) : rotHandleLocal;
+                var rotLine = document.createElementNS(NS_SVG, 'line');
+                rotLine.setAttribute('x1', cx); rotLine.setAttribute('y1', shape.y);
+                rotLine.setAttribute('x2', rotHandleLocal.x); rotLine.setAttribute('y2', rotHandleLocal.y);
+                rotLine.setAttribute('stroke', '#2ecc71'); rotLine.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                rotLine.setAttribute('pointer-events', 'none');
+                if (rot) rotLine.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
+                svg.appendChild(rotLine);
+                ieMakeHandle(svg, rotHandleWorld.x, rotHandleWorld.y, 'grab', function(p){
+                    var deg = Math.atan2(p.x-cx, -(p.y-cy)) * 180/Math.PI;
+                    shape.rotation = Math.round(deg);
+                });
+            } else if (shape.type === 'line' || shape.type === 'arrow') {
+                ieMakeHandle(svg, shape.x1, shape.y1, 'move', function(p){ shape.x1=p.x; shape.y1=p.y; });
+                ieMakeHandle(svg, shape.x2, shape.y2, 'move', function(p){ shape.x2=p.x; shape.y2=p.y; });
+            } else if (shape.type === 'text') {
+                var tbSel = ieTextBoxSize(shape);
+                var box2 = document.createElementNS(NS_SVG, 'rect');
+                box2.setAttribute('x', shape.x); box2.setAttribute('y', shape.y);
+                box2.setAttribute('width', tbSel.w); box2.setAttribute('height', tbSel.h);
+                box2.setAttribute('fill', 'none'); box2.setAttribute('stroke', '#2ecc71');
+                box2.setAttribute('stroke-width', Math.max(1, imgEditState.naturalW*0.0015));
+                box2.setAttribute('stroke-dasharray', '6,4'); box2.setAttribute('pointer-events', 'none');
+                svg.appendChild(box2);
+                ieMakeHandle(svg, shape.x+tbSel.w, shape.y+tbSel.h, 'nwse-resize', function(p){
+                    var newH = Math.max(10, p.y-shape.y);
+                    shape.fontSize = newH/1.2;
+                });
+            }
+        }
+    });
+    if (imgEditState.drawing) {
+        var dvisual = ieBuildShapeVisual(
+            (imgEditState.drawing.type==='rect'||imgEditState.drawing.type==='oval')
+            ? {type:imgEditState.drawing.type, x:Math.min(imgEditState.drawing.x1,imgEditState.drawing.x2), y:Math.min(imgEditState.drawing.y1,imgEditState.drawing.y2), w:Math.abs(imgEditState.drawing.x2-imgEditState.drawing.x1), h:Math.abs(imgEditState.drawing.y2-imgEditState.drawing.y1), color:imgEditState.drawing.color, strokeSize:imgEditState.drawing.strokeSize}
+            : imgEditState.drawing
+        );
+        if (dvisual) { dvisual.setAttribute('opacity','0.75'); svg.appendChild(dvisual); }
+    }
+}
+
+(function initEditSvgEvents(){
+    var svg = document.getElementById('editSvgOverlay');
+    if (!svg) return;
+    svg.addEventListener('pointerdown', onEditSvgPointerDown);
+})();
+
+/* ── Terapkan semua anotasi: gabung ke gambar asli, kembalikan ke #cropImg ── */
+function applyImageEdits(){
+    if (!imgEditState.shapes.length) { closeImageEditor(false); return; }
+    var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
+    var flatSvg = document.createElementNS(NS_SVG, 'svg');
+    flatSvg.setAttribute('xmlns', NS_SVG);
+    flatSvg.setAttribute('width', nw); flatSvg.setAttribute('height', nh);
+    flatSvg.setAttribute('viewBox', '0 0 '+nw+' '+nh);
+    ieBuildDefs(flatSvg);
+    imgEditState.shapes.forEach(function(shape){
+        var v = ieBuildShapeVisual(shape);
+        if (!v) return;
+        if ((shape.type === 'rect' || shape.type === 'oval') && shape.rotation) {
+            var cx = shape.x + shape.w/2, cy = shape.y + shape.h/2;
+            v.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + cx + ' ' + cy + ')');
+        }
+        flatSvg.appendChild(v);
+    });
+    var svgStr = new XMLSerializer().serializeToString(flatSvg);
+    var svgImg = new Image();
+    svgImg.onload = function(){
+        var canvas = document.createElement('canvas');
+        canvas.width = nw; canvas.height = nh;
+        var ctx = canvas.getContext('2d');
+        var srcImg = new Image();
+        srcImg.onload = function(){
+            ctx.drawImage(srcImg, 0, 0, nw, nh);
+            ctx.drawImage(svgImg, 0, 0, nw, nh);
+            var outUrl = canvas.toDataURL('image/jpeg', 0.92);
+            var cropImg = document.getElementById('cropImg');
+            cropImg.onload = function(){
+                var wrap = document.getElementById('cropWrap');
+                var ww = wrap.clientWidth, wh = wrap.clientHeight;
+                var scale = Math.min(ww/cropImg.naturalWidth, wh/cropImg.naturalHeight);
+                var dw = cropImg.naturalWidth*scale, dh = cropImg.naturalHeight*scale;
+                cropImg.style.width = dw+'px'; cropImg.style.height = dh+'px';
+                cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
+                if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+                else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+            };
+            cropImg.src = outUrl;
+            closeImageEditor(false);
+        };
+        srcImg.src = imgEditState.sourceUrl;
+    };
+    svgImg.onerror = function(){ alert('Gagal menerapkan anotasi pada gambar. Coba lagi.'); };
+    svgImg.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
+}
+
+
 function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
     cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
     var existing = (replaceIdx>=0 && imgArr[replaceIdx]) ? imgArr[replaceIdx] : null;
@@ -570,7 +1173,8 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
         var bw = Math.min(dw,dh)*0.8, bh = bw;
         box.style.width = bw+'px'; box.style.height = bh+'px';
         box.style.left = ((ww-bw)/2)+'px'; box.style.top = ((wh-bh)/2)+'px';
-        if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+        if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+        else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
     };
     img.src = dataUrl;
     cropModalState.classList.add('show');
@@ -613,7 +1217,7 @@ function cropAndSave() {
 
     var MAX = 1*1024*1024;
     var dataUrl;
-    for (var q=0.85; q>=0.25; q-=0.1) {
+    for (var q=0.9; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);
         var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
         var newSize = dataUrl.length*0.75;
