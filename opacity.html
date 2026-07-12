@@ -1538,7 +1538,7 @@ function opDownloadPdf() {
         head: [['No','Step of Work','Criteria','v','7A','7B','Result']],
         body: tableRows,
         theme: 'grid',
-        margin: {left: marginX, right: marginX},
+        margin: {top: marginTop, bottom: marginBottom, left: marginX, right: marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:7.5, textColor:[20,30,25], font:'helvetica', cellPadding:2},
         columnStyles: {
@@ -1582,8 +1582,8 @@ function opDownloadPdf() {
         secHeader('CATATAN & EVIDENCE PHOTO');
 
         function iePhotoDrawSize(entry, maxW, maxH) {
-          var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
-          var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+          var wCm = (entry.widthCm && entry.widthCm > 0) ? entry.widthCm : DEFAULT_CROP_W_CM;
+          var hCm = (entry.heightCm && entry.heightCm > 0) ? entry.heightCm : DEFAULT_CROP_H_CM;
           var w = wCm * 10, h = hCm * 10;
           if (w > maxW) { h = h * (maxW / w); w = maxW; }
           if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
@@ -1623,7 +1623,17 @@ function opDownloadPdf() {
               if (rowX + dim.w > maxRowRight && rowX > rowStartX) { y += rowMaxH + gap + 8; rowX = rowStartX; rowMaxH = 0; }
               if (y + dim.h + capH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; rowX=rowStartX; rowMaxH=0; }
               var drawX = Math.max(marginX, Math.min(rowX + ((img.offsetX||0)*10), pw - marginX - dim.w));
-              try { doc.addImage(img.dataUrl,'JPEG',drawX,y,dim.w,dim.h); } catch(e) {}
+              var imgOk = true;
+              try {
+                if (!img.dataUrl || dim.w <= 0 || dim.h <= 0) throw new Error('data gambar kosong/rusak');
+                doc.addImage(img.dataUrl,'JPEG',drawX,y,dim.w,dim.h);
+              } catch(e) {
+                imgOk = false;
+                doc.setDrawColor(200,60,60); doc.setLineWidth(0.4);
+                doc.rect(drawX, y, dim.w, dim.h, 'S');
+                doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(200,60,60);
+                doc.text(doc.splitTextToSize('\u26A0 Gagal memuat gambar: '+safe(img.name||'?'), dim.w-4), drawX+2, y+dim.h/2, {baseline:'middle'});
+              }
               var cap=safe(img.caption||'');
               if (cap) { doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,dim.w), drawX, y+dim.h+3); }
               rowMaxH = Math.max(rowMaxH, dim.h + capH);
