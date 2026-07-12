@@ -1740,25 +1740,39 @@ function cfDownloadPdf() {
       // Halaman pertama \u2014 draw background
       drawBg(doc, pw, ph);
 
-      // ── INFO BOX ──
-      doc.setDrawColor(180, 210, 220);
-      doc.setLineWidth(0.3);
-      doc.rect(marginX, y, contentW, 29, 'S');
+      // ── INFO BOX — Fitur L: Tabel Info Pekerjaan Bergaris (2 kolom x 3 baris) ──
+      var infoRowH = 7.3;
+      var infoBoxH = infoRowH * 3;
+      var infoLabelColW = 24;
+      var infoMidX = marginX + contentW/2;
+
+      doc.setFillColor(255, 251, 214);
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.35);
+      doc.rect(marginX, y, contentW, infoBoxH, 'FD');
+
+      doc.setLineWidth(0.25);
+      // Garis vertikal: setelah label kolom kiri, tengah (pemisah 2 kolom), setelah label kolom kanan
+      doc.line(marginX+infoLabelColW, y, marginX+infoLabelColW, y+infoBoxH);
+      doc.line(infoMidX, y, infoMidX, y+infoBoxH);
+      doc.line(infoMidX+infoLabelColW, y, infoMidX+infoLabelColW, y+infoBoxH);
+      // Garis horizontal antar baris
+      doc.line(marginX, y+infoRowH, marginX+contentW, y+infoRowH);
+      doc.line(marginX, y+infoRowH*2, marginX+contentW, y+infoRowH*2);
 
       var pairs = [
-        [marginX+3, [['Feeder No.', gv('cfFeederNo')], ['Date', gv('cfDate')], ['PIC', gv('cfPIC')]]],
-        [marginX+contentW/2+5, [['Reference', gv('cfRef')], ['Work Order', gv('cfWO')], ['Dicetak', nowStr]]]
+        [marginX+3, marginX+infoLabelColW+3, [['Feeder No.', gv('cfFeederNo')], ['Date', gv('cfDate')], ['PIC', gv('cfPIC')]]],
+        [infoMidX+3, infoMidX+infoLabelColW+3, [['Reference', gv('cfRef')], ['Work Order', gv('cfWO')], ['Dicetak', nowStr]]]
       ];
       pairs.forEach(function(pair) {
-        pair[1].forEach(function(it, i) {
-          var iy = y + 7 + i*7;
+        pair[2].forEach(function(it, i) {
+          var iy = y + infoRowH*i + 4.8;
           doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
-          doc.text(it[0]+':', pair[0], iy);
-          doc.setFont('helvetica','normal'); doc.setTextColor(20,30,25);
-          doc.text(safe(it[1]).substring(0,50), pair[0]+28, iy);
+          doc.text(it[0], pair[0], iy);
+          doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
+          doc.text(safe(it[1]).substring(0,42), pair[1], iy);
         });
       });
-      y += 33;
+      y += infoBoxH + 5;
 
       // ── SECTION HEADER ──
       function secHeader(title) {
