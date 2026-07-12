@@ -1979,7 +1979,22 @@ function bsDownloadPdf() {
       }
       function addSide(label, note, imgs) {
         if (!note && !imgs.length) return;
-        checkPage(10);
+        // Hitung kebutuhan tinggi "judul + catatan + gambar PERTAMA" sebagai 1 paket,
+        // supaya judul tidak terpisah sendirian di halaman lama. Gambar ke-2 dst
+        // (lanjutan) TIDAK ikut dipaksa — biar mengalir normal apa adanya.
+        var labelH = 6;
+        var noteLinesPre = note ? doc.splitTextToSize(note, contentW-6) : [];
+        var noteH = note ? (noteLinesPre.length*4.5 + 2) : 0;
+        var maxPhotoW = contentW - 6, maxPhotoH = 60;
+        var firstDim = imgs.length ? iePhotoDrawSize(imgs[0], maxPhotoW, maxPhotoH) : null;
+        var firstImgH = firstDim ? firstDim.h+12 : 0;
+        var neededFirstBlock = labelH + noteH + firstImgH;
+        var pageUsableH = ph - marginTop - marginBottom;
+        if (neededFirstBlock <= pageUsableH && (y + neededFirstBlock > ph - marginBottom)) {
+          doc.addPage(); bsDrawBg(doc,pw,ph); y = marginTop;
+        } else {
+          checkPage(10);
+        }
         doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,64,175);
         doc.text(label, marginX+3, y); y += 6;
         if (note) {
@@ -1990,7 +2005,7 @@ function bsDownloadPdf() {
         }
         if (imgs.length) {
           var rowStartX = marginX+3, maxRowRight = marginX + contentW - 3;
-          var maxPhotoW = contentW - 6, maxPhotoH = 60, gap=4;
+          var gap=4;
           var rowX = rowStartX, rowMaxH = 0;
           imgs.forEach(function(img) {
             var dim = iePhotoDrawSize(img, maxPhotoW, maxPhotoH);
