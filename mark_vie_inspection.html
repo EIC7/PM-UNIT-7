@@ -1495,35 +1495,34 @@ function downloadPdf(){
       });
       y += totalH + 8;
 
-      // ═══ TABEL CHECKLIST (4 section, Yes/No checkbox + Remark + Evidence foto per-baris) ═══
+      // ═══ TABEL CHECKLIST (4 section, Yes/No checkbox + Remark) — kolom Evidence
+      //     sengaja TIDAK dimasukkan ke tabel; fotonya digambar penuh di section
+      //     "EVIDENCE PHOTO" setelah tabel selesai (lihat di bawah). ═══
       var body = [];
       var sectionHeaderRows = [];
       MV_SECTIONS.forEach(function(sec){
         sectionHeaderRows.push(body.length);
-        body.push([sec.no+'. '+sec.title, '', '', '', '']);
+        body.push([sec.no+'. '+sec.title, '', '', '']);
         sec.items.forEach(function(it){
           var gi = MV_ITEMS.findIndex(function(x){ return x.sectionNo===sec.no && x.label===it.label; });
           var st = mvState[gi] || {yes:false,no:false,remark:''};
-          var hasPhoto = mvRowEvidence[gi] && mvRowEvidence[gi][0];
-          body.push([pdfSafe(it.label), st.yes?'__CHK__':'__BOX__', st.no?'__CHK__':'__BOX__', pdfSafe(st.remark||''), hasPhoto?'__PHOTO:'+gi+'__':'']);
+          body.push([pdfSafe(it.label), st.yes?'__CHK__':'__BOX__', st.no?'__CHK__':'__BOX__', pdfSafe(st.remark||'')]);
         });
       });
       var CHK_COLS_MV = {1:true, 2:true};
-      var evColMV = 4;
-      var evColWidthMV = 26;
       doc.autoTable({
         startY: y,
-        head: [['Description','Yes','No','Remark','Evidence']],
+        head: [['Description','Yes','No','Remark']],
         body: body,
         theme: 'grid',
         margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:7.5, textColor:[20,30,25], font:'helvetica', cellPadding:2},
-        columnStyles: {0:{cellWidth:92}, 1:{cellWidth:14,halign:'center'}, 2:{cellWidth:14,halign:'center'}, 3:{cellWidth:contentW-92-14-14-evColWidthMV}, 4:{cellWidth:evColWidthMV,halign:'center'}},
+        columnStyles: {0:{cellWidth:106}, 1:{cellWidth:16,halign:'center'}, 2:{cellWidth:16,halign:'center'}, 3:{cellWidth:contentW-106-16-16}},
         alternateRowStyles: {fillColor:[246,249,247]},
         didParseCell: function(data){
           if (sectionHeaderRows.indexOf(data.row.index) !== -1 && data.section === 'body') {
-            data.cell.colSpan = 5;
+            data.cell.colSpan = 4;
             data.cell.styles.fillColor = [221,227,222];
             data.cell.styles.textColor = [30,50,40];
             data.cell.styles.fontStyle = 'bold';
@@ -1540,14 +1539,6 @@ function downloadPdf(){
             var bg = (data.row.index%2===0)?[255,255,255]:[246,249,247];
             doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(data.cell.x+0.2,data.cell.y+0.2,data.cell.width-0.4,data.cell.height-0.4,'F');
             mvDrawCheckbox(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val==='__CHK__');
-            return;
-          }
-          // Kolom Evidence: cuma tanda centang kecil kalau ada foto — fotonya sendiri
-          // digambar ukuran penuh di section "EVIDENCE PHOTO" setelah tabel selesai,
-          // supaya tidak kepepet kecil di dalam sel tabel.
-          if (data.column.index === evColMV && String(val||'').indexOf('__PHOTO:') === 0) {
-            doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(30,140,70);
-            doc.text('\u2713', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2 + 1.2, {align:'center'});
           }
         },
         willDrawPage: function(data){ if (data.pageNumber>1) drawBg(doc,pw,ph); }
