@@ -112,6 +112,7 @@ input[type="checkbox"]:checked::after {
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -1520,6 +1521,11 @@ function hgPreloadRefImages(callback) {
 }
 
 function hgDownloadPdf() {
+  var totalImgs = Object.keys(hgEvidence).reduce(function(sum,no){
+    return sum + hgEvidence[no].before.length + hgEvidence[no].after.length;
+  }, 0);
+  var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
+  if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
   hgPreloadRefImages(function() {
   ensureReportBackground(function() {
     try {
@@ -1717,12 +1723,23 @@ function hgDownloadPdf() {
         var evidRows = rowsStep.filter(function(s){ return hgEvidence[s.no].before.length || hgEvidence[s.no].after.length; });
         if (evidRows.length) {
           secHeader('CATATAN & EVIDENCE PHOTO');
-          var gap=6, colW=(contentW-gap)/2, perRow=1, fw=(colW-gap/2)/perRow-2, fh=fw*0.72;
-          var firstBlockH = 10 + 5 + (fh+9);
+          function iePhotoDrawSize(entry, maxW, maxH) {
+            var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
+            var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+            var w = wCm * 10, h = hCm * 10;
+            if (w > maxW) { h = h * (maxW / w); w = maxW; }
+            if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
+            return { w: w, h: h };
+          }
+          var gap=6, colW=(contentW-gap)/2, maxPhotoH=90;
           evidRows.forEach(function(s){
             var befImgs = hgEvidence[s.no].before.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
             var aftImgs = hgEvidence[s.no].after.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
             if (!befImgs.length && !aftImgs.length) return;
+            var firstB = befImgs[0] ? iePhotoDrawSize(befImgs[0], colW, maxPhotoH) : null;
+            var firstA = aftImgs[0] ? iePhotoDrawSize(aftImgs[0], colW, maxPhotoH) : null;
+            var firstRowH = Math.max(firstB ? firstB.h : 0, firstA ? firstA.h : 0, 20);
+            var firstBlockH = 10 + 5 + (firstRowH + 9);
             if (firstBlockH <= (ph-marginTop-marginBottom) && (y+firstBlockH > ph-marginBottom)) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
             else { checkPage(14); }
             doc.setFillColor(60,90,70);
@@ -1738,11 +1755,20 @@ function hgDownloadPdf() {
             var xBef=marginX+2, xAft=marginX+colW+gap;
             var maxImgs = Math.max(befImgs.length, aftImgs.length);
             for (var ii=0; ii<maxImgs; ii++) {
-              if (y+fh+10 > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
-              var bImg = befImgs[ii], aImg = aftImgs[ii];
-              if (bImg) { try{ doc.addImage(bImg.dataUrl,'JPEG',xBef,y,fw,fh); }catch(e){} }
-              if (aImg) { try{ doc.addImage(aImg.dataUrl,'JPEG',xAft,y,fw,fh); }catch(e){} }
-              y += fh + 9;
+              var bImg = befImgs[ii] || null, aImg = aftImgs[ii] || null;
+              var bDim = bImg ? iePhotoDrawSize(bImg, colW, maxPhotoH) : null;
+              var aDim = aImg ? iePhotoDrawSize(aImg, colW, maxPhotoH) : null;
+              var rowH = Math.max(bDim ? bDim.h : 0, aDim ? aDim.h : 0, 20);
+              if (y+rowH+10 > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
+              if (bImg) {
+                var drawXBef = Math.max(marginX, Math.min(xBef + ((bImg.offsetX||0)*10), pw - marginX - bDim.w));
+                try{ doc.addImage(bImg.dataUrl,'JPEG',drawXBef,y,bDim.w,bDim.h); }catch(e){}
+              }
+              if (aImg) {
+                var drawXAft = Math.max(marginX, Math.min(xAft + ((aImg.offsetX||0)*10), pw - marginX - aDim.w));
+                try{ doc.addImage(aImg.dataUrl,'JPEG',drawXAft,y,aDim.w,aDim.h); }catch(e){}
+              }
+              y += rowH + 9;
             }
             y += 3;
           });
@@ -1763,8 +1789,10 @@ function hgDownloadPdf() {
 
       var now = new Date();
       var dateStr = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+      if (typeof hideImgLoading === 'function') hideImgLoading();
       showPdfPreview(doc, 'PM_HG_Analyzer_'+FREQ_LABEL[activeFreq].replace(' ','')+'_'+dateStr+'.pdf');
     } catch(err) {
+      if (typeof hideImgLoading === 'function') hideImgLoading();
       alert('Gagal membuat PDF: ' + (err.message||err));
     }
   });
