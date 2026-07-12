@@ -1287,7 +1287,7 @@ function mvSetYN(i, which) {
 function mvRowEvidenceCellHtml(i) {
   var img = mvRowEvidence[i] && mvRowEvidence[i][0];
   if (!img) {
-    return '<button type="button" onclick="mvRowPhotoPick('+i+')" title="Upload foto evidence" '+
+    return '<button type="button" onclick="mvRowPhotoPick('+i+',event)" title="Upload foto evidence" '+
       'style="width:34px;height:34px;border-radius:6px;border:1.5px dashed var(--border);background:#fff;color:var(--text3);font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">&#128247;</button>';
   }
   return '<div style="position:relative;display:inline-block">' +
@@ -1303,11 +1303,43 @@ function mvRenderRowEvidence(i) {
   if (cell) cell.innerHTML = mvRowEvidenceCellHtml(i);
 }
 
-function mvRowPhotoPick(i) {
+function mvRowPhotoPick(i, ev) {
   mvRowPickTarget = i;
-  var input = document.getElementById('mvRowFileInput');
-  input.value = '';
-  input.click();
+  var popup = document.getElementById('mvRowSrcChoice');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'mvRowSrcChoice';
+    popup.style.cssText = 'display:none;position:absolute;background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.18);padding:8px;gap:6px;z-index:9999;flex-direction:column';
+    popup.innerHTML =
+      '<button type="button" onclick="event.stopPropagation();mvRowPickSource(\'storage\')" style="padding:7px 14px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:110px;white-space:nowrap">&#128193; Penyimpanan</button>' +
+      '<button type="button" onclick="event.stopPropagation();mvRowPickSource(\'camera\')" style="padding:7px 14px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:110px;white-space:nowrap">&#128247; Kamera</button>';
+    document.body.appendChild(popup);
+    document.addEventListener('click', function(){ popup.style.display = 'none'; });
+  }
+  if (ev) ev.stopPropagation();
+  var btn = (ev && ev.currentTarget) ? ev.currentTarget : (ev && ev.target);
+  var rect = btn ? btn.getBoundingClientRect() : {left:100, bottom:100, width:34};
+  var top = window.scrollY + rect.bottom + 6;
+  var left = window.scrollX + rect.left + rect.width/2;
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+  popup.style.transform = 'translateX(-50%)';
+  // Kalau popup akan meluber di kanan layar, geser ke kiri secukupnya
+  popup.style.display = 'flex';
+  var pr = popup.getBoundingClientRect();
+  if (pr.right > window.innerWidth - 8) {
+    popup.style.left = (window.scrollX + window.innerWidth - 8) + 'px';
+    popup.style.transform = 'translateX(-100%)';
+  } else if (pr.left < 8) {
+    popup.style.left = (window.scrollX + 8) + 'px';
+    popup.style.transform = 'none';
+  }
+}
+
+function mvRowPickSource(source) {
+  var popup = document.getElementById('mvRowSrcChoice');
+  if (popup) popup.style.display = 'none';
+  openFileInputSource('mvRowFileInput', source);
 }
 
 function mvRowFileSelected(input) {
