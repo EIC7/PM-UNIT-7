@@ -127,13 +127,18 @@
   <div class="panel">
     <div class="section-label">Checklist Inspeksi</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table class="manual-table" id="mvTable" style="min-width:820px">
-        <thead><tr><th style="width:34px">No</th><th style="min-width:260px">Description</th><th style="width:56px">Yes</th><th style="width:56px">No</th><th style="min-width:160px">Remark</th><th style="width:90px">Evidence</th></tr></thead>
+      <table class="manual-table" id="mvTable" style="min-width:720px">
+        <thead><tr><th style="width:34px">No</th><th style="min-width:280px">Description</th><th style="width:56px">Yes</th><th style="width:56px">No</th><th style="min-width:180px">Remark</th></tr></thead>
         <tbody id="mvTableBody"><!-- built by JS --></tbody>
       </table>
     </div>
   </div>
-  <input type="file" id="mvRowFileInput" accept="image/*,.heic,.heif" style="display:none" onchange="mvRowFileSelected(this)">
+
+  <!-- EVIDENCE PHOTO (gallery umum, bukan per-baris) -->
+  <div class="panel">
+    <div class="section-label">Evidence Photo</div>
+    <div id="mvEvidenceSlot"><!-- built by JS via buildPhotoSlot --></div>
+  </div>
 
   <div class="panel">
     <div class="btn-row">
@@ -957,8 +962,8 @@ function reshapeCropBoxToRatio() {
 }
 
 /* imgOpenCropper: SAMA SIGNATURE dengan versi lama shared.js supaya semua
-   pemanggil existing (mvRowFileSelected/mvRowReEdit/inline onclick) tetap
-   jalan tanpa diubah. */
+   pemanggil existing (mvHandleFiles/mvReEdit/inline onclick) tetap jalan
+   tanpa diubah. */
 function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
     cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
     var existing = (replaceIdx>=0 && imgArr[replaceIdx]) ? imgArr[replaceIdx] : null;
@@ -1052,7 +1057,9 @@ function cropAndSave() {
     imgArr.push(entry);
 
     closeCropModal();
-    if (p.modulePrefix === 'mv' && typeof mvRenderPreviews === 'function') mvRenderPreviews(p.side);
+    // Panggil render callback modul terkait secara dinamis: {prefix}RenderPreviews(side)
+    var renderFnName = p.modulePrefix + 'RenderPreviews';
+    if (typeof window[renderFnName] === 'function') window[renderFnName](p.side);
 }
 
 /* ── Geser posisi gambar (nudge) — generik untuk array manapun ── */
@@ -1239,8 +1246,7 @@ MV_SECTIONS.forEach(function(sec){
 });
 
 var mvState = MV_ITEMS.map(function(it){ return {yes:false, no:false, remark: it.defaultRemark}; });
-var mvRowEvidence = MV_ITEMS.map(function(){ return []; }); // 1 array per baris, isi 0 atau 1 foto
-var mvRowPickTarget = -1; // index baris yang sedang menunggu hasil <input type=file>
+var mvEvidence = [];
 
 function safe(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -1249,7 +1255,7 @@ function buildMvTable() {
   var html = '';
   var globalIdx = 0;
   MV_SECTIONS.forEach(function(sec){
-    html += '<tr><td colspan="6" class="mv-section-title">'+sec.no+'. '+safe(sec.title)+'</td></tr>';
+    html += '<tr><td colspan="5" class="mv-section-title">'+sec.no+'. '+safe(sec.title)+'</td></tr>';
     sec.items.forEach(function(it){
       var i = globalIdx;
       html += '<tr>'+
@@ -1258,7 +1264,6 @@ function buildMvTable() {
         '<td style="text-align:center"><input type="checkbox" class="mv-yn" id="mvYes_'+i+'" onchange="mvSetYN('+i+',\'yes\')"></td>'+
         '<td style="text-align:center"><input type="checkbox" class="mv-yn" id="mvNo_'+i+'" onchange="mvSetYN('+i+',\'no\')"></td>'+
         '<td><input type="text" class="mv-remark" id="mvRemark_'+i+'" value="'+safe(mvState[i].remark)+'" oninput="mvState['+i+'].remark=this.value"></td>'+
-        '<td id="mvRowEvCell_'+i+'" style="text-align:center;vertical-align:middle">'+mvRowEvidenceCellHtml(i)+'</td>'+
       '</tr>';
       globalIdx++;
     });
@@ -1283,96 +1288,102 @@ function mvSetYN(i, which) {
   }
 }
 
-/* ── EVIDENCE PHOTO PER-BARIS (1 foto per item checklist, kolom paling kanan) ── */
-function mvRowEvidenceCellHtml(i) {
-  var img = mvRowEvidence[i] && mvRowEvidence[i][0];
-  if (!img) {
-    return '<button type="button" onclick="mvRowPhotoPick('+i+',event)" title="Upload foto evidence" '+
-      'style="width:34px;height:34px;border-radius:6px;border:1.5px dashed var(--border);background:#fff;color:var(--text3);font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">&#128247;</button>';
-  }
-  return '<div style="position:relative;display:inline-block">' +
-    '<img src="'+safe(img.dataUrl)+'" alt="" style="width:50px;height:38px;object-fit:cover;border-radius:5px;border:2px solid var(--ok);cursor:pointer;display:block" ' +
-      'onclick="mvRowReEdit('+i+')" title="Klik untuk crop ulang" onerror="this.style.display=\'none\'">' +
-    '<button type="button" onclick="event.stopPropagation();mvRowPhotoRemove('+i+')" title="Hapus foto" ' +
-      'style="position:absolute;top:-7px;right:-7px;width:17px;height:17px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:17px;text-align:center;padding:0">&#215;</button>' +
-    '</div>';
+/* ── EVIDENCE PHOTO (galeri umum, bukan per-baris/per-channel) ── */
+function buildMvEvidenceSlot() {
+  var uid = 'mv_ev';
+  document.getElementById('mvEvidenceSlot').innerHTML =
+    '<div id="'+uid+'_drop" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:#fff;" '+
+      'onclick="mvToggleSource(\''+uid+'_src\')" '+
+      'ondragover="event.preventDefault()" '+
+      'ondrop="mvHandleDrop(event)">' +
+      '<input type="file" id="'+uid+'_input" accept="image/*,.heic,.heif" multiple style="display:none" onchange="mvHandleFiles(this.files)">'+
+      '<div style="font-size:24px;margin-bottom:4px">&#128247;</div>'+
+      '<div style="font-size:12px;color:var(--text3)">Klik pilih atau drag foto evidence</div>'+
+      '<div id="'+uid+'_src" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">'+
+        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'storage\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Penyimpanan</button>'+
+        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+uid+'_input\',\'camera\')" style="padding:7px 11px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:90px">Kamera</button>'+
+      '</div>'+
+    '</div>'+
+    '<div id="'+uid+'_preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;padding-top:8px;overflow:visible;min-height:0"></div>'+
+    '<div id="'+uid+'_size" style="font-size:10px;color:var(--text3);margin-top:2px;font-family:\'Courier New\',monospace">0 KB / 1024 KB</div>';
 }
 
-function mvRenderRowEvidence(i) {
-  var cell = document.getElementById('mvRowEvCell_'+i);
-  if (cell) cell.innerHTML = mvRowEvidenceCellHtml(i);
+function mvToggleSource(srcId) {
+  document.querySelectorAll('[id$="_src"]').forEach(function(el){ if (el.id !== srcId) el.style.display = 'none'; });
+  var el = document.getElementById(srcId);
+  if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
 }
 
-function mvRowPhotoPick(i, ev) {
-  mvRowPickTarget = i;
-  var popup = document.getElementById('mvRowSrcChoice');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.id = 'mvRowSrcChoice';
-    popup.style.cssText = 'display:none;position:absolute;background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.18);padding:8px;gap:6px;z-index:9999;flex-direction:column';
-    popup.innerHTML =
-      '<button type="button" onclick="event.stopPropagation();mvRowPickSource(\'storage\')" style="padding:7px 14px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:110px;white-space:nowrap">&#128193; Penyimpanan</button>' +
-      '<button type="button" onclick="event.stopPropagation();mvRowPickSource(\'camera\')" style="padding:7px 14px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:110px;white-space:nowrap">&#128247; Kamera</button>';
-    document.body.appendChild(popup);
-    document.addEventListener('click', function(){ popup.style.display = 'none'; });
-  }
-  if (ev) ev.stopPropagation();
-  var btn = (ev && ev.currentTarget) ? ev.currentTarget : (ev && ev.target);
-  var rect = btn ? btn.getBoundingClientRect() : {left:100, bottom:100, width:34};
-  var top = window.scrollY + rect.bottom + 6;
-  var left = window.scrollX + rect.left + rect.width/2;
-  popup.style.top = top + 'px';
-  popup.style.left = left + 'px';
-  popup.style.transform = 'translateX(-50%)';
-  // Kalau popup akan meluber di kanan layar, geser ke kiri secukupnya
-  popup.style.display = 'flex';
-  var pr = popup.getBoundingClientRect();
-  if (pr.right > window.innerWidth - 8) {
-    popup.style.left = (window.scrollX + window.innerWidth - 8) + 'px';
-    popup.style.transform = 'translateX(-100%)';
-  } else if (pr.left < 8) {
-    popup.style.left = (window.scrollX + 8) + 'px';
-    popup.style.transform = 'none';
-  }
-}
+function mvHandleDrop(e) { e.preventDefault(); mvHandleFiles(e.dataTransfer.files); }
 
-function mvRowPickSource(source) {
-  var popup = document.getElementById('mvRowSrcChoice');
-  if (popup) popup.style.display = 'none';
-  openFileInputSource('mvRowFileInput', source);
-}
-
-function mvRowFileSelected(input) {
-  var file = input.files && input.files[0];
-  var i = mvRowPickTarget;
-  input.value = '';
-  if (!file || i < 0) return;
-  if (!isImageFile(file)) { alert('File harus berupa gambar.'); return; }
-  fileToJpegDataUrl(file, function(dataUrl){
-    if (!dataUrl) return;
-    var name = file.name.replace(/\.[^.]+$/,'.jpg');
-    imgOpenCropper(dataUrl, name, 'image/jpeg', mvRowEvidence[i], 'row:'+i, 'mv', -1);
+function mvHandleFiles(files) {
+  Array.from(files).forEach(function(file) {
+    if (!isImageFile(file)) {
+      var r = new FileReader();
+      r.onload = function(ev){ mvEvidence.push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''}); mvRenderPreviews(); };
+      r.readAsDataURL(file); return;
+    }
+    fileToJpegDataUrl(file, function(dataUrl){
+      if (!dataUrl) return;
+      var name = file.name.replace(/\.[^.]+$/,'.jpg');
+      imgOpenCropper(dataUrl, name, 'image/jpeg', mvEvidence, 'evidence', 'mv', -1);
+    });
   });
 }
 
-function mvRowReEdit(i) {
-  var img = mvRowEvidence[i] && mvRowEvidence[i][0];
+function mvReEdit(idx) {
+  var img = mvEvidence[idx];
   if (!img) return;
-  imgOpenCropper(img.dataUrl, img.name, img.type, mvRowEvidence[i], 'row:'+i, 'mv', 0);
+  imgOpenCropper(img.dataUrl, img.name, img.type, mvEvidence, 'evidence', 'mv', idx);
 }
 
-function mvRowPhotoRemove(i) {
-  mvRowEvidence[i] = [];
-  mvRenderRowEvidence(i);
+function mvRenderPreviews() {
+  mvSyncCaptions();
+  var container = document.getElementById('mv_ev_preview');
+  if (!container) return;
+  container.innerHTML = '';
+  var arr = mvEvidence;
+  if (!arr.length) { var sizeEl0=document.getElementById('mv_ev_size'); if (sizeEl0) sizeEl0.textContent='0 KB / 1024 KB'; return; }
+  arr.forEach(function(img, idx) {
+    if (!img||!img.name) return;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px;vertical-align:top';
+    var isImg = IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
+    var fallback = '<span style=&quot;font-size:10px;color:#c0392b;padding:6px;text-align:center;line-height:1.35&quot;>Preview gagal<br>upload ulang</span>';
+    var thumbStyle = 'width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center';
+    var thumb = isImg
+      ? '<div style="'+thumbStyle+'"><img src="'+safe(img.dataUrl)+'" alt="" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="imgOpenCropper(mvEvidence['+idx+'].dataUrl,mvEvidence['+idx+'].name,mvEvidence['+idx+'].type,mvEvidence,\'evidence\',\'mv\','+idx+')" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\''+fallback+'\'" title="Klik untuk crop ulang"></div>'
+      : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
+    var cropBtn = isImg
+      ? '<button onclick="imgOpenCropper(mvEvidence['+idx+'].dataUrl,mvEvidence['+idx+'].name,mvEvidence['+idx+'].type,mvEvidence,\'evidence\',\'mv\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
+      : '';
+    var nudgeHtml = isImg ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
+      '<button type="button" onclick="nudgeImageInArray(mvEvidence,'+idx+',-0.5,function(){mvRenderPreviews()})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>' +
+      '<span>'+(img.offsetX||0)+'cm</span>' +
+      '<button type="button" onclick="nudgeImageInArray(mvEvidence,'+idx+',0.5,function(){mvRenderPreviews()})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>' +
+      '</div></div>') : '';
+    wrap.innerHTML = thumb + cropBtn
+      + '<button onclick="mvRemoveImg('+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
+      + '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'
+      + nudgeHtml
+      + '<input id="mv_cap_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="mvEvidence['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+    container.appendChild(wrap);
+  });
+  var totalKb = arr.reduce(function(a,img){return a+(img.dataUrl?Math.round(img.dataUrl.length*0.75/1024):0);},0);
+  var sizeEl = document.getElementById('mv_ev_size');
+  if (sizeEl) sizeEl.textContent = totalKb+' KB / 1024 KB';
 }
 
-/* Dipanggil oleh cropAndSave() lewat p.modulePrefix==='mv' setelah crop selesai.
-   'side' berisi 'row:<index>' untuk evidence per-baris. */
-function mvRenderPreviews(side) {
-  if (side && String(side).indexOf('row:') === 0) {
-    var ri = parseInt(String(side).split(':')[1], 10);
-    if (!isNaN(ri)) mvRenderRowEvidence(ri);
-  }
+function mvSyncCaptions() {
+  mvEvidence.forEach(function(img, idx){
+    var inp = document.getElementById('mv_cap_'+idx);
+    if (inp) img.caption = inp.value || '';
+  });
+}
+
+function mvRemoveImg(idx) {
+  mvEvidence.splice(idx,1);
+  mvRenderPreviews();
 }
 
 /* ─── BACKGROUND TEMPLATE PDF (sama seperti modul lain — DRAFT PM KOSONG.jpg) ─── */
@@ -1415,7 +1426,8 @@ function mvDrawCheckbox(doc, x, y, w, h, checked) {
 }
 
 function downloadPdf(){
-  var totalImgs = mvRowEvidence.reduce(function(acc, arr){ return acc + arr.length; }, 0);
+  mvSyncCaptions();
+  var totalImgs = mvEvidence.length;
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
   ensureMvBackground(function() {
@@ -1493,75 +1505,82 @@ function downloadPdf(){
         doc.text(r.lines, valueX, rowY+4.6);
         rowY += r.h;
       });
-      y += totalH + 8;
+      y += totalH + 6;
 
-      // ═══ TABEL CHECKLIST (4 section, Yes/No checkbox + Remark + Evidence foto per-baris) ═══
+      // ═══ TABEL CHECKLIST (4 section, Yes/No checkbox + Remark) ═══
       var body = [];
       var sectionHeaderRows = [];
       MV_SECTIONS.forEach(function(sec){
         sectionHeaderRows.push(body.length);
-        body.push([sec.no+'. '+sec.title, '', '', '', '']);
+        body.push([sec.no+'. '+sec.title, '', '', '']);
         sec.items.forEach(function(it){
           var gi = MV_ITEMS.findIndex(function(x){ return x.sectionNo===sec.no && x.label===it.label; });
           var st = mvState[gi] || {yes:false,no:false,remark:''};
-          var hasPhoto = mvRowEvidence[gi] && mvRowEvidence[gi][0];
-          body.push([pdfSafe(it.label), st.yes?'__CHK__':'__BOX__', st.no?'__CHK__':'__BOX__', pdfSafe(st.remark||''), hasPhoto?'__PHOTO:'+gi+'__':'']);
+          body.push([pdfSafe(it.label), st.yes?'__CHK__':'__BOX__', st.no?'__CHK__':'__BOX__', pdfSafe(st.remark||'')]);
         });
       });
       var CHK_COLS_MV = {1:true, 2:true};
-      var evColMV = 4;
-      var evColWidthMV = 26;
       doc.autoTable({
         startY: y,
-        head: [['Description','Yes','No','Remark','Evidence']],
+        head: [['Description','Yes','No','Remark']],
         body: body,
         theme: 'grid',
         margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
         headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
         bodyStyles: {fontSize:7.5, textColor:[20,30,25], font:'helvetica', cellPadding:2},
-        columnStyles: {0:{cellWidth:92}, 1:{cellWidth:14,halign:'center'}, 2:{cellWidth:14,halign:'center'}, 3:{cellWidth:contentW-92-14-14-evColWidthMV}, 4:{cellWidth:evColWidthMV,halign:'center'}},
+        columnStyles: {0:{cellWidth:106}, 1:{cellWidth:16,halign:'center'}, 2:{cellWidth:16,halign:'center'}, 3:{cellWidth:contentW-106-16-16}},
         alternateRowStyles: {fillColor:[246,249,247]},
         didParseCell: function(data){
           if (sectionHeaderRows.indexOf(data.row.index) !== -1 && data.section === 'body') {
-            data.cell.colSpan = 5;
+            data.cell.colSpan = 4;
             data.cell.styles.fillColor = [221,227,222];
             data.cell.styles.textColor = [30,50,40];
             data.cell.styles.fontStyle = 'bold';
             data.cell.styles.fontSize = 8.5;
             data.cell.styles.halign = 'left';
-            return;
-          }
-          if (data.section === 'body' && data.column.index === evColMV) {
-            if (String(data.cell.raw||'').indexOf('__PHOTO:') === 0) {
-              data.cell.styles.minCellHeight = 20;
-              data.cell.text = [''];
-            }
           }
         },
         didDrawCell: function(data){
           if (data.section !== 'body') return;
           if (sectionHeaderRows.indexOf(data.row.index) !== -1) return;
+          if (!CHK_COLS_MV[data.column.index]) return;
           var val = data.cell.raw;
-          if (CHK_COLS_MV[data.column.index] && (val === '__CHK__' || val === '__BOX__')) {
-            var bg = (data.row.index%2===0)?[255,255,255]:[246,249,247];
-            doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(data.cell.x+0.2,data.cell.y+0.2,data.cell.width-0.4,data.cell.height-0.4,'F');
-            mvDrawCheckbox(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val==='__CHK__');
-            return;
-          }
-          if (data.column.index === evColMV && String(val||'').indexOf('__PHOTO:') === 0) {
-            var gi2 = parseInt(String(val).replace('__PHOTO:','').replace('__',''), 10);
-            var img = mvRowEvidence[gi2] && mvRowEvidence[gi2][0];
-            if (!img) return;
-            var padCell = 1.2;
-            var availW = data.cell.width - padCell*2, availH = data.cell.height - padCell*2;
-            var dim = iePhotoDrawSize(img, availW, availH);
-            var px = data.cell.x + (data.cell.width-dim.w)/2, py = data.cell.y + (data.cell.height-dim.h)/2;
-            try { doc.addImage(img.dataUrl, 'JPEG', px, py, dim.w, dim.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(px,py,dim.w,dim.h,'S'); }
-          }
+          if (val !== '__CHK__' && val !== '__BOX__') return;
+          var bg = (data.row.index%2===0)?[255,255,255]:[246,249,247];
+          doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(data.cell.x+0.2,data.cell.y+0.2,data.cell.width-0.4,data.cell.height-0.4,'F');
+          mvDrawCheckbox(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val==='__CHK__');
         },
         willDrawPage: function(data){ if (data.pageNumber>1) drawBg(doc,pw,ph); }
       });
       y = doc.lastAutoTable.finalY + 8;
+
+      // ═══ EVIDENCE PHOTO (galeri umum, 2 foto per baris) ═══
+      var evImgs = mvEvidence.filter(function(f){ return f.dataUrl && f.type && f.type.indexOf('image/')===0; });
+      if (evImgs.length) {
+        var evGap = 6, evColW = (contentW - evGap) / 2, maxPhotoH = 90;
+        var firstDim = iePhotoDrawSize(evImgs[0], evColW, maxPhotoH);
+        var firstBlockH = 16 + 5 + firstDim.h + 9;
+        if (firstBlockH <= (ph - marginTop - marginBottom) && (y + firstBlockH > ph - marginBottom)) {
+          doc.addPage(); drawBg(doc,pw,ph); y = marginTop;
+        }
+        secHeader('EVIDENCE PHOTO');
+        for (var ei=0; ei<evImgs.length; ei+=2) {
+          var e1 = evImgs[ei], e2 = evImgs[ei+1] || null;
+          var d1 = iePhotoDrawSize(e1, evColW, maxPhotoH);
+          var d2 = e2 ? iePhotoDrawSize(e2, evColW, maxPhotoH) : null;
+          var rowH = Math.max(d1.h, d2 ? d2.h : 0, 20);
+          if (y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+          var x1 = Math.max(marginX, Math.min(marginX+2 + ((e1.offsetX||0)*10), pw - marginX - d1.w));
+          try { doc.addImage(e1.dataUrl, 'JPEG', x1, y, d1.w, d1.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x1,y,d1.w,d1.h,'S'); }
+          if (e1.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(e1.caption), d1.w), x1, y+d1.h+2.5); }
+          if (e2) {
+            var x2 = Math.max(marginX, Math.min(marginX + evColW + evGap + ((e2.offsetX||0)*10), pw - marginX - d2.w));
+            try { doc.addImage(e2.dataUrl, 'JPEG', x2, y, d2.w, d2.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x2,y,d2.w,d2.h,'S'); }
+            if (e2.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(e2.caption), d2.w), x2, y+d2.h+2.5); }
+          }
+          y += rowH + 9;
+        }
+      }
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
       showPdfPreview(doc, 'MarkVIe_Inspection_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
@@ -1587,25 +1606,22 @@ function dbCollectData(modul) {
     assetTag: document.getElementById('mvAssetTag').value || '—',
     assetDesc: document.getElementById('mvAssetDesc').value || '—'
   };
+  mvSyncCaptions();
   var ki = function(img){
-    var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg'};
+    var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};
+    if (img.offsetX) o.offsetX = img.offsetX;
     if (img.widthCm) o.widthCm = img.widthCm;
     if (img.heightCm) o.heightCm = img.heightCm;
     return o;
   };
-  var items = mvState.map(function(st, i){
-    var it = {yes:!!st.yes, no:!!st.no, remark:st.remark||''};
-    var img = mvRowEvidence[i] && mvRowEvidence[i][0];
-    if (img) it.evidence = ki(img);
-    return it;
-  });
+  var items = mvState.map(function(st){ return {yes:!!st.yes, no:!!st.no, remark:st.remark||''}; });
   return {
     modul: MV_MODUL_NAME,
     tanggal: header.tanggal,
     pic: header.pic,
     work_order: (header.workorder && header.workorder !== '—') ? header.workorder : '',
     unit: 'Unit 7',
-    data: { header: header, items: items }
+    data: { header: header, items: items, evidence: mvEvidence.map(ki) }
   };
 }
 
@@ -1637,16 +1653,18 @@ function applyRecordToForm(rec, editingId) {
   var adEl = document.getElementById('mvAssetDesc'); if (adEl && header.assetDesc && header.assetDesc !== '—') adEl.value = header.assetDesc;
 
   if (data.items && data.items.length === mvState.length) {
-    data.items.forEach(function(it, i){
-      mvState[i] = {yes:!!it.yes, no:!!it.no, remark:it.remark||''};
-      if (it.evidence && it.evidence.dataUrl) {
-        var img = it.evidence;
-        mvRowEvidence[i] = [{name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', widthCm:img.widthCm, heightCm:img.heightCm}];
-      } else {
-        mvRowEvidence[i] = [];
-      }
-    });
+    data.items.forEach(function(it, i){ mvState[i] = {yes:!!it.yes, no:!!it.no, remark:it.remark||''}; });
     buildMvTable();
+  }
+  if (data.evidence) {
+    mvEvidence = (data.evidence||[]).map(function(img){
+      var o = {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};
+      if (img.offsetX) o.offsetX = img.offsetX;
+      if (img.widthCm) o.widthCm = img.widthCm;
+      if (img.heightCm) o.heightCm = img.heightCm;
+      return o;
+    });
+    mvRenderPreviews();
   }
 }
 
@@ -1667,8 +1685,9 @@ function resetAll() {
   document.getElementById('mvAssetTag').value = '7TG-CAB-MKVI';
   document.getElementById('mvAssetDesc').value = 'Main Turbine Control Cabinet Unit 7 Mark VIe';
   MV_ITEMS.forEach(function(it, i){ mvState[i] = {yes:false, no:false, remark: it.defaultRemark}; });
-  mvRowEvidence = MV_ITEMS.map(function(){ return []; });
   buildMvTable();
+  mvEvidence = [];
+  mvRenderPreviews();
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
   (function(){
@@ -1681,6 +1700,7 @@ function resetAll() {
 /* ── INIT ── */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 buildMvTable();
+buildMvEvidenceSlot();
 initMvBackground();
 renderPresetButtons();
 initCropDrag();

@@ -1633,7 +1633,7 @@ function buildAndShowPdf() {
     head: [['No','Activity','Acceptance Criteria','As Found','As Left','Pass','Fail','Remarks']],
     body: CHECKLIST_DATA.map(function(r){ return [r.no, r.activity, r.acceptance, r.asFound, r.asLeft, r.pass?'✓':'', r.fail?'✓':'', r.remarks]; }),
     columnStyles:{0:{cellWidth:8,halign:'center'},5:{cellWidth:10,halign:'center'},6:{cellWidth:10,halign:'center'}},
-    didDrawPage:function(){ drawBg(); } });
+    willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
   // TABLE 3 - MEASUREMENT LOG
@@ -1641,7 +1641,7 @@ function buildAndShowPdf() {
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:marginX,right:marginX},
     head: [['Parameter','Unit','OEM Spec','Before','After']],
     body: MEASUREMENT_DATA.map(function(r){ return [r.parameter, r.unit, r.oemSpec, r.before, r.after]; }),
-    didDrawPage:function(){ drawBg(); } });
+    willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
   // TABLE 4 - SPARE PARTS
@@ -1649,7 +1649,7 @@ function buildAndShowPdf() {
   var sp = SPAREPARTS_DATA.length ? SPAREPARTS_DATA.map(function(r){ return [r.partName, r.partNumber, r.qty, r.installed?'✓':'']; }) : [['-','-','-','-']];
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:marginX,right:marginX},
     head: [['Part Name','Part Number','Qty','Installed']], body: sp,
-    didDrawPage:function(){ drawBg(); } });
+    willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 8;
 
   // APPROVAL
@@ -1664,7 +1664,7 @@ function buildAndShowPdf() {
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:3, halign:'center'}, margin:{left:marginX,right:marginX},
     head: [['Technician','Supervisor','Operations']],
     body: [[document.getElementById('apTechnician').value||'-', document.getElementById('apSupervisor').value||'-', document.getElementById('apOperations').value||'-']],
-    didDrawPage:function(){ drawBg(); } });
+    willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 8;
 
   // EVIDENCE PHOTOS
