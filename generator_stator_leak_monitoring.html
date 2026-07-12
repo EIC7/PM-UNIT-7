@@ -1548,7 +1548,7 @@ function buildAndShowPdf() {
   var doc = new jspdf.jsPDF({unit:'mm', format:'a4'});
   var pw = doc.internal.pageSize.getWidth();
   var ph = doc.internal.pageSize.getHeight();
-  var marginX = 14, marginTop = 16, marginBottom = 16;
+  var marginX = 20, marginTop = 25, marginBottom = 25;
   var contentW = pw - (marginX * 2);
   var y = marginTop;
 
