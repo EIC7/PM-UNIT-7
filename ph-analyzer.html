@@ -1732,16 +1732,21 @@ function phDownloadPdf(){
         if(y+need>ph-bgFooterH){
           doc.addPage(); drawBg(doc,pw,ph);
           doc.setFillColor(255,255,255);
-          doc.rect(0,14,pw,ph-14-bgFooterH,'F');
+          doc.setGState && doc.setGState(new doc.GState({opacity: 0.85}));
+          doc.rect(marginX, marginTop2, contentW, ph-marginTop2-bgFooterH, 'F');
+          if (doc.setGState) doc.setGState(new doc.GState({opacity: 1}));
           y=marginTop2;
         }
       }
 
-      // Halaman pertama — background lalu white overlay solid full page
+      // Halaman pertama — background lalu white overlay semi-transparan (hanya kolom konten)
       drawBg(doc,pw,ph);
-      // Cover area tengah (antara header template dan footer template) dengan putih solid
+      // Cover area konten (bukan seluruh halaman) dengan putih semi-transparan
+      // supaya teks tetap terbaca tapi background/border template masih terlihat
       doc.setFillColor(255,255,255);
-      doc.rect(0, 14, pw, ph-14-bgFooterH, 'F');
+      doc.setGState && doc.setGState(new doc.GState({opacity: 0.85}));
+      doc.rect(marginX, marginTop, contentW, ph-marginTop-bgFooterH, 'F');
+      if (doc.setGState) doc.setGState(new doc.GState({opacity: 1}));
 
       // ── HEADER TITLE ──
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,40,100);
@@ -1922,7 +1927,9 @@ function phDownloadPdf(){
           if(data.pageNumber>1){
             drawBg(doc,pw,ph);
             doc.setFillColor(255,255,255);
-            doc.rect(0, 14, pw, ph-14-bgFooterH, 'F');
+            doc.setGState && doc.setGState(new doc.GState({opacity: 0.85}));
+            doc.rect(marginX, marginTop2, contentW, ph-marginTop2-bgFooterH, 'F');
+            if (doc.setGState) doc.setGState(new doc.GState({opacity: 1}));
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
             doc.text('Analyzer Indicator Transmitter (pH) — (lanjutan)', pw/2, marginTop2-3, {align:'center'});
           }
@@ -1970,7 +1977,7 @@ function phDownloadPdf(){
             imgs.forEach(function(img){
               var dim = iePhotoDrawSize(img, contentW-6, 60);
               var rowH = dim.h + 12;
-              if(y+rowH>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.rect(0,14,pw,ph-14-bgFooterH,'F'); y=marginTop2; }
+              if(y+rowH>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.setGState && doc.setGState(new doc.GState({opacity: 0.85})); doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F'); if (doc.setGState) doc.setGState(new doc.GState({opacity: 1})); y=marginTop2; }
               var ox = (img.offsetX||0) * 10; // cm -> mm
               var ix = marginX+3+ox;
               ix = Math.max(marginX+3, Math.min(ix, pw-marginX-dim.w));
