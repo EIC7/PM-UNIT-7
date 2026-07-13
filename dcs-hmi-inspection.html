@@ -302,7 +302,7 @@ body{
 .crop-handle.e{width:10px;height:10px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize}
 .crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30}
 .crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-.crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;touch-action:manipulation}
 .crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
 .crop-btn-save{background:#2ecc71;color:#fff}
 .crop-size-panel{border-top:1px solid #2a3a30;padding-top:8px;margin-top:2px}
@@ -708,6 +708,7 @@ window.addEventListener('resize', function(){
 });
 
 function closeImageEditor(discard){
+    ieForceHideKeyboard(); // jaring pengaman kalau keyboard masih nempel dari prompt() teks
     document.getElementById('editImgModal').classList.remove('show');
     if (discard) { imgEditState.shapes = []; imgEditState.selectedId = null; }
 }
@@ -817,9 +818,16 @@ function ieForceHideKeyboard(){
     }
     // readonly saat focus supaya Android TIDAK memunculkan keyboard baru di
     // input dummy ini — cuma dipakai untuk memicu event blur yang sungguhan.
-    dummy.setAttribute('readonly', 'readonly');
-    dummy.focus();
-    setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
+    // Dipanggil 2x (langsung + setelah delay) karena di sebagian Android
+    // Chrome, blur yang terjadi sebelum browser selesai menutup prompt()
+    // tidak selalu "nempel" — percobaan kedua menangkap kasus itu.
+    function dismissOnce(){
+        dummy.setAttribute('readonly', 'readonly');
+        dummy.focus();
+        setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); document.body.focus && document.body.focus(); }, 0);
+    }
+    dismissOnce();
+    setTimeout(dismissOnce, 150);
 }
 function ieResizeSelectedText(dir){
     var s = getShapeById(imgEditState.selectedId);
@@ -1132,6 +1140,7 @@ function renderAllShapes(){
 
 /* ── Terapkan semua anotasi: gabung ke gambar asli, kembalikan ke #cropImg ── */
 function applyImageEdits(){
+    ieForceHideKeyboard(); // jaring pengaman kalau keyboard masih nempel dari prompt() teks
     if (!imgEditState.shapes.length) { closeImageEditor(false); return; }
     var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
     var flatSvg = document.createElementNS(NS_SVG, 'svg');
