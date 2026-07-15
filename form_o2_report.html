@@ -95,6 +95,9 @@
 .o2-session-tabs{display:flex;gap:8px;margin-bottom:16px}
 .o2-session-tab{padding:10px 16px;border-radius:8px;border:2px solid var(--panel-border);background:#fff;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;flex:1;text-align:center;transition:all .15s}
 .o2-session-tab.active{background:var(--steel);border-color:var(--steel);color:#fff}
+.o2-freq-chip{padding:8px 14px;border-radius:20px;border:1.5px solid var(--border,#d5dde5);background:#fff;color:var(--text2,#5a6a7a);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
+.o2-freq-chip:active{transform:scale(0.97)}
+.o2-freq-chip.active{background:var(--ok,#39ae60);border-color:var(--ok,#39ae60);color:#fff}
 </style>
 </head>
 <body>
@@ -129,7 +132,7 @@
     <div class="section-label">📋 Informasi Pekerjaan</div>
     <div class="o2-job-title">
       <div class="o2-job-title-label">Nama Pekerjaan</div>
-      <div class="o2-job-title-text">Monthly Maintenance of Oxygen Analyzer<br><span>(Cleaning Probe &amp; Recalibration)</span></div>
+      <div class="o2-job-title-text">Preventive Maintenance of Oxygen Analyzer<br><span>(Cleaning Probe &amp; Recalibration)</span></div>
     </div>
     <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
       <div class="meta-field"><label>Work Order</label><input type="text" id="o2Workorder" placeholder="No. Workorder..."></div>
@@ -139,6 +142,12 @@
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
       <div class="meta-field"><label>Asset Description</label><textarea id="o2AssetDesc" rows="2" placeholder="Deskripsi asset..."></textarea></div>
+    </div>
+    <div class="meta-field" style="margin-top:14px">
+      <label>Frequency Maintenance <span style="font-weight:400;text-transform:none;color:var(--text3,#8a97a8)">— pilih satu / lebih, otomatis mengisi Work To Be Done</span></label>
+      <div id="o2FreqChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"><!-- built by JS --></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
       <div class="meta-field"><label>Work To Be Done</label><textarea id="o2WorkToBeDone" rows="2" placeholder="Pekerjaan yang akan dilakukan..."></textarea></div>
     </div>
   </div>
@@ -1285,6 +1294,34 @@ var o2ChannelEnabled = {};
 O2_CHANNELS.forEach(function(c){ o2ChannelEnabled['ch'+c.id] = false; });
 O2_OUTLET_CHANNELS.forEach(function(c){ o2ChannelEnabled['och'+c.id] = false; });
 
+/* ── Frequency Maintenance — pilih 1/lebih, otomatis isi Work To Be Done ── */
+var O2_FREQ_OPTIONS = ['Monthly Maintenance','3Monthly Maintenance','6Monthly Maintenance','1Yearly Maintenance','2Yearly Maintenance','3Yearly Maintenance'];
+var o2SelectedFreq = [];
+
+function o2BuildFreqChips() {
+  var wrap = document.getElementById('o2FreqChips');
+  if (!wrap) return;
+  wrap.innerHTML = O2_FREQ_OPTIONS.map(function(label){
+    return '<button type="button" class="o2-freq-chip" data-freq="'+label+'" onclick="o2ToggleFreq(this,\''+label+'\')">'+label+'</button>';
+  }).join('');
+}
+
+function o2ToggleFreq(btn, label) {
+  var idx = o2SelectedFreq.indexOf(label);
+  if (idx === -1) { o2SelectedFreq.push(label); btn.classList.add('active'); }
+  else { o2SelectedFreq.splice(idx, 1); btn.classList.remove('active'); }
+  document.getElementById('o2WorkToBeDone').value = o2SelectedFreq.join(', ');
+}
+
+/* Dipakai saat restore data (dari Simpan Database / Autosave draft) supaya
+   chip yang sebelumnya dipilih ikut ke-highlight lagi. */
+function o2SetSelectedFreq(list) {
+  o2SelectedFreq = Array.isArray(list) ? list.slice() : [];
+  document.querySelectorAll('.o2-freq-chip').forEach(function(btn){
+    btn.classList.toggle('active', o2SelectedFreq.indexOf(btn.getAttribute('data-freq')) !== -1);
+  });
+}
+
 /* ── Pindah tab sesi Inlet / Outlet (hanya ganti grid mana yang tampil, desain kartu channel tidak berubah) ── */
 function o2SwitchSession(session) {
   var gridIn = document.getElementById('o2ChannelGrid');
@@ -1784,6 +1821,7 @@ function dbCollectData(modul) {
     asset: document.getElementById('o2Asset').value || '—',
     assetDesc: document.getElementById('o2AssetDesc').value || '—',
     workToBeDone: document.getElementById('o2WorkToBeDone').value || '—',
+    frequency: o2SelectedFreq.slice(),
     pic: document.getElementById('o2Pic').value || '—'
   };
   o2SyncAllCaptions();
@@ -1846,6 +1884,7 @@ function applyRecordToForm(rec, editingId) {
   if (woEl && woVal && woVal !== '—') woEl.value = woVal;
   var asEl = document.getElementById('o2Asset'); if (asEl && header.asset && header.asset !== '—') asEl.value = header.asset;
   var adEl = document.getElementById('o2AssetDesc'); if (adEl && header.assetDesc && header.assetDesc !== '—') adEl.value = header.assetDesc;
+  o2SetSelectedFreq(header.frequency || []);
   var wdEl = document.getElementById('o2WorkToBeDone'); if (wdEl && header.workToBeDone && header.workToBeDone !== '—') wdEl.value = header.workToBeDone;
   var pcEl = document.getElementById('o2Pic'); var picVal = rec.pic || header.pic || '';
   if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
@@ -1896,6 +1935,7 @@ function resetAll() {
   document.getElementById('o2Asset').value = '';
   document.getElementById('o2AssetDesc').value = '';
   document.getElementById('o2WorkToBeDone').value = '';
+  o2SetSelectedFreq([]);
   document.getElementById('o2Pic').value = '';
   function resetChannelList(channelList, prefix) {
     channelList.forEach(function(c){
@@ -1926,6 +1966,7 @@ function resetAll() {
 /* ── INIT ── */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 buildO2ChannelGrid();
+o2BuildFreqChips();
 initO2Background();
 renderPresetButtons();
 initCropDrag();
