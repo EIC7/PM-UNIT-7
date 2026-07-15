@@ -92,6 +92,9 @@
 .o2-catatan-label{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:4px}
 .o2-catatan-textarea{width:100%;border:1.5px solid var(--panel-border);border-radius:6px;padding:8px 10px;font-family:Arial,sans-serif;font-size:13px;color:var(--text);resize:vertical;box-sizing:border-box}
 .o2-photo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.o2-session-tabs{display:flex;gap:8px;margin-bottom:16px}
+.o2-session-tab{padding:10px 16px;border-radius:8px;border:2px solid var(--panel-border);background:#fff;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;flex:1;text-align:center;transition:all .15s}
+.o2-session-tab.active{background:var(--steel);border-color:var(--steel);color:#fff}
 </style>
 </head>
 <body>
@@ -142,8 +145,13 @@
 
   <!-- DOKUMENTASI PER CHANNEL -->
   <div class="panel">
-    <div class="section-label">🔬 Dokumentasi Per Channel (8 Channel)</div>
+    <div class="section-label">🔬 Dokumentasi Per Channel</div>
+    <div class="o2-session-tabs">
+      <button type="button" class="o2-session-tab active" id="o2TabInlet" onclick="o2SwitchSession('inlet')">🔵 Inlet (8 Channel)</button>
+      <button type="button" class="o2-session-tab" id="o2TabOutlet" onclick="o2SwitchSession('outlet')">🟢 Outlet (6 Channel)</button>
+    </div>
     <div id="o2ChannelGrid" style="display:flex;flex-direction:column;gap:16px"></div>
+    <div id="o2ChannelGridOutlet" style="display:none;flex-direction:column;gap:16px"></div>
   </div>
 
   <!-- BUTTONS -->
@@ -1256,19 +1264,51 @@ var O2_CHANNELS = [
   {id:8, tag:'7BG-AE-569 — PRIMARY AIR HEATER 7 GAS INLET - OXYGEN ANALYZER ELEMENT 8'}
 ];
 
+// Channel sesi Outlet — daftar tag sesuai referensi terbaru (bisa diedit manual per channel)
+var O2_OUTLET_CHANNELS = [
+  {id:1, tag:'7BG-AI-570A'},
+  {id:2, tag:'7BG-AI-571A'},
+  {id:3, tag:'7BG-AI-572'},
+  {id:4, tag:'7BG-AI-573'},
+  {id:5, tag:'7BG-AI-570B'},
+  {id:6, tag:'7BG-AI-571B'}
+];
+
 // o2Images['ch1'] = {evidence:[], before:[], after:[]}  — tiap array isi {name,dataUrl,type,caption,offsetX?,widthCm?,heightCm?}
+// Inlet pakai prefix 'ch', Outlet pakai prefix 'och' (supaya tidak bentrok)
 var o2Images = {};
 O2_CHANNELS.forEach(function(c){ o2Images['ch'+c.id] = {evidence:[], before:[], after:[]}; });
+O2_OUTLET_CHANNELS.forEach(function(c){ o2Images['och'+c.id] = {evidence:[], before:[], after:[]}; });
 
 // Status centang tiap channel (buka/tutup section + menentukan ikut PDF & auto-isi Asset)
 var o2ChannelEnabled = {};
 O2_CHANNELS.forEach(function(c){ o2ChannelEnabled['ch'+c.id] = false; });
+O2_OUTLET_CHANNELS.forEach(function(c){ o2ChannelEnabled['och'+c.id] = false; });
+
+/* ── Pindah tab sesi Inlet / Outlet (hanya ganti grid mana yang tampil, desain kartu channel tidak berubah) ── */
+function o2SwitchSession(session) {
+  var gridIn = document.getElementById('o2ChannelGrid');
+  var gridOut = document.getElementById('o2ChannelGridOutlet');
+  var tabIn = document.getElementById('o2TabInlet');
+  var tabOut = document.getElementById('o2TabOutlet');
+  if (session === 'outlet') {
+    gridIn.style.display = 'none'; gridOut.style.display = 'flex';
+    tabIn.classList.remove('active'); tabOut.classList.add('active');
+  } else {
+    gridOut.style.display = 'none'; gridIn.style.display = 'flex';
+    tabOut.classList.remove('active'); tabIn.classList.add('active');
+  }
+}
 
 function buildO2ChannelGrid() {
-  var grid = document.getElementById('o2ChannelGrid');
+  buildO2ChannelGridInto(O2_CHANNELS, 'o2ChannelGrid', 'ch');
+  buildO2ChannelGridInto(O2_OUTLET_CHANNELS, 'o2ChannelGridOutlet', 'och');
+}
+function buildO2ChannelGridInto(channelList, gridElId, prefix) {
+  var grid = document.getElementById(gridElId);
   if (!grid || grid.children.length > 0) return;
-  O2_CHANNELS.forEach(function(c) {
-    var ck = 'ch'+c.id;
+  channelList.forEach(function(c) {
+    var ck = prefix+c.id;
     var tagSafe = String(c.tag||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     var row = document.createElement('div');
     row.className = 'o2-channel-card';
@@ -1321,23 +1361,27 @@ function o2ToggleChannel(ck, checked) {
       channel yang dicentang, berurutan kecil ke besar (Channel 1 → 8) ── */
 function o2UpdateAssetFromChannels() {
   var codes = [], descs = [];
-  O2_CHANNELS.forEach(function(c) {
-    var ck = 'ch'+c.id;
-    if (!o2ChannelEnabled[ck]) return;
-    var tagEl = document.getElementById('o2tag_'+ck);
-    var raw = (tagEl ? tagEl.value : c.tag || '').trim();
-    if (!raw) return;
-    var sep = raw.indexOf('—') >= 0 ? '—' : (raw.indexOf(' - ') >= 0 ? ' - ' : null);
-    if (sep) {
-      var idx = raw.indexOf(sep);
-      var code = raw.substring(0, idx).trim();
-      var desc = raw.substring(idx + sep.length).trim();
-      if (code) codes.push(code);
-      if (desc) descs.push(desc);
-    } else {
-      codes.push(raw);
-    }
-  });
+  function collect(channelList, prefix) {
+    channelList.forEach(function(c) {
+      var ck = prefix+c.id;
+      if (!o2ChannelEnabled[ck]) return;
+      var tagEl = document.getElementById('o2tag_'+ck);
+      var raw = (tagEl ? tagEl.value : c.tag || '').trim();
+      if (!raw) return;
+      var sep = raw.indexOf('—') >= 0 ? '—' : (raw.indexOf(' - ') >= 0 ? ' - ' : null);
+      if (sep) {
+        var idx = raw.indexOf(sep);
+        var code = raw.substring(0, idx).trim();
+        var desc = raw.substring(idx + sep.length).trim();
+        if (code) codes.push(code);
+        if (desc) descs.push(desc);
+      } else {
+        codes.push(raw);
+      }
+    });
+  }
+  collect(O2_CHANNELS, 'ch');
+  collect(O2_OUTLET_CHANNELS, 'och');
   var assetEl = document.getElementById('o2Asset');
   var descEl = document.getElementById('o2AssetDesc');
   if (assetEl) assetEl.value = codes.join(', ');
@@ -1494,11 +1538,13 @@ function iePhotoDrawSize(entry, maxW, maxH) {
 
 /* ─── GENERATE PDF ─── */
 function downloadPdf(){
-  var anyEnabled = O2_CHANNELS.some(function(c){ return o2ChannelEnabled['ch'+c.id]; });
-  if (!anyEnabled) { alert('Belum ada Channel yang dicentang. Centang minimal 1 channel di bagian "Dokumentasi Per Channel" sebelum membuat PDF.'); return; }
+  var anyEnabled = O2_CHANNELS.some(function(c){ return o2ChannelEnabled['ch'+c.id]; }) ||
+                    O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelEnabled['och'+c.id]; });
+  if (!anyEnabled) { alert('Belum ada Channel yang dicentang. Centang minimal 1 channel (Inlet atau Outlet) di bagian "Dokumentasi Per Channel" sebelum membuat PDF.'); return; }
   o2SyncAllCaptions();
   var totalImgs = 0;
   O2_CHANNELS.forEach(function(c){ var ck='ch'+c.id; if(!o2ChannelEnabled[ck])return; totalImgs += o2Images[ck].evidence.length + o2Images[ck].before.length + o2Images[ck].after.length; });
+  O2_OUTLET_CHANNELS.forEach(function(c){ var ck='och'+c.id; if(!o2ChannelEnabled[ck])return; totalImgs += o2Images[ck].evidence.length + o2Images[ck].before.length + o2Images[ck].after.length; });
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
   ensureO2Background(function() {
@@ -1604,98 +1650,105 @@ function downloadPdf(){
       y += totalH + 6;
 
       // ─────── DOKUMENTASI PER CHANNEL ───────
-      secHeader('DOKUMENTASI PER CHANNEL (8 CHANNEL)');
-
       var evGap = 6, evColW = (contentW - evGap) / 2, maxPhotoH = 90;
       var bfGap = 6, bfColW = (contentW - bfGap) / 2;
 
-      O2_CHANNELS.forEach(function(c) {
-        var ck = 'ch'+c.id;
-        var tagEl = document.getElementById('o2tag_'+ck);
-        var tag = tagEl && tagEl.value ? tagEl.value : '';
-        var catEl = document.getElementById('o2cat_'+ck);
-        var catatan = catEl ? catEl.value : '';
+      function printChannelGroup(channelList, prefix, sectionTitle) {
+        var anyInGroup = channelList.some(function(c){ return o2ChannelEnabled[prefix+c.id]; });
+        if (!anyInGroup) return;
+        secHeader(sectionTitle);
 
-        if (!o2ChannelEnabled[ck]) return; // hanya channel yang dicentang yang masuk PDF
+        channelList.forEach(function(c) {
+          var ck = prefix+c.id;
+          var tagEl = document.getElementById('o2tag_'+ck);
+          var tag = tagEl && tagEl.value ? tagEl.value : '';
+          var catEl = document.getElementById('o2cat_'+ck);
+          var catatan = catEl ? catEl.value : '';
 
-        var evImgs = o2Images[ck].evidence.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
-        var befImgs = o2Images[ck].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
-        var aftImgs = o2Images[ck].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
+          if (!o2ChannelEnabled[ck]) return; // hanya channel yang dicentang yang masuk PDF
 
-        checkPage(14);
-        doc.setFillColor(60, 90, 70);
-        doc.rect(marginX, y, contentW, 7, 'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
-        doc.text('Channel '+c.id + (tag ? '  |  '+tag : ''), marginX+4, y+5);
-        y += 10;
+          var evImgs = o2Images[ck].evidence.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
+          var befImgs = o2Images[ck].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
+          var aftImgs = o2Images[ck].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
 
-        if (catatan) {
-          doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(60,80,60);
-          var catLines = doc.splitTextToSize('Catatan: '+safe(catatan), contentW-4);
-          checkPage(catLines.length*4+4);
-          doc.text(catLines, marginX+2, y+3);
-          y += catLines.length*4 + 5;
-        }
+          checkPage(14);
+          doc.setFillColor(60, 90, 70);
+          doc.rect(marginX, y, contentW, 7, 'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
+          doc.text('Channel '+c.id + (tag ? '  |  '+tag : ''), marginX+4, y+5);
+          y += 10;
 
-        // BEFORE / AFTER — sejajar kiri-kanan, 1 foto per baris
-        if (befImgs.length || aftImgs.length) {
-          checkPage(7);
-          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160, 90, 20);
-          doc.text('BEFORE CLEANING', marginX+3, y);
-          doc.setTextColor(15, 110, 90);
-          doc.text('AFTER CLEANING', marginX + bfColW + bfGap + 3, y);
-          y += 5;
-          var xBef = marginX + 2, xAft = marginX + bfColW + bfGap;
-          var maxImgs = Math.max(befImgs.length, aftImgs.length);
-          for (var ii=0; ii<maxImgs; ii++) {
-            var bImg = befImgs[ii] || null, aImg = aftImgs[ii] || null;
-            var bDim = bImg ? iePhotoDrawSize(bImg, bfColW, maxPhotoH) : null;
-            var aDim = aImg ? iePhotoDrawSize(aImg, bfColW, maxPhotoH) : null;
-            var rowH2 = Math.max(bDim?bDim.h:0, aDim?aDim.h:0, 20);
-            if (y + rowH2 + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
-            if (bImg) {
-              var dxb = Math.max(marginX, Math.min(xBef + ((bImg.offsetX||0)*10), pw - marginX - bDim.w));
-              try { doc.addImage(bImg.dataUrl, 'JPEG', dxb, y, bDim.w, bDim.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(dxb,y,bDim.w,bDim.h,'S'); }
-              if (bImg.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(bImg.caption), bDim.w), dxb, y+bDim.h+2.5); }
-            }
-            if (aImg) {
-              var dxa = Math.max(marginX, Math.min(xAft + ((aImg.offsetX||0)*10), pw - marginX - aDim.w));
-              try { doc.addImage(aImg.dataUrl, 'JPEG', dxa, y, aDim.w, aDim.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(dxa,y,aDim.w,aDim.h,'S'); }
-              if (aImg.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(aImg.caption), aDim.w), dxa, y+aDim.h+2.5); }
-            }
-            y += rowH2 + 9;
+          if (catatan) {
+            doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(60,80,60);
+            var catLines = doc.splitTextToSize('Catatan: '+safe(catatan), contentW-4);
+            checkPage(catLines.length*4+4);
+            doc.text(catLines, marginX+2, y+3);
+            y += catLines.length*4 + 5;
           }
-        }
 
-        // EVIDENCE — 2 foto per baris
-        if (evImgs.length) {
-          checkPage(7);
-          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(37,99,235);
-          doc.text('EVIDENCE', marginX+3, y);
-          y += 5;
-          for (var ei=0; ei<evImgs.length; ei+=2) {
-            var e1 = evImgs[ei], e2 = evImgs[ei+1] || null;
-            var d1 = iePhotoDrawSize(e1, evColW, maxPhotoH);
-            var d2 = e2 ? iePhotoDrawSize(e2, evColW, maxPhotoH) : null;
-            var rowH = Math.max(d1.h, d2 ? d2.h : 0, 20);
-            if (y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
-            var x1 = Math.max(marginX, Math.min(marginX+2 + ((e1.offsetX||0)*10), pw - marginX - d1.w));
-            try { doc.addImage(e1.dataUrl, 'JPEG', x1, y, d1.w, d1.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x1,y,d1.w,d1.h,'S'); }
-            if (e1.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e1.caption), d1.w), x1, y+d1.h+2.5); }
-            if (e2) {
-              var x2 = Math.max(marginX, Math.min(marginX + evColW + evGap + ((e2.offsetX||0)*10), pw - marginX - d2.w));
-              try { doc.addImage(e2.dataUrl, 'JPEG', x2, y, d2.w, d2.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x2,y,d2.w,d2.h,'S'); }
-              if (e2.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e2.caption), d2.w), x2, y+d2.h+2.5); }
+          // BEFORE / AFTER — sejajar kiri-kanan, 1 foto per baris
+          if (befImgs.length || aftImgs.length) {
+            checkPage(7);
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160, 90, 20);
+            doc.text('BEFORE CLEANING', marginX+3, y);
+            doc.setTextColor(15, 110, 90);
+            doc.text('AFTER CLEANING', marginX + bfColW + bfGap + 3, y);
+            y += 5;
+            var xBef = marginX + 2, xAft = marginX + bfColW + bfGap;
+            var maxImgs = Math.max(befImgs.length, aftImgs.length);
+            for (var ii=0; ii<maxImgs; ii++) {
+              var bImg = befImgs[ii] || null, aImg = aftImgs[ii] || null;
+              var bDim = bImg ? iePhotoDrawSize(bImg, bfColW, maxPhotoH) : null;
+              var aDim = aImg ? iePhotoDrawSize(aImg, bfColW, maxPhotoH) : null;
+              var rowH2 = Math.max(bDim?bDim.h:0, aDim?aDim.h:0, 20);
+              if (y + rowH2 + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+              if (bImg) {
+                var dxb = Math.max(marginX, Math.min(xBef + ((bImg.offsetX||0)*10), pw - marginX - bDim.w));
+                try { doc.addImage(bImg.dataUrl, 'JPEG', dxb, y, bDim.w, bDim.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(dxb,y,bDim.w,bDim.h,'S'); }
+                if (bImg.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(bImg.caption), bDim.w), dxb, y+bDim.h+2.5); }
+              }
+              if (aImg) {
+                var dxa = Math.max(marginX, Math.min(xAft + ((aImg.offsetX||0)*10), pw - marginX - aDim.w));
+                try { doc.addImage(aImg.dataUrl, 'JPEG', dxa, y, aDim.w, aDim.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(dxa,y,aDim.w,aDim.h,'S'); }
+                if (aImg.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(aImg.caption), aDim.w), dxa, y+aDim.h+2.5); }
+              }
+              y += rowH2 + 9;
             }
-            y += rowH + 9;
           }
-        }
 
-        checkPage(5);
-        doc.setDrawColor(180, 210, 185); doc.setLineWidth(0.3);
-        doc.line(marginX, y, marginX + contentW, y);
-        y += 5;
-      });
+          // EVIDENCE — 2 foto per baris
+          if (evImgs.length) {
+            checkPage(7);
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(37,99,235);
+            doc.text('EVIDENCE', marginX+3, y);
+            y += 5;
+            for (var ei=0; ei<evImgs.length; ei+=2) {
+              var e1 = evImgs[ei], e2 = evImgs[ei+1] || null;
+              var d1 = iePhotoDrawSize(e1, evColW, maxPhotoH);
+              var d2 = e2 ? iePhotoDrawSize(e2, evColW, maxPhotoH) : null;
+              var rowH = Math.max(d1.h, d2 ? d2.h : 0, 20);
+              if (y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+              var x1 = Math.max(marginX, Math.min(marginX+2 + ((e1.offsetX||0)*10), pw - marginX - d1.w));
+              try { doc.addImage(e1.dataUrl, 'JPEG', x1, y, d1.w, d1.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x1,y,d1.w,d1.h,'S'); }
+              if (e1.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e1.caption), d1.w), x1, y+d1.h+2.5); }
+              if (e2) {
+                var x2 = Math.max(marginX, Math.min(marginX + evColW + evGap + ((e2.offsetX||0)*10), pw - marginX - d2.w));
+                try { doc.addImage(e2.dataUrl, 'JPEG', x2, y, d2.w, d2.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x2,y,d2.w,d2.h,'S'); }
+                if (e2.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e2.caption), d2.w), x2, y+d2.h+2.5); }
+              }
+              y += rowH + 9;
+            }
+          }
+
+          checkPage(5);
+          doc.setDrawColor(180, 210, 185); doc.setLineWidth(0.3);
+          doc.line(marginX, y, marginX + contentW, y);
+          y += 5;
+        });
+      }
+
+      printChannelGroup(O2_CHANNELS, 'ch', 'DOKUMENTASI PER CHANNEL — INLET (8 CHANNEL)');
+      printChannelGroup(O2_OUTLET_CHANNELS, 'och', 'DOKUMENTASI PER CHANNEL — OUTLET (6 CHANNEL)');
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
       showPdfPreview(doc, 'O2_Report_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
@@ -1710,6 +1763,10 @@ function downloadPdf(){
 function o2SyncAllCaptions() {
   O2_CHANNELS.forEach(function(c){
     var ck = 'ch'+c.id;
+    ['evidence','before','after'].forEach(function(phase){ o2SyncCaptions(ck, phase); });
+  });
+  O2_OUTLET_CHANNELS.forEach(function(c){
+    var ck = 'och'+c.id;
     ['evidence','before','after'].forEach(function(phase){ o2SyncCaptions(ck, phase); });
   });
 }
@@ -1738,19 +1795,23 @@ function dbCollectData(modul) {
     return o;
   };
   var channels = {};
-  O2_CHANNELS.forEach(function(c){
-    var ck = 'ch'+c.id;
-    var tagEl = document.getElementById('o2tag_'+ck);
-    var catEl = document.getElementById('o2cat_'+ck);
-    channels[ck] = {
-      enabled: !!o2ChannelEnabled[ck],
-      tag: tagEl ? tagEl.value||'' : '',
-      catatan: catEl ? catEl.value||'' : '',
-      evidence: o2Images[ck].evidence.map(ki),
-      before: o2Images[ck].before.map(ki),
-      after: o2Images[ck].after.map(ki)
-    };
-  });
+  function collectChannelData(channelList, prefix) {
+    channelList.forEach(function(c){
+      var ck = prefix+c.id;
+      var tagEl = document.getElementById('o2tag_'+ck);
+      var catEl = document.getElementById('o2cat_'+ck);
+      channels[ck] = {
+        enabled: !!o2ChannelEnabled[ck],
+        tag: tagEl ? tagEl.value||'' : '',
+        catatan: catEl ? catEl.value||'' : '',
+        evidence: o2Images[ck].evidence.map(ki),
+        before: o2Images[ck].before.map(ki),
+        after: o2Images[ck].after.map(ki)
+      };
+    });
+  }
+  collectChannelData(O2_CHANNELS, 'ch');
+  collectChannelData(O2_OUTLET_CHANNELS, 'och');
   return {
     modul: 'O2',
     tanggal: header.tanggal,
@@ -1790,27 +1851,31 @@ function applyRecordToForm(rec, editingId) {
   if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
 
   if (data.channels) {
-    O2_CHANNELS.forEach(function(c){
-      var ck = 'ch'+c.id;
-      var chData = data.channels[ck];
-      if (!chData) return;
-      var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = chData.tag || c.tag || '';
-      var catEl = document.getElementById('o2cat_'+ck); if (catEl) catEl.value = chData.catatan || '';
-      var chkEl = document.getElementById('o2chk_'+ck);
-      if (chkEl) { chkEl.checked = !!chData.enabled; o2ToggleChannel(ck, !!chData.enabled); }
-      ['evidence','before','after'].forEach(function(phase){
-        if (chData[phase]) {
-          o2Images[ck][phase] = (chData[phase]||[]).map(function(img){
-            var o = {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};
-            if (img.offsetX) o.offsetX = img.offsetX;
-            if (img.widthCm) o.widthCm = img.widthCm;
-            if (img.heightCm) o.heightCm = img.heightCm;
-            return o;
-          });
-          o2RenderPreviews(ck, phase);
-        }
+    function restoreChannelData(channelList, prefix) {
+      channelList.forEach(function(c){
+        var ck = prefix+c.id;
+        var chData = data.channels[ck];
+        if (!chData) return;
+        var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = chData.tag || c.tag || '';
+        var catEl = document.getElementById('o2cat_'+ck); if (catEl) catEl.value = chData.catatan || '';
+        var chkEl = document.getElementById('o2chk_'+ck);
+        if (chkEl) { chkEl.checked = !!chData.enabled; o2ToggleChannel(ck, !!chData.enabled); }
+        ['evidence','before','after'].forEach(function(phase){
+          if (chData[phase]) {
+            o2Images[ck][phase] = (chData[phase]||[]).map(function(img){
+              var o = {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};
+              if (img.offsetX) o.offsetX = img.offsetX;
+              if (img.widthCm) o.widthCm = img.widthCm;
+              if (img.heightCm) o.heightCm = img.heightCm;
+              return o;
+            });
+            o2RenderPreviews(ck, phase);
+          }
+        });
       });
-    });
+    }
+    restoreChannelData(O2_CHANNELS, 'ch');
+    restoreChannelData(O2_OUTLET_CHANNELS, 'och');
     o2UpdateAssetFromChannels();
   }
 }
@@ -1832,19 +1897,23 @@ function resetAll() {
   document.getElementById('o2AssetDesc').value = '';
   document.getElementById('o2WorkToBeDone').value = '';
   document.getElementById('o2Pic').value = '';
-  O2_CHANNELS.forEach(function(c){
-    var ck = 'ch'+c.id;
-    var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = c.tag || '';
-    var catEl = document.getElementById('o2cat_'+ck); if (catEl) catEl.value = '';
-    var chkEl = document.getElementById('o2chk_'+ck); if (chkEl) chkEl.checked = false;
-    o2ToggleChannel(ck, false);
-    o2Images[ck] = {evidence:[], before:[], after:[]};
-    ['evidence','before','after'].forEach(function(phase){
-      var uid = 'o2_'+ck+'_'+phase;
-      var pv = document.getElementById(uid+'_preview'); if (pv) pv.innerHTML = '';
-      var sz = document.getElementById(uid+'_size'); if (sz) sz.textContent = '0 KB / 1024 KB';
+  function resetChannelList(channelList, prefix) {
+    channelList.forEach(function(c){
+      var ck = prefix+c.id;
+      var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = c.tag || '';
+      var catEl = document.getElementById('o2cat_'+ck); if (catEl) catEl.value = '';
+      var chkEl = document.getElementById('o2chk_'+ck); if (chkEl) chkEl.checked = false;
+      o2ToggleChannel(ck, false);
+      o2Images[ck] = {evidence:[], before:[], after:[]};
+      ['evidence','before','after'].forEach(function(phase){
+        var uid = 'o2_'+ck+'_'+phase;
+        var pv = document.getElementById(uid+'_preview'); if (pv) pv.innerHTML = '';
+        var sz = document.getElementById(uid+'_size'); if (sz) sz.textContent = '0 KB / 1024 KB';
+      });
     });
-  });
+  }
+  resetChannelList(O2_CHANNELS, 'ch');
+  resetChannelList(O2_OUTLET_CHANNELS, 'och');
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
   (function(){
