@@ -34,6 +34,7 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 - [J. Edit Gambar (Insert Shape: Teks/Panah/Garis/Kotak/Oval)](#j-edit-gambar-insert-shape-teksfoto)
 - [K. Rotasi Kotak & Oval](#k-rotasi-kotak--oval-ekstensi--belum-ada-di-fegthtml)
 - [L. Tabel Info Pekerjaan — Grid Full-Width (Label | Value)](#l-tabel-info-pekerjaan--grid-full-width-label--value)
+- [M. Upload Otomatis Foto ke Google Drive (backup, via shared.js)](#m-upload-otomatis-foto-ke-google-drive)
 - [Checklist Konfigurasi per File Baru](#checklist-konfigurasi)
 - [⚠️ Potensi Konflik Global](#potensi-konflik-global)
 
@@ -1445,6 +1446,55 @@ y += totalH + 6;
 
 ---
 
+## M. Upload Otomatis Foto ke Google Drive
+**Sumber:** ditambahkan pertama kali ke `ph-analyzer.html`, lalu dipusatkan ke `shared.js` supaya semua modul otomatis kebagian.
+
+**Tujuan:** setiap kali foto PM selesai di-crop/disimpan ke array gambar, foto itu juga otomatis (silent, non-blocking) terkirim sebagai backup ke folder Google Drive tertentu lewat Apps Script Web App — terpisah dari penyimpanan utama di Supabase. Kalau upload gagal (mis. offline), proses simpan PDF/data utama TETAP jalan normal karena panggilannya non-blocking (tidak pakai `await`, tidak menghentikan alur kalau gagal).
+
+**Backend (di luar HTML — Google Apps Script):**
+- Kode `doPost(e)` di-deploy sebagai Web App (Execute as: Me, Who has access: Anyone) dari sebuah Google Sheets (`DATABASE EIC7`), fungsinya: terima `{token, imageBase64, fileName, modul, keterangan}` → validasi token → decode base64 → simpan file ke folder Drive (`FOLDER_ID`) → catat metadata ke sheet `UploadLog`.
+- URL deployment (`.../exec`) dan folder tujuan **tidak akan berubah** kecuali di-redeploy ulang atau folder Drive-nya dipindah/dihapus.
+
+**Konfigurasi + fungsi inti — SUDAH ADA di `shared.js`, jangan duplikat lagi ke HTML manapun:**
+```js
+var GDRIVE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxyxAOQaIFkT9EZtTHfkjQeG3TlkLnEu2AKVyhUnguK7Td_zls1qL7IPB_hLsXTaLNBHA/exec';
+var GDRIVE_SECRET_TOKEN = 'pmeicunit7-mahfud';
+
+function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
+  if (!GDRIVE_WEB_APP_URL || !dataUrlBase64 || !fileName) return;
+  fetch(GDRIVE_WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      token: GDRIVE_SECRET_TOKEN,
+      imageBase64: dataUrlBase64,
+      fileName: fileName,
+      modul: modul || (window.CURRENT_MODUL || 'unknown'),
+      keterangan: keterangan || ''
+    })
+  }).then(function(res){ return res.json(); })
+    .then(function(result){ if (!result.success) console.error('Upload GDrive gagal:', result.error); })
+    .catch(function(err){ console.error('Upload GDrive error:', err); });
+}
+```
+
+**Titik integrasi berbeda tergantung pola crop yang dipakai file tujuan (cek dulu, lihat item #5 di Checklist Konfigurasi):**
+
+1. **File yang masih pakai pola lama `imgOpenCropper` / `imgCompressAndStore` (shared.js)** — **TIDAK PERLU diubah sama sekali**. Panggilan `uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption)` sudah ditempel otomatis di dalam `imgCompressAndStore()` di `shared.js` sendiri (tepat setelah `imgArr.push(...)`), jadi semua modul yang lewat fungsi ini (op, bs, cf, dcs, cl, ld, fm, hg, dst) otomatis ke-backup ke Drive begitu `shared.js` di-update.
+
+2. **File yang pakai pola baru `cropAndSave()` 3-mode (Fitur B, duplikat per file — mis. `ph-analyzer.html`)** — fungsi `cropAndSave()`-nya ada LOKAL di tiap file (bukan di `shared.js`), jadi perlu **1 baris tambahan manual** tepat setelah `imgArr.push(entry)`:
+   ```js
+   imgArr.push(entry);
+   uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '');
+   closeCropModal();
+   ```
+   Fungsi `uploadFotoKeGDrive` sendiri **tidak perlu didefinisikan ulang** di file ini — otomatis kepakai dari `shared.js` karena sudah di-`<script src="shared.js">`.
+
+**⚠️ Potensi Konflik:** kalau ternyata satu file sudah pernah ditempel versi lama (fungsi `uploadFotoKeGDrive` didefinisikan ulang secara lokal di dalam file HTML-nya sendiri, bukan cuma dipanggil) — itu HARUS dihapus, supaya tidak ada 2 definisi fungsi yang sama-sama global dan salah satu menimpa `shared.js` (kalau URL/token-nya beda, foto bisa nyasar upload ke 2 tempat beda tanpa disadari).
+
+**Butuh dari user:** tidak ada — folder Drive tujuan dan token sudah fixed di `shared.js`. Kalau user minta ganti folder tujuan atau bikin token baru, update `GDRIVE_WEB_APP_URL`/`GDRIVE_SECRET_TOKEN` di `shared.js` SEKALI SAJA (bukan per file).
+
+---
+
 ## Checklist Konfigurasi per File Baru
 Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditanyakan:
 
@@ -1461,6 +1511,6 @@ Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditany
 
 ## ⚠️ Potensi Konflik Global
 Karena semua fitur di atas dan fungsi bawaan `shared.js` sama-sama pakai **global function declaration** (bukan modul/namespace), nama-nama berikut **rawan bentrok** kalau file tujuan sudah punya fungsi dengan nama sama tapi perilaku beda:
-`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`.
+`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`.
 
 **Sebelum menempel kode dari dokumen ini, selalu `grep` dulu nama-nama fungsi di atas pada file tujuan.** Kalau sudah ada dan isinya beda, diskusikan dulu ke user mana yang mau dipakai / digabung, jangan main timpa.

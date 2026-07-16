@@ -58,6 +58,31 @@ var SUPA_URL   = 'https://ruvvximnnacpvvoogbzs.supabase.co';
 var SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
 var SUPA_TABLE = 'pm_records';
 
+/* ── GOOGLE DRIVE PHOTO BACKUP CONFIG ──
+   Upload otomatis (silent, non-blocking) setiap foto PM ke Google Drive
+   lewat Apps Script Web App, sebagai backup terpisah dari Supabase.
+   Ganti GDRIVE_WEB_APP_URL kalau deployment Apps Script diganti/redeploy baru. */
+var GDRIVE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxyxAOQaIFkT9EZtTHfkjQeG3TlkLnEu2AKVyhUnguK7Td_zls1qL7IPB_hLsXTaLNBHA/exec';
+var GDRIVE_SECRET_TOKEN = 'pmeicunit7-mahfud';
+
+function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
+  if (!GDRIVE_WEB_APP_URL || !dataUrlBase64 || !fileName) return;
+  fetch(GDRIVE_WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      token: GDRIVE_SECRET_TOKEN,
+      imageBase64: dataUrlBase64,
+      fileName: fileName,
+      modul: modul || (window.CURRENT_MODUL || 'unknown'),
+      keterangan: keterangan || ''
+    })
+  }).then(function(res){ return res.json(); })
+    .then(function(result){
+      if (!result.success) console.error('Upload GDrive gagal:', result.error);
+    })
+    .catch(function(err){ console.error('Upload GDrive error:', err); });
+}
+
 function supaFetch(method, path, body) {
   var opts = {
     method: method,
@@ -215,8 +240,6 @@ function dbList(modul, callback) {
 function normalizeModul(name) {
   if (!name) return '';
   var n = name.toUpperCase();
-  if (n.indexOf('MARK VIE')>=0 || n.indexOf('MARK-VIE')>=0 || (n.indexOf('ALARM')>=0 && n.indexOf('MODULE')>=0)) return 'MARK_VIE';
-  if (n.indexOf('GENERATOR')>=0 || n.indexOf('STATOR')>=0) return 'GENERATOR_STATOR_LEAK';
   if (n.indexOf('FEGT')>=0 || n.indexOf('LEAK')>=0) return 'FEGT';
   if (n.indexOf('SO2')>=0 || n.indexOf('SCRUBBER')>=0) return 'SO2';
   if (n.indexOf('OPACITY')>=0) return 'OPACITY';
@@ -528,6 +551,7 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
     }
   }
   imgArr.push({name: name.replace(/\.[^.]+$/, '.jpg'), dataUrl: dataUrl, type: 'image/jpeg', caption: caption||''});
+  uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption);
   if (modulePrefix === 'op') { opRenderPreviews(side); updateSizeIndicator('op', side); }
   else if (modulePrefix === 'bs') { bsRenderPreviews(side); updateSizeIndicator('bs', side); }
   else if (modulePrefix === 'cf') { cfRenderPreviews(); updateSizeIndicator('cf', null); }
