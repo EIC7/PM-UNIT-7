@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migrasi Foto Lama ke Google Drive</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#f2f5f8;margin:0;padding:20px;color:#1c2b3a}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-size:18px;margin-bottom:4px}
+.sub{font-size:13px;color:#5a7089;margin-bottom:20px}
+.card{background:#fff;border:1px solid #d8e2ec;border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(30,60,90,0.06)}
+.warn{background:#fff8e1;border-color:#f0d98c;color:#7a5c00;font-size:12.5px;line-height:1.5}
+button{padding:10px 18px;border:none;border-radius:7px;background:#1d74c7;color:#fff;font-weight:600;font-size:13.5px;cursor:pointer}
+button:disabled{background:#9db6c9;cursor:not-allowed}
+button.stop{background:#c73131;margin-left:8px}
+.progress-bar{height:8px;background:#e4ecf3;border-radius:4px;overflow:hidden;margin:12px 0}
+.progress-fill{height:100%;background:#1d9e5c;width:0%;transition:width .2s}
+.stats{display:flex;gap:16px;font-size:12.5px;color:#3a556e;margin-bottom:10px;flex-wrap:wrap}
+.stats b{color:#152638}
+#log{background:#0f1512;color:#cfe9d8;font-family:Consolas,Menlo,monospace;font-size:11.5px;border-radius:8px;padding:12px;height:340px;overflow-y:auto;white-space:pre-wrap;line-height:1.5}
+.log-err{color:#ff8080}
+.log-ok{color:#7fd9a4}
+.log-skip{color:#e0c15c}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Migrasi Foto Lama → Google Drive</h1>
+  <div class="sub">Menarik semua record dari Supabase (tabel pm_records), mencari foto di dalamnya, lalu mengirim tiap foto ke Google Drive lewat Apps Script — supaya foto lama ikut ter-backup seperti foto baru.</div>
+
+  <div class="card warn">
+    ⚠️ Jalankan ini <b>satu kali saja</b>. Kalau dijalankan ulang, foto yang sama akan ter-upload lagi jadi file duplikat di Drive (script ini tidak mengecek apakah foto sudah pernah diupload sebelumnya). Pastikan koneksi internet stabil dan jangan tutup tab ini selama proses berjalan — bisa makan waktu cukup lama kalau data lama jumlahnya banyak.
+  </div>
+
+  <div class="card">
+    <button id="btnStart" onclick="mulaiMigrasi()">▶ Mulai Migrasi</button>
+    <button id="btnStop" class="stop" onclick="hentikanMigrasi()" style="display:none">⏹ Hentikan</button>
+
+    <div class="progress-bar"><div class="progress-fill" id="progFill"></div></div>
+    <div class="stats">
+      <div>Record: <b id="statRecDone">0</b>/<b id="statRecTotal">0</b></div>
+      <div>Foto ditemukan: <b id="statFotoFound">0</b></div>
+      <div>Berhasil upload: <b id="statOk">0</b></div>
+      <div>Gagal: <b id="statFail">0</b></div>
+    </div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+var SUPA_URL   = 'https://ruvvximnnacpvvoogbzs.supabase.co';
+var SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var SUPA_TABLE = 'pm_records';
+
+var GDRIVE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxyxAOQaIFkT9EZtTHfkjQeG3TlkLnEu2AKVyhUnguK7Td_zls1qL7IPB_hLsXTaLNBHA/exec';
+var GDRIVE_SECRET_TOKEN = 'pmeicunit7-mahfud';
+
+var _stop = false;
+
+function log(msg, cls) {
+  var el = document.getElementById('log');
+  var line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setStat(id, val) { document.getElementById(id).textContent = val; }
+
+/* Cari semua object foto {name/fileName, dataUrl} di dalam struktur data apapun,
+   supaya tidak perlu tahu struktur persis tiap modul (images[uid], sections[type][idx].images[], dst) */
+function cariSemuaFoto(obj, hasil) {
+  if (!obj || typeof obj !== 'object') return;
+  if (Array.isArray(obj)) {
+    obj.forEach(function(item){ cariSemuaFoto(item, hasil); });
+    return;
+  }
+  if (typeof obj.dataUrl === 'string' && obj.dataUrl.indexOf('data:image') === 0) {
+    hasil.push({ name: obj.name || ('foto_' + Date.now() + '.jpg'), dataUrl: obj.dataUrl, caption: obj.caption || '' });
+    return; // objek foto biasanya tidak bersarang lagi di dalamnya
+  }
+  Object.keys(obj).forEach(function(k){ cariSemuaFoto(obj[k], hasil); });
+}
+
+function uploadSatuFoto(dataUrl, fileName, modul, keterangan) {
+  return fetch(GDRIVE_WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify({ token: GDRIVE_SECRET_TOKEN, imageBase64: dataUrl, fileName: fileName, modul: modul, keterangan: keterangan })
+  }).then(function(res){ return res.json(); });
+}
+
+function ambilSemuaRecord() {
+  var semua = [];
+  var pageSize = 500;
+  function ambilHalaman(from) {
+    var to = from + pageSize - 1;
+    return fetch(SUPA_URL + '/rest/v1/' + SUPA_TABLE + '?select=*', {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Range': from + '-' + to
+      }
+    }).then(function(res){ return res.json(); })
+      .then(function(rows){
+        semua = semua.concat(rows);
+        if (rows.length === pageSize) return ambilHalaman(from + pageSize);
+        return semua;
+      });
+  }
+  return ambilHalaman(0);
+}
+
+function delay(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
+
+function mulaiMigrasi() {
+  _stop = false;
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStop').style.display = 'inline-block';
+  document.getElementById('log').innerHTML = '';
+  log('Mengambil daftar record dari Supabase...');
+
+  ambilSemuaRecord().then(function(records){
+    setStat('statRecTotal', records.length);
+    log('Ditemukan ' + records.length + ' record. Memulai pemindaian foto...');
+
+    var okCount = 0, failCount = 0, fotoFoundTotal = 0;
+
+    function prosesRecord(idx) {
+      if (_stop) { log('⏹ Dihentikan oleh user.', 'log-skip'); selesai(); return; }
+      if (idx >= records.length) { selesai(); return; }
+
+      var rec = records[idx];
+      var fotoList = [];
+      cariSemuaFoto(rec.data, fotoList);
+      fotoFoundTotal += fotoList.length;
+      setStat('statFotoFound', fotoFoundTotal);
+
+      if (fotoList.length === 0) {
+        setStat('statRecDone', idx + 1);
+        document.getElementById('progFill').style.width = Math.round(((idx+1)/records.length)*100) + '%';
+        setTimeout(function(){ prosesRecord(idx + 1); }, 5);
+        return;
+      }
+
+      log('Record ' + (idx+1) + '/' + records.length + ' (modul: ' + (rec.modul||'-') + ') — ' + fotoList.length + ' foto ditemukan');
+
+      function prosesFoto(fIdx) {
+        if (fIdx >= fotoList.length) {
+          setStat('statRecDone', idx + 1);
+          document.getElementById('progFill').style.width = Math.round(((idx+1)/records.length)*100) + '%';
+          prosesRecord(idx + 1);
+          return;
+        }
+        var f = fotoList[fIdx];
+        uploadSatuFoto(f.dataUrl, f.name, rec.modul || 'unknown', 'Migrasi dari record ' + rec.id)
+          .then(function(result){
+            if (result.success) {
+              okCount++; setStat('statOk', okCount);
+              log('  ✓ ' + f.name, 'log-ok');
+            } else {
+              failCount++; setStat('statFail', failCount);
+              log('  ✗ ' + f.name + ' — ' + result.error, 'log-err');
+            }
+          })
+          .catch(function(err){
+            failCount++; setStat('statFail', failCount);
+            log('  ✗ ' + f.name + ' — ' + err.message, 'log-err');
+          })
+          .then(function(){ return delay(300); }) // jeda kecil biar tidak membanjiri Apps Script
+          .then(function(){ prosesFoto(fIdx + 1); });
+      }
+      prosesFoto(0);
+    }
+
+    function selesai() {
+      log('══════════════════════════');
+      log('SELESAI. Total foto berhasil: ' + okCount + ', gagal: ' + failCount);
+      document.getElementById('btnStart').disabled = false;
+      document.getElementById('btnStop').style.display = 'none';
+    }
+
+    prosesRecord(0);
+  }).catch(function(err){
+    log('Gagal mengambil data dari Supabase: ' + err.message, 'log-err');
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStop').style.display = 'none';
+  });
+}
+
+function hentikanMigrasi() { _stop = true; }
+</script>
+</body>
+</html>
