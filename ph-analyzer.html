@@ -282,6 +282,30 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 
 <script>
 /* ══════════════════════════════════════════════
+   UPLOAD FOTO KE GOOGLE DRIVE (Apps Script Web App)
+   ══════════════════════════════════════════════ */
+var GDRIVE_WEB_APP_URL = 'GANTI_DENGAN_URL_DEPLOYMENT_APPS_SCRIPT';
+var GDRIVE_SECRET_TOKEN = 'pmeicunit7-mahfud';
+
+function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
+    if (!GDRIVE_WEB_APP_URL || GDRIVE_WEB_APP_URL.indexOf('GANTI_DENGAN') === 0) return;
+    fetch(GDRIVE_WEB_APP_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            token: GDRIVE_SECRET_TOKEN,
+            imageBase64: dataUrlBase64,
+            fileName: fileName,
+            modul: modul || 'ph_transmitter',
+            keterangan: keterangan || ''
+        })
+    }).then(function(res){ return res.json(); })
+      .then(function(result){
+          if (!result.success) console.error('Upload GDrive gagal:', result.error);
+      })
+      .catch(function(err){ console.error('Upload GDrive error:', err); });
+}
+
+/* ══════════════════════════════════════════════
    DATA DEFINITIONS
    ══════════════════════════════════════════════ */
 
@@ -1131,6 +1155,9 @@ function cropAndSave() {
     if (offsetX) entry.offsetX = offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
     imgArr.push(entry);
+
+    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, 'ph_transmitter', p.side || '');
 
     closeCropModal();
     // panggil render callback modul terkait (sama seperti imgCompressAndStore lama di shared.js)
