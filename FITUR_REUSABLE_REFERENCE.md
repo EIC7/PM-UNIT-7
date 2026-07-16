@@ -1452,8 +1452,9 @@ y += totalH + 6;
 **Tujuan:** setiap kali foto PM selesai di-crop/disimpan ke array gambar, foto itu juga otomatis (silent, non-blocking) terkirim sebagai backup ke folder Google Drive tertentu lewat Apps Script Web App — terpisah dari penyimpanan utama di Supabase. Kalau upload gagal (mis. offline), proses simpan PDF/data utama TETAP jalan normal karena panggilannya non-blocking (tidak pakai `await`, tidak menghentikan alur kalau gagal).
 
 **Backend (di luar HTML — Google Apps Script):**
-- Kode `doPost(e)` di-deploy sebagai Web App (Execute as: Me, Who has access: Anyone) dari sebuah Google Sheets (`DATABASE EIC7`), fungsinya: terima `{token, imageBase64, fileName, modul, keterangan}` → validasi token → decode base64 → simpan file ke folder Drive (`FOLDER_ID`) → catat metadata ke sheet `UploadLog`.
+- Kode `doPost(e)` di-deploy sebagai Web App (Execute as: Me, Who has access: Anyone) dari sebuah Google Sheets (`DATABASE EIC7`), fungsinya: terima `{token, imageBase64, fileName, modul, keterangan}` → validasi token → decode base64 → **hapus file lama dengan nama sama kalau ada (overwrite, bukan menumpuk duplikat)** → simpan file ke folder Drive (`FOLDER_ID`) → catat metadata ke sheet `UploadLog`.
 - URL deployment (`.../exec`) dan folder tujuan **tidak akan berubah** kecuali di-redeploy ulang atau folder Drive-nya dipindah/dihapus.
+- **Perilaku overwrite:** karena upload dipicu ulang setiap kali foto di-crop/di-edit ulang (termasuk saat buka record dari Riwayat lalu ganti foto), file lama dengan `fileName` yang sama di folder Drive otomatis dipindah ke Trash sebelum file baru dibuat — jadi 1 foto = 1 file terbaru di Drive, tidak menumpuk versi lama. Konsekuensinya: sheet `UploadLog` tetap akan bertambah baris tiap upload (riwayat log tidak ikut ke-overwrite, cuma file fisik di Drive-nya), jadi `UploadLog` masih bisa dipakai untuk lihat kapan-kapan aja suatu foto diubah.
 
 **Konfigurasi + fungsi inti — SUDAH ADA di `shared.js`, jangan duplikat lagi ke HTML manapun:**
 ```js
