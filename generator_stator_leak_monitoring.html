@@ -1124,6 +1124,7 @@ function cropAndSave() {
     if (offsetX) entry.offsetX = offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
     imgArr.push(entry);
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '');
 
     closeCropModal();
     // panggil render callback modul terkait (sama seperti imgCompressAndStore lama di shared.js)

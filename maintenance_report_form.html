@@ -1523,11 +1523,14 @@ function applyImageEdits(){
                 entry.widthCm = cropModal._cropWcm;
                 entry.heightCm = cropModal._cropHcm;
             }
+            var slotIdx = (p.replaceIdx >= 0) ? p.replaceIdx : imgArr.length;
             if (p.replaceIdx >= 0) {
                 imgArr[p.replaceIdx] = entry;
             } else {
                 imgArr.push(entry);
             }
+            var gdriveFileName = 'maintenance_' + p.type + '_' + p.idx + '_' + slotIdx + '.jpg';
+            uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, p.type || '');
 
             closeCropModal();
             renderSection(p.type, p.type + 'Box');

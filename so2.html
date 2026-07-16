@@ -1263,7 +1263,15 @@ function cropAndSave() {
     var entry = {dataUrl: dataUrl, caption: existing && existing.caption ? existing.caption : ''};
     if (existing && existing.offsetX) entry.offsetX = existing.offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
+    var slotIdx = (p.replaceIdx >= 0) ? p.replaceIdx : imgArr.length;
     if (p.replaceIdx >= 0) imgArr[p.replaceIdx] = entry; else imgArr.push(entry);
+
+    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
+    // entry di so2.html tidak punya field 'name', jadi digenerate dari groupKey + slot index
+    // (stabil per slot foto, BUKAN timestamp, supaya saat foto ini di-crop ulang nanti,
+    // file lama di Drive dengan nama sama ke-overwrite otomatis, bukan jadi file baru terus)
+    var gdriveFileName = 'so2_' + p.groupKey + '_' + slotIdx + '.jpg';
+    uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, 'so2', p.groupKey || '');
 
     closeCropModal();
     renderPhotoGallery(p.groupKey, 'gallery-'+p.groupKey);

@@ -1490,6 +1490,16 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
    ```
    Fungsi `uploadFotoKeGDrive` sendiri **tidak perlu didefinisikan ulang** di file ini — otomatis kepakai dari `shared.js` karena sudah di-`<script src="shared.js">`.
 
+**⚠️ Kasus khusus — file yang objek foto-nya TIDAK punya field `name`/`fileName` (mis. `so2.html`, entry cuma `{dataUrl, caption, offsetX, widthCm, heightCm}`):**
+   nama file untuk Drive harus digenerate manual di titik panggil, dan **harus stabil per slot foto** (bukan `Date.now()`/timestamp) supaya fitur overwrite-otomatis di Apps Script (lihat bawah) tetap jalan saat foto itu di-crop ulang nanti:
+   ```js
+   var slotIdx = (p.replaceIdx >= 0) ? p.replaceIdx : imgArr.length;
+   // ...push/replace imgArr seperti biasa...
+   var gdriveFileName = '{{modulPrefix}}_' + p.groupKey + '_' + slotIdx + '.jpg';
+   uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, '{{modulPrefix}}', p.groupKey || '');
+   ```
+   Ganti `{{modulPrefix}}` sesuai modul (mis. `'so2'`). Kalau dipakai timestamp, tiap crop ulang dianggap foto baru dan numpuk file di Drive alih-alih overwrite.
+
 **⚠️ Potensi Konflik:** kalau ternyata satu file sudah pernah ditempel versi lama (fungsi `uploadFotoKeGDrive` didefinisikan ulang secara lokal di dalam file HTML-nya sendiri, bukan cuma dipanggil) — itu HARUS dihapus, supaya tidak ada 2 definisi fungsi yang sama-sama global dan salah satu menimpa `shared.js` (kalau URL/token-nya beda, foto bisa nyasar upload ke 2 tempat beda tanpa disadari).
 
 **Butuh dari user:** tidak ada — folder Drive tujuan dan token sudah fixed di `shared.js`. Kalau user minta ganti folder tujuan atau bikin token baru, update `GDRIVE_WEB_APP_URL`/`GDRIVE_SECRET_TOKEN` di `shared.js` SEKALI SAJA (bukan per file).

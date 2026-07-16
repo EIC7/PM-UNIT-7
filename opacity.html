@@ -1097,6 +1097,9 @@ function cropAndSave() {
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
     imgArr.push(entry);
 
+    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '');
+
     closeCropModal();
     // panggil render callback modul terkait (sama seperti imgCompressAndStore lama di shared.js)
     // Panggil render callback modul terkait secara dinamis: {prefix}RenderPreviews(side)

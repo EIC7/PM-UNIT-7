@@ -1237,6 +1237,9 @@ function cropAndSave() {
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
     imgArr.push(entry);
 
+    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '');
+
     closeCropModal();
     if (typeof bsRenderPreviews === 'function') bsRenderPreviews(p.side);
 }

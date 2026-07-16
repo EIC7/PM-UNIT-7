@@ -734,6 +734,21 @@
   .crop-handle.br { bottom: -5px; right: -5px; cursor: nwse-resize; }
   .crop-controls { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 
+  /* ── HISTORY SUB-TAB (Warehouse / Internal) ── */
+  .hist-subtab-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .hist-subtab-btn {
+    padding: 8px 18px; border-radius: 8px; border: 1px solid var(--border);
+    background: #fff; color: var(--text-mid); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .15s;
+  }
+  .hist-subtab-btn:active { transform: scale(0.97); }
+  .hist-subtab-btn.active { background: var(--steel); border-color: var(--steel); color: #fff; }
+  .hist-subtab-btn .hist-subtab-count {
+    display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px;
+    background: rgba(255,255,255,0.18); font-size: 11px;
+  }
+  .hist-subtab-btn:not(.active) .hist-subtab-count { background: #eef2f6; color: var(--text-mid); }
+
   /* ── STATS ROW ── */
   .stats-row {
     display: flex;
@@ -1407,6 +1422,14 @@
   <!-- TAB: HISTORY PENGAMBILAN -->
   <div class="tab-content" id="tab-history-ambil">
     <div class="panel">
+      <div class="hist-subtab-row">
+        <button class="hist-subtab-btn active" id="histSubBtn-warehouse" onclick="switchHistSubTab('warehouse')">
+          📦 History Warehouse <span class="hist-subtab-count" id="histSubCount-warehouse">0</span>
+        </button>
+        <button class="hist-subtab-btn" id="histSubBtn-internal" onclick="switchHistSubTab('internal')">
+          🏷️ History Internal <span class="hist-subtab-count" id="histSubCount-internal">0</span>
+        </button>
+      </div>
       <div class="stats-row">
         <div class="stat-chip total">📋 Total Pengambilan: <strong id="statHistoryTotal">0</strong></div>
       </div>
@@ -2694,6 +2717,8 @@ function cropAndSave() {
         currentImageMeta.heightCm = cropModalState._cropHcm;
     }
     setPreviewImage(dataUrl);
+    var gdriveFileName = 'material_warehouse_' + (editingId || 'new') + '.jpg';
+    uploadFotoKeGDrive(dataUrl, gdriveFileName, window.CURRENT_MODUL, '');
     closeCropModal();
     showToast('✅ Gambar berhasil di-crop & disimpan');
 }
@@ -3241,7 +3266,7 @@ function editAsset(id) {
    PREVIEW MODAL
 ══════════════════════════════════════════════ */
 function openPreviewModal(id) {
-  var a = assets.find(function(x){ return x.id === id; });
+  var a = assets.find(function(x){ return x.id === id; }) || internalAssets.find(function(x){ return x.id === id; });
   if (!a) return;
 
   document.getElementById('previewTitle').textContent = a.nama || 'Detail Asset';
@@ -3441,7 +3466,7 @@ function closePreviewModal() {
 var pendingDeleteId = null;
 
 function openDeleteModal(id) {
-  var a = assets.find(function(x){ return x.id === id; });
+  var a = assets.find(function(x){ return x.id === id; }) || internalAssets.find(function(x){ return x.id === id; });
   pendingDeleteId = id;
   document.getElementById('deleteModalDesc').textContent =
     'Asset "' + (a ? a.nama : '') + '" (' + (a ? a.nomor : '') + ') akan dihapus secara permanen.';
@@ -3708,6 +3733,7 @@ var historyData         = [];
 var HIST_PER_PAGE       = 100;
 var histPage            = 1;
 var histTotalCount      = 0;
+var histSubTab          = 'warehouse'; // 'warehouse' | 'internal'
 var histSearchDebounce  = null;
 
 function currentHistQ() {
@@ -3719,18 +3745,47 @@ function onHistorySearch() {
   histSearchDebounce = setTimeout(function() {
     histPage = 1;
     loadHistoryPage(1, currentHistQ());
+    refreshHistSubtabCounts();
   }, 400);
 }
 
 function loadHistoryPengambilan() {
   loadHistoryPage(histPage, currentHistQ());
+  refreshHistSubtabCounts();
+}
+
+function switchHistSubTab(sub) {
+  if (histSubTab === sub) return;
+  histSubTab = sub;
+  document.getElementById('histSubBtn-warehouse').classList.toggle('active', sub === 'warehouse');
+  document.getElementById('histSubBtn-internal').classList.toggle('active', sub === 'internal');
+  histPage = 1;
+  loadHistoryPage(histPage, currentHistQ());
+}
+
+// Filter lokasi_barang persis sama seperti pembagian Warehouse/Internal di ASSET_TABLE
+// (lihat _INTERNAL_INCLUDE), supaya history pengambilan ikut kebagi konsisten.
+function _histSubtabFilter(sub) {
+  if (sub === 'internal') return '&or=(lokasi_barang.in.(White%20Container,A55),lokasi_barang.like.INT:*)';
+  return '&lokasi_barang=not.in.(White%20Container,A55)&lokasi_barang=not.like.INT:*';
+}
+
+function refreshHistSubtabCounts() {
+  var qs = currentHistQ() ? _buildSearchOr(currentHistQ(), ['nomor','nama','pengambil','keperluan']) : '';
+  supaFetchPaged(AMBIL_TABLE + '?select=id&limit=1' + _histSubtabFilter('warehouse') + qs)
+    .then(function(res){ document.getElementById('histSubCount-warehouse').textContent = res.count; })
+    .catch(function(){});
+  supaFetchPaged(AMBIL_TABLE + '?select=id&limit=1' + _histSubtabFilter('internal') + qs)
+    .then(function(res){ document.getElementById('histSubCount-internal').textContent = res.count; })
+    .catch(function(){});
 }
 
 function loadHistoryPage(page, q) {
   histPage = page;
   showToast('⏳ Memuat history...');
   var offset = (page - 1) * HIST_PER_PAGE;
-  var path = AMBIL_TABLE + '?select=*&order=tanggal.desc&limit=' + HIST_PER_PAGE + '&offset=' + offset;
+  var path = AMBIL_TABLE + '?select=*&order=tanggal.desc&limit=' + HIST_PER_PAGE + '&offset=' + offset
+           + _histSubtabFilter(histSubTab);
   if (q) {
     path += _buildSearchOr(q, ['nomor','nama','pengambil','keperluan']);
   }

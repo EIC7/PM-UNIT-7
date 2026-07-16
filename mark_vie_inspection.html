@@ -1050,6 +1050,7 @@ function cropAndSave() {
     if (offsetX) entry.offsetX = offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
     imgArr.push(entry);
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '');
 
     closeCropModal();
     if (p.modulePrefix === 'mv' && typeof mvRenderPreviews === 'function') mvRenderPreviews(p.side);
