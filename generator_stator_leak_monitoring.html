@@ -1533,15 +1533,18 @@ function drawGenBackground(doc, pw, ph) {
 
 /* ══════════════════ PDF EXPORT ══════════════════ */
 function runPdfPreview() {
+  dbShowSavingOverlay(true, 'Sedang memuat print preview...', 'Menyusun tabel & foto evidence...');
   try {
     ensureGenBackground(function() {
       try {
         buildAndShowPdf();
       } catch (err) {
+        dbShowSavingOverlay(false);
         alert('❌ GAGAL BUAT PDF (di dalam buildAndShowPdf):\n\n' + (err && err.stack ? err.stack : err));
       }
     });
   } catch (err) {
+    dbShowSavingOverlay(false);
     alert('❌ GAGAL BUAT PDF (di ensureGenBackground):\n\n' + (err && err.stack ? err.stack : err));
   }
 }
@@ -1684,6 +1687,7 @@ function buildAndShowPdf() {
     });
   }
 
+  dbShowSavingOverlay(false);
   showPdfPreview(doc, 'Generator_Stator_Leak_Monitoring_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');
 }
 

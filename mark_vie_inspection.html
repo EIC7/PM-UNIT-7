@@ -1418,7 +1418,7 @@ function mvDrawCheckbox(doc, x, y, w, h, checked) {
 function downloadPdf(){
   var totalImgs = mvRowEvidence.reduce(function(acc, arr){ return acc + arr.length; }, 0);
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
-  if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
+  dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   ensureMvBackground(function() {
     try {
       var jsPDF = window.jspdf.jsPDF;
@@ -1580,9 +1580,12 @@ function downloadPdf(){
       }
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
+
+      dbShowSavingOverlay(false);
       showPdfPreview(doc, 'MarkVIe_Inspection_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
     } catch(e) {
       if (typeof hideImgLoading === 'function') hideImgLoading();
+      dbShowSavingOverlay(false);
       alert('Gagal membuat PDF: ' + (e.message||e));
       console.error(e);
     }

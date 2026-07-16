@@ -1489,7 +1489,7 @@ function drawCheckboxBs(doc, x, y, w, h, checked) {
 function bsDownloadPdf() {
   var totalImgs = (bsImages['1']?bsImages['1'].length:0) + (bsImages['2']?bsImages['2'].length:0);
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
-  if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
+  dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   bsEnsureReportBackground(function() {
   try {
     bsSyncImageCaptions();
@@ -1674,9 +1674,11 @@ function bsDownloadPdf() {
 
     var dateStr=(gv('bsDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
     if (typeof hideImgLoading === 'function') hideImgLoading();
+    dbShowSavingOverlay(false);
     showPdfPreview(doc, 'BeltScale_E45_'+dateStr+'.pdf');
   } catch(err){
     if (typeof hideImgLoading === 'function') hideImgLoading();
+    dbShowSavingOverlay(false);
     alert('PDF Error: '+err.message); console.error(err);
   }
   });

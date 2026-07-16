@@ -2203,16 +2203,18 @@ function dcsDownloadPdf() {
 
       var dateStr = (gv('dcsDate')||'').replace(/-/g,'')||new Date().toISOString().slice(0,10).replace(/-/g,'');
       if (typeof hideImgLoading === 'function') hideImgLoading();
+      dbShowSavingOverlay(false);
       showPdfPreview(doc, 'DCS_HMI_OIS_Inspection_'+dateStr+'.pdf');
 
     } catch(err) {
       if (typeof hideImgLoading === 'function') hideImgLoading();
+      dbShowSavingOverlay(false);
       alert('PDF Error: '+err.message); console.error(err);
     }
   }
   var totalImgs = dcsImages.general.length + dcsImages.defect.length;
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
-  if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
+  dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   /* Coba load background, timeout 1.5s langsung generate */
   if (reportBgReady) { _doPdf(); return; }
   var _done = false;

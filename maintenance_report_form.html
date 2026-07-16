@@ -1747,8 +1747,7 @@ function applyImageEdits(){
             var loadingMsg = totalImgs > 0
                 ? '⏳ Membuat PDF... memproses ' + totalImgs + ' gambar, mohon tunggu'
                 : '⏳ Membuat PDF, mohon tunggu';
-            if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
-
+            dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
             ensureReportBackground(function() {
                 try {
                     var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
@@ -1924,10 +1923,13 @@ function applyImageEdits(){
                     var fn = [wo, date.replace(/-/g,''), atag, adsc].join('_').replace(/\s+/g,'_').replace(/[\\/:*?"<>|]+/g,'').toLowerCase()+'.pdf';
 
                     if (typeof hideImgLoading === 'function') hideImgLoading();
+
+                    dbShowSavingOverlay(false);
                     showPdfPreview(doc, fn);
 
                 } catch(err) {
                     if (typeof hideImgLoading === 'function') hideImgLoading();
+                    dbShowSavingOverlay(false);
                     alert('PDF Error: '+err.message);
                     console.error(err);
                 }

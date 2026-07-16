@@ -1743,8 +1743,8 @@ function downloadPdf(){
   var totalImgs = 0;
   CLEANING_PORTS.forEach(function(p){ var pk='port'+p.id; totalImgs += (cleaningImages[pk].before.length + cleaningImages[pk].after.length); });
   LD_CLEANING_PORTS.forEach(function(p){ var pk='ldport'+p.id; if(ldCleaningImages[pk]) totalImgs += ((ldCleaningImages[pk].before||[]).length + (ldCleaningImages[pk].after||[]).length); });
-  var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
-  if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
+  var loadingMsg = totalImgs>0 ? 'Memproses '+totalImgs+' gambar & menyusun tabel...' : 'Menyusun tabel...';
+  dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   ensureFegtBackground(function() {
     try {
       var jsPDF = window.jspdf.jsPDF;
@@ -2190,10 +2190,12 @@ function downloadPdf(){
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
+      dbShowSavingOverlay(false);
       showPdfPreview(doc, 'FEGT_LD_Report_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
 
     } catch(err) {
       if (typeof hideImgLoading === 'function') hideImgLoading();
+      dbShowSavingOverlay(false);
       alert('PDF Error: '+err.message);
       console.error(err);
     }
