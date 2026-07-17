@@ -169,36 +169,6 @@
     </div>
   </div>
 
-  <!-- SENSOR MAP -->
-  <div class="panel">
-    <div class="section-label">Furnace Path Topology</div>
-    <div class="sensor-map-wrap">
-      <div class="furnace-outer">
-        <div class="furnace-box">
-          <div class="furnace-label north">North</div>
-          <div class="furnace-label south">South</div>
-          <div class="furnace-label west">West</div>
-          <div class="furnace-label east">East</div>
-          <svg class="path-svg" id="pathSvg" viewBox="0 0 580 320" preserveAspectRatio="none"></svg>
-          <div class="sensor-node unknown" id="snode-1" style="left:0%;top:75%">1<div class="s-tip" id="stip-1">Sensor 1</div></div>
-          <div class="sensor-node unknown" id="snode-2" style="left:37.9%;top:100%">2<div class="s-tip" id="stip-2">Sensor 2</div></div>
-          <div class="sensor-node unknown" id="snode-3" style="left:0%;top:50%">3<div class="s-tip" id="stip-3">Sensor 3</div></div>
-          <div class="sensor-node unknown" id="snode-4" style="left:62.1%;top:100%">4<div class="s-tip" id="stip-4">Sensor 4</div></div>
-          <div class="sensor-node unknown" id="snode-5" style="left:0%;top:25%">5<div class="s-tip" id="stip-5">Sensor 5</div></div>
-          <div class="sensor-node unknown" id="snode-6" style="left:100%;top:75%">6<div class="s-tip" id="stip-6">Sensor 6</div></div>
-          <div class="sensor-node unknown" id="snode-7" style="left:100%;top:50%">7<div class="s-tip" id="stip-7">Sensor 7</div></div>
-          <div class="sensor-node unknown" id="snode-8" style="left:100%;top:25%">8<div class="s-tip" id="stip-8">Sensor 8</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="map-legend">
-      <div class="leg-item"><div class="leg-line" style="background:var(--ok);opacity:.7"></div>OK / Valid</div>
-      <div class="leg-item"><div class="leg-line" style="background:var(--fail);opacity:.7"></div>Data Fail</div>
-      <div class="leg-item"><div class="leg-line" style="background:var(--hard);opacity:.7"></div>Hard Fail</div>
-      <div class="leg-item"><div class="leg-line" style="background:var(--steel-light);opacity:.4"></div>No Data</div>
-    </div>
-  </div>
-
   <!-- DATA PREVIEW -->
   <div class="panel" id="previewPanel" style="display:none">
     <div class="section-label">Preview Data Path</div>
@@ -276,6 +246,36 @@
           <tr><td class="path-label">Port 10</td><td style="font-family:'Courier New',monospace">7BG-CAB-151 (BS 10)</td><td>Lt. 2 Bottom Slope Sisi Timur</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- SENSOR MAP (dipindah ke paling bawah) -->
+  <div class="panel">
+    <div class="section-label">Furnace Path Topology</div>
+    <div class="sensor-map-wrap">
+      <div class="furnace-outer">
+        <div class="furnace-box">
+          <div class="furnace-label north">North</div>
+          <div class="furnace-label south">South</div>
+          <div class="furnace-label west">West</div>
+          <div class="furnace-label east">East</div>
+          <svg class="path-svg" id="pathSvg" viewBox="0 0 580 320" preserveAspectRatio="none"></svg>
+          <div class="sensor-node unknown" id="snode-1" style="left:0%;top:75%">1<div class="s-tip" id="stip-1">Sensor 1</div></div>
+          <div class="sensor-node unknown" id="snode-2" style="left:37.9%;top:100%">2<div class="s-tip" id="stip-2">Sensor 2</div></div>
+          <div class="sensor-node unknown" id="snode-3" style="left:0%;top:50%">3<div class="s-tip" id="stip-3">Sensor 3</div></div>
+          <div class="sensor-node unknown" id="snode-4" style="left:62.1%;top:100%">4<div class="s-tip" id="stip-4">Sensor 4</div></div>
+          <div class="sensor-node unknown" id="snode-5" style="left:0%;top:25%">5<div class="s-tip" id="stip-5">Sensor 5</div></div>
+          <div class="sensor-node unknown" id="snode-6" style="left:100%;top:75%">6<div class="s-tip" id="stip-6">Sensor 6</div></div>
+          <div class="sensor-node unknown" id="snode-7" style="left:100%;top:50%">7<div class="s-tip" id="stip-7">Sensor 7</div></div>
+          <div class="sensor-node unknown" id="snode-8" style="left:100%;top:25%">8<div class="s-tip" id="stip-8">Sensor 8</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="map-legend">
+      <div class="leg-item"><div class="leg-line" style="background:var(--ok);opacity:.7"></div>OK / Valid</div>
+      <div class="leg-item"><div class="leg-line" style="background:var(--fail);opacity:.7"></div>Data Fail</div>
+      <div class="leg-item"><div class="leg-line" style="background:var(--hard);opacity:.7"></div>Hard Fail</div>
+      <div class="leg-item"><div class="leg-line" style="background:var(--steel-light);opacity:.4"></div>No Data</div>
     </div>
   </div>
 
@@ -1403,7 +1403,6 @@ function autoSetStatus(selectId, tempVal) {
   var sel = document.getElementById(selectId);
   if (!sel || sel.disabled) return;
   var val = parseFloat(tempVal);
-  if (tempVal === '' || tempVal === null) return;
   sel.value = (!isNaN(val) && val > 0) ? 'ok' : 'data fail';
 }
 
@@ -2676,7 +2675,7 @@ function applyRecordToForm(rec, editingId) {
     data.paths.forEach(function(p){
       var t=document.getElementById('mtemp-'+p.id);
       var s=document.getElementById('mstatus-'+p.id);
-      if(t)t.value=p.temp||0;
+      if(t)t.value=(p.temp?p.temp:'');
       if(s)s.value=p.status||p.statusRaw||'ok';
     });
     collectManualData();
@@ -2685,7 +2684,7 @@ function applyRecordToForm(rec, editingId) {
     data.leakPaths.forEach(function(p){
       var t=document.getElementById('lktemp-'+p.id);
       var s=document.getElementById('lkstatus-'+p.id);
-      if(t&&!t.disabled)t.value=(p.temp!=null?p.temp:'');
+      if(t&&!t.disabled)t.value=(p.temp?p.temp:'');
       if(s&&!s.disabled)s.value=p.status||'ok';
     });
   }
