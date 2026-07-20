@@ -1551,6 +1551,9 @@ function so2Reset() {
     var b=document.getElementById('allY7b_'+cat);if(b)b.checked=false;
   });
   ['s2Note7A','s2Note7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  ['s2aDCS','s2aLocal','s2aBefore','s2aAfter','s2cDCS','s2cLocal','s2cBefore','s2cAfter'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  ['s2aZero','s2cZero'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='0';});
+  ['s2aSpan','s2cSpan'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='461';});
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
