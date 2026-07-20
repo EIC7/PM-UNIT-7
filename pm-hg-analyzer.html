@@ -1887,6 +1887,7 @@ function restoreDraftData(rec, editingId) {
 
 /* ── RESET ── */
 function hgResetAll() {
+  if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null;
   var t = new Date();
   document.getElementById('hgTanggal').value = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
@@ -1895,6 +1896,13 @@ function hgResetAll() {
   STEP_DATA.forEach(function(s){ stepState[s.no] = {check:false, sparepart:'', done:false}; hgEvidence[s.no] = {before:[], after:[]}; });
   TABLE54.forEach(function(r){ table54State[r.no] = {selesai:false}; });
   hgSwitchTab(activeFreq);
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
 }
 
 /* ── LOAD FROM HISTORY (URL ?id=xxx&print=1) ── */

@@ -1483,7 +1483,8 @@ function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, functi
 
 /* ══════════════════ RESET ══════════════════ */
 function resetAll() {
-  if (!confirm('Reset semua data pada form ini?')) return;
+  if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
+  window._editingId = null; // mulai entri baru — jangan lagi update record lama
   ['hWorkOrder','hPic','hAssetTag','hAssetDesc'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('hTanggal').value = todayStrG();
   document.getElementById('t1Equipment').value = '';
@@ -1504,6 +1505,13 @@ function resetAll() {
   document.getElementById('apSupervisor').value = '';
   document.getElementById('apOperations').value = '';
   buildChecklistTable(); buildMeasurementTable(); buildSparePartsTable(); renderEvidenceList();
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
 }
 function todayStrG() {
   var d = new Date();
@@ -1732,6 +1740,7 @@ function dbCollectData(modul) {
 
 function applyRecordToForm(rec, editingId) {
   if (!rec) return;
+  if (editingId) window._editingId = editingId; // supaya Simpan berikutnya meng-UPDATE record ini, bukan bikin duplikat baru
   var d = rec.data || {};
   document.getElementById('hTanggal').value = rec.tanggal || '';
   document.getElementById('hPic').value = rec.pic || '';

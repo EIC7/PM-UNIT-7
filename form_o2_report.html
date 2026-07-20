@@ -1962,6 +1962,12 @@ function resetAll() {
   resetChannelList(O2_OUTLET_CHANNELS, 'och');
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
   (function(){
     var today=new Date();
     var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');

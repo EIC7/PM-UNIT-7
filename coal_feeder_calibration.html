@@ -1620,6 +1620,8 @@ function cfRemoveImg(idx) { cfImages.splice(idx, 1); cfRenderPreviews(); }
 
 // ── RESET ─────────────────────────────────────────────────────────────────────
 function cfReset() {
+  if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
+  window._editingId = null; // mulai entri baru — jangan lagi update record lama
   var allIds = [
     'cal1_dev1','cal1_dev2','cal1_dev3',
     'cal1_ppl1','cal1_ppl2','cal1_ppl3',
@@ -1642,6 +1644,13 @@ function cfReset() {
   cfImages = [];
   var p = document.getElementById('cfImgPreview'); if(p) p.innerHTML='';
   updateSizeIndicator('cf', null);
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
 }
 
 // ── COLLECT DATA (for dbSave) ─────────────────────────────────────────────────

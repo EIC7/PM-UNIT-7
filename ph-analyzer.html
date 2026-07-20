@@ -1647,6 +1647,13 @@ function phReset(){
   // Reset notes
   document.querySelectorAll('[id^="phNote_"]').forEach(function(el){ el.value=''; });
   window._editingId=null;
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
   dbShowToast('Form direset');
 }
 

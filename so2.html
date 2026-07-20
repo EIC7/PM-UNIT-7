@@ -1538,6 +1538,8 @@ function so2RefreshAllChecks() {
 }
 
 function so2Reset() {
+  if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
+  window._editingId = null; // mulai entri baru — jangan lagi update record lama
   SO2_CHECKS.forEach(function(item,idx){
     if(item.header) return;
     ['c7aY_','c7aN_','c7bY_','c7bN_'].forEach(function(p){var e=document.getElementById(p+idx);if(e)e.checked=false;});
@@ -1549,6 +1551,13 @@ function so2Reset() {
     var b=document.getElementById('allY7b_'+cat);if(b)b.checked=false;
   });
   ['s2Note7A','s2Note7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
 }
 
 // ── BACKGROUND — sama persis dengan opacity ───────────────────────────────────

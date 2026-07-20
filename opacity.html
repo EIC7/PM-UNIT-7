@@ -1387,6 +1387,7 @@ function imgReEditOp(side,idx){ var img=opImages[side][idx]; imgOpenCropper(img.
 function opRemoveImg(side,idx){ opImages[side].splice(idx,1); opRenderPreviews(side); }
 
 function opReset() {
+  if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
   OP_CHECKS.forEach(function(item,idx){
     ['opChk_','op7A_','op7B_'].forEach(function(p){var e=document.getElementById(p+idx);if(e)e.checked=false;});
@@ -1399,6 +1400,13 @@ function opReset() {
   opImages={'7A':[],'7B':[]};
   ['opImgPreview7A','opImgPreview7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.innerHTML='';});
   updateSizeIndicator('op','7A'); updateSizeIndicator('op','7B');
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
 }
 
 // ── PDF ───────────────────────────────────────────────────────────────────────

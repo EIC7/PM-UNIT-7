@@ -2202,6 +2202,7 @@ function downloadPdf(){
 }
 
 function resetAll(){
+  if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
   pathData=[];diagResults={};metaInfo={tanggal:'—',workorder:'—',operator:'—'};rawHeaders=[];rawRows=[];
   document.getElementById('fileInput').value='';
@@ -2234,6 +2235,13 @@ function resetAll(){
     ldTogglePort(pk,false);
     ['before','after'].forEach(function(phase){ var uid='ld_'+pk+'_'+phase; var el=document.getElementById(uid+'_preview');if(el)el.innerHTML=''; var sz=document.getElementById(uid+'_size');if(sz)sz.textContent='0 KB / 1024 KB'; });
   });
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
 }
 
 function runLeakDiagnosis(){

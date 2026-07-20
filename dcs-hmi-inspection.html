@@ -1916,6 +1916,8 @@ function dcsRemoveImg(side, idx) { dcsImages[side].splice(idx, 1); dcsRenderPrev
    RESET
 ══════════════════════════════════════════════ */
 function dcsReset() {
+  if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
+  window._editingId = null; // mulai entri baru — jangan lagi update record lama
   DCS_CHECKS.forEach(function(item, idx){
     var chk = document.getElementById('dcsChk_'+idx);
     if (chk) chk.checked = false;
@@ -1933,6 +1935,13 @@ function dcsReset() {
   dcsImages = {general:[], defect:[]};
   ['dcsImgPreviewgeneral','dcsImgPreviewdefect'].forEach(function(id){ var e=document.getElementById(id); if(e)e.innerHTML=''; });
   updateSizeIndicator('dcs','general'); updateSizeIndicator('dcs','defect');
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('print');
+    window.history.replaceState({}, '', url.toString());
+  }
   dbShowToast('Form direset ✓');
 }
 
