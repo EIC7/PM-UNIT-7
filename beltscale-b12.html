@@ -1549,6 +1549,8 @@ function bsReset() {
   ['bsU78','bsCCH','bsAllA','bsAllB','bs3mAllCheck','bsDefectAllCheck'].forEach(function(id){var e=document.getElementById(id);if(e&&e.type==='checkbox')e.checked=false;});
   document.querySelectorAll('#bs3mTable input[type=checkbox]').forEach(function(e){if(e.type==='checkbox') e.checked = false;});
   document.querySelectorAll('#bs3mTable input[type=text]').forEach(function(e){e.value='';});
+  document.querySelectorAll('#bsDefectTable input[type=checkbox]').forEach(function(e){if(e.type==='checkbox') e.checked = false;});
+  document.querySelectorAll('#bsDefectTable input[type=text]').forEach(function(e){e.value='';});
   ['bsImgPreview1','bsImgPreview2'].forEach(function(id){var e=document.getElementById(id);if(e)e.innerHTML='';});
   ['bsImgInput1','bsImgInput2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   updateSizeIndicator('bs',1); updateSizeIndicator('bs',2);
