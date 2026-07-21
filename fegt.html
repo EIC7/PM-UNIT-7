@@ -2216,6 +2216,8 @@ function resetAll(){
   document.getElementById('manWorkorder').value='';
   document.getElementById('manOperator').value='';
   PATHS.forEach(function(p){var t=document.getElementById('mtemp-'+p.id);var s=document.getElementById('mstatus-'+p.id);if(t)t.value='';if(s)s.value='ok';});
+  LEAK_PATHS.forEach(function(p){var t=document.getElementById('lktemp-'+p.id);var s=document.getElementById('lkstatus-'+p.id);if(t&&!t.disabled)t.value='';if(s&&!s.disabled)s.value='ok';});
+  var leakResultEl=document.getElementById('leakResult'); if(leakResultEl) leakResultEl.style.display='none';
   document.getElementById('btnPdf').disabled=activeTab==='manual'?false:true;
   document.getElementById('btnSave').disabled=activeTab==='manual'?false:true;
   document.getElementById('previewPanel').style.display='none';

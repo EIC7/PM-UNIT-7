@@ -1644,6 +1644,18 @@ function cfReset() {
   cfImages = [];
   var p = document.getElementById('cfImgPreview'); if(p) p.innerHTML='';
   updateSizeIndicator('cf', null);
+  // Reset toggle "tampil di print" Feeder Calibration & Test Demand Signal ke kondisi awal (off, section tersembunyi)
+  ['feeder','demand'].forEach(function(type){
+    var chkMap = {feeder:'chk-feeder', demand:'chk-demand'};
+    var secMap = {feeder:'section-feeder', demand:'section-demand'};
+    var lblMap = {feeder:'lbl-feeder', demand:'lbl-demand'};
+    var chk = document.getElementById(chkMap[type]);
+    var sec = document.getElementById(secMap[type]);
+    var lbl = document.getElementById(lblMap[type]);
+    if (chk) chk.checked = false;
+    if (sec) sec.style.display = 'none';
+    if (lbl) { lbl.style.background = '#fff'; lbl.style.color = 'var(--steel)'; lbl.style.borderColor = 'var(--border)'; }
+  });
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
