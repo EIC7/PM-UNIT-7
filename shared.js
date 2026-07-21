@@ -250,6 +250,7 @@ function normalizeModul(name) {
     return 'BELT';
   }
   if (n.indexOf('MAINTENANCE')>=0 || n.indexOf('REPORT')>=0) return 'MAINTENANCE_REPORT';
+  if (n.indexOf('SILO')>=0) return 'COAL_SILO_LEVEL';
   if (n.indexOf('COAL')>=0 || n.indexOf('FEEDER')>=0) return 'COAL_FEEDER';
   if (n.indexOf('DCS')>=0 || n.indexOf('HMI')>=0 || n.indexOf('OIS')>=0) return 'DCS_HMI';
   if (n.indexOf('FLOW METER')>=0 || n.indexOf('FLOWMETER')>=0 || n.indexOf('FGD')>=0) return 'FLOWMETER_FGD';
@@ -573,6 +574,10 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
   }
   else if (modulePrefix === 'hg') {
     if (typeof hgRenderPreviews === 'function') hgRenderPreviews(side);
+  }
+  else if (modulePrefix === 'cs') {
+    if (typeof csRenderPreviews === 'function') csRenderPreviews(side);
+    if (typeof csUpdateSizeInfo === 'function') csUpdateSizeInfo(side);
   }
 }
 

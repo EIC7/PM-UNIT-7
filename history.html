@@ -40,6 +40,7 @@
       <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR B1-B2')" style="font-size:12px;padding:6px 14px;flex:none">Belt B1/B2</button>
       <button class="btn btn-outline" onclick="loadHistory('Coal Feeder Calibration')" style="font-size:12px;padding:6px 14px;flex:none">Coal Feeder</button>
       <button class="btn btn-outline" onclick="loadHistory('Analyzer Indicator Transmitter (pH)')" style="font-size:12px;padding:6px 14px;flex:none">pH Analyzer</button>
+      <button class="btn btn-outline" onclick="loadHistory('COAL_SILO_LEVEL')" style="font-size:12px;padding:6px 14px;flex:none">Coal Silo Level</button>
       <button class="btn btn-outline" onclick="loadHistory('DCS-HMI')" style="font-size:12px;padding:6px 14px;flex:none">Dcs-HMI</button>
       <button class="btn btn-outline" onclick="loadHistory('Flow Meter FGD Inlet &amp; Quencher')" style="font-size:12px;padding:6px 14px;flex:none">Flow Meter FGD</button>
       <button class="btn btn-outline" onclick="loadHistory('PM HG Analyzer')" style="font-size:12px;padding:6px 14px;flex:none">PM HG Analyzer</button>
@@ -68,6 +69,7 @@ function modulToUrl(modul, id) {
   if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id;
   if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id;
   if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id;
+  if (norm === 'COAL_SILO_LEVEL')    return 'coal-silo-level.html?id=' + id;
   if (norm === 'CONDUCTIVITY')       return 'conductivity.html?id=' + id;
   if (norm === 'FLOWMETER_FGD')      return 'flow-meter-fgd.html?id=' + id;
   if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id;
@@ -89,6 +91,7 @@ function modulToPrintUrl(modul, id) {
   if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id + '&print=1';
   if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id + '&print=1';
   if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id + '&print=1';
+  if (norm === 'COAL_SILO_LEVEL')    return 'coal-silo-level.html?id=' + id + '&print=1';
   if (norm === 'CONDUCTIVITY')       return 'conductivity.html?id=' + id + '&print=1';
   if (norm === 'FLOWMETER_FGD')      return 'flow-meter-fgd.html?id=' + id + '&print=1';
   if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id + '&print=1';
