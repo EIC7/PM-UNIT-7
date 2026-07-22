@@ -36,6 +36,13 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .cs-buf-label{font-size:10px;color:var(--text3);font-weight:600}
 .cs-buf-input{font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:3px;background:#fff;width:100%;box-sizing:border-box;color:#111;text-align:right}
 .cs-buf-input:focus{border-color:var(--ok);outline:none}
+.cs-tab-btn{font-size:12px;font-weight:600;padding:8px 18px;border-radius:6px;border:1px solid var(--border);background:#f5f5f5;color:var(--text3);cursor:pointer}
+.cs-tab-btn.cs-tab-active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.cs-view-insp{display:none}
+#csMainTable.cs-mode-inspection .cs-view-calib{display:none}
+#csMainTable.cs-mode-inspection .cs-view-insp{display:block}
+#csMainTable.cs-mode-calibration .cs-view-insp{display:none}
+#csMainTable.cs-mode-calibration .cs-view-calib{display:block}
 .cs-result-input{font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:3px;width:100%;box-sizing:border-box;color:#111}
 .cs-result-input:focus{border-color:var(--ok);outline:none}
 .cs-chk-center{text-align:center;vertical-align:middle}
@@ -129,6 +136,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   <div class="panel">
     <div class="section-label">Informasi Pekerjaan</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:4px">
+      <div class="meta-field"><label>No. Dokumen</label><input type="text" id="csDocNo" placeholder="No. dokumen (jika ada)..."></div>
       <div class="meta-field"><label>Date</label><input type="date" id="csDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="csPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="csWO" placeholder="Work Order..."></div>
@@ -145,8 +153,12 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   <!-- STEP OF WORK TABLE -->
   <div class="panel">
     <div class="section-label">Step of Work — Coal Silo Level Transmitter Inspection &amp; Maintenance</div>
+    <div class="cs-tabs" style="display:flex;gap:8px;margin-bottom:14px">
+      <button type="button" id="csTabInspectionBtn" class="cs-tab-btn" onclick="csSetTabMode('inspection')">Inspection</button>
+      <button type="button" id="csTabCalibrationBtn" class="cs-tab-btn cs-tab-active" onclick="csSetTabMode('calibration')">Calibration</button>
+    </div>
     <div class="cs-table-wrap">
-      <table class="cs-main-table" id="csMainTable">
+      <table class="cs-main-table cs-mode-calibration" id="csMainTable">
         <thead id="csTableHead"></thead>
         <tbody id="csTableBody"></tbody>
       </table>
@@ -1289,11 +1301,12 @@ var CSL_STEPS = [
   {no:3,   label:'Cleaning outside/inside all of panel/transmitter and load cell card, use soft cloth/purging with low air instrument or use spray air/ultra jet.', criteria:'Cleanliness', type:'check'},
   {no:4,   label:'Make sure all sealing panel/transmitter, conduit connection is good (no dust & water ingress into inside of panel/conduit/transmitter), no damage conduit/instalation instrumentation.', criteria:'Good Condition', type:'check'},
   {no:5,   label:'Check connection and inspection the termination cable is tight, no looses/defective, check the scoon cable and tidy up the cable, replace the ties cable/cable scoon if required.', criteria:'Good Condition', type:'check'},
-  {no:6,   label:'DCS Reading', criteria:'', type:'measure'},
-  {no:'7a', label:'OMRON K3HB VLC', criteria:'A1', type:'measure'},
-  {no:'7b', label:'OMRON K3HB VLC', criteria:'A2', type:'measure'},
-  {no:'8a', label:'JB Model 400', criteria:'Load Cell Voltage (Vdc) Blue-Orange', type:'measure'},
-  {no:'8b', label:'JB Model 400', criteria:'Load Cell Output (mVdc) Red-Black', type:'measure'},
+  {no:6,   label:'DCS Reading', criteria:'Percentage (%)', type:'measure'},
+  {no:'6a', label:'Display Omron Reading', criteria:'Weight', type:'measure'},
+  {no:'7a', label:'Scaling Point Input', criteria:'A1', type:'measure', note:'Input Mentah (mV) — Titik 1 / Zero, Titik 2 / Span', labelSpan:2},
+  {no:'7b', label:'Scaling Point Input', criteria:'A2', type:'measure', skipLabel:true},
+  {no:'8a', label:'Scaling Point Display', criteria:'A1', type:'measure', note:'Nilai Yang Ditampilkan / Aktual — Titik 1, Titik 2', labelSpan:2},
+  {no:'8b', label:'Scaling Point Display', criteria:'A2', type:'measure', skipLabel:true},
   {no:'9a', label:'Load Cell 1', criteria:'Load Cell Voltage (Vdc) Black-Green', type:'measure'},
   {no:'9b', label:'Load Cell 1', criteria:'Load Cell Output (mVdc) Red-White', type:'measure'},
   {no:'10a', label:'Load Cell 2', criteria:'Load Cell Voltage (Vdc) Black-Green', type:'measure'},
@@ -1432,11 +1445,20 @@ function csBuildTable() {
     tdNo.textContent=step.no;
     tr2.appendChild(tdNo);
 
-    // Label
-    var tdLabel=document.createElement('td');
-    tdLabel.style.cssText='font-size:12px;padding:6px 10px';
-    tdLabel.textContent=step.label;
-    tr2.appendChild(tdLabel);
+    // Label (skip entirely if merged into previous row's rowspan)
+    if(!step.skipLabel){
+      var tdLabel=document.createElement('td');
+      tdLabel.style.cssText='font-size:12px;padding:6px 10px';
+      if(step.labelSpan) tdLabel.rowSpan=step.labelSpan;
+      tdLabel.appendChild(document.createTextNode(step.label));
+      if(step.note){
+        var noteDiv=document.createElement('div');
+        noteDiv.style.cssText='font-size:10px;color:var(--text3);font-weight:400;font-style:italic;margin-top:3px';
+        noteDiv.textContent=step.note;
+        tdLabel.appendChild(noteDiv);
+      }
+      tr2.appendChild(tdLabel);
+    }
 
     // Criteria
     var tdCrit=document.createElement('td');
@@ -1478,10 +1500,14 @@ function csBuildUnitCell(step, idx, uid) {
       return '<div class="cs-chk-center" style="padding:4px 0"><input type="checkbox" id="csU_'+uid2+'_'+idx+'" onchange="csUpdateResult('+idx+')" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></div>';
     case 'measure':
       return '<div class="cs-unit-cell-inner">'+
+        '<div class="cs-view-calib">'+
         '<div class="cs-buf-row"><span class="cs-buf-label">As Found</span><span class="cs-buf-label">As Left</span></div>'+
         '<div class="cs-buf-row" style="margin-bottom:0">'+
         '<input class="cs-buf-input" id="csAF_'+uid2+'_'+idx+'" type="number" step="0.01" placeholder="—" oninput="csUpdateResult('+idx+')">'+
         '<input class="cs-buf-input" id="csAL_'+uid2+'_'+idx+'" type="number" step="0.01" placeholder="—" oninput="csUpdateResult('+idx+')">'+
+        '</div></div>'+
+        '<div class="cs-view-insp">'+
+        '<input class="cs-buf-input" style="text-align:center" id="csINSP_'+uid2+'_'+idx+'" type="number" step="0.01" placeholder="Reading..." oninput="csUpdateResult('+idx+')">'+
         '</div></div>';
     default:
       return '';
@@ -1503,12 +1529,30 @@ function csUpdateResult(idx) {
       var el=document.getElementById('csU_'+uid2+'_'+idx);
       if(el&&el.checked) hasValue=true;
     } else {
-      // any input has a value? (As Found / As Left)
-      var possibles=['csAF_'+uid2+'_'+idx,'csAL_'+uid2+'_'+idx];
+      // any input has a value? (mode-aware: single reading in Inspection, As Found/As Left in Calibration)
+      var possibles = (window.csTabMode==='inspection')
+        ? ['csINSP_'+uid2+'_'+idx]
+        : ['csAF_'+uid2+'_'+idx,'csAL_'+uid2+'_'+idx];
       possibles.forEach(function(pid){var e=document.getElementById(pid);if(e&&e.value.trim())hasValue=true;});
     }
   });
   resEl.innerHTML = hasValue ? '<span class="cs-ok-badge">ok</span>' : '';
+}
+
+window.csTabMode = 'calibration'; // default view: full As Found/As Left calibration table
+
+function csSetTabMode(mode){
+  window.csTabMode = mode;
+  var table=document.getElementById('csMainTable');
+  if(table){
+    table.classList.remove('cs-mode-inspection','cs-mode-calibration');
+    table.classList.add('cs-mode-'+mode);
+  }
+  var btnInsp=document.getElementById('csTabInspectionBtn');
+  var btnCalib=document.getElementById('csTabCalibrationBtn');
+  if(btnInsp) btnInsp.classList.toggle('cs-tab-active', mode==='inspection');
+  if(btnCalib) btnCalib.classList.toggle('cs-tab-active', mode==='calibration');
+  CSL_STEPS.forEach(function(_,idx){ csUpdateResult(idx); });
 }
 
 function csCheckAll(checked){
@@ -1626,6 +1670,7 @@ function csReset(){
   if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
 
+  document.getElementById('csDocNo').value='';
   document.getElementById('csPIC').value='';
   document.getElementById('csWO').value='';
   // Reset all checkboxes and inputs di tabel utama (check + measure As Found/As Left)
@@ -1634,6 +1679,7 @@ function csReset(){
     else el.value='';
   });
   CSL_STEPS.forEach(function(_,idx){ csUpdateResult(idx); });
+  csSetTabMode('calibration');
   // Reset images
   CSL_UNITS.forEach(function(u){ csImages[u.id]=[]; csRenderPreviews(u.id); });
   // Reset notes
@@ -1671,7 +1717,7 @@ function dbCollectData(modul){
       if(step.type==='check'){
         var chkU=document.getElementById('csU_'+uid2+'_'+idx); cell.unitChk=!!(chkU&&chkU.checked);
       } else {
-        var fields=['csAF_'+uid2+'_'+idx,'csAL_'+uid2+'_'+idx];
+        var fields=['csAF_'+uid2+'_'+idx,'csAL_'+uid2+'_'+idx,'csINSP_'+uid2+'_'+idx];
         fields.forEach(function(fid){ var e=document.getElementById(fid); if(e) cell[fid]=e.value; });
       }
       uid2s[u.id]=cell;
@@ -1695,7 +1741,7 @@ function dbCollectData(modul){
     pic:gv('csPIC'),
     work_order:gv('csWO'),
     unit:'Unit 7',
-    data:{activeUnits:Object.keys(csActiveUnits).filter(function(k){return csActiveUnits[k];}),steps:steps,images:images,notes:notes}
+    data:{activeUnits:Object.keys(csActiveUnits).filter(function(k){return csActiveUnits[k];}),steps:steps,images:images,notes:notes,docNo:gv('csDocNo'),tabMode:window.csTabMode}
   };
 }
 
@@ -1733,16 +1779,28 @@ function csDownloadPdf(){
       function checkPage(need){
         if(y+need>ph-bgFooterH){
           doc.addPage(); drawBg(doc,pw,ph);
+          doc.setFillColor(255,255,255);
+          doc.setGState && doc.setGState(new doc.GState({opacity: 0.85}));
+          doc.rect(marginX, marginTop2, contentW, ph-marginTop2-bgFooterH, 'F');
+          if (doc.setGState) doc.setGState(new doc.GState({opacity: 1}));
           y=marginTop2;
         }
       }
 
-      // Halaman pertama — background
+      // Halaman pertama — background lalu white overlay semi-transparan (hanya kolom konten)
       drawBg(doc,pw,ph);
+      // Cover area konten (bukan seluruh halaman) dengan putih semi-transparan
+      // supaya teks tetap terbaca tapi background/border template masih terlihat
+      doc.setFillColor(255,255,255);
+      doc.setGState && doc.setGState(new doc.GState({opacity: 0.85}));
+      doc.rect(marginX, marginTop, contentW, ph-marginTop-bgFooterH, 'F');
+      if (doc.setGState) doc.setGState(new doc.GState({opacity: 1}));
 
       // ── HEADER TITLE ──
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,40,100);
-      doc.text('Level Transmitter Inspection & Maintenance', marginX, y); y+=8;
+      doc.text('Level Transmitter Inspection & Maintenance', marginX, y); y+=6;
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,60,60);
+      doc.text(safe(gv('csDocNo')), marginX, y); y+=6;
 
       // ── INFO PEKERJAAN — Fitur L: Tabel Grid Full-Width (Label | Value) ──
       var padIn = 3;
@@ -1754,6 +1812,7 @@ function csDownloadPdf(){
         ['Tanggal', safe(gv('csDate'))],
         ['PIC', safe(gv('csPIC'))],
         ['Work Order', safe(gv('csWO'))],
+        ['No. Dokumen', safe(gv('csDocNo'))],
         ['Dicetak', safe(nowStr)]
       ];
 
@@ -1847,11 +1906,17 @@ function csDownloadPdf(){
             var el=document.getElementById('csU_'+uid2+'_'+idx);
             cellVal=(el&&el.checked)?'__CHK__':'__BOX__';
           } else if(step.type==='measure'){
-            var elAF=document.getElementById('csAF_'+uid2+'_'+idx);
-            var elAL=document.getElementById('csAL_'+uid2+'_'+idx);
-            var vAF=(elAF&&elAF.value.trim())?elAF.value.trim():'—';
-            var vAL=(elAL&&elAL.value.trim())?elAL.value.trim():'—';
-            cellVal='AF: '+vAF+'\nAL: '+vAL;
+            if(window.csTabMode==='inspection'){
+              var elI=document.getElementById('csINSP_'+uid2+'_'+idx);
+              var vI=(elI&&elI.value.trim())?elI.value.trim():'—';
+              cellVal='Reading: '+vI;
+            } else {
+              var elAF=document.getElementById('csAF_'+uid2+'_'+idx);
+              var elAL=document.getElementById('csAL_'+uid2+'_'+idx);
+              var vAF=(elAF&&elAF.value.trim())?elAF.value.trim():'—';
+              var vAL=(elAL&&elAL.value.trim())?elAL.value.trim():'—';
+              cellVal='AF: '+vAF+'\nAL: '+vAL;
+            }
           }
           row.push(cellVal);
         });
@@ -1877,7 +1942,7 @@ function csDownloadPdf(){
         body:tableRows,
         theme:'grid',
         tableWidth: contentW,
-        margin:{left:marginX, right:marginX, top:marginTop2, bottom:marginBottom},
+        margin:{left:marginX, right:marginX},
         headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:tableFontSize,halign:'center',font:'helvetica',cellPadding:1.5},
         bodyStyles:{fontSize:tableFontSize,textColor:[20,30,25],font:'helvetica',cellPadding:1.5},
         columnStyles:colStyles,
@@ -1896,6 +1961,10 @@ function csDownloadPdf(){
         willDrawPage:function(data){
           if(data.pageNumber>1){
             drawBg(doc,pw,ph);
+            doc.setFillColor(255,255,255);
+            doc.setGState && doc.setGState(new doc.GState({opacity: 0.85}));
+            doc.rect(marginX, marginTop2, contentW, ph-marginTop2-bgFooterH, 'F');
+            if (doc.setGState) doc.setGState(new doc.GState({opacity: 1}));
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
             doc.text('Coal Silo Level Transmitter — (lanjutan)', pw/2, marginTop2-3, {align:'center'});
           }
@@ -1943,7 +2012,7 @@ function csDownloadPdf(){
             imgs.forEach(function(img){
               var dim = iePhotoDrawSize(img, contentW-6, 60);
               var rowH = dim.h + 12;
-              if(y+rowH>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); y=marginTop2; }
+              if(y+rowH>ph-bgFooterH){ doc.addPage(); drawBg(doc,pw,ph); doc.setFillColor(255,255,255); doc.setGState && doc.setGState(new doc.GState({opacity: 0.85})); doc.rect(marginX,marginTop2,contentW,ph-marginTop2-bgFooterH,'F'); if (doc.setGState) doc.setGState(new doc.GState({opacity: 1})); y=marginTop2; }
               var ox = (img.offsetX||0) * 10; // cm -> mm
               var ix = marginX+3+ox;
               ix = Math.max(marginX+3, Math.min(ix, pw-marginX-dim.w));
@@ -1984,6 +2053,7 @@ function applyRecordToForm(rec, editingId) {
   window._editingId=editingId;
   var sv=function(eid,val){var e=document.getElementById(eid);if(e)e.value=val||'';};
   sv('csDate',rec.tanggal); sv('csPIC',rec.pic); sv('csWO',rec.work_order);
+  if(data.docNo) sv('csDocNo',data.docNo);
 
   // Restore active units
   if(data.activeUnits&&data.activeUnits.length){
@@ -1993,6 +2063,7 @@ function applyRecordToForm(rec, editingId) {
     csBuildTable();
     csBuildNotesArea();
   }
+  csSetTabMode(data.tabMode||'calibration');
 
   var activeUnits=csGetActiveUnits();
 
