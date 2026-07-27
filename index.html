@@ -593,6 +593,42 @@
             min-height: 18px;
         }
 
+        .area-filter-wrap {
+            max-width: 560px;
+            margin: 14px auto 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .area-filter-label {
+            font-size: 12.5px;
+            color: var(--text-light);
+            white-space: nowrap;
+        }
+
+        .area-filter-select {
+            flex: 1;
+            max-width: 260px;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg2);
+            font-size: 13.5px;
+            font-family: inherit;
+            color: var(--text-dark);
+            outline: none;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .area-filter-select:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+        }
+
         .no-results {
             display: none;
             text-align: center;
@@ -989,6 +1025,15 @@
             <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
         </div>
         <div class="search-count" id="searchCount"></div>
+        <div class="area-filter-wrap">
+            <label class="area-filter-label" for="areaFilter">Filter Berdasarkan Area</label>
+            <select id="areaFilter" class="area-filter-select">
+                <option value="">Semua Area</option>
+                <option value="boiler">Boiler</option>
+                <option value="turbine">Turbine</option>
+                <option value="common">Common</option>
+            </select>
+        </div>
     </div>
 
     <!-- MODULE SELECTION SECTION -->
@@ -1037,7 +1082,7 @@
             </div>
 
             <!-- MOD-16 Flow Meter FGD Inlet & Quencher -->
-            <div class="pm-card" onclick="window.location.href='flow-meter-fgd.html'" style="--card-color: #0ea5e9;">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='flow-meter-fgd.html'" style="--card-color: #0ea5e9;">
                 <div class="card-index">MOD-16</div>
                 <div class="card-icon">🌊</div>
                 <div class="card-title">Flow Meter FGD<br>Inlet & Quencher</div>
@@ -1052,7 +1097,7 @@
             </div>
 
             <!-- MOD-01 PM O2 Inlet & Outlet -->
-            <div class="pm-card" onclick="openO2Popup()">
+            <div class="pm-card" data-area="boiler" onclick="openO2Popup()">
                 <div class="card-index">MOD-01</div>
                 <div class="card-icon">🫧</div>
                 <div class="card-title">PM O2<br>Inlet & Outlet</div>
@@ -1067,7 +1112,7 @@
             </div>
 
             <!-- MOD-02 CEMS Calibration -->
-            <div class="pm-card" onclick="window.open('https://unit7cems.figma.site/','_blank')">
+            <div class="pm-card" data-area="boiler" onclick="window.open('https://unit7cems.figma.site/','_blank')">
                 <div class="card-index">MOD-02</div>
                 <div class="card-icon">📡</div>
                 <div class="card-title">CEMS<br>Calibration</div>
@@ -1082,7 +1127,7 @@
             </div>
 
             <!-- MOD-03 FEGT & LD -->
-            <div class="pm-card" onclick="window.location.href='fegt.html'">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='fegt.html'">
                 <div class="card-index">MOD-03</div>
                 <div class="card-icon">🌡️</div>
                 <div class="card-title">FEGT &<br>Leak Detection</div>
@@ -1097,7 +1142,7 @@
             </div>
 
             <!-- MOD-04 SO2 Scrubber -->
-            <div class="pm-card" onclick="window.location.href='so2.html'">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='so2.html'">
                 <div class="card-index">MOD-04</div>
                 <div class="card-icon">💨</div>
                 <div class="card-title">SO2 Scrubber<br>Inlet</div>
@@ -1111,7 +1156,7 @@
             </div>
 
             <!-- MOD-05 Opacity -->
-            <div class="pm-card" onclick="window.location.href='opacity.html'">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='opacity.html'">
                 <div class="card-index">MOD-05</div>
                 <div class="card-icon">👁️</div>
                 <div class="card-title">Opacity<br>Monitor</div>
@@ -1125,7 +1170,7 @@
             </div>
 
             <!-- MOD-06 Belt Scale E4 & E5 -->
-            <div class="pm-card" onclick="window.location.href='beltscale-e45.html'">
+            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-e45.html'">
                 <div class="card-index">MOD-06</div>
                 <div class="card-icon">⚖️</div>
                 <div class="card-title">Belt Scale<br>Conveyor E4 & E5</div>
@@ -1140,7 +1185,7 @@
             </div>
 
             <!-- MOD-07 Belt Scale E2 & E3 -->
-            <div class="pm-card" onclick="window.location.href='beltscale-e23.html'">
+            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-e23.html'">
                 <div class="card-index">MOD-07</div>
                 <div class="card-icon">⚖️</div>
                 <div class="card-title">Belt Scale<br>Conveyor E2 & E3</div>
@@ -1155,7 +1200,7 @@
             </div>
 
             <!-- MOD-08 Belt Scale B1 & B2 -->
-            <div class="pm-card" onclick="window.location.href='beltscale-b12.html'">
+            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-b12.html'">
                 <div class="card-index">MOD-08</div>
                 <div class="card-icon">⚖️</div>
                 <div class="card-title">Belt Scale<br>Conveyor B1 & B2</div>
@@ -1170,7 +1215,7 @@
             </div>
 
             <!-- MOD-10 Analyzer Indicator Transmitter (pH) -->
-            <div class="pm-card" onclick="window.location.href='ph-analyzer.html'">
+            <div class="pm-card" data-area="common" onclick="window.location.href='ph-analyzer.html'">
                 <div class="card-index">MOD-10</div>
                 <div class="card-icon">🧪</div>
                 <div class="card-title">Analyzer Indicator<br>Transmitter (pH)</div>
@@ -1200,7 +1245,7 @@
             </div>
 
             <!-- MOD-12 Inspection and Cleaning DCS HMI/OIS -->
-            <div class="pm-card" onclick="window.location.href='dcs-hmi-inspection.html'">
+            <div class="pm-card" data-area="boiler common" onclick="window.location.href='dcs-hmi-inspection.html'">
                 <div class="card-index">MOD-12</div>
                 <div class="card-icon">🖥️</div>
                 <div class="card-title">Inspection & Cleaning<br>DCS HMI/OIS</div>
@@ -1215,7 +1260,7 @@
             </div>
 
             <!-- MOD-13 PM Conductivity -->
-            <div class="pm-card" onclick="window.location.href='conductivity.html'">
+            <div class="pm-card" data-area="boiler common" onclick="window.location.href='conductivity.html'">
                 <div class="card-index">MOD-13</div>
                 <div class="card-icon">⚡</div>
                 <div class="card-title">PM<br>Conductivity</div>
@@ -1230,7 +1275,7 @@
             </div>
 
             <!-- MOD-17 PM HG Analyzer -->
-            <div class="pm-card" onclick="window.location.href='pm-hg-analyzer.html'" style="--card-color: #7c3aed;">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='pm-hg-analyzer.html'" style="--card-color: #7c3aed;">
                 <div class="card-index">MOD-17</div>
                 <div class="card-icon">⚗️</div>
                 <div class="card-title">PM HG<br>Analyzer</div>
@@ -1245,7 +1290,7 @@
             </div>
 
             <!-- MOD-18 Generator Stator Leak Monitoring -->
-            <div class="pm-card" onclick="window.location.href='generator_stator_leak_monitoring.html'" style="--card-color: #0e7490;">
+            <div class="pm-card" data-area="turbine" onclick="window.location.href='generator_stator_leak_monitoring.html'" style="--card-color: #0e7490;">
                 <div class="card-index">MOD-18</div>
                 <div class="card-icon">🛢️</div>
                 <div class="card-title">Generator Stator<br>Leak Monitoring</div>
@@ -1260,7 +1305,7 @@
             </div>
 
             <!-- MOD-20 Coal Silo Level Transmitter -->
-            <div class="pm-card" onclick="window.location.href='coal-silo-level.html'" style="--card-color: #b45309;">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='coal-silo-level.html'" style="--card-color: #b45309;">
                 <div class="card-index">MOD-20</div>
                 <div class="card-icon">🧪</div>
                 <div class="card-title">Coal Silo Level<br>Transmitter</div>
@@ -1274,7 +1319,7 @@
             </div>
 
             <!-- MOD-19 Mark VIe Alarm & Module Inspection -->
-            <div class="pm-card" onclick="window.location.href='mark_vie_inspection.html'" style="--card-color: #6d28d9;">
+            <div class="pm-card" data-area="turbine" onclick="window.location.href='mark_vie_inspection.html'" style="--card-color: #6d28d9;">
                 <div class="card-index">MOD-19</div>
                 <div class="card-icon">🧩</div>
                 <div class="card-title">Mark VIe Alarm &<br>Module Inspection</div>
@@ -1431,34 +1476,44 @@
         var searchClear = document.getElementById('searchClear');
         var searchCount = document.getElementById('searchCount');
         var noResults = document.getElementById('noResults');
+        var areaFilter = document.getElementById('areaFilter');
 
         searchInput.addEventListener('input', function() {
             var q = this.value.trim().toLowerCase();
             searchClear.style.display = q ? 'block' : 'none';
-            filterCards(q);
+            filterCards();
+        });
+
+        areaFilter.addEventListener('change', function() {
+            filterCards();
         });
 
         function clearSearch() {
             searchInput.value = '';
             searchClear.style.display = 'none';
-            filterCards('');
+            filterCards();
             searchInput.focus();
         }
 
-        function filterCards(q) {
+        function filterCards() {
+            var q = searchInput.value.trim().toLowerCase();
+            var area = areaFilter.value; // '' = Semua Area (tidak difilter)
             var cards = document.querySelectorAll('.pm-card');
             var visible = 0;
 
             cards.forEach(function(card) {
                 var text = card.innerText.toLowerCase();
-                var match = !q || text.includes(q);
+                var textMatch = !q || text.includes(q);
+                var cardAreas = (card.getAttribute('data-area') || '').split(' ');
+                var areaMatch = !area || cardAreas.includes(area);
+                var match = textMatch && areaMatch;
                 card.style.display = match ? '' : 'none';
                 if (match) visible++;
             });
 
             noResults.style.display = (visible === 0) ? 'block' : 'none';
 
-            if (q) {
+            if (q || area) {
                 searchCount.textContent = visible + ' modul ditemukan';
             } else {
                 searchCount.textContent = '';
