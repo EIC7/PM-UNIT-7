@@ -147,6 +147,10 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       <div class="meta-field"><label>PIC</label><input type="text" id="csPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="csWO" placeholder="Work Order..."></div>
     </div>
+    <div class="meta-field" style="margin-top:10px">
+      <label>Work To Be Done</label>
+      <textarea id="csWTBD" rows="2" placeholder="Uraian pekerjaan yang akan dilakukan..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
   </div>
 
   <!-- PILIH UNIT COAL SILO -->
@@ -1780,6 +1784,7 @@ function csReset(){
 
   document.getElementById('csPIC').value='';
   document.getElementById('csWO').value='';
+  document.getElementById('csWTBD').value='';
   // Reset all checkboxes and inputs di tabel utama (check + measure As Found/As Left)
   document.querySelectorAll('#csTableBody input').forEach(function(el){
     if(el.type==='checkbox') el.checked=false;
@@ -1848,7 +1853,7 @@ function dbCollectData(modul){
     pic:gv('csPIC'),
     work_order:gv('csWO'),
     unit:'Unit 7',
-    data:{activeUnits:Object.keys(csActiveUnits).filter(function(k){return csActiveUnits[k];}),steps:steps,images:images,notes:notes,tabMode:window.csTabMode}
+    data:{activeUnits:Object.keys(csActiveUnits).filter(function(k){return csActiveUnits[k];}),steps:steps,images:images,notes:notes,workToBeDone:gv('csWTBD'),tabMode:window.csTabMode}
   };
 }
 
@@ -1917,6 +1922,7 @@ function csDownloadPdf(){
         ['Tanggal', safe(gv('csDate'))],
         ['PIC', safe(gv('csPIC'))],
         ['Work Order', safe(gv('csWO'))],
+        ['Work To Be Done', safe(gv('csWTBD'))],
         ['Dicetak', safe(nowStr)]
       ];
 
@@ -2157,6 +2163,7 @@ function applyRecordToForm(rec, editingId) {
   window._editingId=editingId;
   var sv=function(eid,val){var e=document.getElementById(eid);if(e)e.value=val||'';};
   sv('csDate',rec.tanggal); sv('csPIC',rec.pic); sv('csWO',rec.work_order);
+  sv('csWTBD', data.workToBeDone);
 
   // Restore active units
   if(data.activeUnits&&data.activeUnits.length){
