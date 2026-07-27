@@ -286,6 +286,13 @@ body{
 /* ── CROP MODAL (3-mode) ── */
 #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
 #cropModal.show{display:flex}
+/* ── MULTI-UPLOAD NOTIFICATION OVERLAY (Fitur N) ── */
+#puUploadOverlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.8);flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#puUploadOverlay.show{display:flex}
+#puUploadOverlaySpinner{width:38px;height:38px;border:4px solid rgba(255,255,255,0.25);border-top-color:#2ecc71;border-radius:50%;animation:puSpin 0.8s linear infinite;margin-bottom:16px}
+#puUploadOverlayTitle{font-size:15px;font-weight:700;color:#fff}
+#puUploadOverlaySub{font-size:12px;color:#c9d6cf;margin-top:6px;max-width:280px}
+@keyframes puSpin{to{transform:rotate(360deg)}}
 .crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
 .crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
 .crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
@@ -527,6 +534,13 @@ body{
             </div>
         </div>
     </div>
+</div>
+
+<!-- MULTI-UPLOAD NOTIFICATION OVERLAY (Fitur N) -->
+<div id="puUploadOverlay" onclick="puHideUploadOverlay()">
+    <div id="puUploadOverlaySpinner"></div>
+    <div id="puUploadOverlayTitle"></div>
+    <div id="puUploadOverlaySub"></div>
 </div>
 
 <!-- ═══ EDIT GAMBAR (Insert Shape: Teks/Panah/Garis/Kotak/Oval) ═══ -->
@@ -1463,6 +1477,99 @@ function nudgeImageInArray(imgArr, imgIdx, delta, rerenderFn) {
     if (typeof rerenderFn === 'function') rerenderFn();
 }
 
+/* ── Fitur N: Upload Multi-Gambar — Skip-Crop Otomatis + Overlay Notifikasi ──
+   Dipakai bareng oleh *HandleFiles saat file yang dipilih user > 1: modal crop
+   di-skip otomatis, tiap gambar disimpan PENUH (tanpa dipotong) dengan ukuran
+   cetak default (DEFAULT_CROP_W_CM x DEFAULT_CROP_H_CM), sama seperti kalau
+   user manual pilih mode Default lalu Simpan. */
+var puUploadOverlayTimer = null;
+function puShowUploadOverlay(mode) {
+    var ov = document.getElementById('puUploadOverlay');
+    var spinner = document.getElementById('puUploadOverlaySpinner');
+    var title = document.getElementById('puUploadOverlayTitle');
+    var sub = document.getElementById('puUploadOverlaySub');
+    if (!ov) return;
+    if (puUploadOverlayTimer) { clearTimeout(puUploadOverlayTimer); puUploadOverlayTimer = null; }
+    if (mode === 'loading') {
+        spinner.style.display = '';
+        title.textContent = 'Sedang mengupload gambar';
+        sub.textContent = 'Upload banyak gambar mungkin membutuhkan waktu';
+        ov.classList.add('show');
+    } else if (mode === 'done') {
+        spinner.style.display = 'none';
+        title.textContent = 'Silahkan crop gambar secara manual per item';
+        sub.textContent = 'Ketuk di mana saja untuk menutup';
+        ov.classList.add('show');
+        puUploadOverlayTimer = setTimeout(puHideUploadOverlay, 3000);
+    }
+}
+function puHideUploadOverlay() {
+    var ov = document.getElementById('puUploadOverlay');
+    if (ov) ov.classList.remove('show');
+    if (puUploadOverlayTimer) { clearTimeout(puUploadOverlayTimer); puUploadOverlayTimer = null; }
+}
+
+function puCompressFullImage(dataUrl, imgArr, cb) {
+    var img = new Image();
+    img.onload = function() {
+        var canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        var MAX = 1*1024*1024;
+        var out;
+        for (var q=0.9; q>=0.25; q-=0.1) {
+            out = canvas.toDataURL('image/jpeg', q);
+            var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
+            var newSize = out.length*0.75;
+            if (currentTotal+newSize <= MAX) break;
+            if (q<=0.25) {
+                var factor = Math.sqrt(MAX/(currentTotal+newSize));
+                var c2 = document.createElement('canvas');
+                c2.width = Math.max(50, Math.floor(canvas.width*factor));
+                c2.height = Math.max(50, Math.floor(canvas.height*factor));
+                c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+                out = c2.toDataURL('image/jpeg', 0.7);
+                break;
+            }
+        }
+        cb(out);
+    };
+    img.onerror = function(){ cb(null); };
+    img.src = dataUrl;
+}
+
+function puHandleMultiUpload(fileArr, imgArr, side, modulePrefix) {
+    puShowUploadOverlay('loading');
+    var pending = fileArr.length;
+    var renderFnName = modulePrefix + 'RenderPreviews';
+    var doRender = function(){ if (typeof window[renderFnName] === 'function') window[renderFnName](side); };
+    var finishOne = function() { pending--; if (pending <= 0) puShowUploadOverlay('done'); };
+    fileArr.forEach(function(file) {
+        if (!isImageFile(file)) {
+            var r = new FileReader();
+            r.onload = function(ev){
+                imgArr.push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''});
+                doRender();
+                finishOne();
+            };
+            r.onerror = finishOne;
+            r.readAsDataURL(file);
+            return;
+        }
+        fileToJpegDataUrl(file, function(rawDataUrl){
+            if (!rawDataUrl) { finishOne(); return; }
+            puCompressFullImage(rawDataUrl, imgArr, function(finalDataUrl){
+                if (!finalDataUrl) { finishOne(); return; }
+                var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, type:'image/jpeg', caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
+                imgArr.push(entry);
+                doRender();
+                if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, modulePrefix, side || '');
+                finishOne();
+            });
+        });
+    });
+}
+
 /* ── Drag & resize kotak crop (mousedown+touchstart) ── */
 function initCropDrag() {
     var box = document.getElementById('cropBox');
@@ -1837,7 +1944,9 @@ function dcsRefreshAll() {
 function dcsHandleDrop(e, side) { e.preventDefault(); dcsHandleFiles(e.dataTransfer.files, side); }
 
 function dcsHandleFiles(files, side) {
-  Array.from(files).forEach(function(file) {
+  var fileArr = Array.from(files);
+  if (fileArr.length > 1) { puHandleMultiUpload(fileArr, dcsImages[side], side, 'dcs'); return; }
+  fileArr.forEach(function(file) {
     if (!isImageFile(file)) {
       var r = new FileReader();
       r.onload = function(ev) {
