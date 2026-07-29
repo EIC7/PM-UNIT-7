@@ -145,7 +145,7 @@ var PM_GATE_TABLE = 'trusted_devices';
 // GANTI STRING INI KAPAN SAJA untuk memaksa SEMUA user (yang device-nya
 // belum ditandai Trusted lewat device-admin.html) memasukkan password baru.
 // Device yang sudah Trusted tetap lolos otomatis walau password diganti.
-var PM_GATE_PASSWORD = 'paiton7';
+var PM_GATE_PASSWORD = 'eicunit7';
 
 function pmSimpleHash(str) {
   // Hash sederhana (BUKAN cryptographic-grade) — cukup supaya password tidak
