@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Device Admin — Kelola Akses PM Unit 7</title>
+<script src="shared.js"></script>
+<style>
+  :root{
+    --bg:#f8fafb; --bg2:#ffffff; --bg3:#f3f4f6;
+    --border:#e5e7eb; --text-dark:#1f2937; --text-mid:#4b5563; --text-light:#9ca3af;
+    --green:#16a085; --red:#ef4444; --amber:#f59e0b;
+    --shadow-sm:0 1px 2px rgba(0,0,0,0.05); --shadow-md:0 4px 16px rgba(0,0,0,0.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text-dark)}
+  header{background:var(--bg2);border-bottom:1px solid var(--border);padding:18px clamp(16px,4vw,40px);position:sticky;top:0;z-index:10}
+  header h1{margin:0;font-size:18px;font-weight:800}
+  header p{margin:4px 0 0;font-size:12.5px;color:var(--text-light)}
+  main{max-width:1000px;margin:0 auto;padding:22px clamp(16px,4vw,40px) 60px}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .toolbar-info{font-size:12.5px;color:var(--text-light)}
+  button.refresh{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);font-size:12.5px;font-weight:600;color:var(--text-mid);cursor:pointer}
+  button.refresh:hover{background:var(--bg3)}
+  .device-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .device-main{flex:1;min-width:220px}
+  .device-name{font-size:14.5px;font-weight:700;color:var(--text-dark)}
+  .device-name .empty{color:var(--text-light);font-weight:400;font-style:italic}
+  .device-meta{font-size:11.5px;color:var(--text-light);margin-top:3px;line-height:1.6}
+  .device-meta code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:10.5px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+  .badge.trusted{background:#e6f7f1;color:var(--green)}
+  .badge.pending{background:#fff3e0;color:var(--amber)}
+  .actions{display:flex;gap:8px;flex-shrink:0}
+  .btn{padding:8px 14px;border-radius:8px;border:none;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .btn.trust{background:var(--green);color:#fff}
+  .btn.revoke{background:var(--bg3);color:var(--text-mid);border:1px solid var(--border)}
+  .btn.del{background:#fdecea;color:var(--red)}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--text-light)}
+  .empty-state .ic{font-size:36px;margin-bottom:10px}
+  .loading{text-align:center;padding:40px;color:var(--text-light);font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔑 Device Admin</h1>
+  <p>Kelola device yang boleh akses tanpa password (Trusted Device) — Unit 7 PLTU Paiton</p>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="toolbar-info" id="daCount">Memuat data...</div>
+    <button class="refresh" onclick="daLoadDevices()">↻ Refresh</button>
+  </div>
+  <div id="daList"><div class="loading">Memuat daftar device...</div></div>
+</main>
+
+<script>
+function daFmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    var d = new Date(iso);
+    return d.toLocaleString('id-ID', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+  } catch(e) { return iso; }
+}
+
+function daParseUA(ua) {
+  if (!ua) return 'Tidak diketahui';
+  var os = 'OS?', browser = 'Browser?';
+  if (/android/i.test(ua)) os = 'Android';
+  else if (/iphone|ipad|ios/i.test(ua)) os = 'iOS';
+  else if (/windows/i.test(ua)) os = 'Windows';
+  else if (/mac os/i.test(ua)) os = 'macOS';
+  else if (/linux/i.test(ua)) os = 'Linux';
+  if (/edg\//i.test(ua)) browser = 'Edge';
+  else if (/chrome\//i.test(ua)) browser = 'Chrome';
+  else if (/firefox\//i.test(ua)) browser = 'Firefox';
+  else if (/safari\//i.test(ua)) browser = 'Safari';
+  return browser + ' · ' + os;
+}
+
+function daLoadDevices() {
+  var listEl = document.getElementById('daList');
+  var countEl = document.getElementById('daCount');
+  listEl.innerHTML = '<div class="loading">Memuat daftar device...</div>';
+  supaFetch('GET', 'trusted_devices?order=last_seen.desc')
+    .then(function(rows) {
+      countEl.textContent = rows.length + ' device pernah tercatat';
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="empty-state"><div class="ic">📭</div>Belum ada device yang tercatat.<br>Device baru akan muncul di sini setelah user memasukkan password pertama kali.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map(function(r) {
+        var name = r.device_name ? r.device_name : '<span class="empty">(tanpa nama)</span>';
+        var badge = r.trusted
+          ? '<span class="badge trusted">✓ Trusted</span>'
+          : '<span class="badge pending">⏳ Pending</span>';
+        var actionBtn = r.trusted
+          ? '<button class="btn revoke" onclick="daToggleTrust(\'' + r.device_id + '\', false)">Cabut Trusted</button>'
+          : '<button class="btn trust" onclick="daToggleTrust(\'' + r.device_id + '\', true)">✓ Jadikan Trusted</button>';
+        return '' +
+          '<div class="device-card">' +
+            '<div class="device-main">' +
+              '<div class="device-name">' + name + ' ' + badge + '</div>' +
+              '<div class="device-meta">' +
+                daParseUA(r.user_agent) + '<br>' +
+                'Pertama akses: ' + daFmtDate(r.first_seen) + ' &nbsp;·&nbsp; Terakhir: ' + daFmtDate(r.last_seen) + '<br>' +
+                '<code>' + r.device_id + '</code>' +
+              '</div>' +
+            '</div>' +
+            '<div class="actions">' +
+              actionBtn +
+              '<button class="btn del" onclick="daDeleteDevice(\'' + r.device_id + '\')">Hapus</button>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+    })
+    .catch(function(err) {
+      listEl.innerHTML = '<div class="empty-state"><div class="ic">⚠️</div>Gagal memuat data.<br>' + (err.message || err) + '<br><br>Pastikan tabel <code>trusted_devices</code> sudah dibuat di Supabase.</div>';
+      countEl.textContent = '';
+    });
+}
+
+function daToggleTrust(deviceId, trusted) {
+  supaFetch('PATCH', 'trusted_devices?device_id=eq.' + encodeURIComponent(deviceId), { trusted: trusted })
+    .then(function(){ dbShowToast(trusted ? 'Device ditandai Trusted' : 'Trusted dicabut'); daLoadDevices(); })
+    .catch(function(err){ alert('Gagal update: ' + (err.message || err)); });
+}
+
+function daDeleteDevice(deviceId) {
+  if (!confirm('Hapus catatan device ini? Kalau device itu akses lagi nanti, akan dianggap device baru (harus password lagi).')) return;
+  supaFetch('DELETE', 'trusted_devices?device_id=eq.' + encodeURIComponent(deviceId))
+    .then(function(){ dbShowToast('Device dihapus'); daLoadDevices(); })
+    .catch(function(err){ alert('Gagal hapus: ' + (err.message || err)); });
+}
+
+daLoadDevices();
+</script>
+
+</body>
+</html>

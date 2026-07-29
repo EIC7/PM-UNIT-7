@@ -2,6 +2,33 @@
    SHARED.JS — Common utilities untuk semua modul PM Unit 7
    ═══════════════════════════════════════════════════════ */
 
+/* ── GATE AKSES (Password + Trusted Device) ──
+   HARUS paling atas file supaya halaman ke-block sebelum konten sempat
+   kelihatan (mencegah "flash" isi halaman sebelum password diverifikasi).
+   document.write() di sini AMAN karena shared.js dipanggil lewat tag script
+   dengan atribut src biasa (bukan async/defer) di <head> semua file modul,
+   jadi masih di tengah proses parsing dokumen. ── */
+(function(){
+  document.write(
+    '<style id="pmGateHideStyle">html,body{margin:0}body>*:not(#pmAuthGate){display:none !important}</style>' +
+    '<div id="pmAuthGate" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:linear-gradient(135deg,#0f2b22,#132e2a);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">' +
+      '<div style="width:100%;max-width:340px;background:#16211c;border:1px solid #23362c;border-radius:14px;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">' +
+        '<div style="text-align:center;font-size:34px;margin-bottom:6px">&#128274;</div>' +
+        '<div style="text-align:center;color:#e6f2ec;font-size:16px;font-weight:700;margin-bottom:4px">Akses Terbatas</div>' +
+        '<div style="text-align:center;color:#8fae9d;font-size:12.5px;margin-bottom:18px">Masukkan password untuk membuka halaman ini</div>' +
+        '<div id="pmGateNameWrap" style="margin-bottom:10px;display:none">' +
+          '<input id="pmGateName" type="text" placeholder="Nama kamu (sekali isi saja)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
+        '</div>' +
+        '<div style="margin-bottom:10px">' +
+          '<input id="pmGatePw" type="password" placeholder="Password" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
+        '</div>' +
+        '<div id="pmGateError" style="color:#ff8686;font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>' +
+        '<button id="pmGateSubmit" type="button" style="width:100%;padding:11px;border:none;border-radius:8px;background:#16a085;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Masuk</button>' +
+      '</div>' +
+    '</div>'
+  );
+})();
+
 /* ── POLYFILLS (old Android Chrome) ── */
 if (!Object.entries) {
   Object.entries = function(obj) {
@@ -100,6 +127,145 @@ function supaFetch(method, path, body) {
       return res.text().then(function(t){ return t ? JSON.parse(t) : []; });
     });
 }
+
+/* ── GATE AKSES: LOGIC (device id, cek password, sinkron trusted device) ──
+   Tabel Supabase yang dibutuhkan (jalankan sekali di SQL editor Supabase):
+     create table trusted_devices (
+       device_id text primary key,
+       device_name text,
+       user_agent text,
+       first_seen timestamptz default now(),
+       last_seen timestamptz default now(),
+       trusted boolean default false
+     );
+     alter table trusted_devices disable row level security;
+   ── */
+var PM_GATE_TABLE = 'trusted_devices';
+
+// GANTI STRING INI KAPAN SAJA untuk memaksa SEMUA user (yang device-nya
+// belum ditandai Trusted lewat device-admin.html) memasukkan password baru.
+// Device yang sudah Trusted tetap lolos otomatis walau password diganti.
+var PM_GATE_PASSWORD = 'paiton7';
+
+function pmSimpleHash(str) {
+  // Hash sederhana (BUKAN cryptographic-grade) — cukup supaya password tidak
+  // kebaca polos di localStorage. Ini bukan proteksi keamanan tinggi.
+  var h = 5381;
+  for (var i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+var PM_GATE_PW_HASH = pmSimpleHash(PM_GATE_PASSWORD);
+
+function pmLS(op, key, val) {
+  try {
+    if (op === 'get') return localStorage.getItem(key);
+    if (op === 'set') { localStorage.setItem(key, val); return true; }
+    if (op === 'remove') { localStorage.removeItem(key); return true; }
+  } catch (e) {}
+  return null;
+}
+
+function pmGetDeviceId() {
+  var id = pmLS('get', 'pm_device_id');
+  if (!id) {
+    id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    pmLS('set', 'pm_device_id', id);
+  }
+  return id;
+}
+
+function pmUnlockGate() {
+  var style = document.getElementById('pmGateHideStyle');
+  var gate = document.getElementById('pmAuthGate');
+  if (style && style.parentNode) style.parentNode.removeChild(style);
+  if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
+}
+
+function pmShowGateError(msg) {
+  var el = document.getElementById('pmGateError');
+  if (el) el.textContent = msg;
+}
+
+function pmSyncDeviceToSupabase(deviceId, name) {
+  var ua = navigator.userAgent || '';
+  var now = new Date().toISOString();
+  supaFetch('GET', PM_GATE_TABLE + '?device_id=eq.' + encodeURIComponent(deviceId) + '&limit=1')
+    .then(function(rows) {
+      if (rows && rows.length) {
+        var patch = { last_seen: now, user_agent: ua };
+        if (name) patch.device_name = name;
+        return supaFetch('PATCH', PM_GATE_TABLE + '?device_id=eq.' + encodeURIComponent(deviceId), patch);
+      }
+      return supaFetch('POST', PM_GATE_TABLE, {
+        device_id: deviceId, device_name: name || '', user_agent: ua,
+        first_seen: now, last_seen: now, trusted: false
+      });
+    })
+    .catch(function(err){ console.error('Gate sync error:', err); });
+}
+
+function pmCheckTrustedRemote(deviceId) {
+  // Cek status Trusted terbaru ke Supabase (background, tidak nge-block UI).
+  // Kalau ternyata Trusted (baru ditandai admin, atau device ini baru clear
+  // cache tapi device_id-nya sama), buka gate + simpan cache lokal.
+  // Kalau ternyata TIDAK trusted (dicabut admin), hapus cache lokalnya.
+  supaFetch('GET', PM_GATE_TABLE + '?device_id=eq.' + encodeURIComponent(deviceId) + '&select=trusted&limit=1')
+    .then(function(rows) {
+      var trusted = !!(rows && rows.length && rows[0].trusted === true);
+      if (trusted) { pmLS('set', 'pm_trusted_flag', '1'); pmUnlockGate(); }
+      else { pmLS('remove', 'pm_trusted_flag'); }
+    })
+    .catch(function(){});
+}
+
+function pmInitGate() {
+  var deviceId = pmGetDeviceId();
+  var storedName = pmLS('get', 'pm_device_name') || '';
+  var alreadyTrustedLocally = pmLS('get', 'pm_trusted_flag') === '1';
+  var pwAlreadyOk = pmLS('get', 'pm_auth_pw_hash') === PM_GATE_PW_HASH;
+
+  // Selalu cek ulang ke Supabase di background (nangkep kasus baru
+  // ditandai/dicabut Trusted, atau device pindah browser/clear cache).
+  pmCheckTrustedRemote(deviceId);
+
+  if (alreadyTrustedLocally || pwAlreadyOk) { pmUnlockGate(); return; }
+
+  var nameWrap = document.getElementById('pmGateNameWrap');
+  var nameInput = document.getElementById('pmGateName');
+  var pwInput = document.getElementById('pmGatePw');
+  var submitBtn = document.getElementById('pmGateSubmit');
+  if (!storedName && nameWrap) nameWrap.style.display = 'block';
+
+  function submit() {
+    var pw = ((pwInput && pwInput.value) || '').trim();
+    if (!pw) { pmShowGateError('Password wajib diisi.'); return; }
+    if (pmSimpleHash(pw) !== PM_GATE_PW_HASH) {
+      pmShowGateError('Password salah, coba lagi.');
+      if (pwInput) { pwInput.value = ''; pwInput.focus(); }
+      return;
+    }
+    var name = storedName;
+    if (!storedName) {
+      name = ((nameInput && nameInput.value) || '').trim();
+      if (!name) { pmShowGateError('Nama wajib diisi (sekali saja).'); return; }
+      pmLS('set', 'pm_device_name', name);
+    }
+    pmLS('set', 'pm_auth_pw_hash', PM_GATE_PW_HASH);
+    pmSyncDeviceToSupabase(deviceId, name);
+    pmUnlockGate();
+  }
+
+  if (submitBtn) submitBtn.addEventListener('click', submit);
+  if (pwInput) pwInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submit(); });
+  if (nameInput) nameInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submit(); });
+  if (nameWrap && nameWrap.style.display === 'block' && nameInput) nameInput.focus();
+  else if (pwInput) pwInput.focus();
+}
+
+// Elemen gate sudah pasti ada di DOM di titik ini (ditulis via document.write
+// sinkron di atas, dalam satu eksekusi <script> yang sama), jadi aman
+// dipanggil langsung tanpa nunggu DOMContentLoaded.
+pmInitGate();
 
 /* ── TOAST NOTIFICATION ── */
 function dbShowToast(msg) {
