@@ -145,7 +145,7 @@ var PM_GATE_TABLE = 'trusted_devices';
 // GANTI STRING INI KAPAN SAJA untuk memaksa SEMUA user (yang device-nya
 // belum ditandai Trusted lewat device-admin.html) memasukkan password baru.
 // Device yang sudah Trusted tetap lolos otomatis walau password diganti.
-var PM_GATE_PASSWORD = 'eicunit7';
+var PM_GATE_PASSWORD = 'paiton7';
 
 function pmSimpleHash(str) {
   // Hash sederhana (BUKAN cryptographic-grade) — cukup supaya password tidak
@@ -201,7 +201,14 @@ function pmSyncDeviceToSupabase(deviceId, name) {
         first_seen: now, last_seen: now, trusted: false
       });
     })
-    .catch(function(err){ console.error('Gate sync error:', err); });
+    .then(function(){
+      // Baru ditandai "sudah tercatat" kalau BENERAN berhasil sampai ke
+      // Supabase — supaya kalau gagal (mis. tabel belum dibuat saat itu),
+      // percobaan berikutnya (pmInitGate di kunjungan lain) otomatis coba
+      // kirim ulang, bukan dianggap selesai padahal belum pernah nyampe.
+      pmLS('set', 'pm_device_synced', '1');
+    })
+    .catch(function(err){ console.error('Gate sync error (akan dicoba lagi nanti):', err); });
 }
 
 function pmCheckTrustedRemote(deviceId) {
@@ -223,12 +230,20 @@ function pmInitGate() {
   var storedName = pmLS('get', 'pm_device_name') || '';
   var alreadyTrustedLocally = pmLS('get', 'pm_trusted_flag') === '1';
   var pwAlreadyOk = pmLS('get', 'pm_auth_pw_hash') === PM_GATE_PW_HASH;
+  var alreadySynced = pmLS('get', 'pm_device_synced') === '1';
 
   // Selalu cek ulang ke Supabase di background (nangkep kasus baru
   // ditandai/dicabut Trusted, atau device pindah browser/clear cache).
   pmCheckTrustedRemote(deviceId);
 
-  if (alreadyTrustedLocally || pwAlreadyOk) { pmUnlockGate(); return; }
+  if (alreadyTrustedLocally || pwAlreadyOk) {
+    pmUnlockGate();
+    // Self-healing: kalau dulu percobaan catat ke Supabase gagal (mis. tabel
+    // trusted_devices belum sempat dibuat saat itu), coba lagi tiap load
+    // sampai berhasil — supaya device ini akhirnya muncul di Device Admin.
+    if (!alreadySynced) pmSyncDeviceToSupabase(deviceId, storedName);
+    return;
+  }
 
   var nameWrap = document.getElementById('pmGateNameWrap');
   var nameInput = document.getElementById('pmGateName');
