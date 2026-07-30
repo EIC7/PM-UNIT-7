@@ -17,6 +17,7 @@
         '<div style="text-align:center;color:#e6f2ec;font-size:16px;font-weight:700;margin-bottom:4px">Akses Terbatas</div>' +
         '<div style="text-align:center;color:#8fae9d;font-size:12.5px;margin-bottom:18px">Masukkan password untuk membuka halaman ini</div>' +
         '<div id="pmGateNameWrap" style="margin-bottom:10px;display:none">' +
+          '<div style="color:#8fae9d;font-size:11px;margin-bottom:6px">Masukkan nama hanya untuk dikenali admin</div>' +
           '<input id="pmGateName" type="text" placeholder="Nama kamu (sekali isi saja)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
         '</div>' +
         '<div style="margin-bottom:10px">' +
@@ -136,25 +137,33 @@ function supaFetch(method, path, body) {
        user_agent text,
        first_seen timestamptz default now(),
        last_seen timestamptz default now(),
-       trusted boolean default false
+       trusted boolean default false,
+       access_revoked boolean default false
      );
      alter table trusted_devices disable row level security;
-   ── */
-var PM_GATE_TABLE = 'trusted_devices';
 
-// GANTI STRING INI KAPAN SAJA untuk memaksa SEMUA user (yang device-nya
-// belum ditandai Trusted lewat device-admin.html) memasukkan password baru.
-// Device yang sudah Trusted tetap lolos otomatis walau password diganti.
-var PM_GATE_PASSWORD = 'eicunit7';
+     create table gate_config (
+       id int primary key default 1,
+       password_hash text not null,
+       updated_at timestamptz default now()
+     );
+     insert into gate_config (id, password_hash) values (1, '<hash password awal>');
+     alter table gate_config disable row level security;
+
+   Password TIDAK lagi disimpan di file ini (sengaja, biar tidak kebaca lewat
+   View Source) — ganti password sekarang lewat form di device-admin.html,
+   yang meng-update baris di tabel gate_config. ── */
+var PM_GATE_TABLE = 'trusted_devices';
+var PM_GATE_CONFIG_TABLE = 'gate_config';
 
 function pmSimpleHash(str) {
   // Hash sederhana (BUKAN cryptographic-grade) — cukup supaya password tidak
-  // kebaca polos di localStorage. Ini bukan proteksi keamanan tinggi.
+  // kebaca polos. Ini bukan proteksi keamanan tinggi, tapi cukup untuk
+  // penghalang praktis (lihat penjelasan di chat).
   var h = 5381;
   for (var i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
   return h.toString(36);
 }
-var PM_GATE_PW_HASH = pmSimpleHash(PM_GATE_PASSWORD);
 
 function pmLS(op, key, val) {
   try {
@@ -186,6 +195,17 @@ function pmShowGateError(msg) {
   if (el) el.textContent = msg;
 }
 
+function pmFetchCurrentPwHash() {
+  // Ambil hash password yang BERLAKU SEKARANG langsung dari Supabase (live,
+  // bukan dari cache) — dipakai saat validasi submit password di gate supaya
+  // password baru yang baru diganti admin langsung berlaku, tanpa perlu
+  // device lain sempat "sinkron" duluan.
+  return supaFetch('GET', PM_GATE_CONFIG_TABLE + '?id=eq.1&select=password_hash&limit=1')
+    .then(function(rows) {
+      return (rows && rows.length) ? rows[0].password_hash : null;
+    });
+}
+
 function pmSyncDeviceToSupabase(deviceId, name) {
   var ua = navigator.userAgent || '';
   var now = new Date().toISOString();
@@ -211,16 +231,39 @@ function pmSyncDeviceToSupabase(deviceId, name) {
     .catch(function(err){ console.error('Gate sync error (akan dicoba lagi nanti):', err); });
 }
 
-function pmCheckTrustedRemote(deviceId) {
-  // Cek status Trusted terbaru ke Supabase (background, tidak nge-block UI).
-  // Kalau ternyata Trusted (baru ditandai admin, atau device ini baru clear
-  // cache tapi device_id-nya sama), buka gate + simpan cache lokal.
-  // Kalau ternyata TIDAK trusted (dicabut admin), hapus cache lokalnya.
-  supaFetch('GET', PM_GATE_TABLE + '?device_id=eq.' + encodeURIComponent(deviceId) + '&select=trusted&limit=1')
+function pmCheckAccessRemote(deviceId) {
+  // Cek status terbaru ke Supabase (background, tidak nge-block UI konten
+  // yang lagi dibuka, tapi menentukan status buat kunjungan berikutnya):
+  // - trusted=true            -> lolos otomatis, cache lokal disimpan.
+  // - row device dihapus admin-> dianggap "device di-reset total": cache
+  //                              password & trusted lokal dihapus, jadi
+  //                              kunjungan berikutnya wajib password lagi.
+  // - access_revoked=true     -> admin sengaja klik "Cabut Trusted": cache
+  //                              password lokal ikut dihapus juga.
+  // - password_hash berubah   -> admin ganti password lewat device-admin ->
+  //                              cache password lokal yang lama dihapus,
+  //                              device (yang belum Trusted) wajib password
+  //                              baru di kunjungan berikutnya.
+  supaFetch('GET', PM_GATE_TABLE + '?device_id=eq.' + encodeURIComponent(deviceId) + '&select=trusted,access_revoked&limit=1')
     .then(function(rows) {
-      var trusted = !!(rows && rows.length && rows[0].trusted === true);
-      if (trusted) { pmLS('set', 'pm_trusted_flag', '1'); pmUnlockGate(); }
-      else { pmLS('remove', 'pm_trusted_flag'); }
+      if (!rows || !rows.length) {
+        pmLS('remove', 'pm_trusted_flag');
+        pmLS('remove', 'pm_auth_pw_hash');
+        pmLS('remove', 'pm_device_synced');
+        return;
+      }
+      var row = rows[0];
+      if (row.trusted === true) { pmLS('set', 'pm_trusted_flag', '1'); pmUnlockGate(); return; }
+      pmLS('remove', 'pm_trusted_flag');
+      if (row.access_revoked === true) { pmLS('remove', 'pm_auth_pw_hash'); return; }
+      // Bukan trusted & bukan revoked -> cek juga apakah password globalnya
+      // sudah diganti admin sejak device ini terakhir login.
+      pmFetchCurrentPwHash().then(function(currentHash) {
+        var localHash = pmLS('get', 'pm_auth_pw_hash');
+        if (currentHash && localHash && localHash !== currentHash) {
+          pmLS('remove', 'pm_auth_pw_hash');
+        }
+      });
     })
     .catch(function(){});
 }
@@ -229,18 +272,22 @@ function pmInitGate() {
   var deviceId = pmGetDeviceId();
   var storedName = pmLS('get', 'pm_device_name') || '';
   var alreadyTrustedLocally = pmLS('get', 'pm_trusted_flag') === '1';
-  var pwAlreadyOk = pmLS('get', 'pm_auth_pw_hash') === PM_GATE_PW_HASH;
+  var localPwHash = pmLS('get', 'pm_auth_pw_hash');
   var alreadySynced = pmLS('get', 'pm_device_synced') === '1';
 
   // Selalu cek ulang ke Supabase di background (nangkep kasus baru
-  // ditandai/dicabut Trusted, atau device pindah browser/clear cache).
-  pmCheckTrustedRemote(deviceId);
+  // ditandai/dicabut Trusted, password diganti admin, atau device pindah
+  // browser/clear cache). Tidak nge-block tampilan halaman yang sedang
+  // dibuka — cuma menentukan status untuk load berikutnya.
+  pmCheckAccessRemote(deviceId);
 
-  if (alreadyTrustedLocally || pwAlreadyOk) {
+  if (alreadyTrustedLocally || localPwHash) {
+    // Catatan: device dengan localPwHash tersimpan dianggap lolos dulu
+    // (instan, tanpa nunggu network) — kalau ternyata password sudah
+    // diganti admin, pmCheckAccessRemote() di atas akan menghapus cache-nya
+    // di background, jadi baru kunjungan BERIKUTNYA yang bakal diminta
+    // password baru. Ini trade-off wajar untuk sistem tanpa server auth.
     pmUnlockGate();
-    // Self-healing: kalau dulu percobaan catat ke Supabase gagal (mis. tabel
-    // trusted_devices belum sempat dibuat saat itu), coba lagi tiap load
-    // sampai berhasil — supaya device ini akhirnya muncul di Device Admin.
     if (!alreadySynced) pmSyncDeviceToSupabase(deviceId, storedName);
     return;
   }
@@ -251,23 +298,41 @@ function pmInitGate() {
   var submitBtn = document.getElementById('pmGateSubmit');
   if (!storedName && nameWrap) nameWrap.style.display = 'block';
 
+  function setSubmitBusy(busy) {
+    if (!submitBtn) return;
+    submitBtn.disabled = busy;
+    submitBtn.textContent = busy ? 'Memeriksa...' : 'Masuk';
+  }
+
   function submit() {
     var pw = ((pwInput && pwInput.value) || '').trim();
     if (!pw) { pmShowGateError('Password wajib diisi.'); return; }
-    if (pmSimpleHash(pw) !== PM_GATE_PW_HASH) {
-      pmShowGateError('Password salah, coba lagi.');
-      if (pwInput) { pwInput.value = ''; pwInput.focus(); }
-      return;
-    }
     var name = storedName;
     if (!storedName) {
       name = ((nameInput && nameInput.value) || '').trim();
       if (!name) { pmShowGateError('Nama wajib diisi (sekali saja).'); return; }
-      pmLS('set', 'pm_device_name', name);
     }
-    pmLS('set', 'pm_auth_pw_hash', PM_GATE_PW_HASH);
-    pmSyncDeviceToSupabase(deviceId, name);
-    pmUnlockGate();
+    pmShowGateError('');
+    setSubmitBusy(true);
+    pmFetchCurrentPwHash().then(function(currentHash) {
+      setSubmitBusy(false);
+      if (!currentHash) {
+        pmShowGateError('Tidak bisa menghubungi server, coba lagi.');
+        return;
+      }
+      if (pmSimpleHash(pw) !== currentHash) {
+        pmShowGateError('Password salah, coba lagi.');
+        if (pwInput) { pwInput.value = ''; pwInput.focus(); }
+        return;
+      }
+      if (!storedName) pmLS('set', 'pm_device_name', name);
+      pmLS('set', 'pm_auth_pw_hash', currentHash);
+      pmSyncDeviceToSupabase(deviceId, name);
+      pmUnlockGate();
+    }).catch(function() {
+      setSubmitBusy(false);
+      pmShowGateError('Gagal menghubungi server, coba lagi.');
+    });
   }
 
   if (submitBtn) submitBtn.addEventListener('click', submit);
