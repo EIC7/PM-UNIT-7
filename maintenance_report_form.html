@@ -113,6 +113,26 @@
         .pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
         .pdf-preview-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
         .img-thumb .size-badge{position:absolute;bottom:6px;left:2px;background:rgba(0,0,0,0.65);color:#fff;font-size:9px;padding:1px 4px;border-radius:4px;font-weight:600}
+        .upload-drop.drag-over{outline:2px dashed #2ecc71;outline-offset:4px;border-radius:8px;background:#eafaf0}
+        /* AI PROMPT */
+        .ai-btn{background:linear-gradient(135deg,#7c4dff,#448aff);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:0.88em;cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;box-shadow:0 2px 8px rgba(68,138,255,0.3)}
+        .ai-btn:active{opacity:0.8}
+        #aiModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:12px}
+        #aiModal.show{display:flex}
+        .ai-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,640px);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);color:#e0f0e8}
+        .ai-header{background:#243228;padding:14px 16px;position:sticky;top:0;z-index:2}
+        .ai-header-title{font-weight:700;font-size:15px}
+        .ai-header-hint{font-size:11px;color:#8aab96;margin-top:2px}
+        .ai-body{padding:16px}
+        .ai-field{margin-bottom:12px}
+        .ai-field label{display:block;font-size:12px;font-weight:600;color:#aac8b5;margin-bottom:4px}
+        .ai-field textarea,.ai-field input{width:100%;padding:9px 10px;border-radius:6px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8;font-size:13px;font-family:inherit}
+        .ai-field textarea{min-height:64px;resize:vertical}
+        .ai-result-block{border:1px solid #2a3a30;border-radius:8px;padding:10px;margin-bottom:10px;background:#141c17}
+        .ai-result-block h4{font-size:12px;color:#7fd9a4;margin-bottom:6px}
+        .ai-footer{padding:12px 16px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0}
+        .ai-status{font-size:12px;color:#8aab96;padding:6px 0;text-align:center}
+        .ai-status.err{color:#ff8a80}
         @media print{.no-print{display:none!important}}
     </style>
 </head>
@@ -159,6 +179,8 @@
             <div class="form-group"><label>PIC</label><input type="text" id="pic" placeholder="Nama teknisi"></div>
             <div class="form-group"><label>Material Replacement</label><input type="text" id="material" placeholder="Material..."></div>
         </div>
+
+        <button type="button" class="ai-btn no-print" onclick="openAiModal()">🤖 Prompt AI — Isi Finding/Action/Restore</button>
 
         <div class="section-title" style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="toggleSection('findings')">
             <input type="checkbox" id="chkFindings" style="width:16px;height:16px;accent-color:#2ecc71;cursor:pointer;flex-shrink:0" onclick="event.stopPropagation();toggleSection('findings')" onchange="event.stopPropagation()">
@@ -319,7 +341,165 @@
     </div>
 </div>
 
+<!-- PROMPT AI MODAL -->
+<div id="aiModal">
+    <div class="ai-dialog">
+        <div class="ai-header">
+            <div class="ai-header-title">🤖 Prompt AI — Finding / Action / Restore</div>
+            <div class="ai-header-hint">Isi catatan singkat, AI akan membuatkan judul & deskripsi detail per bagian</div>
+        </div>
+        <div class="ai-body" id="aiBodyInput">
+            <div class="ai-field">
+                <label>Work Description / Failure Description</label>
+                <textarea id="aiInWorkDesc" placeholder="Deskripsi pekerjaan/kerusakan singkat..."></textarea>
+            </div>
+            <div class="ai-field">
+                <label>Finding (catatan singkat)</label>
+                <textarea id="aiInFinding" placeholder="Contoh: ditemukan kebocoran pada seal pompa..."></textarea>
+            </div>
+            <div class="ai-field">
+                <label>Action (catatan singkat)</label>
+                <textarea id="aiInAction" placeholder="Contoh: ganti seal, kencangkan baut flange..."></textarea>
+            </div>
+            <div id="aiStatus" class="ai-status" style="display:none"></div>
+        </div>
+        <div class="ai-body" id="aiBodyResult" style="display:none">
+            <div class="ai-result-block">
+                <h4>🔍 Finding</h4>
+                <div class="ai-field"><label>Judul</label><input type="text" id="aiOutFindingTitle"></div>
+                <div class="ai-field"><label>Deskripsi</label><textarea id="aiOutFindingDesc"></textarea></div>
+            </div>
+            <div class="ai-result-block">
+                <h4>🔧 Action</h4>
+                <div class="ai-field"><label>Judul</label><input type="text" id="aiOutActionTitle"></div>
+                <div class="ai-field"><label>Deskripsi</label><textarea id="aiOutActionDesc"></textarea></div>
+            </div>
+            <div class="ai-result-block">
+                <h4>✅ Restore / Hasil</h4>
+                <div class="ai-field"><label>Judul</label><input type="text" id="aiOutRestoreTitle"></div>
+                <div class="ai-field"><label>Deskripsi</label><textarea id="aiOutRestoreDesc"></textarea></div>
+            </div>
+        </div>
+        <div class="ai-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closeAiModal()">Batal</button>
+            <button class="crop-btn crop-btn-outline" id="aiBackBtn" style="display:none" onclick="aiBackToInput()">← Ulangi</button>
+            <button class="crop-btn crop-btn-save" id="aiGenerateBtn" onclick="aiGenerate()">✨ Generate</button>
+            <button class="crop-btn crop-btn-save" id="aiApplyBtn" style="display:none" onclick="aiApplyToReport()">✓ Terapkan ke Report</button>
+        </div>
+    </div>
+</div>
+
     <script>
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROMPT AI — isi Finding/Action/Restore otomatis lewat proxy Apps Script
+   TODO: ganti AI_PROXY_URL dan AI_SECRET_TOKEN dengan nilai dari deployment
+   Web App Anda (Deploy > Manage deployments, dan Script Properties).
+   ══════════════════════════════════════════════════════════════════════════ */
+var AI_PROXY_URL = 'GANTI_DENGAN_URL_WEB_APP_ANDA';
+var AI_SECRET_TOKEN = 'GANTI_DENGAN_SECRET_TOKEN_ANDA';
+var aiLastResult = null;
+
+function openAiModal() {
+    document.getElementById('aiInWorkDesc').value = safe(document.getElementById('failureDesc').value);
+    document.getElementById('aiInFinding').value = '';
+    document.getElementById('aiInAction').value = '';
+    aiShowInputView();
+    setAiStatus('');
+    document.getElementById('aiModal').classList.add('show');
+}
+function closeAiModal() {
+    document.getElementById('aiModal').classList.remove('show');
+}
+function aiShowInputView() {
+    document.getElementById('aiBodyInput').style.display = '';
+    document.getElementById('aiBodyResult').style.display = 'none';
+    document.getElementById('aiGenerateBtn').style.display = '';
+    document.getElementById('aiApplyBtn').style.display = 'none';
+    document.getElementById('aiBackBtn').style.display = 'none';
+}
+function aiBackToInput() { aiShowInputView(); }
+function setAiStatus(msg, isErr) {
+    var el = document.getElementById('aiStatus');
+    el.style.display = msg ? '' : 'none';
+    el.textContent = msg || '';
+    el.className = 'ai-status' + (isErr ? ' err' : '');
+}
+
+function aiGenerate() {
+    if (!AI_PROXY_URL || AI_PROXY_URL.indexOf('GANTI_DENGAN') === 0) {
+        setAiStatus('URL proxy AI belum diisi di dalam file ini.', true);
+        return;
+    }
+    var workDesc = safe(document.getElementById('aiInWorkDesc').value);
+    var finding = safe(document.getElementById('aiInFinding').value);
+    var action = safe(document.getElementById('aiInAction').value);
+    if (!workDesc && !finding && !action) {
+        setAiStatus('Isi minimal salah satu kolom dulu.', true);
+        return;
+    }
+    setAiStatus('⏳ Menghubungi AI, mohon tunggu...');
+    document.getElementById('aiGenerateBtn').disabled = true;
+
+    fetch(AI_PROXY_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'}, // hindari CORS preflight ke Apps Script
+        body: JSON.stringify({ token: AI_SECRET_TOKEN, workDesc: workDesc, finding: finding, action: action })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+        document.getElementById('aiGenerateBtn').disabled = false;
+        if (!data.success) {
+            setAiStatus('Gagal: ' + (data.error || 'Tidak diketahui'), true);
+            return;
+        }
+        aiLastResult = data;
+        document.getElementById('aiOutFindingTitle').value = data.finding.title || '';
+        document.getElementById('aiOutFindingDesc').value = data.finding.desc || '';
+        document.getElementById('aiOutActionTitle').value = data.action.title || '';
+        document.getElementById('aiOutActionDesc').value = data.action.desc || '';
+        document.getElementById('aiOutRestoreTitle').value = data.restore.title || '';
+        document.getElementById('aiOutRestoreDesc').value = data.restore.desc || '';
+        setAiStatus('');
+        document.getElementById('aiBodyInput').style.display = 'none';
+        document.getElementById('aiBodyResult').style.display = '';
+        document.getElementById('aiGenerateBtn').style.display = 'none';
+        document.getElementById('aiBackBtn').style.display = '';
+        document.getElementById('aiApplyBtn').style.display = '';
+    })
+    .catch(function(err){
+        document.getElementById('aiGenerateBtn').disabled = false;
+        setAiStatus('Gagal terhubung ke server AI: ' + err.message, true);
+    });
+}
+
+// Terapkan hasil AI ke item pertama tiap section (title+desc), gambar tidak disentuh.
+function aiApplyToReport() {
+    function applyOne(type, titleId, descId) {
+        var title = safe(document.getElementById(titleId).value);
+        var desc = safe(document.getElementById(descId).value);
+        if (!sections[type][0]) sections[type][0] = {title:'', desc:'', images:[]};
+        sections[type][0].title = title;
+        sections[type][0].desc = desc;
+    }
+    applyOne('findings', 'aiOutFindingTitle', 'aiOutFindingDesc');
+    applyOne('actions', 'aiOutActionTitle', 'aiOutActionDesc');
+    applyOne('restore', 'aiOutRestoreTitle', 'aiOutRestoreDesc');
+
+    renderSection('findings', 'findingsBox');
+    renderSection('actions', 'actionsBox');
+    renderSection('restore', 'restoreBox');
+    updateBadges();
+
+    ['findings','actions','restore'].forEach(function(type){
+        var sec = document.getElementById('section' + type.charAt(0).toUpperCase() + type.slice(1));
+        var chk = document.getElementById('chk' + type.charAt(0).toUpperCase() + type.slice(1));
+        if (sec) sec.style.display = '';
+        if (chk) chk.checked = true;
+    });
+
+    closeAiModal();
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
@@ -1246,8 +1426,8 @@ function applyImageEdits(){
                 html += '<input type="text" value="'+esc(item.title)+'" oninput="sections.'+type+'['+idx+'].title=this.value"></div>';
                 html += '<div class="form-group"><label>Deskripsi</label>';
                 html += '<textarea oninput="sections.'+type+'['+idx+'].desc=this.value">'+esc(item.desc)+'</textarea></div>';
-                html += '<div style="position:relative;margin-bottom:8px">';
-                html += '<button class="btn btn-gray" type="button" onclick="toggleSourceChoices(\''+type+'\','+idx+')">📤 Upload</button>';
+                html += '<div class="upload-drop" style="position:relative;margin-bottom:8px" ondragover="event.preventDefault();this.classList.add(\'drag-over\')" ondragleave="this.classList.remove(\'drag-over\')" ondrop="this.classList.remove(\'drag-over\');handleItemDrop(event,\''+type+'\','+idx+')">';
+                html += '<button class="btn btn-gray" type="button" onclick="toggleSourceChoices(\''+type+'\','+idx+')">📤 Upload <span style="font-weight:400;opacity:0.75">(atau seret gambar ke sini)</span></button>';
                 html += '<div id="sourceChoices-'+type+'-'+idx+'" style="display:none;position:absolute;top:100%;left:0;transform:translateY(10px);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">';
                 html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'camera\')" style="min-width:100px">📷 Kamera</button>';
                 html += '<button class="btn btn-gray" type="button" onclick="triggerUpload(\''+type+'\','+idx+',-1,\'storage\')" style="min-width:100px">🗂️ Penyimpanan</button>';
@@ -1340,6 +1520,21 @@ function applyImageEdits(){
             var choiceEl = document.getElementById('sourceChoices-'+type+'-'+idx);
             if (choiceEl) choiceEl.style.display = 'none';
             openFileInputSource('fileInput', source || 'storage');
+        }
+
+        // Drag & drop file gambar langsung ke area upload item (pola dari opacity.html, disederhanakan)
+        function handleItemDrop(e, type, idx) {
+            e.preventDefault();
+            var files = e.dataTransfer && e.dataTransfer.files;
+            if (!files || !files.length) return;
+            cropModal._pending = {type:type, idx:idx, replaceIdx:-1};
+            fileToDataUrl(files[0], function(dataUrl) {
+                if (!dataUrl) return;
+                openCropModal(dataUrl);
+            });
+            if (files.length > 1) {
+                setTimeout(function(){ alert('Hanya gambar pertama yang diproses. Seret satu per satu untuk gambar lainnya.'); }, 300);
+            }
         }
 
         document.getElementById('fileInput').addEventListener('change', function(e) {
