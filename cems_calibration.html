@@ -1927,14 +1927,27 @@ function exportPdf(){
   try {
     var doc = new jspdf.jsPDF('p','mm','a4');
     var pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
-    var marginX = 12, marginBottom = 14, contentW = pw - marginX*2;
-    var y = 14;
+    var marginX = 20, marginTop = 26, marginBottom = 20, contentW = pw - marginX*2;
+    var y = marginTop;
+
+    // Background per halaman — dijaga supaya hanya digambar SEKALI per nomor
+    // halaman, walau dipicu berkali-kali (checkPage manual maupun auto-page-break
+    // internal jspdf-autotable), supaya tidak menimpa/menghapus konten yang
+    // sudah digambar duluan di halaman yang sama.
+    var bgDrawnPages = {};
+    function drawBgOnce(){
+      var pn = doc.internal.getCurrentPageInfo().pageNumber;
+      if (bgDrawnPages[pn]) return;
+      bgDrawnPages[pn] = true;
+      drawBg(doc, pw, ph);
+    }
+    var autoTableBgHook = { didDrawPage: function(){ drawBgOnce(); } };
 
     // Halaman pertama — draw background SEKALI di awal
-    drawBg(doc, pw, ph);
+    drawBgOnce();
 
     function checkPage(need){
-      if (y + need > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = 14; }
+      if (y + need > ph - marginBottom) { doc.addPage(); drawBgOnce(); y = marginTop; }
     }
     function sectionHeader(title){
       checkPage(12);
@@ -1984,7 +1997,7 @@ function exportPdf(){
     // ── STEP 2: Cal Gas Regulator ──
     sectionHeader('Step 2: Cal Gas Regulator Outlet Pressure (psi)');
     doc.autoTable({
-      startY: y, margin:{left:marginX, right:marginX},
+      startY: y, margin:{left:marginX, right:marginX}, didDrawPage:function(){drawBgOnce();},
       head: [['Titik','Outlet Pressure (psi)','Remaining Gas Cylinder (psi)']],
       body: [
         ['Zero', safe(d.gasReg.zeroOutlet), safe(d.gasReg.zeroCyl)],
@@ -2001,7 +2014,7 @@ function exportPdf(){
     }
     // ── STEP 3 ──
     checkPage(14); sectionHeader('Step 3: Optical Energy Reading Before Calibration');
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Measured Energy','Concentration']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Measured Energy','Concentration']],
       body: opticalTableBody(d.opticalBefore), styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[244,217,166],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 3;
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,30,25);
@@ -2009,7 +2022,7 @@ function exportPdf(){
 
     // ── STEP 4 ──
     checkPage(14); sectionHeader('Step 4: Analyzer Reading (DAS) Before Calibration');
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Nilai']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Nilai']],
       body: DAS_FIELDS.map(function(f){ return [f.label+' ('+f.unit+')', safe(d.dasBefore[f.key])]; }),
       styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 8;
@@ -2020,7 +2033,7 @@ function exportPdf(){
       checkPage(10);
       doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,30,25);
       doc.text(subtitle, marginX, y+4); y += 7;
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Expected Value','Concentration']],
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Expected Value','Concentration']],
         body: rows.map(function(r){ return [r.label, data[r.key].exp, data[r.key].act]; }),
         styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:headerColor,textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 6;
@@ -2060,7 +2073,7 @@ function exportPdf(){
 
     // ── STEP 6 ──
     checkPage(14); sectionHeader('Step 6: Optical Energy Reading After Calibration');
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Measured Energy','Concentration']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Measured Energy','Concentration']],
       body: opticalTableBody(d.opticalAfter), styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[244,217,166],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 3;
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,30,25);
@@ -2068,14 +2081,14 @@ function exportPdf(){
 
     // ── STEP 7 ──
     checkPage(14); sectionHeader('Step 7: Analyzer Reading (DAS) After Calibration');
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Nilai']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Nilai']],
       body: DAS_FIELDS.map(function(f){ return [f.label+' ('+f.unit+')', safe(d.dasAfter[f.key])]; }),
       styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 8;
 
     // ── STEP 8 ──
     checkPage(14); sectionHeader('Step 8: Actual Temperature Reading (°C)');
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Titik Ukur','Suhu (°C)']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Titik Ukur','Suhu (°C)']],
       body: TEMP_FIELDS.map(function(f){ return [f.label, safe(d.temperature[f.key])]; }),
       styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 8;
@@ -2087,7 +2100,7 @@ function exportPdf(){
     var freq = d.meta.frequency;
     if (freq==='Monthly'||freq==='3-Monthly'||freq==='2-Yearly'){
       checkPage(14); sectionHeader('Step 9: 1 Monthly Inspection');
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Status','Item']],
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
         body:[
           [d.inspection1.a?'✓':'—','a. Following 2 Weekly - Unit 7 CEMS Inspection & Maintenance'],
           [d.inspection1.b?'✓':'—','b. Perform Purging Flow stack gas - elv 110 chimney U78 and Last reading (7BGCEMAI107)'],
@@ -2101,7 +2114,7 @@ function exportPdf(){
     }
     if (freq==='3-Monthly'||freq==='2-Yearly'){
       checkPage(14); sectionHeader('Step 10: 3 Monthly Inspection');
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Status','Item']],
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
         body:[
           [d.inspection3.a?'✓':'—','a. Following 1 Monthly - Unit 7 CEMS Inspection & Maintenance'],
           [d.inspection3.b?'✓':'—','b. Analyzer MKS 2000 maintenance (cleaning and cell inspection)'],
@@ -2112,7 +2125,7 @@ function exportPdf(){
     }
     if (freq==='2-Yearly'){
       checkPage(14); sectionHeader('Step 11: 2 Yearly Inspection');
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Status','Item']],
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
         body:[
           [d.inspection2y.a?'✓':'—','a. Following 3 Monthly - Unit 7 CEMS Inspection and Maintenance'],
           [d.inspection2y.b?'✓':'—','b. Replace Pump Diaphragm HW for MC3 Analyzer by ECOCHEM item ID PU1286-N026'],
