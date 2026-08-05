@@ -53,6 +53,9 @@
 .check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #e4e8e5;border-radius:8px;background:#fafcfb}
 .check-item input{width:19px;height:19px;margin-top:2px;flex:none}
 .check-item span{font-size:13.5px;color:#20302a;line-height:1.4}
+.btn-checkall{margin-left:auto;flex:none;border:1px solid #2ecc71;background:#eafcf1;color:#1c8a4a;font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;cursor:pointer;white-space:nowrap}
+.btn-checkall:active{background:#d3f7e1}
+.btn-checkall.is-all{background:#2ecc71;color:#fff;border-color:#219150}
 
 .evidence-box{margin-top:14px;padding:12px;border:1px dashed #b7c3bb;border-radius:8px;background:#f7faf8}
 .evidence-title{font-size:12.5px;font-weight:700;color:#3d4c44;margin-bottom:8px}
@@ -267,7 +270,9 @@
 
   <!-- STEP 9 -->
   <div class="panel step-panel" id="step9" style="display:none">
-    <div class="step-title"><span class="stepnum">9</span> 1 Monthly Inspection</div>
+    <div class="step-title"><span class="stepnum">9</span> 1 Monthly Inspection
+      <button type="button" class="btn-checkall" id="btnCheckAll_step9" onclick="toggleCheckAll('step9')">☑ Check All</button>
+    </div>
     <div class="check-list">
       <label class="check-item"><input type="checkbox" id="insp1_a"><span>a. Following 2 Weekly - Unit 7 CEMS Inspection &amp; Maintenance</span></label>
       <label class="check-item"><input type="checkbox" id="insp1_b"><span>b. Perform Purging Flow stack gas - elv 110 chimney U78 and Last reading (7BGCEMAI107)</span></label>
@@ -281,7 +286,9 @@
 
   <!-- STEP 10 -->
   <div class="panel step-panel" id="step10" style="display:none">
-    <div class="step-title"><span class="stepnum">10</span> 3 Monthly Inspection</div>
+    <div class="step-title"><span class="stepnum">10</span> 3 Monthly Inspection
+      <button type="button" class="btn-checkall" id="btnCheckAll_step10" onclick="toggleCheckAll('step10')">☑ Check All</button>
+    </div>
     <div class="check-list">
       <label class="check-item"><input type="checkbox" id="insp3_a"><span>a. Following 1 Monthly - Unit 7 CEMS Inspection &amp; Maintenance</span></label>
       <label class="check-item"><input type="checkbox" id="insp3_b"><span>b. Analyzer MKS 2000 maintenance (cleaning and cell inspection)</span></label>
@@ -292,7 +299,9 @@
 
   <!-- STEP 11 -->
   <div class="panel step-panel" id="step11" style="display:none">
-    <div class="step-title"><span class="stepnum">11</span> 2 Yearly Inspection</div>
+    <div class="step-title"><span class="stepnum">11</span> 2 Yearly Inspection
+      <button type="button" class="btn-checkall" id="btnCheckAll_step11" onclick="toggleCheckAll('step11')">☑ Check All</button>
+    </div>
     <div class="check-list">
       <label class="check-item"><input type="checkbox" id="insp2y_a"><span>a. Following 3 Monthly - Unit 7 CEMS Inspection and Maintenance</span></label>
       <label class="check-item"><input type="checkbox" id="insp2y_b"><span>b. Replace Pump Diaphragm HW for MC3 Analyzer by ECOCHEM item ID PU1286-N026</span></label>
@@ -1573,6 +1582,39 @@ function onFreqChange(){
 }
 
 /* ══════════════════════════════════════════════════════════════
+   CHECK ALL — Step 9/10/11 (1 Monthly, 3 Monthly, 2 Yearly Inspection)
+   Tombol toggle: kalau belum semua tercentang -> centang semua,
+   kalau sudah semua tercentang -> lepas semua. Label & style tombol
+   ikut menyesuaikan status saat ini.
+   ══════════════════════════════════════════════════════════════ */
+function syncCheckAllBtn(stepId){
+  var panel = document.getElementById(stepId);
+  var btn = document.getElementById('btnCheckAll_'+stepId);
+  if (!panel || !btn) return;
+  var boxes = panel.querySelectorAll('.check-list input[type="checkbox"]');
+  var allChecked = boxes.length>0 && Array.prototype.every.call(boxes, function(b){ return b.checked; });
+  btn.textContent = allChecked ? '☑ Uncheck All' : '☐ Check All';
+  btn.classList.toggle('is-all', allChecked);
+}
+function toggleCheckAll(stepId){
+  var panel = document.getElementById(stepId);
+  if (!panel) return;
+  var boxes = panel.querySelectorAll('.check-list input[type="checkbox"]');
+  var allChecked = boxes.length>0 && Array.prototype.every.call(boxes, function(b){ return b.checked; });
+  boxes.forEach(function(b){ b.checked = !allChecked; });
+  syncCheckAllBtn(stepId);
+  if (typeof scheduleAutosave === 'function') scheduleAutosave();
+}
+['step9','step10','step11'].forEach(function(stepId){
+  var panel = document.getElementById(stepId);
+  if (!panel) return;
+  panel.querySelectorAll('.check-list input[type="checkbox"]').forEach(function(b){
+    b.addEventListener('change', function(){ syncCheckAllBtn(stepId); });
+  });
+  syncCheckAllBtn(stepId);
+});
+
+/* ══════════════════════════════════════════════════════════════
    FOTO EVIDENCE (Zero / Span 1 / Span 2)
    Uploader sederhana: kompresi ke JPEG + thumbnail + caption + hapus.
    Kalau shared.js menyediakan fileToJpegDataUrl/uploadFotoKeGDrive,
@@ -2123,19 +2165,46 @@ function exportPdf(){
     y = doc.lastAutoTable.finalY + 8;
 
     // ── STEP 9/10/11 — hanya dicetak kalau relevan dengan frequency terpilih ──
-    function inspectionBody(items){
-      return Object.keys(items).map(function(k){ return [(items[k]?'✓':'—'), k]; });
+    // Kotak centang digambar sebagai checkbox visual (kotak + centang), bukan
+    // simbol teks ✓/— — mengikuti pola drawCheckboxBs reusable dari
+    // so2/opacity/beltscale.
+    function drawCheckboxBs(doc, x, y, w, h, checked){
+      var size = Math.min(w, h) * 0.55;
+      var bx = x + w/2 - size/2, by = y + h/2 - size/2;
+      doc.setLineWidth(0.4);
+      if (checked) {
+        doc.setDrawColor(30,140,74); doc.setFillColor(46,204,113);
+        doc.rect(bx, by, size, size, 'FD');
+        doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+        doc.line(bx+size*0.18, by+size*0.52, bx+size*0.40, by+size*0.76);
+        doc.line(bx+size*0.40, by+size*0.76, bx+size*0.84, by+size*0.22);
+      } else {
+        doc.setDrawColor(150,160,155); doc.setFillColor(255,255,255);
+        doc.rect(bx, by, size, size, 'FD');
+      }
+    }
+    function inspectionTable(items){
+      return {
+        body: items.map(function(r){ return ['', r[1]]; }),
+        didDrawCell: function(data){
+          if (data.section==='body' && data.column.index===0) {
+            drawCheckboxBs(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, !!items[data.row.index][0]);
+          }
+        }
+      };
     }
     var freq = d.meta.frequency;
     if (freq==='Monthly'||freq==='3-Monthly'||freq==='2-Yearly'){
       checkPage(14); sectionHeader('Step 9: 1 Monthly Inspection');
+      var insp9 = inspectionTable([
+        [d.inspection1.a,'a. Following 2 Weekly - Unit 7 CEMS Inspection & Maintenance'],
+        [d.inspection1.b,'b. Perform Purging Flow stack gas - elv 110 chimney U78 and Last reading (7BGCEMAI107)'],
+        [d.inspection1.c,'c. Perform Purging-cleaning sample probe - elv 110 chimney U7'],
+        [d.inspection1.d,'d. Perform Purging-cleaning alumunium filter probe - elv 110 chimney U78']
+      ]);
       doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
-        body:[
-          [d.inspection1.a?'✓':'—','a. Following 2 Weekly - Unit 7 CEMS Inspection & Maintenance'],
-          [d.inspection1.b?'✓':'—','b. Perform Purging Flow stack gas - elv 110 chimney U78 and Last reading (7BGCEMAI107)'],
-          [d.inspection1.c?'✓':'—','c. Perform Purging-cleaning sample probe - elv 110 chimney U7'],
-          [d.inspection1.d?'✓':'—','d. Perform Purging-cleaning alumunium filter probe - elv 110 chimney U78']
-        ], styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
+        body: insp9.body, didDrawCell: insp9.didDrawCell,
+        styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
       drawEvidenceGroup('Foto Evidence — Purging/Cleaning Flow Stack Gas (elv 110 chimney U7/U78)', calEvidence.flowstack);
       drawEvidenceGroup('Foto Evidence — Purging-Cleaning Sample Probe (elv 110 chimney U7)', calEvidence.sampleprobe);
@@ -2143,25 +2212,37 @@ function exportPdf(){
     }
     if (freq==='3-Monthly'||freq==='2-Yearly'){
       checkPage(14); sectionHeader('Step 10: 3 Monthly Inspection');
+      var insp10 = inspectionTable([
+        [d.inspection3.a,'a. Following 1 Monthly - Unit 7 CEMS Inspection & Maintenance'],
+        [d.inspection3.b,'b. Analyzer MKS 2000 maintenance (cleaning and cell inspection)'],
+        [d.inspection3.c,'c. Perform Replace alumunium filter probe and Kit - elv 110 chimney U78'],
+        [d.inspection3.d,'d. Cleaning sample flow gas stack - elv 110 chimney U7']
+      ]);
       doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
-        body:[
-          [d.inspection3.a?'✓':'—','a. Following 1 Monthly - Unit 7 CEMS Inspection & Maintenance'],
-          [d.inspection3.b?'✓':'—','b. Analyzer MKS 2000 maintenance (cleaning and cell inspection)'],
-          [d.inspection3.c?'✓':'—','c. Perform Replace alumunium filter probe and Kit - elv 110 chimney U78'],
-          [d.inspection3.d?'✓':'—','d. Cleaning sample flow gas stack - elv 110 chimney U7']
-        ], styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
+        body: insp10.body, didDrawCell: insp10.didDrawCell,
+        styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
     }
     if (freq==='2-Yearly'){
       checkPage(14); sectionHeader('Step 11: 2 Yearly Inspection');
+      var insp11 = inspectionTable([
+        [d.inspection2y.a,'a. Following 3 Monthly - Unit 7 CEMS Inspection and Maintenance'],
+        [d.inspection2y.b,'b. Replace Pump Diaphragm HW for MC3 Analyzer by ECOCHEM item ID PU1286-N026'],
+        [d.inspection2y.c,'c. Cleaning sample flow gas stack - elv 110 chimney 7']
+      ]);
       doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
-        body:[
-          [d.inspection2y.a?'✓':'—','a. Following 3 Monthly - Unit 7 CEMS Inspection and Maintenance'],
-          [d.inspection2y.b?'✓':'—','b. Replace Pump Diaphragm HW for MC3 Analyzer by ECOCHEM item ID PU1286-N026'],
-          [d.inspection2y.c?'✓':'—','c. Cleaning sample flow gas stack - elv 110 chimney 7']
-        ], styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
+        body: insp11.body, didDrawCell: insp11.didDrawCell,
+        styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
       drawEvidenceGroup('Foto Evidence — Replace Pump Diaphragm HW MC3 Analyzer (ECOCHEM PU1286-N026)', calEvidence.pumpdiaphragm);
+    }
+
+    // Buang halaman terakhir yang "mengambang" kosong — bisa muncul kalau
+    // page-break internal jspdf-autotable membuka halaman baru tepat di
+    // akhir konten tanpa ada isi lagi setelahnya (y masih ~marginTop).
+    var lastPageNum = doc.internal.getNumberOfPages();
+    if (lastPageNum > 1 && y <= marginTop + 5) {
+      doc.deletePage(lastPageNum);
     }
 
     if (typeof hideImgLoading === 'function') hideImgLoading();
