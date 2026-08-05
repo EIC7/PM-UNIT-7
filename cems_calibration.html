@@ -61,12 +61,78 @@
 .evidence-thumb img{width:100%;height:90px;object-fit:cover;display:block}
 .evidence-thumb .cap{width:100%;box-sizing:border-box;border:none;border-top:1px solid #eee;font-size:10.5px;padding:4px 6px}
 .evidence-thumb .del{position:absolute;top:3px;right:3px;background:#e53935;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1}
-.evidence-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed #b7c3bb;border-radius:8px;height:90px;background:#fff;color:#7c8b83;font-size:11px;cursor:pointer}
+.evidence-thumb .redo{position:absolute;top:3px;left:3px;background:#2563eb;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1}
+.evidence-add{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed #b7c3bb;border-radius:8px;height:90px;background:#fff;color:#7c8b83;font-size:11px;cursor:pointer}
 .evidence-add span{font-size:20px}
+.evidence-add.dragover{border-color:#2ecc71;background:#eafcf1}
+
+/* ── Fitur reusable: geser posisi foto (nudge) ── */
+.img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
+.img-nudge-label{font-size:8px;color:#8a8a8a;text-align:center;line-height:1.2;max-width:100px}
+.img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
+.img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ccc;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
+.img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
+
+/* ── MULTI-UPLOAD NOTIFICATION OVERLAY ── */
+#evidUploadOverlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.8);flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#evidUploadOverlay.show{display:flex}
+#evidUploadOverlaySpinner{width:38px;height:38px;border:4px solid rgba(255,255,255,0.25);border-top-color:#2ecc71;border-radius:50%;animation:evidSpin 0.8s linear infinite;margin-bottom:16px}
+#evidUploadOverlayTitle{font-size:15px;font-weight:700;color:#fff}
+#evidUploadOverlaySub{font-size:12px;color:#c9d6cf;margin-top:6px;max-width:280px}
+@keyframes evidSpin{to{transform:rotate(360deg)}}
 
 #stepGasReg .field-grid .field-item.zero-fld input{background:#eafcf1}
 #stepGasReg .field-grid .field-item.span1-fld input{background:#fffbe0}
 #stepGasReg .field-grid .field-item.span2-fld input{background:#fff2e0}
+
+/* ── CROP MODAL (3-mode: Default/Preset/Manual) — reusable dari fegt/opacity ── */
+#cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+#cropModal.show{display:flex}
+.crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+.crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
+.crop-header-hint{font-size:10px;color:#8aab96}
+#cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+#cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
+#cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
+.crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
+.crop-handle.nw{top:-6px;left:-6px;cursor:nw-resize} .crop-handle.ne{top:-6px;right:-6px;cursor:ne-resize}
+.crop-handle.sw{bottom:-6px;left:-6px;cursor:sw-resize} .crop-handle.se{bottom:-6px;right:-6px;cursor:se-resize}
+.crop-handle.n{width:10px;height:10px;top:-5px;left:50%;transform:translateX(-50%);cursor:n-resize}
+.crop-handle.s{width:10px;height:10px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize}
+.crop-handle.w{width:10px;height:10px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize}
+.crop-handle.e{width:10px;height:10px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize}
+.crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30}
+.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
+.crop-btn-save{background:#2ecc71;color:#fff}
+.crop-size-panel{border-top:1px solid #2a3a30;padding-top:8px;margin-top:2px}
+.crop-size-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.crop-preset-btn,.crop-orient-btn,.crop-mode-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
+.crop-preset-btn.active,.crop-orient-btn.active,.crop-mode-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
+.crop-mode-btn{padding:6px 12px;font-size:12px}
+.crop-cm-field{display:flex;flex-direction:column;gap:2px}
+.crop-cm-field label{font-size:9px;color:#8aab96;font-weight:600}
+.crop-cm-field input{width:64px;padding:5px 6px;font-size:12px;border-radius:5px;border:1px solid #3a4f42;background:#0f1512;color:#e0f0e8}
+.crop-size-label{font-size:11px;color:#7fd9a4;font-weight:600;margin-left:4px}
+.crop-default-label{font-size:12px;color:#7fd9a4;font-weight:600;padding:4px 2px}
+
+/* ── PDF PREVIEW MODAL — render via PDF.js canvas, aman untuk Chrome Android ── */
+.pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+.pdf-preview-modal.show{display:flex}
+.pdf-preview-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,900px);height:min(92vh,1100px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
+.pdf-preview-header{background:#243228;padding:10px 46px 10px 16px;flex:0 0 auto;position:relative}
+.pdf-preview-title{font-weight:700;font-size:14px;color:#e0f0e8}
+.pdf-preview-hint{font-size:11px;color:#8aab96;margin-top:2px}
+.pdf-preview-close-x{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1px solid #3a4f42;background:#1a221e;color:#e0f0e8;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.pdf-preview-close-x:active{background:#2a3a30}
+.pdf-preview-body{flex:1 1 auto;background:#333;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.pdf-canvas-container{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
+.pdf-canvas-container canvas{max-width:100%;height:auto;box-shadow:0 2px 10px rgba(0,0,0,0.5);background:#fff}
+.pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
+.pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
+.pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
 </style>
 </head>
 <body>
@@ -228,7 +294,76 @@
 
 </div>
 
-<input type="file" id="evidFileInput" accept="image/*" style="display:none" multiple>
+<input type="file" id="evidFileInput" accept="image/*,.heic,.heif" style="display:none" multiple>
+
+<!-- MULTI-UPLOAD NOTIFICATION OVERLAY -->
+<div id="evidUploadOverlay" onclick="evidHideUploadOverlay()">
+    <div id="evidUploadOverlaySpinner"></div>
+    <div id="evidUploadOverlayTitle"></div>
+    <div id="evidUploadOverlaySub"></div>
+</div>
+
+<!-- CROP MODAL (3-mode: Default/Preset/Manual) -->
+<div id="cropModal">
+    <div class="crop-dialog">
+        <div class="crop-header">
+            <div class="crop-header-title">✂️ Crop Gambar</div>
+            <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
+        </div>
+        <div id="cropWrap">
+            <img id="cropImg" src="">
+            <div id="cropBox">
+                <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
+                <div class="crop-handle sw"></div><div class="crop-handle se"></div>
+                <div class="crop-handle n"></div><div class="crop-handle s"></div>
+                <div class="crop-handle w"></div><div class="crop-handle e"></div>
+            </div>
+        </div>
+        <div class="crop-footer">
+            <div class="crop-size-panel">
+                <div class="crop-size-row" id="cropModeRow">
+                    <button type="button" class="crop-mode-btn" id="cropModeDefault" onclick="setCropMode('default')">⭐ Default</button>
+                    <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
+                    <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
+                </div>
+                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran cetak: 7.2 × 5.18 cm — gambar penuh (tidak dipotong)</div>
+                <div id="cropPresetControls" style="display:none">
+                    <div class="crop-size-row" id="cropPresetRow"></div>
+                    <div class="crop-size-row" style="margin-top:8px">
+                        <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
+                        <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
+                    </div>
+                </div>
+                <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
+                </div>
+            </div>
+            <div class="crop-btns">
+                <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
+                <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PDF PREVIEW MODAL -->
+<div id="pdfPreviewModal" class="pdf-preview-modal">
+    <div class="pdf-preview-dialog">
+        <div class="pdf-preview-header">
+            <button type="button" class="pdf-preview-close-x" onclick="closePdfPreview()" aria-label="Tutup">✕</button>
+            <div class="pdf-preview-title">📄 Preview Hasil PDF</div>
+            <div class="pdf-preview-hint">Ini tampilan asli file PDF-nya, cek dulu sebelum download</div>
+        </div>
+        <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
+        <div class="pdf-preview-footer">
+            <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+        </div>
+    </div>
+</div>
 
 <script>
 /* ══════════════════════════════════════════════════════════════
@@ -289,6 +424,449 @@ var calEvidence = { zero: [], span1: [], span2: [], flowstack: [], sampleprobe: 
 var ALL_EVID_GROUPS = ['zero','span1','span2','flowstack','sampleprobe','filterprobe','pumpdiaphragm'];
 function renderAllEvidence(){ ALL_EVID_GROUPS.forEach(renderEvidence); }
 var evidPendingGroup = null;
+var evidUploadQueue = null;
+var evidUploadGroup = null;
+
+/* ══════════════════════════════════════════════════════════════
+   BACKGROUND TEMPLATE PDF — dipakai di tiap halaman (reusable dari opacity)
+   ══════════════════════════════════════════════════════════════ */
+var reportBgImg = null;
+var reportBgReady = false;
+var reportBgCallbacks = [];
+
+function initReportBackground() {
+  if (reportBgImg) return;
+  reportBgImg = new Image();
+  reportBgImg.onload = function() {
+    reportBgReady = true;
+    var cbs = reportBgCallbacks.splice(0);
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  reportBgImg.onerror = function() {
+    reportBgReady = false;
+    var cbs = reportBgCallbacks.splice(0);
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  reportBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+
+function ensureReportBackground(callback) {
+  if (!reportBgImg) { reportBgCallbacks.push(callback); initReportBackground(); return; }
+  if (reportBgReady) { callback(); return; }
+  if (reportBgImg.complete && reportBgImg.naturalWidth > 0) { reportBgReady = true; callback(); return; }
+  reportBgCallbacks.push(callback);
+}
+
+function drawBg(doc, pw, ph) {
+  if (!reportBgImg || !reportBgImg.naturalWidth) return;
+  try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CROP MODAL (3-mode: Default/Preset/Manual) — reusable dari fegt/opacity.
+   imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx)
+   ══════════════════════════════════════════════════════════════ */
+var cropModalState = document.getElementById('cropModal');
+cropModalState._pending = null;
+cropModalState._ratioLocked = false;
+cropModalState._cropWcm = null;
+cropModalState._cropHcm = null;
+cropModalState._orientation = 'portrait';
+cropModalState._activePresetIdx = -1;
+cropModalState._mode = 'default';
+cropModalState._presetRatio = 1;
+var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
+var PRESET_DEFAULT_LONG_CM = 4;
+var MANUAL_MAX_CM = 7;
+var CROP_PRESETS = [
+    {label:'1:1', w:1, h:1}, {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
+    {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
+];
+function renderPresetButtons() {
+    var row = document.getElementById('cropPresetRow');
+    if (!row) return;
+    row.innerHTML = '';
+    CROP_PRESETS.forEach(function(p, i) {
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'crop-preset-btn'; btn.id = 'cropPreset-'+i;
+        btn.textContent = p.label; btn.onclick = function () { applyPreset(i); };
+        row.appendChild(btn);
+    });
+}
+function highlightPreset(activeIdx) {
+    CROP_PRESETS.forEach(function (p, idx) {
+        var btn = document.getElementById('cropPreset-'+idx);
+        if (btn) btn.classList.toggle('active', idx === activeIdx);
+    });
+}
+function getMaxForField(field) {
+    if (cropModalState._mode === 'preset') {
+        var longMax=7, shortMax=5;
+        if (cropModalState._orientation === 'landscape') return field==='w' ? longMax : shortMax;
+        return field==='w' ? shortMax : longMax;
+    }
+    if (cropModalState._mode === 'manual') return MANUAL_MAX_CM;
+    return 99;
+}
+function clampCmValue(v, maxV) {
+    v = parseFloat(v);
+    if (!isFinite(v) || v<=0) v=0.5;
+    if (v>maxV) v=maxV;
+    if (v<0.5) v=0.5;
+    return Math.round(v*10)/10;
+}
+function setCropMode(mode) {
+    cropModalState._mode = mode;
+    ['Default','Preset','Manual'].forEach(function(m){
+        var b = document.getElementById('cropMode'+m);
+        if (b) b.classList.toggle('active', mode === m.toLowerCase());
+    });
+    var presetControls = document.getElementById('cropPresetControls');
+    var cmRow = document.getElementById('cropCmRow');
+    var defaultLabel = document.getElementById('cropDefaultLabel');
+    if (mode === 'default') {
+        presetControls.style.display='none'; cmRow.style.display='none'; defaultLabel.style.display='block';
+        highlightPreset(-1); applyDefaultSize();
+    } else if (mode === 'preset') {
+        presetControls.style.display='block'; cmRow.style.display='flex'; defaultLabel.style.display='none';
+        applyPreset(cropModalState._activePresetIdx < 0 ? 0 : cropModalState._activePresetIdx);
+    } else {
+        presetControls.style.display='none'; cmRow.style.display='flex'; defaultLabel.style.display='none';
+        highlightPreset(-1);
+        setFreeSize(cropModalState._cropWcm||5, cropModalState._cropHcm||5);
+    }
+}
+function applyDefaultSize() {
+    cropModalState._ratioLocked = false;
+    cropModalState._cropWcm = DEFAULT_CROP_W_CM; cropModalState._cropHcm = DEFAULT_CROP_H_CM;
+    updateSizeLabel(); fitCropBoxToFullImage();
+}
+function fitCropBoxToFullImage() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img) return;
+    var iL = parseInt(img.style.left) || 0, iT = parseInt(img.style.top) || 0;
+    var iW = img.offsetWidth, iH = img.offsetHeight;
+    if (!iW || !iH) return;
+    box.style.left = iL + 'px'; box.style.top = iT + 'px';
+    box.style.width = iW + 'px'; box.style.height = iH + 'px';
+}
+function applyPreset(i) {
+    var p = CROP_PRESETS[i];
+    var ratioValue = Math.max(p.w,p.h) / Math.min(p.w,p.h);
+    cropModalState._activePresetIdx = i;
+    var longSide = PRESET_DEFAULT_LONG_CM;
+    var shortSide = Math.round((longSide/ratioValue)*10)/10;
+    var w,h;
+    if (cropModalState._orientation === 'landscape') { w=longSide; h=shortSide; } else { h=longSide; w=shortSide; }
+    cropModalState._presetRatio = w/h;
+    setLockedSize(w,h); highlightPreset(i);
+}
+function setCropOrientation(orientation) {
+    cropModalState._orientation = orientation;
+    document.getElementById('cropOrientPotrait').classList.toggle('active', orientation==='portrait');
+    document.getElementById('cropOrientLandscape').classList.toggle('active', orientation==='landscape');
+    var w = cropModalState._cropWcm||1, h = cropModalState._cropHcm||1;
+    var longVal=Math.max(w,h), shortVal=Math.min(w,h), neww, newh;
+    if (orientation==='landscape') { neww=longVal; newh=shortVal; } else { newh=longVal; neww=shortVal; }
+    cropModalState._presetRatio = neww/newh;
+    setLockedSize(neww, newh);
+}
+function onCustomCmChange(field) {
+    if (cropModalState._mode === 'preset') { onPresetFieldChange(field); return; }
+    if (cropModalState._mode === 'manual') {
+        var w = clampCmValue(document.getElementById('cropWcm').value, getMaxForField('w'));
+        var h = clampCmValue(document.getElementById('cropHcm').value, getMaxForField('h'));
+        document.getElementById('cropWcm').value = w; document.getElementById('cropHcm').value = h;
+        setFreeSize(w, h, true);
+    }
+}
+function onPresetFieldChange(field) {
+    var ratio = cropModalState._presetRatio || 1;
+    var wEl=document.getElementById('cropWcm'), hEl=document.getElementById('cropHcm');
+    var w,h;
+    if (field==='w') { w=parseFloat(wEl.value)||0.5; h=w/ratio; } else { h=parseFloat(hEl.value)||0.5; w=h*ratio; }
+    var maxW=getMaxForField('w'), maxH=getMaxForField('h');
+    var scale = Math.min(1, maxW/w, maxH/h); w*=scale; h*=scale;
+    if (w<0.5) { w=0.5; h=w/ratio; }
+    if (h<0.5) { h=0.5; w=h*ratio; }
+    w=Math.round(w*10)/10; h=Math.round(h*10)/10;
+    wEl.value=w; hEl.value=h;
+    cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function setLockedSize(w,h,skipInputSync) {
+    w=clampCmValue(w,getMaxForField('w')); h=clampCmValue(h,getMaxForField('h'));
+    cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (!skipInputSync) { document.getElementById('cropWcm').value=w; document.getElementById('cropHcm').value=h; }
+    updateSizeLabel(); reshapeCropBoxToRatio();
+}
+function setFreeSize(w,h,skipInputSync) {
+    w=clampCmValue(w,getMaxForField('w')); h=clampCmValue(h,getMaxForField('h'));
+    cropModalState._ratioLocked=false; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (!skipInputSync) { document.getElementById('cropWcm').value=w; document.getElementById('cropHcm').value=h; }
+    updateSizeLabel();
+}
+function updateSizeLabel() {
+    var lbl = document.getElementById('cropSizeLabel'); if (!lbl) return;
+    var w=cropModalState._cropWcm, h=cropModalState._cropHcm;
+    lbl.textContent = cropModalState._mode==='preset'
+        ? 'Ukuran cetak: '+w+' cm × '+h+' cm (rasio terkunci)'
+        : 'Ukuran cetak: '+w+' cm × '+h+' cm (bebas, maks '+MANUAL_MAX_CM+'×'+MANUAL_MAX_CM+'cm)';
+}
+function clampNum(val, min, max) { return Math.max(min, Math.min(max, val)); }
+function reshapeCropBoxToRatio() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img || !cropModalState._cropWcm || !cropModalState._cropHcm) return;
+    var ratio = cropModalState._cropWcm / cropModalState._cropHcm;
+    var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    var bL=parseInt(box.style.left)||0, bT=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var cx=bL+bW/2, cy=bT+bH/2;
+    var newW=bW, newH=bW/ratio;
+    if (newH>bH*1.6||newH<bH*0.6) { newH=bH; newW=bH*ratio; }
+    newW = Math.min(newW, iW); newH = Math.min(newH, iH);
+    if (newW/newH > ratio) newW = newH*ratio; else newH = newW/ratio;
+    var nl = clampNum(cx-newW/2, iL, iL+iW-newW);
+    var nt = clampNum(cy-newH/2, iT, iT+iH-newH);
+    box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+}
+function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
+    cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
+    var existing = (replaceIdx>=0 && imgArr[replaceIdx]) ? imgArr[replaceIdx] : null;
+    var preferredSize = (existing && existing.widthCm && existing.heightCm) ? {w:existing.widthCm, h:existing.heightCm} : null;
+    cropModalState._orientation = 'portrait';
+    cropModalState._activePresetIdx = -1;
+    if (preferredSize) {
+        document.getElementById('cropWcm').value = preferredSize.w;
+        document.getElementById('cropHcm').value = preferredSize.h;
+        if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) setCropMode('default');
+        else { setCropMode('manual'); setFreeSize(preferredSize.w, preferredSize.h); }
+    } else {
+        document.getElementById('cropWcm').value = 5; document.getElementById('cropHcm').value = 5;
+        setCropMode('default');
+    }
+    var img = document.getElementById('cropImg');
+    img.onload = function() {
+        var wrap = document.getElementById('cropWrap');
+        var ww = wrap.clientWidth, wh = wrap.clientHeight;
+        var scale = Math.min(ww/img.naturalWidth, wh/img.naturalHeight);
+        var dw = img.naturalWidth*scale, dh = img.naturalHeight*scale;
+        img.style.width = dw+'px'; img.style.height = dh+'px';
+        img.style.left = ((ww-dw)/2)+'px'; img.style.top = ((wh-dh)/2)+'px';
+        var box = document.getElementById('cropBox');
+        var bw = Math.min(dw,dh)*0.8, bh = bw;
+        box.style.width = bw+'px'; box.style.height = bh+'px';
+        box.style.left = ((ww-bw)/2)+'px'; box.style.top = ((wh-bh)/2)+'px';
+        if (cropModalState._mode === 'default') fitCropBoxToFullImage();
+        else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+    };
+    img.src = dataUrl;
+    cropModalState.classList.add('show');
+}
+function closeCropModal() {
+    cropModalState.classList.remove('show');
+    cropModalState._pending = null;
+}
+function cropReset() {
+    var img = document.getElementById('cropImg');
+    var p = cropModalState._pending;
+    if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
+}
+function skipCrop() { closeCropModal(); processNextEvidUpload(); }
+function cropAndSave() {
+    var img = document.getElementById('cropImg');
+    var box = document.getElementById('cropBox');
+    var p = cropModalState._pending;
+    if (!p) { alert('Target upload tidak ditemukan. Coba upload ulang.'); closeCropModal(); return; }
+
+    var iLeft=parseInt(img.style.left)||0, iTop=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    if (!img.naturalWidth || !img.naturalHeight || !iW || !iH) { alert('Gambar belum siap diproses. Coba tunggu sebentar lalu simpan lagi.'); return; }
+    var bLeft=parseInt(box.style.left)||0, bTop=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var scale = img.naturalWidth / iW;
+    var sx=Math.max(0,(bLeft-iLeft)*scale), sy=Math.max(0,(bTop-iTop)*scale);
+    var sw=Math.min(img.naturalWidth-sx, bW*scale), sh=Math.min(img.naturalHeight-sy, bH*scale);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+    var imgArr = p.imgArr;
+    var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
+    var caption = existing ? (existing.caption||'') : '';
+    var offsetX = existing ? (existing.offsetX||0) : 0;
+    if (p.replaceIdx >= 0) imgArr.splice(p.replaceIdx, 1);
+
+    var MAX = 1*1024*1024;
+    var dataUrl;
+    for (var q=0.9; q>=0.25; q-=0.1) {
+        dataUrl = canvas.toDataURL('image/jpeg', q);
+        var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
+        var newSize = dataUrl.length*0.75;
+        if (currentTotal+newSize <= MAX) break;
+        if (q<=0.25) {
+            var factor = Math.sqrt(MAX/(currentTotal+newSize));
+            var c2 = document.createElement('canvas');
+            c2.width = Math.max(50, Math.floor(canvas.width*factor));
+            c2.height = Math.max(50, Math.floor(canvas.height*factor));
+            c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+            dataUrl = c2.toDataURL('image/jpeg', 0.7);
+            break;
+        }
+    }
+
+    var entry = {name:(p.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl: dataUrl, type:'image/jpeg', caption: caption};
+    if (offsetX) entry.offsetX = offsetX;
+    if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
+    imgArr.push(entry);
+
+    if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'CEMS Calibration', p.side||'');
+
+    closeCropModal();
+    if (typeof renderEvidence === 'function' && p.side) renderEvidence(p.side);
+    processNextEvidUpload();
+}
+function initCropDrag() {
+    var box = document.getElementById('cropBox');
+    box.addEventListener('mousedown', onCropDragStart, false);
+    box.addEventListener('touchstart', onCropDragStart, {passive: false});
+}
+function onCropDragStart(e) {
+    e.preventDefault(); e.stopPropagation();
+    var box = document.getElementById('cropBox');
+    var t = e.touches ? e.touches[0] : e;
+    var startX=t.clientX, startY=t.clientY;
+    var startL=parseInt(box.style.left)||0, startT=parseInt(box.style.top)||0;
+    var startW=box.offsetWidth, startH=box.offsetHeight;
+    var rect=box.getBoundingClientRect();
+    var rx=t.clientX-rect.left, ry=t.clientY-rect.top, edge=22;
+    var edgeX = rx<edge?'l':rx>startW-edge?'r':'';
+    var edgeY = ry<edge?'t':ry>startH-edge?'b':'';
+    var mode = (edgeX||edgeY) ? edgeX+edgeY : 'move';
+    function onMove(ev) {
+        ev.preventDefault();
+        var mv = ev.touches?ev.touches[0]:ev;
+        var dx=mv.clientX-startX, dy=mv.clientY-startY;
+        var img=document.getElementById('cropImg');
+        var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+        var iW=img.offsetWidth, iH=img.offsetHeight;
+        if (mode==='move') {
+            box.style.left = clampNum(startL+dx, iL, iL+iW-startW)+'px';
+            box.style.top = clampNum(startT+dy, iT, iT+iH-startH)+'px';
+            return;
+        }
+        if (cropModalState._ratioLocked && cropModalState._cropWcm && cropModalState._cropHcm) {
+            var ratio = cropModalState._cropWcm / cropModalState._cropHcm;
+            var growRight=mode.indexOf('r')>=0, growLeftEdge=mode.indexOf('l')>=0;
+            var growBottom=mode.indexOf('b')>=0, growTopEdge=mode.indexOf('t')>=0;
+            var isCorner = mode.length===2;
+            var anchorX = growLeftEdge ? (startL+startW) : startL;
+            var anchorY = growTopEdge ? (startT+startH) : startT;
+            var dxSigned = growRight?dx:(growLeftEdge?-dx:0);
+            var dySigned = growBottom?dy:(growTopEdge?-dy:0);
+            var newW,newH;
+            if (isCorner) {
+                if (Math.abs(dxSigned)>=Math.abs(dySigned)) { newW=startW+dxSigned; newH=newW/ratio; }
+                else { newH=startH+dySigned; newW=newH*ratio; }
+            } else if (growLeftEdge||growRight) { newW=startW+dxSigned; newH=newW/ratio; }
+            else { newH=startH+dySigned; newW=newH*ratio; }
+            if (newW<40) { newW=40; newH=newW/ratio; }
+            if (newH<40) { newH=40; newW=newH*ratio; }
+            var maxW = growLeftEdge?(anchorX-iL):(iL+iW-anchorX);
+            var maxH = growTopEdge?(anchorY-iT):(iT+iH-anchorY);
+            var scaleDown = Math.min(1, maxW>0?maxW/newW:1, maxH>0?maxH/newH:1);
+            newW*=scaleDown; newH*=scaleDown;
+            var nl,nt;
+            if (isCorner||growLeftEdge||growRight) nl = growLeftEdge?(anchorX-newW):anchorX; else nl = startL+(startW-newW)/2;
+            if (isCorner||growTopEdge||growBottom) nt = growTopEdge?(anchorY-newH):anchorY; else nt = startT+(startH-newH)/2;
+            box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+        } else {
+            var growRight2=mode.indexOf('r')>=0, growLeftEdge2=mode.indexOf('l')>=0;
+            var growBottom2=mode.indexOf('b')>=0, growTopEdge2=mode.indexOf('t')>=0;
+            var nl2=startL, nt2=startT, nw2=startW, nh2=startH;
+            if (growRight2) nw2 = clampNum(startW+dx, 40, iL+iW-startL);
+            if (growLeftEdge2) { nw2 = clampNum(startW-dx, 40, startL+startW-iL); nl2 = startL+startW-nw2; }
+            if (growBottom2) nh2 = clampNum(startH+dy, 40, iT+iH-startT);
+            if (growTopEdge2) { nh2 = clampNum(startH-dy, 40, startT+startH-iT); nt2 = startT+startH-nh2; }
+            box.style.left=nl2+'px'; box.style.top=nt2+'px'; box.style.width=nw2+'px'; box.style.height=nh2+'px';
+        }
+    }
+    function onUp() {
+        document.removeEventListener('mousemove',onMove); document.removeEventListener('touchmove',onMove);
+        document.removeEventListener('mouseup',onUp); document.removeEventListener('touchend',onUp);
+    }
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
+}
+
+/* ── Antrean upload: crop modal hanya proses 1 gambar per waktu, file lain dari
+   multi-select diproses berurutan setelah crop sebelumnya Simpan/Lewati ── */
+function processNextEvidUpload(){
+    if (!evidUploadQueue || !evidUploadQueue.length) { evidUploadQueue = null; return; }
+    var file = evidUploadQueue.shift();
+    var group = evidUploadGroup;
+    function afterConvert(dataUrl){
+        if (!dataUrl) { processNextEvidUpload(); return; }
+        imgOpenCropper(dataUrl, file.name, 'image/jpeg', calEvidence[group], group, 'cems', -1);
+    }
+    if (typeof fileToJpegDataUrl === 'function') fileToJpegDataUrl(file, afterConvert);
+    else compressImageLocal(file, afterConvert);
+}
+function reEditEvidence(group, idx){
+    var img = calEvidence[group][idx];
+    if (!img) return;
+    imgOpenCropper(img.dataUrl, img.name, img.type||'image/jpeg', calEvidence[group], group, 'cems', idx);
+}
+
+/* ── PDF PREVIEW (PDF.js canvas — aman untuk Chrome Android) ── */
+var pdfPreviewState = { doc: null, filename: '', blobUrl: '' };
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+function showPdfPreview(doc, filename) {
+    if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
+    pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
+    var modal = document.getElementById('pdfPreviewModal');
+    var container = document.getElementById('pdfPreviewFrame');
+    container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
+    modal.classList.add('show');
+    if (typeof pdfjsLib === 'undefined') {
+        container.innerHTML = '<div class="pdf-canvas-loading">Preview tidak tersedia di browser ini.<br>Silakan langsung download untuk melihat hasilnya.</div>';
+        return;
+    }
+    var arrayBuffer = doc.output('arraybuffer');
+    pdfjsLib.getDocument({data: arrayBuffer}).promise.then(function(pdf) {
+        container.innerHTML = '';
+        function renderPage(pageNum) {
+            pdf.getPage(pageNum).then(function(page) {
+                var viewport = page.getViewport({scale: 1.8});
+                var canvas = document.createElement('canvas');
+                canvas.width = viewport.width; canvas.height = viewport.height;
+                container.appendChild(canvas);
+                page.render({canvasContext: canvas.getContext('2d'), viewport: viewport}).promise.then(function() {
+                    if (pageNum < pdf.numPages) renderPage(pageNum+1);
+                });
+            });
+        }
+        renderPage(1);
+    }).catch(function(err) {
+        console.error(err);
+        container.innerHTML = '<div class="pdf-canvas-loading">Gagal menampilkan preview.<br>Silakan langsung download untuk melihat hasilnya.</div>';
+    });
+}
+function confirmDownloadPdf() { if (pdfPreviewState.doc) pdfPreviewState.doc.save(pdfPreviewState.filename); }
+function closePdfPreview() {
+    document.getElementById('pdfPreviewModal').classList.remove('show');
+    document.getElementById('pdfPreviewFrame').innerHTML = '';
+    if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
+    pdfPreviewState.doc = null;
+}
 
 /* ══════════════════════════════════════════════════════════════
    BUILD TABLES / GRIDS
@@ -382,15 +960,32 @@ function renderEvidence(group){
   var html = '<div class="evidence-title">📷 '+title+' <span style="font-weight:400;color:#9aa39d">('+subtitle+')</span></div>';
   html += '<div class="evidence-grid">';
   arr.forEach(function(img, idx){
+    var nudgeHtml = '<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">'+
+      '<button type="button" onclick="event.stopPropagation();nudgeImageInArray(calEvidence.'+group+','+idx+',-0.5,function(){renderEvidence(\''+group+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>'+
+      '<span>'+(img.offsetX||0)+'cm</span>'+
+      '<button type="button" onclick="event.stopPropagation();nudgeImageInArray(calEvidence.'+group+','+idx+',0.5,function(){renderEvidence(\''+group+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>'+
+      '</div></div>';
     html += '<div class="evidence-thumb">' +
+      '<button type="button" class="redo" title="Crop Ulang" onclick="reEditEvidence(\''+group+'\','+idx+')">✂️</button>' +
       '<button type="button" class="del" onclick="deleteEvidence(\''+group+'\','+idx+')">✕</button>' +
       '<img src="'+img.dataUrl+'">' +
       '<input class="cap" placeholder="Keterangan..." value="'+(img.caption||'').replace(/"/g,'&quot;')+'" onchange="calEvidence.'+group+'['+idx+'].caption=this.value">' +
+      nudgeHtml +
       '</div>';
   });
-  html += '<div class="evidence-add" onclick="triggerEvidenceUpload(\''+group+'\')"><span>＋</span>Tambah Foto</div>';
+  html += '<div class="evidence-add" id="evidAdd_'+group+'" onclick="toggleSourceChoices(\'evidSource_'+group+'\')" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="this.classList.remove(\'dragover\');evidHandleDrop(event,\''+group+'\')">' +
+    '<span>＋</span>Tambah Foto' +
+    '<div id="evidSource_'+group+'" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">' +
+      '<button type="button" onclick="event.stopPropagation();evidOpenSource(\''+group+'\',\'storage\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block;margin-bottom:4px">Penyimpanan</button>' +
+      '<button type="button" onclick="event.stopPropagation();evidOpenSource(\''+group+'\',\'camera\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block">Kamera</button>' +
+    '</div>' +
+  '</div>';
   html += '</div>';
   box.innerHTML = html;
+}
+function evidOpenSource(group, source){
+  evidPendingGroup = group;
+  openFileInputSource('evidFileInput', source);
 }
 function triggerEvidenceUpload(group){
   evidPendingGroup = group;
@@ -402,32 +997,129 @@ function deleteEvidence(group, idx){
 }
 document.getElementById('evidFileInput').addEventListener('change', function(e){
   var files = Array.prototype.slice.call(e.target.files||[]);
-  if (!files.length || !evidPendingGroup) return;
-  var group = evidPendingGroup;
-  files.forEach(function(file){
-    if (typeof fileToJpegDataUrl === 'function') {
-      fileToJpegDataUrl(file, function(dataUrl){
-        if (!dataUrl) return;
-        pushEvidence(group, dataUrl, file.name);
-      });
-    } else {
-      compressImageLocal(file, function(dataUrl){
-        if (!dataUrl) return;
-        pushEvidence(group, dataUrl, file.name);
-      });
-    }
-  });
   e.target.value = '';
+  if (!files.length || !evidPendingGroup) return;
+  evidHandleFiles(files, evidPendingGroup);
 });
-function pushEvidence(group, dataUrl, name){
-  var entry = { dataUrl: dataUrl, name: name || (group+'_'+Date.now()+'.jpg'), caption: '' };
-  calEvidence[group].push(entry);
-  renderEvidence(group);
-  if (typeof uploadFotoKeGDrive === 'function') {
-    var slotIdx = calEvidence[group].length - 1;
-    var fname = 'cems_'+group+'_'+slotIdx+'.jpg';
-    uploadFotoKeGDrive(dataUrl, fname, 'CEMS Calibration', group);
+
+/* ── Drag & drop file langsung ke kotak "Tambah Foto" ── */
+function evidHandleDrop(e, group){
+  e.preventDefault();
+  evidPendingGroup = group;
+  evidHandleFiles(e.dataTransfer.files, group);
+}
+
+/* ── Overlay notifikasi multi-upload: "memproses foto X dari Y" ── */
+var evidUploadOverlayTimer = null;
+function evidShowUploadOverlay(mode, current, total){
+  var ov = document.getElementById('evidUploadOverlay');
+  var spinner = document.getElementById('evidUploadOverlaySpinner');
+  var title = document.getElementById('evidUploadOverlayTitle');
+  var sub = document.getElementById('evidUploadOverlaySub');
+  if (!ov) return;
+  if (evidUploadOverlayTimer) { clearTimeout(evidUploadOverlayTimer); evidUploadOverlayTimer = null; }
+  if (mode === 'loading') {
+    spinner.style.display = '';
+    title.textContent = 'Memproses foto '+Math.min(current+1,total)+' dari '+total;
+    sub.textContent = 'Upload banyak gambar mungkin membutuhkan waktu';
+    ov.classList.add('show');
+  } else if (mode === 'done') {
+    spinner.style.display = 'none';
+    title.textContent = 'Selesai — semua foto berhasil diupload';
+    sub.textContent = 'Ketuk di mana saja untuk menutup';
+    ov.classList.add('show');
+    evidUploadOverlayTimer = setTimeout(evidHideUploadOverlay, 3000);
   }
+}
+function evidHideUploadOverlay(){
+  var ov = document.getElementById('evidUploadOverlay');
+  if (ov) ov.classList.remove('show');
+  if (evidUploadOverlayTimer) { clearTimeout(evidUploadOverlayTimer); evidUploadOverlayTimer = null; }
+}
+
+/* ── Compress dataUrl gambar penuh (tanpa dipotong) mengikuti budget ukuran
+   yang sama seperti cropAndSave, dipakai untuk auto-skip-crop multi-upload ── */
+function evidCompressFullImage(dataUrl, imgArr, cb){
+  var img = new Image();
+  img.onload = function(){
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    var MAX = 1*1024*1024;
+    var out;
+    for (var q=0.9; q>=0.25; q-=0.1) {
+      out = canvas.toDataURL('image/jpeg', q);
+      var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
+      var newSize = out.length*0.75;
+      if (currentTotal+newSize <= MAX) break;
+      if (q<=0.25) {
+        var factor = Math.sqrt(MAX/(currentTotal+newSize));
+        var c2 = document.createElement('canvas');
+        c2.width = Math.max(50, Math.floor(canvas.width*factor));
+        c2.height = Math.max(50, Math.floor(canvas.height*factor));
+        c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+        out = c2.toDataURL('image/jpeg', 0.7);
+        break;
+      }
+    }
+    cb(out);
+  };
+  img.onerror = function(){ cb(null); };
+  img.src = dataUrl;
+}
+
+/* ── Upload evidence: 1 file → crop modal seperti biasa;
+   multi-select → skip crop (pakai ukuran default penuh) + overlay progress ── */
+function evidHandleFiles(files, group){
+  var fileArr = Array.prototype.slice.call(files||[]);
+  if (!fileArr.length) return;
+  var isMulti = fileArr.length > 1;
+
+  if (!isMulti) {
+    fileArr.forEach(function(file){
+      var afterConvert = function(dataUrl){
+        if (!dataUrl) return;
+        imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', calEvidence[group], group, 'cems', -1);
+      };
+      if (typeof fileToJpegDataUrl === 'function') fileToJpegDataUrl(file, afterConvert);
+      else compressImageLocal(file, afterConvert);
+    });
+    return;
+  }
+
+  var total = fileArr.length, done = 0;
+  evidShowUploadOverlay('loading', done, total);
+  var finishOne = function(){
+    done++;
+    if (done < total) evidShowUploadOverlay('loading', done, total);
+    else evidShowUploadOverlay('done');
+  };
+  fileArr.forEach(function(file){
+    var afterConvert = function(rawDataUrl){
+      if (!rawDataUrl) { finishOne(); return; }
+      evidCompressFullImage(rawDataUrl, calEvidence[group], function(finalDataUrl){
+        if (!finalDataUrl) { finishOne(); return; }
+        var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, type:'image/jpeg', caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
+        calEvidence[group].push(entry);
+        renderEvidence(group);
+        if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'cems', group);
+        finishOne();
+      });
+    };
+    if (typeof fileToJpegDataUrl === 'function') fileToJpegDataUrl(file, afterConvert);
+    else compressImageLocal(file, afterConvert);
+  });
+}
+
+/* ── Geser posisi gambar (nudge) — generik untuk array manapun ── */
+function nudgeImageInArray(imgArr, imgIdx, delta, rerenderFn){
+  var img = imgArr[imgIdx];
+  if (!img) return;
+  var next = Math.round(((img.offsetX||0)+delta)*10)/10;
+  var LIMIT = 5;
+  if (next>LIMIT) next=LIMIT; if (next<-LIMIT) next=-LIMIT;
+  img.offsetX = next;
+  if (typeof rerenderFn === 'function') rerenderFn();
 }
 function compressImageLocal(file, callback){
   var looksLikeImage = file && (/^image\//i.test(file.type||'') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name||''));
@@ -453,6 +1145,9 @@ function compressImageLocal(file, callback){
   reader.readAsDataURL(file);
 }
 renderAllEvidence();
+renderPresetButtons();
+initCropDrag();
+initReportBackground();
 
 /* ══════════════════════════════════════════════════════════════
    COLLECT DATA
@@ -595,14 +1290,18 @@ function exportPdf(){
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
 
+  ensureReportBackground(function() {
   try {
     var doc = new jspdf.jsPDF('p','mm','a4');
     var pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
     var marginX = 12, marginBottom = 14, contentW = pw - marginX*2;
     var y = 14;
 
+    // Halaman pertama — draw background SEKALI di awal
+    drawBg(doc, pw, ph);
+
     function checkPage(need){
-      if (y + need > ph - marginBottom) { doc.addPage(); y = 14; }
+      if (y + need > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = 14; }
     }
     function sectionHeader(title){
       checkPage(12);
@@ -709,6 +1408,7 @@ function exportPdf(){
       arr.forEach(function(img){
         checkPage(cellH + 10);
         var x = marginX + col*(cellW+gap);
+        x = Math.max(marginX, Math.min(x + ((img.offsetX||0)*10), marginX + contentW - cellW));
         try { doc.addImage(img.dataUrl, 'JPEG', x, y, cellW, cellH); } catch(e){}
         doc.setDrawColor(200,200,200); doc.rect(x, y, cellW, cellH);
         if (img.caption) {
@@ -798,6 +1498,7 @@ function exportPdf(){
     console.error(err);
     alert('Gagal membuat PDF: '+err.message);
   }
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════
