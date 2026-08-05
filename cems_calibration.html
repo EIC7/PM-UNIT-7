@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CEMS Calibration — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── Struktur lokal khusus modul CEMS Calibration ── */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #000;border-radius:6px;overflow:hidden;background:#fffbd6}
+.info-row{display:grid;grid-template-columns:130px 1fr;border-bottom:1px solid #000;border-right:1px solid #000}
+.info-row:nth-child(2n){border-right:none}
+.info-row:last-child,.info-row:nth-last-child(2){border-bottom:none}
+.info-row label{padding:8px 10px;font-weight:700;font-size:12.5px;color:#37508c;background:#fff7c2;display:flex;align-items:center}
+.info-row input,.info-row select{border:none;background:transparent;padding:8px 10px;font-size:13px;font-weight:600;color:#14201d;width:100%;box-sizing:border-box}
+.info-row input:focus,.info-row select:focus{outline:2px solid #2ecc71;outline-offset:-2px}
+@media (max-width:700px){.info-grid{grid-template-columns:1fr}.info-row{border-right:none!important}}
+
+.step-panel{margin-bottom:18px}
+.step-title{font-family:'Arial Narrow',sans-serif;font-weight:800;font-size:17px;letter-spacing:.3px;color:#1c2b22;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #dde3de;display:flex;align-items:center;gap:8px}
+.step-title .stepnum{background:#2ecc71;color:#fff;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+
+.freq-choices{display:flex;flex-direction:column;gap:8px}
+.freq-choice{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #cfd8d2;border-radius:8px;cursor:pointer;background:#fafcfb}
+.freq-choice input{width:18px;height:18px}
+.freq-choice.checked{background:#eafcf1;border-color:#2ecc71}
+.freq-choice span{font-weight:600;font-size:14px;color:#20302a}
+
+.cems-table{width:100%;border-collapse:collapse;font-size:13px}
+.cems-table th,.cems-table td{border:1px solid #cfd8d2;padding:8px 10px;text-align:left}
+.cems-table th{background:#f3e9c9;font-weight:700;color:#20302a}
+.cems-table thead.hdr-zero th{background:#d6f5df}
+.cems-table thead.hdr-span1 th{background:#fff3b0}
+.cems-table thead.hdr-span2 th{background:#ffdfae}
+.cems-table thead.hdr-optical th{background:#f4d9a6}
+.cems-table input[type=text],.cems-table input[type=number]{width:100%;box-sizing:border-box;border:1px solid #dfe6e1;border-radius:6px;padding:7px 8px;font-size:13px;background:#f7f8f6}
+.cems-table input:disabled{color:#9aa39d;font-style:italic;background:#eef0ee}
+.cems-table td.param-cell{font-weight:700;color:#20302a;background:#fafcfb;white-space:nowrap}
+
+.field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.field-item label{display:block;font-size:12px;font-weight:700;color:#3d4c44;margin-bottom:4px}
+.field-item input{width:100%;box-sizing:border-box;border:1px solid #dfe6e1;border-radius:7px;padding:9px 10px;font-size:13.5px;background:#f7f8f6}
+.field-item .unit{font-size:10.5px;color:#8a9791;font-weight:600}
+.overall-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.overall-row label{font-weight:700;font-size:13px;color:#20302a}
+.overall-row input{width:120px;border:1px solid #dfe6e1;border-radius:7px;padding:8px 10px;font-size:13.5px;background:#f7f8f6}
+
+.check-list{display:flex;flex-direction:column;gap:10px}
+.check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #e4e8e5;border-radius:8px;background:#fafcfb}
+.check-item input{width:19px;height:19px;margin-top:2px;flex:none}
+.check-item span{font-size:13.5px;color:#20302a;line-height:1.4}
+
+.evidence-box{margin-top:14px;padding:12px;border:1px dashed #b7c3bb;border-radius:8px;background:#f7faf8}
+.evidence-title{font-size:12.5px;font-weight:700;color:#3d4c44;margin-bottom:8px}
+.evidence-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.evidence-thumb{position:relative;border:1px solid #dfe6e1;border-radius:8px;overflow:hidden;background:#fff}
+.evidence-thumb img{width:100%;height:90px;object-fit:cover;display:block}
+.evidence-thumb .cap{width:100%;box-sizing:border-box;border:none;border-top:1px solid #eee;font-size:10.5px;padding:4px 6px}
+.evidence-thumb .del{position:absolute;top:3px;right:3px;background:#e53935;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1}
+.evidence-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px dashed #b7c3bb;border-radius:8px;height:90px;background:#fff;color:#7c8b83;font-size:11px;cursor:pointer}
+.evidence-add span{font-size:20px}
+
+#stepGasReg .field-grid .field-item.zero-fld input{background:#eafcf1}
+#stepGasReg .field-grid .field-item.span1-fld input{background:#fffbe0}
+#stepGasReg .field-grid .field-item.span2-fld input{background:#fff2e0}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">CEMS</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Continuous Emission Monitoring System Calibration</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Data Calibration</div>
+      <div class="page-header-title">CEMS <span>Unit 7</span></div>
+    </div>
+    <div style="margin-bottom:8px">
+      <span class="badge" id="freqBadge">FREQUENCY BELUM DIPILIH</span>
+    </div>
+  </div>
+
+  <!-- INFO PEKERJAAN -->
+  <div class="panel">
+    <div class="section-label">Informasi Pekerjaan</div>
+    <div class="info-grid">
+      <div class="info-row"><label>Workorder</label><input type="text" id="metaWorkorder" placeholder="No. Workorder..."></div>
+      <div class="info-row"><label>Asset</label><input type="text" id="metaAsset" placeholder="Kode Asset..." value="7BGCEMAI107"></div>
+      <div class="info-row"><label>Desc Asset</label><input type="text" id="metaDescAsset" placeholder="Deskripsi Asset..." value="CEMS Analyzer Unit 7"></div>
+      <div class="info-row"><label>PIC</label><input type="text" id="metaPic" placeholder="Nama PIC..."></div>
+      <div class="info-row"><label>Tanggal</label><input type="date" id="metaTanggal"></div>
+      <div class="info-row"><label>Frequency</label><input type="text" id="metaFrequency" placeholder="— pilih di Step 1 —" readonly></div>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="panel step-panel">
+    <div class="step-title"><span class="stepnum">1</span> Calibration Frequency</div>
+    <div class="freq-choices" id="freqChoices">
+      <label class="freq-choice"><input type="radio" name="freq" value="2-Weekly" onchange="onFreqChange()"><span>2-Weekly</span></label>
+      <label class="freq-choice"><input type="radio" name="freq" value="Monthly" onchange="onFreqChange()"><span>Monthly</span></label>
+      <label class="freq-choice"><input type="radio" name="freq" value="3-Monthly" onchange="onFreqChange()"><span>3-Monthly</span></label>
+      <label class="freq-choice"><input type="radio" name="freq" value="2-Yearly" onchange="onFreqChange()"><span>2-Yearly</span></label>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="panel step-panel" id="stepGasReg">
+    <div class="step-title"><span class="stepnum">2</span> Cal Gas Regulator Outlet Pressure (psi)</div>
+    <div style="font-size:12px;color:#7c8b83;font-style:italic;margin-bottom:10px">Check before calibration</div>
+    <div class="field-grid">
+      <div class="field-item zero-fld"><label>Zero - Outlet Pressure</label><input type="number" id="gasZeroOutlet"></div>
+      <div class="field-item zero-fld"><label>Zero - Remaining Gas Cylinder</label><input type="number" id="gasZeroCyl"></div>
+      <div class="field-item span1-fld"><label>Span 1 - Outlet Pressure</label><input type="number" id="gasSpan1Outlet"></div>
+      <div class="field-item span1-fld"><label>Span 1 - Remaining Gas Cylinder</label><input type="number" id="gasSpan1Cyl"></div>
+      <div class="field-item span2-fld"><label>Span 2 - Outlet Pressure</label><input type="number" id="gasSpan2Outlet"></div>
+      <div class="field-item span2-fld"><label>Span 2 - Remaining Gas Cylinder</label><input type="number" id="gasSpan2Cyl"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="panel step-panel">
+    <div class="step-title"><span class="stepnum">3</span> Optical Energy Reading Before Calibration</div>
+    <div style="overflow-x:auto"><table class="cems-table" id="tblOpticalBefore"></table></div>
+    <div class="overall-row"><label>Overall System Energy:</label><input type="number" id="ob_overall" step="0.01"><span class="unit">%</span></div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="panel step-panel">
+    <div class="step-title"><span class="stepnum">4</span> Analyzer Reading (DAS) Before Calibration</div>
+    <div class="field-grid" id="dasBeforeGrid"></div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="panel step-panel">
+    <div class="step-title"><span class="stepnum">5</span> Calibration</div>
+
+    <div style="font-weight:800;font-size:14px;margin:14px 0 8px;color:#1c2b22">a. Zero Calibration</div>
+    <div style="overflow-x:auto"><table class="cems-table" id="tblZero"></table></div>
+    <div class="evidence-box" id="evidZero"></div>
+
+    <div style="font-weight:800;font-size:14px;margin:20px 0 8px;color:#1c2b22">b. Span 1 Calibration</div>
+    <div style="overflow-x:auto"><table class="cems-table" id="tblSpan1"></table></div>
+    <div class="evidence-box" id="evidSpan1"></div>
+
+    <div style="font-weight:800;font-size:14px;margin:20px 0 8px;color:#1c2b22">c. Span 2 Calibration</div>
+    <div style="overflow-x:auto"><table class="cems-table" id="tblSpan2"></table></div>
+    <div class="evidence-box" id="evidSpan2"></div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="panel step-panel">
+    <div class="step-title"><span class="stepnum">6</span> Optical Energy Reading After Calibration</div>
+    <div style="overflow-x:auto"><table class="cems-table" id="tblOpticalAfter"></table></div>
+    <div class="overall-row"><label>Overall System Energy:</label><input type="number" id="oa_overall" step="0.01"><span class="unit">%</span></div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="panel step-panel">
+    <div class="step-title"><span class="stepnum">7</span> Analyzer Reading (DAS) After Calibration</div>
+    <div class="field-grid" id="dasAfterGrid"></div>
+  </div>
+
+  <!-- STEP 8 -->
+  <div class="panel step-panel">
+    <div class="step-title"><span class="stepnum">8</span> Actual Temperature Reading (°C)</div>
+    <div class="field-grid" id="tempGrid"></div>
+  </div>
+
+  <!-- STEP 9 -->
+  <div class="panel step-panel" id="step9" style="display:none">
+    <div class="step-title"><span class="stepnum">9</span> 1 Monthly Inspection</div>
+    <div class="check-list">
+      <label class="check-item"><input type="checkbox" id="insp1_a"><span>a. Following 2 Weekly - Unit 7 CEMS Inspection &amp; Maintenance</span></label>
+      <label class="check-item"><input type="checkbox" id="insp1_b"><span>b. Perform Purging Flow stack gas - elv 110 chimney U78 and Last reading (7BGCEMAI107)</span></label>
+      <label class="check-item"><input type="checkbox" id="insp1_c"><span>c. Perform Purging-cleaning sample probe - elv 110 chimney U7</span></label>
+      <label class="check-item"><input type="checkbox" id="insp1_d"><span>d. Perform Purging-cleaning alumunium filter probe - elv 110 chimney U78</span></label>
+    </div>
+  </div>
+
+  <!-- STEP 10 -->
+  <div class="panel step-panel" id="step10" style="display:none">
+    <div class="step-title"><span class="stepnum">10</span> 3 Monthly Inspection</div>
+    <div class="check-list">
+      <label class="check-item"><input type="checkbox" id="insp3_a"><span>a. Following 1 Monthly - Unit 7 CEMS Inspection &amp; Maintenance</span></label>
+      <label class="check-item"><input type="checkbox" id="insp3_b"><span>b. Analyzer MKS 2000 maintenance (cleaning and cell inspection)</span></label>
+      <label class="check-item"><input type="checkbox" id="insp3_c"><span>c. Perform Replace alumunium filter probe and Kit - elv 110 chimney U78</span></label>
+      <label class="check-item"><input type="checkbox" id="insp3_d"><span>d. Cleaning sample flow gas stack - elv 110 chimney U7</span></label>
+    </div>
+  </div>
+
+  <!-- STEP 11 -->
+  <div class="panel step-panel" id="step11" style="display:none">
+    <div class="step-title"><span class="stepnum">11</span> 2 Yearly Inspection</div>
+    <div class="check-list">
+      <label class="check-item"><input type="checkbox" id="insp2y_a"><span>a. Following 3 Monthly - Unit 7 CEMS Inspection and Maintenance</span></label>
+      <label class="check-item"><input type="checkbox" id="insp2y_b"><span>b. Replace Pump Diaphragm HW for MC3 Analyzer by ECOCHEM item ID PU1286-N026</span></label>
+      <label class="check-item"><input type="checkbox" id="insp2y_c"><span>c. Cleaning sample flow gas stack - elv 110 chimney 7</span></label>
+    </div>
+  </div>
+
+  <!-- BUTTONS -->
+  <div class="btn-row" style="margin-top:20px;margin-bottom:40px">
+    <button class="btn btn-pdf" id="btnPdf" onclick="exportPdf()">⬇ Export PDF</button>
+    <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="saveDraft(true)">💾 Simpan</button>
+    <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
+  </div>
+
+</div>
+
+<input type="file" id="evidFileInput" accept="image/*" style="display:none" multiple>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   DATA MODEL
+   ══════════════════════════════════════════════════════════════ */
+window.CURRENT_MODUL = 'cems_calibration';
+
+var OPTICAL_ROWS = [
+  {key:'CO',   label:'CO',      me:true},
+  {key:'NOx',  label:'NOx',     me:true},
+  {key:'SO2',  label:'SO2',     me:true},
+  {key:'H2O',  label:'H2O',     me:true},
+  {key:'CO2',  label:'CO2',     me:true},
+  {key:'Flow', label:'Flow',    me:false},
+  {key:'O2Wet',label:'O2 Wet',  me:false}
+];
+var DAS_FIELDS = [
+  {key:'NOx',      label:'NOx',      unit:'mg/Nm³'},
+  {key:'SO2',      label:'SO2',      unit:'mg/Nm³'},
+  {key:'CO2',      label:'CO2',      unit:'%'},
+  {key:'O2',       label:'O2',       unit:'%'},
+  {key:'Flow',     label:'Flow',     unit:'m³/s'},
+  {key:'Hg',       label:'Hg',       unit:'mg/Nm³'},
+  {key:'PM',       label:'PM',       unit:'mg/Nm³'},
+  {key:'Pressure', label:'Pressure', unit:'kPa'}
+];
+var TEMP_FIELDS = [
+  {key:'MC3',        label:'MC3 Cell'},
+  {key:'Detector',   label:'Detector'},
+  {key:'O2Sensor',   label:'O2 Sensor'},
+  {key:'SampleLine', label:'Sample Line'},
+  {key:'SamplePump', label:'Sample Pump'},
+  {key:'ProbeFilter',label:'Probe Filter'},
+  {key:'ProbeTube',  label:'Probe Tube'},
+  {key:'GasStack',   label:'Gas Stack Reading'},
+  {key:'RoomTemp',   label:'CEMS Room Temp'}
+];
+var ZERO_ROWS  = [
+  {key:'CO',  label:'CO',    exp:'0'},
+  {key:'CO2', label:'CO2',   exp:'0'},
+  {key:'H2O', label:'H2O',   exp:'0'},
+  {key:'NOx', label:'NOx',   exp:'0'},
+  {key:'SO2', label:'SO2',   exp:'0'},
+  {key:'Flow',label:'Flow',  exp:'0'},
+  {key:'O2Wet',label:'O2 Wet',exp:'12'}
+];
+var SPAN1_ROWS = [
+  {key:'CO',  label:'CO'},
+  {key:'CO2', label:'CO2'},
+  {key:'SO2', label:'SO2'}
+];
+var SPAN2_ROWS = [
+  {key:'NOx', label:'NOx'},
+  {key:'SO2', label:'SO2'}
+];
+
+var calEvidence = { zero: [], span1: [], span2: [] };
+var evidPendingGroup = null;
+
+/* ══════════════════════════════════════════════════════════════
+   BUILD TABLES / GRIDS
+   ══════════════════════════════════════════════════════════════ */
+function buildOpticalTable(tblId, prefix){
+  var tbl = document.getElementById(tblId);
+  var html = '<thead class="hdr-optical"><tr><th>Parameter</th><th>Measured Energy</th><th>Concentration</th></tr></thead><tbody>';
+  OPTICAL_ROWS.forEach(function(r){
+    html += '<tr><td class="param-cell">'+r.label+'</td>' +
+      '<td>' + (r.me ? '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_me">' : '<input type="text" value="N/A" disabled>') + '</td>' +
+      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_c"></td></tr>';
+  });
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+function buildDasGrid(gridId, prefix){
+  var grid = document.getElementById(gridId);
+  var html = '';
+  DAS_FIELDS.forEach(function(f){
+    html += '<div class="field-item"><label>'+f.label+' <span class="unit">('+f.unit+')</span></label>' +
+      '<input type="number" step="0.01" id="'+prefix+'_'+f.key+'"></div>';
+  });
+  grid.innerHTML = html;
+}
+function buildTempGrid(){
+  var grid = document.getElementById('tempGrid');
+  var html = '';
+  TEMP_FIELDS.forEach(function(f){
+    html += '<div class="field-item"><label>'+f.label+'</label><input type="number" step="0.01" id="t_'+f.key+'"></div>';
+  });
+  grid.innerHTML = html;
+}
+function buildCalTable(tblId, headerClass, rows, prefix, hasExpInput){
+  var tbl = document.getElementById(tblId);
+  var html = '<thead class="'+headerClass+'"><tr><th>Parameter</th><th>Expected Value</th><th>Concentration</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    var expCell = hasExpInput
+      ? '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp" value="'+(r.exp!==undefined?r.exp:'')+'">'
+      : '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp">';
+    html += '<tr><td class="param-cell">'+r.label+'</td>' +
+      '<td>'+expCell+'</td>' +
+      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_act"></td></tr>';
+  });
+  html += '</tbody>';
+  tbl.innerHTML = html;
+}
+
+buildOpticalTable('tblOpticalBefore', 'ob');
+buildOpticalTable('tblOpticalAfter', 'oa');
+buildDasGrid('dasBeforeGrid', 'da');
+buildDasGrid('dasAfterGrid', 'db');
+buildTempGrid();
+buildCalTable('tblZero', 'hdr-zero', ZERO_ROWS, 'z', true);
+buildCalTable('tblSpan1', 'hdr-span1', SPAN1_ROWS, 'sp1', false);
+buildCalTable('tblSpan2', 'hdr-span2', SPAN2_ROWS, 'sp2', false);
+
+/* ══════════════════════════════════════════════════════════════
+   STEP 1 — FREQUENCY (mengendalikan visibilitas Step 9/10/11)
+   ══════════════════════════════════════════════════════════════ */
+function onFreqChange(){
+  var checked = document.querySelector('input[name="freq"]:checked');
+  var val = checked ? checked.value : '';
+  document.getElementById('metaFrequency').value = val;
+  document.getElementById('freqBadge').textContent = val ? (val.toUpperCase()+' CALIBRATION') : 'FREQUENCY BELUM DIPILIH';
+  document.querySelectorAll('.freq-choice').forEach(function(el){
+    el.classList.toggle('checked', el.querySelector('input').checked);
+  });
+  document.getElementById('step9').style.display  = (val==='Monthly'||val==='3-Monthly'||val==='2-Yearly') ? 'block' : 'none';
+  document.getElementById('step10').style.display = (val==='3-Monthly'||val==='2-Yearly') ? 'block' : 'none';
+  document.getElementById('step11').style.display = (val==='2-Yearly') ? 'block' : 'none';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FOTO EVIDENCE (Zero / Span 1 / Span 2)
+   Uploader sederhana: kompresi ke JPEG + thumbnail + caption + hapus.
+   Kalau shared.js menyediakan fileToJpegDataUrl/uploadFotoKeGDrive,
+   otomatis dipakai (dicek via typeof) supaya foto ikut ke-backup GDrive.
+   ══════════════════════════════════════════════════════════════ */
+function renderEvidence(group){
+  var box = document.getElementById('evid'+group.charAt(0).toUpperCase()+group.slice(1));
+  var arr = calEvidence[group];
+  var title = {zero:'Foto Evidence — Zero Calibration', span1:'Foto Evidence — Span 1 Calibration', span2:'Foto Evidence — Span 2 Calibration'}[group];
+  var html = '<div class="evidence-title">📷 '+title+' <span style="font-weight:400;color:#9aa39d">(pembanding nilai aktual)</span></div>';
+  html += '<div class="evidence-grid">';
+  arr.forEach(function(img, idx){
+    html += '<div class="evidence-thumb">' +
+      '<button type="button" class="del" onclick="deleteEvidence(\''+group+'\','+idx+')">✕</button>' +
+      '<img src="'+img.dataUrl+'">' +
+      '<input class="cap" placeholder="Keterangan..." value="'+(img.caption||'').replace(/"/g,'&quot;')+'" onchange="calEvidence.'+group+'['+idx+'].caption=this.value">' +
+      '</div>';
+  });
+  html += '<div class="evidence-add" onclick="triggerEvidenceUpload(\''+group+'\')"><span>＋</span>Tambah Foto</div>';
+  html += '</div>';
+  box.innerHTML = html;
+}
+function triggerEvidenceUpload(group){
+  evidPendingGroup = group;
+  document.getElementById('evidFileInput').click();
+}
+function deleteEvidence(group, idx){
+  calEvidence[group].splice(idx,1);
+  renderEvidence(group);
+}
+document.getElementById('evidFileInput').addEventListener('change', function(e){
+  var files = Array.prototype.slice.call(e.target.files||[]);
+  if (!files.length || !evidPendingGroup) return;
+  var group = evidPendingGroup;
+  files.forEach(function(file){
+    if (typeof fileToJpegDataUrl === 'function') {
+      fileToJpegDataUrl(file, function(dataUrl){
+        if (!dataUrl) return;
+        pushEvidence(group, dataUrl, file.name);
+      });
+    } else {
+      compressImageLocal(file, function(dataUrl){
+        if (!dataUrl) return;
+        pushEvidence(group, dataUrl, file.name);
+      });
+    }
+  });
+  e.target.value = '';
+});
+function pushEvidence(group, dataUrl, name){
+  var entry = { dataUrl: dataUrl, name: name || (group+'_'+Date.now()+'.jpg'), caption: '' };
+  calEvidence[group].push(entry);
+  renderEvidence(group);
+  if (typeof uploadFotoKeGDrive === 'function') {
+    var slotIdx = calEvidence[group].length - 1;
+    var fname = 'cems_'+group+'_'+slotIdx+'.jpg';
+    uploadFotoKeGDrive(dataUrl, fname, 'cems_calibration', group);
+  }
+}
+function compressImageLocal(file, callback){
+  var looksLikeImage = file && (/^image\//i.test(file.type||'') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name||''));
+  if (!looksLikeImage) { alert('File harus berupa gambar.'); callback(null); return; }
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    var img = new Image();
+    img.onload = function(){
+      try{
+        var c = document.createElement('canvas');
+        var maxSide = 1400;
+        var scale = Math.min(maxSide/(img.naturalWidth||maxSide), maxSide/(img.naturalHeight||maxSide), 1);
+        c.width = Math.max(1, Math.round((img.naturalWidth||800)*scale));
+        c.height = Math.max(1, Math.round((img.naturalHeight||600)*scale));
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        callback(c.toDataURL('image/jpeg', 0.85));
+      }catch(err){ callback(ev.target.result); }
+    };
+    img.onerror = function(){ alert('Format gambar tidak bisa diproses. Gunakan JPG atau PNG.'); callback(null); };
+    img.src = ev.target.result;
+  };
+  reader.onerror = function(){ callback(null); };
+  reader.readAsDataURL(file);
+}
+renderEvidence('zero'); renderEvidence('span1'); renderEvidence('span2');
+
+/* ══════════════════════════════════════════════════════════════
+   COLLECT DATA
+   ══════════════════════════════════════════════════════════════ */
+function val(id){ var el=document.getElementById(id); return el ? el.value : ''; }
+function chk(id){ var el=document.getElementById(id); return el ? el.checked : false; }
+
+function collectOptical(prefix){
+  var out = {};
+  OPTICAL_ROWS.forEach(function(r){
+    out[r.key] = { me: r.me ? val(prefix+'_'+r.key+'_me') : 'N/A', c: val(prefix+'_'+r.key+'_c') };
+  });
+  return out;
+}
+function collectDas(prefix){
+  var out = {};
+  DAS_FIELDS.forEach(function(f){ out[f.key] = val(prefix+'_'+f.key); });
+  return out;
+}
+function collectCal(prefix, rows){
+  var out = {};
+  rows.forEach(function(r){ out[r.key] = { exp: val(prefix+'_'+r.key+'_exp'), act: val(prefix+'_'+r.key+'_act') }; });
+  return out;
+}
+
+function collectData(){
+  return {
+    meta: {
+      workorder: val('metaWorkorder'), asset: val('metaAsset'), descAsset: val('metaDescAsset'),
+      pic: val('metaPic'), tanggal: val('metaTanggal'), frequency: val('metaFrequency')
+    },
+    gasReg: {
+      zeroOutlet: val('gasZeroOutlet'), zeroCyl: val('gasZeroCyl'),
+      span1Outlet: val('gasSpan1Outlet'), span1Cyl: val('gasSpan1Cyl'),
+      span2Outlet: val('gasSpan2Outlet'), span2Cyl: val('gasSpan2Cyl')
+    },
+    opticalBefore: collectOptical('ob'), opticalBeforeOverall: val('ob_overall'),
+    dasBefore: collectDas('da'),
+    zero: collectCal('z', ZERO_ROWS), span1: collectCal('sp1', SPAN1_ROWS), span2: collectCal('sp2', SPAN2_ROWS),
+    opticalAfter: collectOptical('oa'), opticalAfterOverall: val('oa_overall'),
+    dasAfter: collectDas('db'),
+    temperature: (function(){ var o={}; TEMP_FIELDS.forEach(function(f){o[f.key]=val('t_'+f.key);}); return o; })(),
+    inspection1: { a:chk('insp1_a'), b:chk('insp1_b'), c:chk('insp1_c'), d:chk('insp1_d') },
+    inspection3: { a:chk('insp3_a'), b:chk('insp3_b'), c:chk('insp3_c'), d:chk('insp3_d') },
+    inspection2y:{ a:chk('insp2y_a'), b:chk('insp2y_b'), c:chk('insp2y_c') },
+    evidence: calEvidence
+  };
+}
+function applyData(d){
+  if (!d) return;
+  if (d.meta){ val_set('metaWorkorder',d.meta.workorder); val_set('metaAsset',d.meta.asset); val_set('metaDescAsset',d.meta.descAsset); val_set('metaPic',d.meta.pic); val_set('metaTanggal',d.meta.tanggal); }
+  if (d.meta && d.meta.frequency){
+    var r = document.querySelector('input[name="freq"][value="'+d.meta.frequency+'"]');
+    if (r) { r.checked = true; onFreqChange(); }
+  }
+  if (d.gasReg){ ['zeroOutlet','zeroCyl','span1Outlet','span1Cyl','span2Outlet','span2Cyl'].forEach(function(k){ val_set('gas'+k.charAt(0).toUpperCase()+k.slice(1), d.gasReg[k]); }); }
+  function applyOptical(prefix, data, overall){
+    if (!data) return;
+    OPTICAL_ROWS.forEach(function(r){
+      if (data[r.key]){ if(r.me) val_set(prefix+'_'+r.key+'_me', data[r.key].me); val_set(prefix+'_'+r.key+'_c', data[r.key].c); }
+    });
+  }
+  applyOptical('ob', d.opticalBefore); val_set('ob_overall', d.opticalBeforeOverall);
+  applyOptical('oa', d.opticalAfter); val_set('oa_overall', d.opticalAfterOverall);
+  function applyDas(prefix, data){ if(!data) return; DAS_FIELDS.forEach(function(f){ val_set(prefix+'_'+f.key, data[f.key]); }); }
+  applyDas('da', d.dasBefore); applyDas('db', d.dasAfter);
+  function applyCal(prefix, rows, data){ if(!data) return; rows.forEach(function(r){ if(data[r.key]){ val_set(prefix+'_'+r.key+'_exp', data[r.key].exp); val_set(prefix+'_'+r.key+'_act', data[r.key].act); } }); }
+  applyCal('z', ZERO_ROWS, d.zero); applyCal('sp1', SPAN1_ROWS, d.span1); applyCal('sp2', SPAN2_ROWS, d.span2);
+  if (d.temperature) TEMP_FIELDS.forEach(function(f){ val_set('t_'+f.key, d.temperature[f.key]); });
+  if (d.inspection1) ['a','b','c','d'].forEach(function(k){ chk_set('insp1_'+k, d.inspection1[k]); });
+  if (d.inspection3) ['a','b','c','d'].forEach(function(k){ chk_set('insp3_'+k, d.inspection3[k]); });
+  if (d.inspection2y) ['a','b','c'].forEach(function(k){ chk_set('insp2y_'+k, d.inspection2y[k]); });
+  if (d.evidence){
+    calEvidence = d.evidence;
+    renderEvidence('zero'); renderEvidence('span1'); renderEvidence('span2');
+  }
+}
+function val_set(id,v){ var el=document.getElementById(id); if (el && v!==undefined && v!==null) el.value = v; }
+function chk_set(id,v){ var el=document.getElementById(id); if (el) el.checked = !!v; }
+
+/* ══════════════════════════════════════════════════════════════
+   SIMPAN DRAFT — pakai dbSave/dbCollectData shared.js kalau tersedia,
+   fallback ke localStorage kalau belum disambungkan.
+   ══════════════════════════════════════════════════════════════ */
+var LS_KEY = 'cems_calibration_draft';
+function saveDraft(manual){
+  var data = collectData();
+  if (typeof dbSave === 'function') {
+    try { dbSave('cems_calibration'); return; } catch(e) { /* fallback di bawah */ }
+  }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+    if (manual) {
+      if (typeof dbShowToast === 'function') dbShowToast('Draft tersimpan ✓');
+      else alert('Draft tersimpan di perangkat ini ✓');
+    }
+  } catch(e){ if (manual) alert('Gagal menyimpan draft: '+e.message); }
+}
+function loadDraft(){
+  if (typeof dbLoad === 'function') return; // biarkan alur riwayat shared.js yang menangani (?id=xxx)
+  try {
+    var raw = localStorage.getItem(LS_KEY);
+    if (raw) applyData(JSON.parse(raw));
+  } catch(e){}
+}
+function dbCollectData(modul){
+  // Dipanggil oleh shared.js (dbSave) kalau tersedia — bentuk data mengikuti collectData() di atas.
+  if (modul !== 'cems_calibration') return null;
+  return collectData();
+}
+function applyRecordToForm(rec){
+  if (!rec) return;
+  applyData(rec.data || rec);
+}
+function restoreDraftData(rec, editingId){
+  if (!rec) return;
+  setTimeout(function(){
+    applyRecordToForm(rec);
+    if (editingId) window._editingId = editingId;
+    if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
+  }, 300);
+}
+function resetAll(){
+  if (!confirm('Reset semua data yang sudah diisi?')) return;
+  document.querySelectorAll('input[type=text],input[type=number],input[type=date]').forEach(function(el){ el.value=''; });
+  document.querySelectorAll('input[type=checkbox]').forEach(function(el){ el.checked=false; });
+  document.querySelectorAll('input[name="freq"]').forEach(function(el){ el.checked=false; });
+  document.getElementById('metaFrequency').value='';
+  document.getElementById('freqBadge').textContent='FREQUENCY BELUM DIPILIH';
+  document.querySelectorAll('.freq-choice').forEach(function(el){ el.classList.remove('checked'); });
+  document.getElementById('step9').style.display='none';
+  document.getElementById('step10').style.display='none';
+  document.getElementById('step11').style.display='none';
+  calEvidence = { zero: [], span1: [], span2: [] };
+  renderEvidence('zero'); renderEvidence('span1'); renderEvidence('span2');
+  try{ localStorage.removeItem(LS_KEY); }catch(e){}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EXPORT PDF — pola Fitur L (grid info full-width) + autoTable
+   + lampiran foto evidence kalibrasi.
+   ══════════════════════════════════════════════════════════════ */
+function safe(v){ return (v===undefined||v===null||v==='') ? '—' : String(v); }
+
+function exportPdf(){
+  var d = collectData();
+  var totalImgs = calEvidence.zero.length + calEvidence.span1.length + calEvidence.span2.length;
+  var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
+  if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
+
+  try {
+    var doc = new jspdf.jsPDF('p','mm','a4');
+    var pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight();
+    var marginX = 12, marginBottom = 14, contentW = pw - marginX*2;
+    var y = 14;
+
+    function checkPage(need){
+      if (y + need > ph - marginBottom) { doc.addPage(); y = 14; }
+    }
+    function sectionHeader(title){
+      checkPage(12);
+      doc.setFillColor(30,45,38); doc.rect(marginX, y, contentW, 8, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(255,255,255);
+      doc.text(title, marginX+3, y+5.6);
+      y += 12;
+    }
+
+    // ── JUDUL ──
+    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(20,30,25);
+    doc.text('CEMS DATA CALIBRATION — UNIT 7', marginX, y); y += 8;
+
+    // ── INFO PEKERJAAN (Fitur L: grid full-width label|value) ──
+    var padIn = 3, labelColW = 40;
+    var valueX = marginX + labelColW + padIn, valueW = contentW - labelColW - padIn*2;
+    var infoFields = [
+      ['Workorder', safe(d.meta.workorder)],
+      ['Asset', safe(d.meta.asset)],
+      ['Desc Asset', safe(d.meta.descAsset)],
+      ['PIC', safe(d.meta.pic)],
+      ['Tanggal', safe(d.meta.tanggal)],
+      ['Frequency', safe(d.meta.frequency)]
+    ];
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+    var infoRows = infoFields.map(function(f){
+      var lines = doc.splitTextToSize(String(f[1]||''), valueW);
+      var h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5);
+      return {label:f[0], lines:lines, h:h};
+    });
+    var totalH = infoRows.reduce(function(s,r){ return s+r.h; },0);
+    checkPage(totalH+6);
+    doc.setFillColor(255,251,214); doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
+    doc.rect(marginX, y, contentW, totalH, 'FD');
+    doc.line(marginX+labelColW, y, marginX+labelColW, y+totalH);
+    var rowY = y; doc.setLineWidth(0.25);
+    infoRows.forEach(function(r, idx){
+      if (idx>0) doc.line(marginX, rowY, marginX+contentW, rowY);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
+      doc.text(r.label, marginX+padIn, rowY+4.6);
+      doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
+      doc.text(r.lines, valueX, rowY+4.6);
+      rowY += r.h;
+    });
+    y += totalH + 8;
+
+    // ── STEP 2: Cal Gas Regulator ──
+    sectionHeader('Step 2: Cal Gas Regulator Outlet Pressure (psi)');
+    doc.autoTable({
+      startY: y, margin:{left:marginX, right:marginX},
+      head: [['Titik','Outlet Pressure (psi)','Remaining Gas Cylinder (psi)']],
+      body: [
+        ['Zero', safe(d.gasReg.zeroOutlet), safe(d.gasReg.zeroCyl)],
+        ['Span 1', safe(d.gasReg.span1Outlet), safe(d.gasReg.span1Cyl)],
+        ['Span 2', safe(d.gasReg.span2Outlet), safe(d.gasReg.span2Cyl)]
+      ],
+      styles:{fontSize:8.5, cellPadding:2.2}, headStyles:{fillColor:[243,233,201], textColor:[20,30,25]},
+      theme:'grid'
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    function opticalTableBody(data){
+      return OPTICAL_ROWS.map(function(r){ return [r.label, data[r.key].me, data[r.key].c]; });
+    }
+    // ── STEP 3 ──
+    checkPage(14); sectionHeader('Step 3: Optical Energy Reading Before Calibration');
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Measured Energy','Concentration']],
+      body: opticalTableBody(d.opticalBefore), styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[244,217,166],textColor:[20,30,25]}, theme:'grid' });
+    y = doc.lastAutoTable.finalY + 3;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,30,25);
+    doc.text('Overall System Energy: '+safe(d.opticalBeforeOverall)+' %', marginX, y+4); y += 10;
+
+    // ── STEP 4 ──
+    checkPage(14); sectionHeader('Step 4: Analyzer Reading (DAS) Before Calibration');
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Nilai']],
+      body: DAS_FIELDS.map(function(f){ return [f.label+' ('+f.unit+')', safe(d.dasBefore[f.key])]; }),
+      styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── STEP 5 ──
+    checkPage(14); sectionHeader('Step 5: Calibration');
+    function calTable(subtitle, headerColor, rows, data){
+      checkPage(10);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,30,25);
+      doc.text(subtitle, marginX, y+4); y += 7;
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Expected Value','Concentration']],
+        body: rows.map(function(r){ return [r.label, data[r.key].exp, data[r.key].act]; }),
+        styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:headerColor,textColor:[20,30,25]}, theme:'grid' });
+      y = doc.lastAutoTable.finalY + 6;
+    }
+    calTable('a. Zero Calibration', [214,245,223], ZERO_ROWS, d.zero);
+    calTable('b. Span 1 Calibration', [255,243,176], SPAN1_ROWS, d.span1);
+    calTable('c. Span 2 Calibration', [255,223,174], SPAN2_ROWS, d.span2);
+
+    // ── FOTO EVIDENCE per group ──
+    function drawEvidenceGroup(title, arr){
+      if (!arr.length) return;
+      checkPage(14);
+      doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,30,25);
+      doc.text('📷 '+title, marginX, y+4); y += 7;
+      var perRow = 3, gap = 4;
+      var cellW = (contentW - gap*(perRow-1)) / perRow, cellH = cellW*0.72;
+      var col = 0;
+      arr.forEach(function(img){
+        checkPage(cellH + 10);
+        var x = marginX + col*(cellW+gap);
+        try { doc.addImage(img.dataUrl, 'JPEG', x, y, cellW, cellH); } catch(e){}
+        doc.setDrawColor(200,200,200); doc.rect(x, y, cellW, cellH);
+        if (img.caption) {
+          doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(90,90,90);
+          doc.text(doc.splitTextToSize(img.caption, cellW), x, y+cellH+3.5);
+        }
+        col++;
+        if (col >= perRow) { col = 0; y += cellH + 9; } 
+      });
+      if (col !== 0) y += cellH + 9;
+      y += 3;
+    }
+    drawEvidenceGroup('Foto Evidence — Zero Calibration', calEvidence.zero);
+    drawEvidenceGroup('Foto Evidence — Span 1 Calibration', calEvidence.span1);
+    drawEvidenceGroup('Foto Evidence — Span 2 Calibration', calEvidence.span2);
+
+    // ── STEP 6 ──
+    checkPage(14); sectionHeader('Step 6: Optical Energy Reading After Calibration');
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Measured Energy','Concentration']],
+      body: opticalTableBody(d.opticalAfter), styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[244,217,166],textColor:[20,30,25]}, theme:'grid' });
+    y = doc.lastAutoTable.finalY + 3;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,30,25);
+    doc.text('Overall System Energy: '+safe(d.opticalAfterOverall)+' %', marginX, y+4); y += 10;
+
+    // ── STEP 7 ──
+    checkPage(14); sectionHeader('Step 7: Analyzer Reading (DAS) After Calibration');
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Parameter','Nilai']],
+      body: DAS_FIELDS.map(function(f){ return [f.label+' ('+f.unit+')', safe(d.dasAfter[f.key])]; }),
+      styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── STEP 8 ──
+    checkPage(14); sectionHeader('Step 8: Actual Temperature Reading (°C)');
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Titik Ukur','Suhu (°C)']],
+      body: TEMP_FIELDS.map(function(f){ return [f.label, safe(d.temperature[f.key])]; }),
+      styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // ── STEP 9/10/11 — hanya dicetak kalau relevan dengan frequency terpilih ──
+    function inspectionBody(items){
+      return Object.keys(items).map(function(k){ return [(items[k]?'✓':'—'), k]; });
+    }
+    var freq = d.meta.frequency;
+    if (freq==='Monthly'||freq==='3-Monthly'||freq==='2-Yearly'){
+      checkPage(14); sectionHeader('Step 9: 1 Monthly Inspection');
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Status','Item']],
+        body:[
+          [d.inspection1.a?'✓':'—','a. Following 2 Weekly - Unit 7 CEMS Inspection & Maintenance'],
+          [d.inspection1.b?'✓':'—','b. Perform Purging Flow stack gas - elv 110 chimney U78 and Last reading (7BGCEMAI107)'],
+          [d.inspection1.c?'✓':'—','c. Perform Purging-cleaning sample probe - elv 110 chimney U7'],
+          [d.inspection1.d?'✓':'—','d. Perform Purging-cleaning alumunium filter probe - elv 110 chimney U78']
+        ], styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+    if (freq==='3-Monthly'||freq==='2-Yearly'){
+      checkPage(14); sectionHeader('Step 10: 3 Monthly Inspection');
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Status','Item']],
+        body:[
+          [d.inspection3.a?'✓':'—','a. Following 1 Monthly - Unit 7 CEMS Inspection & Maintenance'],
+          [d.inspection3.b?'✓':'—','b. Analyzer MKS 2000 maintenance (cleaning and cell inspection)'],
+          [d.inspection3.c?'✓':'—','c. Perform Replace alumunium filter probe and Kit - elv 110 chimney U78'],
+          [d.inspection3.d?'✓':'—','d. Cleaning sample flow gas stack - elv 110 chimney U7']
+        ], styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+    if (freq==='2-Yearly'){
+      checkPage(14); sectionHeader('Step 11: 2 Yearly Inspection');
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX}, head:[['Status','Item']],
+        body:[
+          [d.inspection2y.a?'✓':'—','a. Following 3 Monthly - Unit 7 CEMS Inspection and Maintenance'],
+          [d.inspection2y.b?'✓':'—','b. Replace Pump Diaphragm HW for MC3 Analyzer by ECOCHEM item ID PU1286-N026'],
+          [d.inspection2y.c?'✓':'—','c. Cleaning sample flow gas stack - elv 110 chimney 7']
+        ], styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    if (typeof hideImgLoading === 'function') hideImgLoading();
+    var fn = 'CEMS_Calibration_U7_'+(d.meta.tanggal||'draft')+'.pdf';
+    if (typeof showPdfPreview === 'function') { showPdfPreview(doc, fn); }
+    else { doc.save(fn); }
+  } catch (err) {
+    if (typeof hideImgLoading === 'function') hideImgLoading();
+    console.error(err);
+    alert('Gagal membuat PDF: '+err.message);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+   ══════════════════════════════════════════════════════════════ */
+setInterval(function(){ var el=document.getElementById('clock'); if(el) el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); },1000);
+(function(){
+  var today=new Date();
+  var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var el=document.getElementById('metaTanggal'); if(el && !el.value) el.value=todayStr;
+})();
+// autosave ringan tiap ada perubahan input (fallback localStorage, lihat saveDraft())
+document.addEventListener('change', function(e){
+  if (e.target && (e.target.tagName==='INPUT')) saveDraft(false);
+});
+loadDraft();
+
+/* ── LOAD FROM HISTORY (URL ?id=xxx), kalau shared.js sudah tersambung ── */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  if (!id || typeof dbLoad !== 'function') return;
+  dbLoad(id, function(rec){
+    setTimeout(function(){
+      applyRecordToForm(rec);
+      if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
+    }, 300);
+  });
+})();
+</script>
+</body>
+</html>
