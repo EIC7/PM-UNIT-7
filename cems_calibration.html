@@ -218,7 +218,7 @@
   <!-- BUTTONS -->
   <div class="btn-row" style="margin-top:20px;margin-bottom:40px">
     <button class="btn btn-pdf" id="btnPdf" onclick="exportPdf()">⬇ Export PDF</button>
-    <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="saveDraft(true)">💾 Simpan</button>
+    <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('CEMS Calibration')">💾 Simpan ke Database</button>
     <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
   </div>
 
@@ -230,7 +230,7 @@
 /* ══════════════════════════════════════════════════════════════
    DATA MODEL
    ══════════════════════════════════════════════════════════════ */
-window.CURRENT_MODUL = 'cems_calibration';
+window.CURRENT_MODUL = 'CEMS Calibration';
 
 var OPTICAL_ROWS = [
   {key:'CO',   label:'CO',      me:true},
@@ -412,7 +412,7 @@ function pushEvidence(group, dataUrl, name){
   if (typeof uploadFotoKeGDrive === 'function') {
     var slotIdx = calEvidence[group].length - 1;
     var fname = 'cems_'+group+'_'+slotIdx+'.jpg';
-    uploadFotoKeGDrive(dataUrl, fname, 'cems_calibration', group);
+    uploadFotoKeGDrive(dataUrl, fname, 'CEMS Calibration', group);
   }
 }
 function compressImageLocal(file, callback){
@@ -520,34 +520,24 @@ function val_set(id,v){ var el=document.getElementById(id); if (el && v!==undefi
 function chk_set(id,v){ var el=document.getElementById(id); if (el) el.checked = !!v; }
 
 /* ══════════════════════════════════════════════════════════════
-   SIMPAN DRAFT — pakai dbSave/dbCollectData shared.js kalau tersedia,
-   fallback ke localStorage kalau belum disambungkan.
+   SIMPAN — sepenuhnya lewat dbSave/dbCollectData shared.js.
+   Autosave draft (IndexedDB) & prompt "lanjutkan draft?" sudah otomatis
+   ditangani shared.js (autosaveCheckAndPrompt) selama dbCollectData +
+   restoreDraftData ada di sini — tidak perlu localStorage tambahan.
    ══════════════════════════════════════════════════════════════ */
-var LS_KEY = 'cems_calibration_draft';
-function saveDraft(manual){
-  var data = collectData();
-  if (typeof dbSave === 'function') {
-    try { dbSave('cems_calibration'); return; } catch(e) { /* fallback di bawah */ }
-  }
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(data));
-    if (manual) {
-      if (typeof dbShowToast === 'function') dbShowToast('Draft tersimpan ✓');
-      else alert('Draft tersimpan di perangkat ini ✓');
-    }
-  } catch(e){ if (manual) alert('Gagal menyimpan draft: '+e.message); }
-}
-function loadDraft(){
-  if (typeof dbLoad === 'function') return; // biarkan alur riwayat shared.js yang menangani (?id=xxx)
-  try {
-    var raw = localStorage.getItem(LS_KEY);
-    if (raw) applyData(JSON.parse(raw));
-  } catch(e){}
-}
 function dbCollectData(modul){
-  // Dipanggil oleh shared.js (dbSave) kalau tersedia — bentuk data mengikuti collectData() di atas.
-  if (modul !== 'cems_calibration') return null;
-  return collectData();
+  // Dipanggil oleh shared.js (dbSave/autosave) — bentuk rec HARUS sesuai
+  // kolom tabel pm_records: modul, tanggal, pic, work_order, unit, data.
+  if (modul !== 'CEMS Calibration') return null;
+  var full = collectData();
+  return {
+    modul: 'CEMS Calibration',
+    tanggal: full.meta.tanggal || null,
+    pic: full.meta.pic || null,
+    work_order: full.meta.workorder || null,
+    unit: 'Unit 7',
+    data: full
+  };
 }
 function applyRecordToForm(rec){
   if (!rec) return;
@@ -574,7 +564,8 @@ function resetAll(){
   document.getElementById('step11').style.display='none';
   calEvidence = { zero: [], span1: [], span2: [] };
   renderEvidence('zero'); renderEvidence('span1'); renderEvidence('span2');
-  try{ localStorage.removeItem(LS_KEY); }catch(e){}
+  window._editingId = null;
+  if (typeof autosaveClear === 'function') autosaveClear();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -799,13 +790,11 @@ setInterval(function(){ var el=document.getElementById('clock'); if(el) el.textC
   var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
   var el=document.getElementById('metaTanggal'); if(el && !el.value) el.value=todayStr;
 })();
-// autosave ringan tiap ada perubahan input (fallback localStorage, lihat saveDraft())
-document.addEventListener('change', function(e){
-  if (e.target && (e.target.tagName==='INPUT')) saveDraft(false);
-});
-loadDraft();
+// Autosave draft, prompt "lanjutkan draft?", dan load-from-history (?id=xxx)
+// sudah otomatis ditangani shared.js (autosaveCheckAndPrompt / dbLoad) selama
+// dbCollectData(), applyRecordToForm(), dan restoreDraftData() di atas ada.
 
-/* ── LOAD FROM HISTORY (URL ?id=xxx), kalau shared.js sudah tersambung ── */
+/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
 (function(){
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
@@ -813,6 +802,7 @@ loadDraft();
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec);
+      window._editingId = id;
       if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
     }, 300);
   });

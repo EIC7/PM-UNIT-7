@@ -32,6 +32,7 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
       <button class="btn btn-outline" onclick="loadHistory('')" style="font-size:12px;padding:6px 14px;flex:none">Semua</button>
       <button class="btn btn-outline" onclick="loadHistory('FEGT')" style="font-size:12px;padding:6px 14px;flex:none">FEGT</button>
+      <button class="btn btn-outline" onclick="loadHistory('CEMS Calibration')" style="font-size:12px;padding:6px 14px;flex:none">CEMS Calibration</button>
       <button class="btn btn-outline" onclick="loadHistory('SO2')" style="font-size:12px;padding:6px 14px;flex:none">SO2</button>
       <button class="btn btn-outline" onclick="loadHistory('OPACITY')" style="font-size:12px;padding:6px 14px;flex:none">Opacity</button>
       <button class="btn btn-outline" onclick="loadHistory('MAINTENANCE_REPORT')" style="font-size:12px;padding:6px 14px;flex:none">Maintenance</button>
@@ -60,6 +61,7 @@
 function modulToUrl(modul, id) {
   var norm = normalizeModul(modul);
   if (norm === 'FEGT')               return 'fegt.html?id=' + id;
+  if (norm === 'CEMS_CALIBRATION')   return 'cems_calibration.html?id=' + id;
   if (norm === 'SO2')                return 'so2.html?id=' + id;
   if (norm === 'OPACITY')            return 'opacity.html?id=' + id;
   if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id;
@@ -82,6 +84,7 @@ function modulToUrl(modul, id) {
 function modulToPrintUrl(modul, id) {
   var norm = normalizeModul(modul);
   if (norm === 'FEGT')               return 'fegt.html?id=' + id + '&print=1';
+  if (norm === 'CEMS_CALIBRATION')   return 'cems_calibration.html?id=' + id + '&print=1';
   if (norm === 'SO2')                return 'so2.html?id=' + id + '&print=1';
   if (norm === 'OPACITY')            return 'opacity.html?id=' + id + '&print=1';
   if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id + '&print=1';

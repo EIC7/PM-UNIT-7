@@ -489,6 +489,7 @@ function normalizeModul(name) {
   if (n.indexOf('FEGT')>=0 || n.indexOf('LEAK')>=0) return 'FEGT';
   if (n.indexOf('SO2')>=0 || n.indexOf('SCRUBBER')>=0) return 'SO2';
   if (n.indexOf('OPACITY')>=0) return 'OPACITY';
+  if (n.indexOf('CEMS')>=0) return 'CEMS_CALIBRATION';
   if (n.indexOf('BELT')>=0 || n.indexOf('CONVEYOR')>=0) {
     if (n.indexOf('E4')>=0 || n.indexOf('E45')>=0 || (n.indexOf('E-4')>=0)) return 'BELT_E45';
     if (n.indexOf('E2')>=0 || n.indexOf('E23')>=0 || (n.indexOf('E-2')>=0)) return 'BELT_E23';
