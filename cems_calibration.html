@@ -192,6 +192,9 @@
       <label class="check-item"><input type="checkbox" id="insp1_c"><span>c. Perform Purging-cleaning sample probe - elv 110 chimney U7</span></label>
       <label class="check-item"><input type="checkbox" id="insp1_d"><span>d. Perform Purging-cleaning alumunium filter probe - elv 110 chimney U78</span></label>
     </div>
+    <div class="evidence-box" id="evidFlowstack"></div>
+    <div class="evidence-box" id="evidSampleprobe"></div>
+    <div class="evidence-box" id="evidFilterprobe"></div>
   </div>
 
   <!-- STEP 10 -->
@@ -213,6 +216,7 @@
       <label class="check-item"><input type="checkbox" id="insp2y_b"><span>b. Replace Pump Diaphragm HW for MC3 Analyzer by ECOCHEM item ID PU1286-N026</span></label>
       <label class="check-item"><input type="checkbox" id="insp2y_c"><span>c. Cleaning sample flow gas stack - elv 110 chimney 7</span></label>
     </div>
+    <div class="evidence-box" id="evidPumpdiaphragm"></div>
   </div>
 
   <!-- BUTTONS -->
@@ -273,15 +277,17 @@ var ZERO_ROWS  = [
 ];
 var SPAN1_ROWS = [
   {key:'CO',  label:'CO'},
-  {key:'CO2', label:'CO2'},
-  {key:'SO2', label:'SO2'}
+  {key:'SO2', label:'SO2'},
+  {key:'CO2', label:'CO2'}
 ];
 var SPAN2_ROWS = [
   {key:'NOx', label:'NOx'},
   {key:'SO2', label:'SO2'}
 ];
 
-var calEvidence = { zero: [], span1: [], span2: [] };
+var calEvidence = { zero: [], span1: [], span2: [], flowstack: [], sampleprobe: [], filterprobe: [], pumpdiaphragm: [] };
+var ALL_EVID_GROUPS = ['zero','span1','span2','flowstack','sampleprobe','filterprobe','pumpdiaphragm'];
+function renderAllEvidence(){ ALL_EVID_GROUPS.forEach(renderEvidence); }
 var evidPendingGroup = null;
 
 /* ══════════════════════════════════════════════════════════════
@@ -364,8 +370,16 @@ function onFreqChange(){
 function renderEvidence(group){
   var box = document.getElementById('evid'+group.charAt(0).toUpperCase()+group.slice(1));
   var arr = calEvidence[group];
-  var title = {zero:'Foto Evidence — Zero Calibration', span1:'Foto Evidence — Span 1 Calibration', span2:'Foto Evidence — Span 2 Calibration'}[group];
-  var html = '<div class="evidence-title">📷 '+title+' <span style="font-weight:400;color:#9aa39d">(pembanding nilai aktual)</span></div>';
+  var title = {
+    zero:'Foto Evidence — Zero Calibration', span1:'Foto Evidence — Span 1 Calibration', span2:'Foto Evidence — Span 2 Calibration',
+    flowstack:'Foto Evidence — Purging/Cleaning Flow Stack Gas (elv 110 chimney U7/U78)',
+    sampleprobe:'Foto Evidence — Purging-Cleaning Sample Probe (elv 110 chimney U7)',
+    filterprobe:'Foto Evidence — Filter Probe Alumunium (elv 110 chimney U78)',
+    pumpdiaphragm:'Foto Evidence — Replace Pump Diaphragm HW MC3 Analyzer (ECOCHEM PU1286-N026)'
+  }[group];
+  var calGroups = {zero:1, span1:1, span2:1};
+  var subtitle = calGroups[group] ? 'pembanding nilai aktual' : 'dokumentasi pekerjaan';
+  var html = '<div class="evidence-title">📷 '+title+' <span style="font-weight:400;color:#9aa39d">('+subtitle+')</span></div>';
   html += '<div class="evidence-grid">';
   arr.forEach(function(img, idx){
     html += '<div class="evidence-thumb">' +
@@ -438,7 +452,7 @@ function compressImageLocal(file, callback){
   reader.onerror = function(){ callback(null); };
   reader.readAsDataURL(file);
 }
-renderEvidence('zero'); renderEvidence('span1'); renderEvidence('span2');
+renderAllEvidence();
 
 /* ══════════════════════════════════════════════════════════════
    COLLECT DATA
@@ -512,8 +526,9 @@ function applyData(d){
   if (d.inspection3) ['a','b','c','d'].forEach(function(k){ chk_set('insp3_'+k, d.inspection3[k]); });
   if (d.inspection2y) ['a','b','c'].forEach(function(k){ chk_set('insp2y_'+k, d.inspection2y[k]); });
   if (d.evidence){
-    calEvidence = d.evidence;
-    renderEvidence('zero'); renderEvidence('span1'); renderEvidence('span2');
+    calEvidence = { zero: [], span1: [], span2: [], flowstack: [], sampleprobe: [], filterprobe: [], pumpdiaphragm: [] };
+    ALL_EVID_GROUPS.forEach(function(g){ if (d.evidence[g]) calEvidence[g] = d.evidence[g]; });
+    renderAllEvidence();
   }
 }
 function val_set(id,v){ var el=document.getElementById(id); if (el && v!==undefined && v!==null) el.value = v; }
@@ -562,8 +577,8 @@ function resetAll(){
   document.getElementById('step9').style.display='none';
   document.getElementById('step10').style.display='none';
   document.getElementById('step11').style.display='none';
-  calEvidence = { zero: [], span1: [], span2: [] };
-  renderEvidence('zero'); renderEvidence('span1'); renderEvidence('span2');
+  calEvidence = { zero: [], span1: [], span2: [], flowstack: [], sampleprobe: [], filterprobe: [], pumpdiaphragm: [] };
+  renderAllEvidence();
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
 }
@@ -576,7 +591,7 @@ function safe(v){ return (v===undefined||v===null||v==='') ? '—' : String(v); 
 
 function exportPdf(){
   var d = collectData();
-  var totalImgs = calEvidence.zero.length + calEvidence.span1.length + calEvidence.span2.length;
+  var totalImgs = ALL_EVID_GROUPS.reduce(function(sum,g){ return sum + calEvidence[g].length; }, 0);
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
 
@@ -747,6 +762,9 @@ function exportPdf(){
           [d.inspection1.d?'✓':'—','d. Perform Purging-cleaning alumunium filter probe - elv 110 chimney U78']
         ], styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
+      drawEvidenceGroup('Foto Evidence — Purging/Cleaning Flow Stack Gas (elv 110 chimney U7/U78)', calEvidence.flowstack);
+      drawEvidenceGroup('Foto Evidence — Purging-Cleaning Sample Probe (elv 110 chimney U7)', calEvidence.sampleprobe);
+      drawEvidenceGroup('Foto Evidence — Filter Probe Alumunium (elv 110 chimney U78)', calEvidence.filterprobe);
     }
     if (freq==='3-Monthly'||freq==='2-Yearly'){
       checkPage(14); sectionHeader('Step 10: 3 Monthly Inspection');
@@ -768,6 +786,7 @@ function exportPdf(){
           [d.inspection2y.c?'✓':'—','c. Cleaning sample flow gas stack - elv 110 chimney 7']
         ], styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
+      drawEvidenceGroup('Foto Evidence — Replace Pump Diaphragm HW MC3 Analyzer (ECOCHEM PU1286-N026)', calEvidence.pumpdiaphragm);
     }
 
     if (typeof hideImgLoading === 'function') hideImgLoading();
