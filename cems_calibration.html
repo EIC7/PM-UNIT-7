@@ -2051,7 +2051,7 @@ function exportPdf(){
     // ── STEP 2: Cal Gas Regulator ──
     sectionHeader('Step 2: Cal Gas Regulator Outlet Pressure (psi)', estTableBlockH(3));
     doc.autoTable({
-      startY: y, margin:{left:marginX, right:marginX, top:marginTop, bottom:marginBottom}, didDrawPage:function(){drawBgOnce();},
+      startY: y, margin:{left:marginX, right:marginX, top:marginTop, bottom:marginBottom}, willDrawPage:function(){drawBgOnce();},
       head: [['Titik','Outlet Pressure (psi)','Remaining Gas Cylinder (psi)']],
       body: [
         ['Zero', safe(d.gasReg.zeroOutlet), safe(d.gasReg.zeroCyl)],
@@ -2068,7 +2068,7 @@ function exportPdf(){
     }
     // ── STEP 3 ──
     sectionHeader('Step 3: Optical Energy Reading Before Calibration', estTableBlockH(OPTICAL_ROWS.length));
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Measured Energy','Concentration']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Measured Energy','Concentration']],
       body: opticalTableBody(d.opticalBefore), styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[244,217,166],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 3;
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,30,25);
@@ -2076,7 +2076,7 @@ function exportPdf(){
 
     // ── STEP 4 ──
     sectionHeader('Step 4: Analyzer Reading (DAS) Before Calibration', estTableBlockH(DAS_FIELDS.length));
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Nilai']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Nilai']],
       body: DAS_FIELDS.map(function(f){ return [f.label+' ('+f.unit+')', safe(d.dasBefore[f.key])]; }),
       styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 8;
@@ -2087,7 +2087,7 @@ function exportPdf(){
       checkPage(7 + estTableBlockH(rows.length));
       doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,30,25);
       doc.text(subtitle, marginX, y+4); y += 7;
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Expected Value','Concentration']],
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Expected Value','Concentration']],
         body: rows.map(function(r){ return [r.label, data[r.key].exp, data[r.key].act]; }),
         styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:headerColor,textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 6;
@@ -2133,7 +2133,7 @@ function exportPdf(){
         checkPage(10);
       }
       doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,30,25);
-      doc.text('📷 '+title, marginX, y+4); y += labelH;
+      doc.text(title, marginX, y+4); y += labelH;
       var idx = 0;
       while (idx < arr.length) {
         // Susun satu baris: foto dipasang berurutan pada ukuran aslinya
@@ -2172,13 +2172,13 @@ function exportPdf(){
       }
       y += 3;
     }
-    drawEvidenceGroup('Foto Evidence — Zero Calibration', calEvidence.zero);
-    drawEvidenceGroup('Foto Evidence — Span 1 Calibration', calEvidence.span1);
-    drawEvidenceGroup('Foto Evidence — Span 2 Calibration', calEvidence.span2);
+    drawEvidenceGroup('Zero Calibration', calEvidence.zero);
+    drawEvidenceGroup('Span 1 Calibration', calEvidence.span1);
+    drawEvidenceGroup('Span 2 Calibration', calEvidence.span2);
 
     // ── STEP 6 ──
     sectionHeader('Step 6: Optical Energy Reading After Calibration', estTableBlockH(OPTICAL_ROWS.length));
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Measured Energy','Concentration']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Measured Energy','Concentration']],
       body: opticalTableBody(d.opticalAfter), styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[244,217,166],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 3;
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,30,25);
@@ -2186,14 +2186,14 @@ function exportPdf(){
 
     // ── STEP 7 ──
     sectionHeader('Step 7: Analyzer Reading (DAS) After Calibration', estTableBlockH(DAS_FIELDS.length));
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Parameter','Nilai']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Nilai']],
       body: DAS_FIELDS.map(function(f){ return [f.label+' ('+f.unit+')', safe(d.dasAfter[f.key])]; }),
       styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 8;
 
     // ── STEP 8 ──
     sectionHeader('Step 8: Actual Temperature Reading (°C)', estTableBlockH(TEMP_FIELDS.length));
-    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Titik Ukur','Suhu (°C)']],
+    doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Titik Ukur','Suhu (°C)']],
       body: TEMP_FIELDS.map(function(f){ return [f.label, safe(d.temperature[f.key])]; }),
       styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 8;
@@ -2236,13 +2236,13 @@ function exportPdf(){
         [d.inspection1.c,'c. Perform Purging-cleaning sample probe - elv 110 chimney U7'],
         [d.inspection1.d,'d. Perform Purging-cleaning alumunium filter probe - elv 110 chimney U78']
       ]);
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
         body: insp9.body, didDrawCell: insp9.didDrawCell,
         styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
-      drawEvidenceGroup('Foto Evidence — Purging/Cleaning Flow Stack Gas (elv 110 chimney U7/U78)', calEvidence.flowstack);
-      drawEvidenceGroup('Foto Evidence — Purging-Cleaning Sample Probe (elv 110 chimney U7)', calEvidence.sampleprobe);
-      drawEvidenceGroup('Foto Evidence — Filter Probe Alumunium (elv 110 chimney U78)', calEvidence.filterprobe);
+      drawEvidenceGroup('Purging/Cleaning Flow Stack Gas (elv 110 chimney U7/U78)', calEvidence.flowstack);
+      drawEvidenceGroup('Purging-Cleaning Sample Probe (elv 110 chimney U7)', calEvidence.sampleprobe);
+      drawEvidenceGroup('Filter Probe Alumunium (elv 110 chimney U78)', calEvidence.filterprobe);
     }
     if (freq==='3-Monthly'||freq==='2-Yearly'){
       sectionHeader('Step 10: 3 Monthly Inspection', estTableBlockH(4));
@@ -2252,7 +2252,7 @@ function exportPdf(){
         [d.inspection3.c,'c. Perform Replace alumunium filter probe and Kit - elv 110 chimney U78'],
         [d.inspection3.d,'d. Cleaning sample flow gas stack - elv 110 chimney U7']
       ]);
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
         body: insp10.body, didDrawCell: insp10.didDrawCell,
         styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
@@ -2264,11 +2264,11 @@ function exportPdf(){
         [d.inspection2y.b,'b. Replace Pump Diaphragm HW for MC3 Analyzer by ECOCHEM item ID PU1286-N026'],
         [d.inspection2y.c,'c. Cleaning sample flow gas stack - elv 110 chimney 7']
       ]);
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, didDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Status','Item']],
         body: insp11.body, didDrawCell: insp11.didDrawCell,
         styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
-      drawEvidenceGroup('Foto Evidence — Replace Pump Diaphragm HW MC3 Analyzer (ECOCHEM PU1286-N026)', calEvidence.pumpdiaphragm);
+      drawEvidenceGroup('Replace Pump Diaphragm HW MC3 Analyzer (ECOCHEM PU1286-N026)', calEvidence.pumpdiaphragm);
     }
 
     // Buang halaman terakhir yang "mengambang" kosong — bisa muncul kalau
