@@ -60,6 +60,11 @@
 .evidence-box{margin-top:14px;padding:12px;border:1px dashed #b7c3bb;border-radius:8px;background:#f7faf8}
 .evidence-title{font-size:12.5px;font-weight:700;color:#3d4c44;margin-bottom:8px}
 .evidence-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.evidence-phase-block{margin-bottom:14px}
+.evidence-phase-block:last-child{margin-bottom:0}
+.evidence-phase-label{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 9px;border-radius:999px;margin-bottom:8px}
+.evidence-phase-label.before{background:#fff3e0;color:#b45309}
+.evidence-phase-label.after{background:#e6f7f1;color:#0f7a5c}
 .evidence-thumb{position:relative;border:1px solid #dfe6e1;border-radius:8px;overflow:hidden;background:#fff}
 .evidence-thumb img{width:100%;height:90px;object-fit:cover;display:block}
 .evidence-thumb .cap{width:100%;box-sizing:border-box;border:none;border-top:1px solid #eee;font-size:10.5px;padding:4px 6px}
@@ -331,8 +336,8 @@
                     </div>
                 </div>
                 <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
-                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
                     <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                 </div>
             </div>
@@ -468,10 +473,30 @@ var SPAN2_ROWS = [
   {key:'SO2', label:'SO2', exp:'439.80'}
 ];
 
-var calEvidence = { zero: [], span1: [], span2: [], flowstack: [], sampleprobe: [], filterprobe: [], pumpdiaphragm: [] };
+var calEvidence = null;
 var ALL_EVID_GROUPS = ['zero','span1','span2','flowstack','sampleprobe','filterprobe','pumpdiaphragm'];
-function renderAllEvidence(){ ALL_EVID_GROUPS.forEach(renderEvidence); }
+// Hanya grup kalibrasi (Zero/Span1/Span2) yang pakai struktur Before/After —
+// dipakai untuk membandingkan pembacaan sebelum vs sesudah kalibrasi.
+// Grup evidence inspeksi (flowstack/sampleprobe/filterprobe/pumpdiaphragm)
+// tetap satu daftar foto biasa seperti semula (dokumentasi pekerjaan,
+// bukan perbandingan before/after).
+var BEFORE_AFTER_GROUPS = ['zero','span1','span2'];
+function isBeforeAfterGroup(g){ return BEFORE_AFTER_GROUPS.indexOf(g) >= 0; }
+function freshCalEvidence(){
+  var o = {};
+  ALL_EVID_GROUPS.forEach(function(g){ o[g] = isBeforeAfterGroup(g) ? {before:[],after:[]} : []; });
+  return o;
+}
+// Ambil array foto aktual untuk suatu grup. Untuk grup Before/After, phase
+// ('before'/'after') wajib diisi; untuk grup biasa, phase diabaikan (boleh
+// null) karena datanya cuma satu array flat.
+function getEvidArr(group, phase){
+  return isBeforeAfterGroup(group) ? calEvidence[group][phase] : calEvidence[group];
+}
+calEvidence = freshCalEvidence();
+function renderAllEvidence(){ ALL_EVID_GROUPS.forEach(function(g){ renderEvidence(g); }); }
 var evidPendingGroup = null;
+var evidPendingPhase = null;
 var evidUploadQueue = null;
 var evidUploadGroup = null;
 
@@ -524,8 +549,8 @@ cropModalState._activePresetIdx = -1;
 cropModalState._mode = 'default';
 cropModalState._presetRatio = 1;
 var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
-var PRESET_DEFAULT_LONG_CM = 4;
-var MANUAL_MAX_CM = 7;
+var PRESET_DEFAULT_LONG_CM = 10;
+var MANUAL_MAX_CM = 20;
 
 /* ══════════════════════════════════════════════════════════════════════════
    EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
@@ -1116,7 +1141,7 @@ function highlightPreset(activeIdx) {
 }
 function getMaxForField(field) {
     if (cropModalState._mode === 'preset') {
-        var longMax=7, shortMax=5;
+        var longMax=MANUAL_MAX_CM, shortMax=MANUAL_MAX_CM;
         if (cropModalState._orientation === 'landscape') return field==='w' ? longMax : shortMax;
         return field==='w' ? shortMax : longMax;
     }
@@ -1139,6 +1164,10 @@ function setCropMode(mode) {
     var presetControls = document.getElementById('cropPresetControls');
     var cmRow = document.getElementById('cropCmRow');
     var defaultLabel = document.getElementById('cropDefaultLabel');
+    // Selalu mulai dari kotak crop yang menutupi seluruh gambar dulu setiap
+    // pindah tab (Default/Preset/Manual), supaya user tidak perlu geser2
+    // manual kalau kotak sebelumnya kekecilan/di posisi lain.
+    fitCropBoxToFullImage();
     if (mode === 'default') {
         presetControls.style.display='none'; cmRow.style.display='none'; defaultLabel.style.display='block';
         highlightPreset(-1); applyDefaultSize();
@@ -1433,10 +1462,12 @@ function processNextEvidUpload(){
     if (typeof fileToJpegDataUrl === 'function') fileToJpegDataUrl(file, afterConvert);
     else compressImageLocal(file, afterConvert);
 }
-function reEditEvidence(group, idx){
-    var img = calEvidence[group][idx];
+function reEditEvidence(group, phase, idx){
+    var arr = getEvidArr(group, phase);
+    var img = arr[idx];
     if (!img) return;
-    imgOpenCropper(img.dataUrl, img.name, img.type||'image/jpeg', calEvidence[group], group, 'cems', idx);
+    var side = isBeforeAfterGroup(group) ? group+'_'+phase : group;
+    imgOpenCropper(img.dataUrl, img.name, img.type||'image/jpeg', arr, side, 'cems', idx);
 }
 
 /* ── PDF PREVIEW (PDF.js canvas — aman untuk Chrome Android) ── */
@@ -1668,9 +1699,16 @@ function toggleCheckAll(stepId){
    Kalau shared.js menyediakan fileToJpegDataUrl/uploadFotoKeGDrive,
    otomatis dipakai (dicek via typeof) supaya foto ikut ke-backup GDrive.
    ══════════════════════════════════════════════════════════════ */
-function renderEvidence(group){
+function renderEvidence(groupOrSide){
+  // p.side dari imgOpenCropper/cropAndSave bisa berupa 'group' polos atau
+  // 'group_before'/'group_after' (dipakai juga sebagai suffix nama file
+  // GDrive) — di sini dinormalisasi balik ke group polos, karena satu box
+  // render selalu menampilkan seluruh isi grup itu sekaligus.
+  var group = groupOrSide;
+  if (group.slice(-7) === '_before') group = group.slice(0, -7);
+  else if (group.slice(-6) === '_after') group = group.slice(0, -6);
   var box = document.getElementById('evid'+group.charAt(0).toUpperCase()+group.slice(1));
-  var arr = calEvidence[group];
+  if (!box) return;
   var title = {
     zero:'Foto Evidence — Zero Calibration', span1:'Foto Evidence — Span 1 Calibration', span2:'Foto Evidence — Span 2 Calibration',
     flowstack:'Foto Evidence — Purging/Cleaning Flow Stack Gas (elv 110 chimney U7/U78)',
@@ -1678,58 +1716,85 @@ function renderEvidence(group){
     filterprobe:'Foto Evidence — Filter Probe Alumunium (elv 110 chimney U78)',
     pumpdiaphragm:'Foto Evidence — Replace Pump Diaphragm HW MC3 Analyzer (ECOCHEM PU1286-N026)'
   }[group];
-  var calGroups = {zero:1, span1:1, span2:1};
-  var subtitle = calGroups[group] ? 'pembanding nilai aktual' : 'dokumentasi pekerjaan';
+  var subtitle = isBeforeAfterGroup(group) ? 'pembanding nilai aktual' : 'dokumentasi pekerjaan';
   var html = '<div class="evidence-title">📷 '+title+' <span style="font-weight:400;color:#9aa39d">('+subtitle+')</span></div>';
-  html += '<div class="evidence-grid">';
-  arr.forEach(function(img, idx){
+
+  function thumbHtml(img, idx, group, phase){
+    var phaseArg = phase ? '\''+phase+'\'' : 'null';
+    var nudgeTarget = 'calEvidence.'+group+(phase ? '.'+phase : '');
     var nudgeHtml = '<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">'+
-      '<button type="button" onclick="event.stopPropagation();nudgeImageInArray(calEvidence.'+group+','+idx+',-0.5,function(){renderEvidence(\''+group+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>'+
+      '<button type="button" onclick="event.stopPropagation();nudgeImageInArray('+nudgeTarget+','+idx+',-0.5,function(){renderEvidence(\''+group+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>'+
       '<span>'+(img.offsetX||0)+'cm</span>'+
-      '<button type="button" onclick="event.stopPropagation();nudgeImageInArray(calEvidence.'+group+','+idx+',0.5,function(){renderEvidence(\''+group+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>'+
+      '<button type="button" onclick="event.stopPropagation();nudgeImageInArray('+nudgeTarget+','+idx+',0.5,function(){renderEvidence(\''+group+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>'+
       '</div></div>';
-    html += '<div class="evidence-thumb">' +
-      '<button type="button" class="redo" title="Crop Ulang" onclick="reEditEvidence(\''+group+'\','+idx+')">✂️</button>' +
-      '<button type="button" class="del" onclick="deleteEvidence(\''+group+'\','+idx+')">✕</button>' +
+    return '<div class="evidence-thumb">' +
+      '<button type="button" class="redo" title="Crop Ulang" onclick="reEditEvidence(\''+group+'\','+phaseArg+','+idx+')">✂️</button>' +
+      '<button type="button" class="del" onclick="deleteEvidence(\''+group+'\','+phaseArg+','+idx+')">✕</button>' +
       '<img src="'+img.dataUrl+'">' +
-      '<input class="cap" placeholder="Keterangan..." value="'+(img.caption||'').replace(/"/g,'&quot;')+'" onchange="calEvidence.'+group+'['+idx+'].caption=this.value">' +
+      '<input class="cap" placeholder="Keterangan..." value="'+(img.caption||'').replace(/"/g,'&quot;')+'" onchange="'+nudgeTarget+'['+idx+'].caption=this.value">' +
       nudgeHtml +
       '</div>';
-  });
-  html += '<div class="evidence-add" id="evidAdd_'+group+'" onclick="toggleSourceChoices(\'evidSource_'+group+'\')" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="this.classList.remove(\'dragover\');evidHandleDrop(event,\''+group+'\')">' +
-    '<span>＋</span>Tambah Foto' +
-    '<div id="evidSource_'+group+'" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">' +
-      '<button type="button" onclick="event.stopPropagation();evidOpenSource(\''+group+'\',\'storage\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block;margin-bottom:4px">Penyimpanan</button>' +
-      '<button type="button" onclick="event.stopPropagation();evidOpenSource(\''+group+'\',\'camera\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block">Kamera</button>' +
-    '</div>' +
-  '</div>';
-  html += '</div>';
+  }
+  function addTileHtml(group, phase){
+    var phaseArg = phase ? '\''+phase+'\'' : 'null';
+    var sourceId = 'evidSource_'+group+(phase?'_'+phase:'');
+    return '<div class="evidence-add" id="evidAdd_'+group+(phase?'_'+phase:'')+'" onclick="toggleSourceChoices(\''+sourceId+'\')" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="this.classList.remove(\'dragover\');evidHandleDrop(event,\''+group+'\','+phaseArg+')">' +
+      '<span>＋</span>Tambah Foto' +
+      '<div id="'+sourceId+'" style="display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">' +
+        '<button type="button" onclick="event.stopPropagation();evidOpenSource(\''+group+'\','+phaseArg+',\'storage\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block;margin-bottom:4px">Penyimpanan</button>' +
+        '<button type="button" onclick="event.stopPropagation();evidOpenSource(\''+group+'\','+phaseArg+',\'camera\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block">Kamera</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  if (isBeforeAfterGroup(group)) {
+    ['before','after'].forEach(function(phase){
+      var arr = calEvidence[group][phase];
+      var phaseLabel = phase === 'before' ? 'Before' : 'After';
+      html += '<div class="evidence-phase-block">';
+      html += '<div class="evidence-phase-label '+phase+'">'+phaseLabel+'</div>';
+      html += '<div class="evidence-grid">';
+      arr.forEach(function(img, idx){ html += thumbHtml(img, idx, group, phase); });
+      html += addTileHtml(group, phase);
+      html += '</div></div>';
+    });
+  } else {
+    var flatArr = calEvidence[group];
+    html += '<div class="evidence-grid">';
+    flatArr.forEach(function(img, idx){ html += thumbHtml(img, idx, group, null); });
+    html += addTileHtml(group, null);
+    html += '</div>';
+  }
   box.innerHTML = html;
 }
-function evidOpenSource(group, source){
+function evidOpenSource(group, phase, source){
   evidPendingGroup = group;
+  evidPendingPhase = phase;
   openFileInputSource('evidFileInput', source);
 }
-function triggerEvidenceUpload(group){
+function triggerEvidenceUpload(group, phase){
   evidPendingGroup = group;
+  evidPendingPhase = phase;
   document.getElementById('evidFileInput').click();
 }
-function deleteEvidence(group, idx){
-  calEvidence[group].splice(idx,1);
+function deleteEvidence(group, phase, idx){
+  getEvidArr(group, phase).splice(idx,1);
   renderEvidence(group);
 }
 document.getElementById('evidFileInput').addEventListener('change', function(e){
   var files = Array.prototype.slice.call(e.target.files||[]);
   e.target.value = '';
   if (!files.length || !evidPendingGroup) return;
-  evidHandleFiles(files, evidPendingGroup);
+  if (isBeforeAfterGroup(evidPendingGroup) && !evidPendingPhase) return;
+  evidHandleFiles(files, evidPendingGroup, evidPendingPhase);
 });
 
 /* ── Drag & drop file langsung ke kotak "Tambah Foto" ── */
-function evidHandleDrop(e, group){
+function evidHandleDrop(e, group, phase){
   e.preventDefault();
   evidPendingGroup = group;
-  evidHandleFiles(e.dataTransfer.files, group);
+  evidPendingPhase = phase;
+  evidHandleFiles(e.dataTransfer.files, group, phase);
 }
 
 /* ── Overlay notifikasi multi-upload: "memproses foto X dari Y" ── */
@@ -1793,16 +1858,18 @@ function evidCompressFullImage(dataUrl, imgArr, cb){
 
 /* ── Upload evidence: 1 file → crop modal seperti biasa;
    multi-select → skip crop (pakai ukuran default penuh) + overlay progress ── */
-function evidHandleFiles(files, group){
+function evidHandleFiles(files, group, phase){
   var fileArr = Array.prototype.slice.call(files||[]);
   if (!fileArr.length) return;
   var isMulti = fileArr.length > 1;
+  var imgArr = getEvidArr(group, phase);
+  var side = isBeforeAfterGroup(group) ? group+'_'+phase : group;
 
   if (!isMulti) {
     fileArr.forEach(function(file){
       var afterConvert = function(dataUrl){
         if (!dataUrl) return;
-        imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', calEvidence[group], group, 'cems', -1);
+        imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', imgArr, side, 'cems', -1);
       };
       if (typeof fileToJpegDataUrl === 'function') fileToJpegDataUrl(file, afterConvert);
       else compressImageLocal(file, afterConvert);
@@ -1820,12 +1887,12 @@ function evidHandleFiles(files, group){
   fileArr.forEach(function(file){
     var afterConvert = function(rawDataUrl){
       if (!rawDataUrl) { finishOne(); return; }
-      evidCompressFullImage(rawDataUrl, calEvidence[group], function(finalDataUrl){
+      evidCompressFullImage(rawDataUrl, imgArr, function(finalDataUrl){
         if (!finalDataUrl) { finishOne(); return; }
         var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, type:'image/jpeg', caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
-        calEvidence[group].push(entry);
+        imgArr.push(entry);
         renderEvidence(group);
-        if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'cems', group);
+        if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'cems', side);
         finishOne();
       });
     };
@@ -1944,8 +2011,24 @@ function applyData(d){
   if (d.inspection3) ['a','b','c','d'].forEach(function(k){ chk_set('insp3_'+k, d.inspection3[k]); });
   if (d.inspection2y) ['a','b','c'].forEach(function(k){ chk_set('insp2y_'+k, d.inspection2y[k]); });
   if (d.evidence){
-    calEvidence = { zero: [], span1: [], span2: [], flowstack: [], sampleprobe: [], filterprobe: [], pumpdiaphragm: [] };
-    ALL_EVID_GROUPS.forEach(function(g){ if (d.evidence[g]) calEvidence[g] = d.evidence[g]; });
+    calEvidence = freshCalEvidence();
+    ALL_EVID_GROUPS.forEach(function(g){
+      var val = d.evidence[g];
+      if (!val) return;
+      if (isBeforeAfterGroup(g)) {
+        if (Array.isArray(val)) {
+          // Data lama (sebelum ada Before/After) — foto yang sudah ada dulu
+          // ditaruh semua ke "Before" supaya tidak hilang, "After" mulai kosong.
+          calEvidence[g] = { before: val, after: [] };
+        } else {
+          calEvidence[g] = { before: val.before||[], after: val.after||[] };
+        }
+      } else {
+        // Grup flat biasa — kalau data lama tersimpan sempat berbentuk
+        // before/after, digabung kembali jadi satu daftar supaya tidak hilang.
+        calEvidence[g] = Array.isArray(val) ? val : (val.before||[]).concat(val.after||[]);
+      }
+    });
     renderAllEvidence();
   }
 }
@@ -1994,7 +2077,7 @@ function resetAll(){
   document.querySelectorAll('.freq-choice').forEach(function(el){ el.classList.remove('checked'); });
   document.getElementById('step9').style.display='none';
   document.getElementById('step9CheckList').innerHTML='';
-  calEvidence = { zero: [], span1: [], span2: [], flowstack: [], sampleprobe: [], filterprobe: [], pumpdiaphragm: [] };
+  calEvidence = freshCalEvidence();
   renderAllEvidence();
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
@@ -2008,7 +2091,10 @@ function safe(v){ return (v===undefined||v===null||v==='') ? '—' : String(v); 
 
 function exportPdf(){
   var d = collectData();
-  var totalImgs = ALL_EVID_GROUPS.reduce(function(sum,g){ return sum + calEvidence[g].length; }, 0);
+  var totalImgs = ALL_EVID_GROUPS.reduce(function(sum,g){
+    var v = calEvidence[g];
+    return sum + (isBeforeAfterGroup(g) ? (v.before.length+v.after.length) : v.length);
+  }, 0);
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   if (typeof showImgLoading === 'function') showImgLoading(loadingMsg);
 
@@ -2219,9 +2305,12 @@ function exportPdf(){
       }
       y += 3;
     }
-    drawEvidenceGroup('Zero Calibration', calEvidence.zero);
-    drawEvidenceGroup('Span 1 Calibration', calEvidence.span1);
-    drawEvidenceGroup('Span 2 Calibration', calEvidence.span2);
+    drawEvidenceGroup('Zero Calibration — Before', calEvidence.zero.before);
+    drawEvidenceGroup('Zero Calibration — After', calEvidence.zero.after);
+    drawEvidenceGroup('Span 1 Calibration — Before', calEvidence.span1.before);
+    drawEvidenceGroup('Span 1 Calibration — After', calEvidence.span1.after);
+    drawEvidenceGroup('Span 2 Calibration — Before', calEvidence.span2.before);
+    drawEvidenceGroup('Span 2 Calibration — After', calEvidence.span2.after);
 
     // ── STEP 6 ──
     sectionHeader('Step 6: Optical Energy Reading After Calibration', estTableBlockH(OPTICAL_ROWS.length));
@@ -2291,7 +2380,9 @@ function exportPdf(){
         body: insp9.body, didDrawCell: insp9.didDrawCell,
         styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
-      inspPlan.evidenceGroups.forEach(function(g){ drawEvidenceGroup(g.title, calEvidence[g.key]); });
+      inspPlan.evidenceGroups.forEach(function(g){
+        drawEvidenceGroup(g.title, calEvidence[g.key]);
+      });
     }
 
     // Buang halaman terakhir yang "mengambang" kosong — bisa muncul kalau
