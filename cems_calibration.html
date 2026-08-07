@@ -475,12 +475,12 @@ var SPAN2_ROWS = [
 
 var calEvidence = null;
 var ALL_EVID_GROUPS = ['zero','span1','span2','flowstack','sampleprobe','filterprobe','pumpdiaphragm'];
-// Hanya grup kalibrasi (Zero/Span1/Span2) yang pakai struktur Before/After —
-// dipakai untuk membandingkan pembacaan sebelum vs sesudah kalibrasi.
-// Grup evidence inspeksi (flowstack/sampleprobe/filterprobe/pumpdiaphragm)
-// tetap satu daftar foto biasa seperti semula (dokumentasi pekerjaan,
-// bukan perbandingan before/after).
-var BEFORE_AFTER_GROUPS = ['zero','span1','span2'];
+// Grup evidence inspeksi (flowstack/sampleprobe/filterprobe/pumpdiaphragm di
+// Step 9-11) pakai struktur Before/After — dipakai untuk membandingkan
+// kondisi sebelum vs sesudah pekerjaan (purging/cleaning/replace).
+// Grup kalibrasi (Zero/Span1/Span2) tetap satu daftar foto biasa (tidak
+// perlu before/after).
+var BEFORE_AFTER_GROUPS = ['flowstack','sampleprobe','filterprobe','pumpdiaphragm'];
 function isBeforeAfterGroup(g){ return BEFORE_AFTER_GROUPS.indexOf(g) >= 0; }
 function freshCalEvidence(){
   var o = {};
@@ -1716,7 +1716,7 @@ function renderEvidence(groupOrSide){
     filterprobe:'Foto Evidence — Filter Probe Alumunium (elv 110 chimney U78)',
     pumpdiaphragm:'Foto Evidence — Replace Pump Diaphragm HW MC3 Analyzer (ECOCHEM PU1286-N026)'
   }[group];
-  var subtitle = isBeforeAfterGroup(group) ? 'pembanding nilai aktual' : 'dokumentasi pekerjaan';
+  var subtitle = isBeforeAfterGroup(group) ? 'kondisi sebelum vs sesudah pekerjaan' : 'dokumentasi pekerjaan';
   var html = '<div class="evidence-title">📷 '+title+' <span style="font-weight:400;color:#9aa39d">('+subtitle+')</span></div>';
 
   function thumbHtml(img, idx, group, phase){
@@ -2305,12 +2305,9 @@ function exportPdf(){
       }
       y += 3;
     }
-    drawEvidenceGroup('Zero Calibration — Before', calEvidence.zero.before);
-    drawEvidenceGroup('Zero Calibration — After', calEvidence.zero.after);
-    drawEvidenceGroup('Span 1 Calibration — Before', calEvidence.span1.before);
-    drawEvidenceGroup('Span 1 Calibration — After', calEvidence.span1.after);
-    drawEvidenceGroup('Span 2 Calibration — Before', calEvidence.span2.before);
-    drawEvidenceGroup('Span 2 Calibration — After', calEvidence.span2.after);
+    drawEvidenceGroup('Zero Calibration', calEvidence.zero);
+    drawEvidenceGroup('Span 1 Calibration', calEvidence.span1);
+    drawEvidenceGroup('Span 2 Calibration', calEvidence.span2);
 
     // ── STEP 6 ──
     sectionHeader('Step 6: Optical Energy Reading After Calibration', estTableBlockH(OPTICAL_ROWS.length));
@@ -2381,7 +2378,8 @@ function exportPdf(){
         styles:{fontSize:8.5,cellPadding:2.2}, columnStyles:{0:{cellWidth:16,halign:'center'}}, headStyles:{fillColor:[222,232,226],textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 8;
       inspPlan.evidenceGroups.forEach(function(g){
-        drawEvidenceGroup(g.title, calEvidence[g.key]);
+        drawEvidenceGroup(g.title + ' — Before', calEvidence[g.key].before);
+        drawEvidenceGroup(g.title + ' — After', calEvidence[g.key].after);
       });
     }
 
