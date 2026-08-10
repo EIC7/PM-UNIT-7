@@ -219,10 +219,13 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
                         <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
                         <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
                     </div>
+                    <div class="crop-size-row" style="margin-top:8px">
+                        <button type="button" class="crop-preset-btn" id="cropPresetSquare" onclick="applySquarePreset()" title="Rasio 1:1 berdiri sendiri, tidak ikut Potrait/Lanskap">◻ 1:1</button>
+                    </div>
                 </div>
                 <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
-                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
                     <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                 </div>
             </div>
@@ -322,12 +325,13 @@ cropModalState._cropWcm = null;
 cropModalState._cropHcm = null;
 cropModalState._orientation = 'portrait';
 cropModalState._activePresetIdx = -1;
+cropModalState._lastRatioPresetIdx = -1; // ingat preset rasio (bukan 1:1) terakhir dipakai
 cropModalState._mode = 'default';
 cropModalState._presetRatio = 1;
 
 var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
-var PRESET_DEFAULT_LONG_CM = 4;
-var MANUAL_MAX_CM = 7;
+var PRESET_DEFAULT_LONG_CM = 10;
+var MANUAL_MAX_CM = 20;
 
 /* ══════════════════════════════════════════════════════════════════════════
    EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
@@ -905,7 +909,7 @@ function applyImageEdits(){
 }
 
 var CROP_PRESETS = [
-    {label:'1:1', w:1, h:1}, {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
+    {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
     {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
 ];
 
@@ -925,10 +929,31 @@ function highlightPreset(activeIdx) {
         var btn = document.getElementById('cropPreset-'+idx);
         if (btn) btn.classList.toggle('active', idx === activeIdx);
     });
+    // 1:1 berdiri sendiri di luar daftar rasio — begitu salah satu preset
+    // rasio (yang ikut Potrait/Lanskap) dipilih, tombol 1:1 ikut nonaktif.
+    var sq = document.getElementById('cropPresetSquare');
+    if (sq) sq.classList.toggle('active', activeIdx === 'square');
+}
+// Preset 1:1 sengaja dipisah dari CROP_PRESETS supaya TIDAK ikut terpengaruh
+// toggle Potrait/Lanskap (bujur sangkar tidak punya orientasi).
+function applySquarePreset() {
+    cropModalState._activePresetIdx = 'square';
+    var side = Math.min(PRESET_DEFAULT_LONG_CM, MANUAL_MAX_CM);
+    cropModalState._presetRatio = 1;
+    fitCropBoxToFullImage(); // selalu mulai dari full image dulu sebelum diperkecil ke 1:1
+    setLockedSize(side, side);
+    highlightPreset('square');
+    // 1:1 tidak punya orientasi (panjang = lebar) — lepas highlight
+    // Potrait/Lanskap supaya keduanya tidak nyangkut "aktif" padahal box-nya
+    // sudah bukan preset rasio itu lagi, dan klik Potrait/Lanskap berikutnya
+    // kelihatan jelas sebagai state BARU sehingga presetnya kereset dengan bersih.
+    var pB=document.getElementById('cropOrientPotrait'), lB=document.getElementById('cropOrientLandscape');
+    if (pB) pB.classList.remove('active');
+    if (lB) lB.classList.remove('active');
 }
 function getMaxForField(field) {
     if (cropModalState._mode === 'preset') {
-        var longMax=7, shortMax=5;
+        var longMax=MANUAL_MAX_CM, shortMax=MANUAL_MAX_CM;
         if (cropModalState._orientation === 'landscape') return field==='w' ? longMax : shortMax;
         return field==='w' ? shortMax : longMax;
     }
@@ -951,12 +976,17 @@ function setCropMode(mode) {
     var presetControls = document.getElementById('cropPresetControls');
     var cmRow = document.getElementById('cropCmRow');
     var defaultLabel = document.getElementById('cropDefaultLabel');
+    // Selalu mulai dari kotak crop yang menutupi seluruh gambar dulu setiap
+    // pindah tab (Default/Preset/Manual), supaya user tidak perlu geser2
+    // manual kalau kotak sebelumnya kekecilan/di posisi lain.
+    fitCropBoxToFullImage();
     if (mode === 'default') {
         presetControls.style.display='none'; cmRow.style.display='none'; defaultLabel.style.display='block';
         highlightPreset(-1); applyDefaultSize();
     } else if (mode === 'preset') {
         presetControls.style.display='block'; cmRow.style.display='flex'; defaultLabel.style.display='none';
-        applyPreset(cropModalState._activePresetIdx < 0 ? 0 : cropModalState._activePresetIdx);
+        if (cropModalState._activePresetIdx === 'square') applySquarePreset();
+        else applyPreset((cropModalState._activePresetIdx === -1 || cropModalState._activePresetIdx == null) ? 0 : cropModalState._activePresetIdx);
     } else {
         presetControls.style.display='none'; cmRow.style.display='flex'; defaultLabel.style.display='none';
         highlightPreset(-1);
@@ -985,6 +1015,7 @@ function applyPreset(i) {
     var p = CROP_PRESETS[i];
     var ratioValue = Math.max(p.w,p.h) / Math.min(p.w,p.h);
     cropModalState._activePresetIdx = i;
+    cropModalState._lastRatioPresetIdx = i;
     var longSide = PRESET_DEFAULT_LONG_CM;
     var shortSide = Math.round((longSide/ratioValue)*10)/10;
     var w,h;
@@ -996,6 +1027,28 @@ function setCropOrientation(orientation) {
     cropModalState._orientation = orientation;
     document.getElementById('cropOrientPotrait').classList.toggle('active', orientation==='portrait');
     document.getElementById('cropOrientLandscape').classList.toggle('active', orientation==='landscape');
+    // Potrait/Lanskap adalah milik preset RASIO, bukan 1:1. Kalau sebelumnya
+    // lagi di preset 1:1, klik Potrait/Lanskap TIDAK langsung memaksakan
+    // salah satu rasio — box cukup dikembalikan ke ukuran PENUH gambar dan
+    // status 1:1 dilepas, biar user sendiri yang pilih rasio berikutnya dari
+    // kondisi full image itu (memaksa rasio tertentu di sini bikin box
+    // kelihatan "mengecil tiba-tiba" alih-alih benar-benar kembali full).
+    if (cropModalState._activePresetIdx === 'square') {
+        fitCropBoxToFullImage();
+        cropModalState._activePresetIdx = -1;
+        cropModalState._ratioLocked = false;
+        cropModalState._cropWcm = null;
+        cropModalState._cropHcm = null;
+        highlightPreset(-1);
+        var wEl=document.getElementById('cropWcm'), hEl=document.getElementById('cropHcm'), lblEl=document.getElementById('cropSizeLabel');
+        if (wEl) wEl.value = ''; if (hEl) hEl.value = '';
+        if (lblEl) lblEl.textContent = 'Pilih salah satu rasio di bawah';
+        return;
+    }
+    // Selalu mulai dari kotak crop full image dulu sebelum di-reshape ke
+    // rasio baru sesuai orientasi — supaya kotak tidak "nyangkut" di
+    // ukuran/posisi lama waktu pindah Lanskap↔Potrait.
+    fitCropBoxToFullImage();
     var w = cropModalState._cropWcm||1, h = cropModalState._cropHcm||1;
     var longVal=Math.max(w,h), shortVal=Math.min(w,h), neww, newh;
     if (orientation==='landscape') { neww=longVal; newh=shortVal; } else { newh=longVal; neww=shortVal; }
