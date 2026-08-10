@@ -1,4 +1,6 @@
-> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek semua fitur di bawah. Apabila ditemukan perbedaan atau ada yang kurang dari semua revisi ataupun pembaruan (dibanding kondisi HTML yang sedang dikerjakan), maka terapkan ke HTML tersebut.
+> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai M di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-13 huruf (A–M) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai M.**
+
+
 
 # Fitur Reusable — Referensi dari `fegt.html`
 
@@ -21,22 +23,24 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 
 ---
 
-## Daftar Fitur
-- [A. Upload Gambar (kamera/galeri + convert + HEIC)](#a-upload-gambar)
-- [B. Crop Modal 3-Mode (Default / Preset / Manual)](#b-crop-modal-3-mode)
-- [C. Crop Ulang (✂️ scissors, re-edit tanpa upload baru)](#c-crop-ulang)
-- [D. Geser Posisi Gambar di Hasil PDF (nudge + reflow)](#d-geser-posisi-gambar)
-- [E. Drag/Resize Kotak Crop](#e-dragresize-kotak-crop)
-- [F. Autosave Draft (pola `shared.js`)](#f-autosave-draft)
-- [G. Loading Overlay (riwayat / simpan / export PDF)](#g-loading-overlay)
-- [H. Background Template PDF](#h-background-template-pdf)
-- [I. Preview PDF Sebelum Download (PDF.js canvas, mobile-safe)](#i-preview-pdf)
-- [J. Edit Gambar (Insert Shape: Teks/Panah/Garis/Kotak/Oval)](#j-edit-gambar-insert-shape-teksfoto)
-- [K. Rotasi Kotak & Oval](#k-rotasi-kotak--oval-ekstensi--belum-ada-di-fegthtml)
-- [L. Tabel Info Pekerjaan — Grid Full-Width (Label | Value)](#l-tabel-info-pekerjaan--grid-full-width-label--value)
-- [M. Upload Otomatis Foto ke Google Drive (backup, via shared.js)](#m-upload-otomatis-foto-ke-google-drive)
-- [Checklist Konfigurasi per File Baru](#checklist-konfigurasi)
-- [⚠️ Potensi Konflik Global](#potensi-konflik-global)
+## Daftar Fitur — Checklist A→M (cek SEMUA, urut, jangan lompat)
+- [ ] [A. Upload Gambar (kamera/galeri + convert + HEIC)](#a-upload-gambar)
+- [ ] [B. Crop Modal 3-Mode (Default / Preset / Manual)](#b-crop-modal-3-mode)
+- [ ] [C. Crop Ulang (✂️ scissors, re-edit tanpa upload baru)](#c-crop-ulang)
+- [ ] [D. Geser Posisi Gambar di Hasil PDF (nudge + reflow)](#d-geser-posisi-gambar)
+- [ ] [E. Drag/Resize Kotak Crop](#e-dragresize-kotak-crop)
+- [ ] [F. Autosave Draft (pola `shared.js`)](#f-autosave-draft)
+- [ ] [G. Loading Overlay (riwayat / simpan / export PDF)](#g-loading-overlay)
+- [ ] [H. Background Template PDF](#h-background-template-pdf)
+- [ ] [I. Preview PDF Sebelum Download (PDF.js canvas, mobile-safe)](#i-preview-pdf)
+- [ ] [J. Edit Gambar (Insert Shape: Teks/Panah/Garis/Kotak/Oval)](#j-edit-gambar-insert-shape-teksfoto)
+- [ ] [K. Rotasi Kotak & Oval](#k-rotasi-kotak--oval-ekstensi--belum-ada-di-fegthtml)
+- [ ] [L. Tabel Info Pekerjaan — Grid Full-Width (Label | Value)](#l-tabel-info-pekerjaan--grid-full-width-label--value)
+- [ ] [M. Upload Otomatis Foto ke Google Drive (backup, via shared.js)](#m-upload-otomatis-foto-ke-google-drive)
+- [ ] [Checklist Konfigurasi per File Baru](#checklist-konfigurasi)
+- [ ] [⚠️ Potensi Konflik Global](#potensi-konflik-global)
+
+> Checklist `[ ]` di atas cuma alat bantu baca — dokumen ini statis (bukan tempat centang beneran). Yang WAJIB: setiap kali menerapkan fitur ke HTML lain, telusuri A→M ini di kepala/kerja sendiri sampai semuanya ke-cek, baru selesai.
 
 ---
 
@@ -115,9 +119,17 @@ function fileToDataUrlLocal(file, callback) {
 
 ## B. Crop Modal 3-Mode
 **Tujuan:** setelah pilih foto, user crop dengan 3 pilihan mode:
-- **Default** — langsung 7.2×5.18cm (tidak perlu isi apa-apa)
-- **Preset** — pilih rasio (1:1/3:2/4:3/5:4/16:9/A4/Letter) + orientasi Potrait/Lanskap, isi salah satu Panjang/Lebar, sisi lain otomatis mengikuti rasio. Cap: sisi panjang maks 7cm, sisi pendek maks 5cm.
-- **Manual** — bebas, kedua sisi maks 7cm.
+- **Default** — langsung 7.2×5.18cm (tidak perlu isi apa-apa), kotak crop = seluruh gambar (tidak dipotong).
+- **Preset** — pilih rasio (3:2/4:3/5:4/16:9/A4/Letter) + orientasi Potrait/Lanskap, isi salah satu Panjang/Lebar, sisi lain otomatis mengikuti rasio. Sisi acuan (long side) default **10cm**, cap kedua sisi **maks 20cm**.
+- **1:1** — **preset terpisah, BUKAN bagian dari daftar rasio Preset di atas** dan tidak terpengaruh toggle Potrait/Lanskap (bujur sangkar tidak punya orientasi). Klik tombol 1:1 → kotak langsung jadi persegi, klik Potrait/Lanskap saat 1:1 aktif tidak mengubah bentuk kotak.
+- **Manual** — bebas, kedua sisi maks **20cm** (naik dari 7cm versi lama).
+
+**🆕 Update penting (per revisi terbaru, wajib ada di semua file yang pakai crop modal ini):**
+1. **Kotak crop selalu reset ke ukuran PENUH gambar dulu**, sebelum ukuran/rasio mode yang baru diterapkan — dipicu di 2 titik: (a) setiap pindah tab **Default/Preset/Manual** (di `setCropMode()`), dan (b) setiap toggle **Potrait ↔ Lanskap** saat masih di tab Preset (di `setCropOrientation()`). Sebelum fix ini, box dihitung ulang dari sisa posisi/ukuran box SEBELUMNYA (stale) — akibatnya box kelihatan kekecilan/nyangkut di posisi lama dan user harus geser-geser manual dulu.
+2. **1:1 dipisah total dari daftar `CROP_PRESETS`** (yang dulu isinya `1:1, 3:2, 4:3, 5:4, 16:9, A4, Letter`) — sekarang `CROP_PRESETS` cuma `3:2, 4:3, 5:4, 16:9, A4, Letter`, dan 1:1 jadi tombol+fungsi sendiri (`applySquarePreset()`) di baris terpisah di bawah tombol Potrait/Lanskap.
+3. `PRESET_DEFAULT_LONG_CM` naik dari **4cm → 10cm**.
+4. `MANUAL_MAX_CM` naik dari **7cm → 20cm**, dan cap preset (`longMax`/`shortMax` di `getMaxForField`) yang dulu hardcode `7`/`5` sekarang ikut `MANUAL_MAX_CM` (jadi `20`/`20`, bukan `7`/`5` lagi). Atribut HTML `max="7"` di kedua input cm (`cropWcm`/`cropHcm`) juga ikut naik jadi `max="20"`.
+5. **Klik Potrait/Lanskap saat preset 1:1 lagi aktif → kotak dikembalikan ke ukuran PENUH gambar dan status 1:1 dilepas** (`_activePresetIdx=-1`, tidak ada preset aktif, label ganti jadi "Pilih salah satu rasio di bawah") — **BUKAN** auto-menerapkan salah satu rasio. Ini revisi ke-2: percobaan pertama (`applyPreset(lastRatioPresetIdx)` otomatis) ternyata salah — box malah kelihatan "mengecil tiba-tiba" karena rasio manapun yang jauh dari bentuk asli gambar (mis. preset 16:9 potrait di foto 4:3) pasti menghasilkan box lebih kecil dari full image; itu secara matematis benar tapi bukan yang diinginkan user saat mereka bilang "kembalikan ke full". Jadi user memang harus klik salah satu tombol rasio (3:2/4:3/dst) SETELAHNYA secara manual untuk memilih bentuknya — `cropModal._lastRatioPresetIdx` (dicatat tiap `applyPreset(i)` dipanggil) TETAP dipakai, tapi hanya di `setCropMode()` (dispatch pas pindah TAB balik ke Preset), bukan di `setCropOrientation()`.
 
 **⚠️ Potensi Konflik BESAR:** `shared.js` sudah punya crop engine generik sendiri dengan nama fungsi **SAMA PERSIS**: `cropReset()`, `cropAndSave()`, `skipCrop()`, `imgOpenCropper()`. Kalau file tujuan MASIH memanggil `imgOpenCropper(...)` di tombol upload-nya (pola lama, ukuran dalam PIXEL bukan CM, tanpa mode Default/Preset/Manual) — deklarasi fungsi baru di `<script>` inline file itu (dimuat setelah `shared.js`) akan **menimpa** punya `shared.js` secara otomatis karena global function declaration terakhir yang menang. Ini AMAN selama seluruh alur upload di file itu diarahkan ke `openCropModal()` versi baru (bukan campur aduk manggil `imgOpenCropper` di satu tempat dan `openCropModal` di tempat lain). **Cek dulu semua pemanggil crop di file tujuan, ganti semua ke `openCropModal(dataUrl)` / `triggerUpload(...)` versi baru ini secara konsisten.**
 
@@ -146,17 +158,20 @@ function fileToDataUrlLocal(file, callback) {
                     <button type="button" class="crop-mode-btn" id="cropModePreset" onclick="setCropMode('preset')">▦ Preset</button>
                     <button type="button" class="crop-mode-btn" id="cropModeManual" onclick="setCropMode('manual')">✋ Manual</button>
                 </div>
-                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran: 7.2 × 5.18 cm (default, tidak perlu diatur)</div>
+                <div class="crop-default-label" id="cropDefaultLabel" style="display:none">Ukuran cetak: 7.2 × 5.18 cm — gambar penuh (tidak dipotong)</div>
                 <div id="cropPresetControls" style="display:none">
                     <div class="crop-size-row" id="cropPresetRow"></div>
                     <div class="crop-size-row" style="margin-top:8px">
                         <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
                         <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
                     </div>
+                    <div class="crop-size-row" style="margin-top:8px">
+                        <button type="button" class="crop-preset-btn" id="cropPresetSquare" onclick="applySquarePreset()" title="Rasio 1:1 berdiri sendiri, tidak ikut Potrait/Lanskap">◻ 1:1</button>
+                    </div>
                 </div>
                 <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
-                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
                     <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                 </div>
             </div>
@@ -217,14 +232,15 @@ cropModal._cropWcm = null;
 cropModal._cropHcm = null;
 cropModal._orientation = 'portrait';
 cropModal._activePresetIdx = -1;
+cropModal._lastRatioPresetIdx = -1; // 🆕 ingat preset rasio (bukan 1:1) terakhir dipakai
 cropModal._mode = 'default';
 cropModal._presetRatio = 1;
 
 var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
-var PRESET_DEFAULT_LONG_CM = 4;
-var MANUAL_MAX_CM = 7;
-var CROP_PRESETS = [
-    {label:'1:1', w:1, h:1}, {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
+var PRESET_DEFAULT_LONG_CM = 10;   // 🆕 dulu 4
+var MANUAL_MAX_CM = 20;            // 🆕 dulu 7
+var CROP_PRESETS = [               // 🆕 1:1 SUDAH TIDAK di sini — lihat applySquarePreset()
+    {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
     {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
 ];
 
@@ -244,10 +260,25 @@ function highlightPreset(activeIdx) {
         var btn = document.getElementById('cropPreset-'+idx);
         if (btn) btn.classList.toggle('active', idx === activeIdx);
     });
+    // 🆕 1:1 berdiri sendiri di luar daftar rasio — begitu salah satu preset
+    // rasio (yang ikut Potrait/Lanskap) dipilih, tombol 1:1 ikut nonaktif,
+    // dan sebaliknya (lihat applySquarePreset()).
+    var sq = document.getElementById('cropPresetSquare');
+    if (sq) sq.classList.toggle('active', activeIdx === 'square');
+}
+// 🆕 Preset 1:1 sengaja dipisah dari CROP_PRESETS supaya TIDAK ikut
+// terpengaruh toggle Potrait/Lanskap (bujur sangkar tidak punya orientasi).
+function applySquarePreset() {
+    cropModal._activePresetIdx = 'square';
+    var side = Math.min(PRESET_DEFAULT_LONG_CM, MANUAL_MAX_CM);
+    cropModal._presetRatio = 1;
+    fitCropBoxToFullImage(); // selalu mulai dari full image dulu sebelum diperkecil ke 1:1
+    setLockedSize(side, side);
+    highlightPreset('square');
 }
 function getMaxForField(field) {
     if (cropModal._mode === 'preset') {
-        var longMax=7, shortMax=5;
+        var longMax=MANUAL_MAX_CM, shortMax=MANUAL_MAX_CM; // 🆕 dulu hardcode 7/5, sekarang ikut MANUAL_MAX_CM (20/20)
         if (cropModal._orientation === 'landscape') return field==='w' ? longMax : shortMax;
         return field==='w' ? shortMax : longMax;
     }
@@ -261,6 +292,21 @@ function clampCmValue(v, maxV) {
     if (v<0.5) v=0.5;
     return Math.round(v*10)/10;
 }
+// 🆕 Bikin kotak crop menutupi SELURUH gambar (posisi & ukuran = gambar apa
+// adanya di dalam #cropWrap). Dipanggil di awal setCropMode() (tiap pindah
+// tab), di applyDefaultSize(), applySquarePreset(), dan setCropOrientation()
+// (tiap toggle Potrait/Lanskap) — supaya box SELALU mulai dari "penuh" dulu
+// sebelum di-reshape ke ukuran/rasio mode yang baru dipilih.
+function fitCropBoxToFullImage() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img) return;
+    var iL = parseInt(img.style.left) || 0, iT = parseInt(img.style.top) || 0;
+    var iW = img.offsetWidth, iH = img.offsetHeight;
+    if (!iW || !iH) return;
+    box.style.left = iL + 'px'; box.style.top = iT + 'px';
+    box.style.width = iW + 'px'; box.style.height = iH + 'px';
+}
 function setCropMode(mode) {
     cropModal._mode = mode;
     ['Default','Preset','Manual'].forEach(function(m){
@@ -270,12 +316,18 @@ function setCropMode(mode) {
     var presetControls = document.getElementById('cropPresetControls');
     var cmRow = document.getElementById('cropCmRow');
     var defaultLabel = document.getElementById('cropDefaultLabel');
+    // 🆕 Selalu mulai dari kotak crop yang menutupi SELURUH gambar dulu setiap
+    // pindah tab (Default/Preset/Manual), supaya user tidak perlu geser2
+    // manual kalau kotak sebelumnya kekecilan/nyangkut di posisi lama.
+    fitCropBoxToFullImage();
     if (mode === 'default') {
         presetControls.style.display='none'; cmRow.style.display='none'; defaultLabel.style.display='block';
         highlightPreset(-1); applyDefaultSize();
     } else if (mode === 'preset') {
         presetControls.style.display='block'; cmRow.style.display='flex'; defaultLabel.style.display='none';
-        applyPreset(cropModal._activePresetIdx < 0 ? 0 : cropModal._activePresetIdx);
+        // 🆕 dispatch ke applySquarePreset() kalau preset terakhir aktif adalah 1:1
+        if (cropModal._activePresetIdx === 'square') applySquarePreset();
+        else applyPreset((cropModal._activePresetIdx === -1 || cropModal._activePresetIdx == null) ? 0 : cropModal._activePresetIdx);
     } else {
         presetControls.style.display='none'; cmRow.style.display='flex'; defaultLabel.style.display='none';
         highlightPreset(-1);
@@ -283,14 +335,21 @@ function setCropMode(mode) {
     }
 }
 function applyDefaultSize() {
-    cropModal._ratioLocked = true;
+    // 🆕 Default = gambar penuh, TIDAK dipotong — makanya pakai
+    // fitCropBoxToFullImage() (kotak = seluruh gambar), bukan
+    // reshapeCropBoxToRatio() (yang dulu dipakai dan salah, karena
+    // reshapeCropBoxToRatio mengasumsikan ada rasio yang mau dikunci).
+    // ratioLocked di-set FALSE karena ukuran cetak 7.2×5.18cm ini fixed,
+    // independen dari bentuk/rasio kotak yang ditampilkan (gambar penuh).
+    cropModal._ratioLocked = false;
     cropModal._cropWcm = DEFAULT_CROP_W_CM; cropModal._cropHcm = DEFAULT_CROP_H_CM;
-    updateSizeLabel(); reshapeCropBoxToRatio();
+    updateSizeLabel(); fitCropBoxToFullImage();
 }
 function applyPreset(i) {
     var p = CROP_PRESETS[i];
     var ratioValue = Math.max(p.w,p.h) / Math.min(p.w,p.h);
     cropModal._activePresetIdx = i;
+    cropModal._lastRatioPresetIdx = i; // 🆕 dicatat supaya bisa dipakai lagi kalau balik dari 1:1
     var longSide = PRESET_DEFAULT_LONG_CM;
     var shortSide = Math.round((longSide/ratioValue)*10)/10;
     var w,h;
@@ -302,6 +361,35 @@ function setCropOrientation(orientation) {
     cropModal._orientation = orientation;
     document.getElementById('cropOrientPotrait').classList.toggle('active', orientation==='portrait');
     document.getElementById('cropOrientLandscape').classList.toggle('active', orientation==='landscape');
+    // 🆕🆕 (revisi ke-2) Potrait/Lanskap adalah milik preset RASIO, bukan
+    // 1:1. Kalau sebelumnya lagi di preset 1:1, klik Potrait/Lanskap TIDAK
+    // langsung memaksakan salah satu rasio (3:2/4:3/16:9/dst) — itu
+    // percobaan revisi PERTAMA (auto-`applyPreset(lastRatioPresetIdx)`) dan
+    // ternyata SALAH: box malah kelihatan "mengecil tiba-tiba" alih-alih
+    // benar-benar kembali full dulu, karena rasio tertentu (apalagi yang
+    // jauh dari bentuk gambar aslinya, mis. 16:9 potrait di foto 4:3) PASTI
+    // menghasilkan box yang lebih kecil dari full image — itu sudah benar
+    // secara matematis, tapi bukan yang diinginkan user. Fix yang benar:
+    // box CUKUP dikembalikan ke ukuran PENUH gambar dan status 1:1 dilepas
+    // (`_activePresetIdx=-1`, tidak ada preset yang aktif) — biar user
+    // sendiri yang pilih rasio mana yang mau dipakai berikutnya dari kondisi
+    // full image itu.
+    if (cropModal._activePresetIdx === 'square') {
+        fitCropBoxToFullImage();
+        cropModal._activePresetIdx = -1;
+        cropModal._ratioLocked = false;
+        cropModal._cropWcm = null;
+        cropModal._cropHcm = null;
+        highlightPreset(-1);
+        var wEl=document.getElementById('cropWcm'), hEl=document.getElementById('cropHcm'), lblEl=document.getElementById('cropSizeLabel');
+        if (wEl) wEl.value = ''; if (hEl) hEl.value = '';
+        if (lblEl) lblEl.textContent = 'Pilih salah satu rasio di bawah';
+        return;
+    }
+    // Selalu mulai dari kotak crop full image dulu sebelum di-reshape ke
+    // rasio baru sesuai orientasi — bug lama: box dihitung dari ukuran/posisi
+    // box SEBELUMNYA (stale), jadi box "nyangkut" pas pindah Lanskap↔Potrait.
+    fitCropBoxToFullImage();
     var w = cropModal._cropWcm||1, h = cropModal._cropHcm||1;
     var longVal=Math.max(w,h), shortVal=Math.min(w,h), neww, newh;
     if (orientation==='landscape') { neww=longVal; newh=shortVal; } else { newh=longVal; neww=shortVal; }
@@ -363,6 +451,7 @@ function updateSizeLabel() {
 **Butuh dari user saat integrasi:**
 - Apakah file tujuan MASIH pakai crop engine lama shared.js (`imgOpenCropper`)? Kalau iya, semua pemanggilnya perlu diarahkan ulang ke `openCropModal()`.
 - Apakah ukuran default 7.2×5.18cm masih relevan untuk jenis dokumen file itu, atau beda?
+- **Cek dulu file tujuan sudah versi lama atau baru** — kalau masih ketemu `1:1` di dalam `CROP_PRESETS`, atau `PRESET_DEFAULT_LONG_CM = 4`, atau `MANUAL_MAX_CM = 7`, atau `max="7"` di input `cropWcm`/`cropHcm`, atau `setCropMode()`/`setCropOrientation()` belum manggil `fitCropBoxToFullImage()` di awal fungsinya, atau `setCropOrientation()` masih `return` polos ATAU masih `applyPreset(...)` otomatis begitu `_activePresetIdx === 'square'` (harusnya cuma reset full image + lepas status 1:1, TANPA auto-pilih rasio — lihat poin 5), atau tidak ada `cropModal._lastRatioPresetIdx` sama sekali — berarti file itu masih versi lama, **terapkan semua 5 poin update di atas sekaligus** (jangan cuma sebagian), karena semuanya saling terkait dalam satu alur yang sama.
 
 **🐛 BUG PENTING yang sudah di-fix — ukuran cm crop tidak dipakai di PDF:**
 `cropAndSave()` menyimpan `entry.widthCm`/`entry.heightCm` per foto (sesuai cm yang dipilih user saat crop, termasuk "Default" 7.2×5.18cm) — **tapi di kode generate PDF (bagian yang nge-loop foto before/after ke `doc.addImage`), nilai ini SERING DIABAIKAN begitu saja**, diganti kotak grid seragam yang dihitung dari lebar kolom halaman (mis. `fw = (colW-gap/2)/perRow-2`). Akibatnya foto "Default 7.2×5.18cm" bisa muncul jauh lebih kecil di PDF daripada label ukurannya (pernah ketemu: label bilang 7.2×5.18cm, tapi yang ke-render cuma ~3.7×2.8cm) — user bisa mengira foto tidak ke-crop dengan benar padahal sebenarnya box PDF-nya yang tidak mengikuti cm.
@@ -1522,6 +1611,6 @@ Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditany
 
 ## ⚠️ Potensi Konflik Global
 Karena semua fitur di atas dan fungsi bawaan `shared.js` sama-sama pakai **global function declaration** (bukan modul/namespace), nama-nama berikut **rawan bentrok** kalau file tujuan sudah punya fungsi dengan nama sama tapi perilaku beda:
-`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`.
+`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `applySquarePreset`, `fitCropBoxToFullImage`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`.
 
 **Sebelum menempel kode dari dokumen ini, selalu `grep` dulu nama-nama fungsi di atas pada file tujuan.** Kalau sudah ada dan isinya beda, diskusikan dulu ke user mana yang mau dipakai / digabung, jangan main timpa.

@@ -1232,12 +1232,23 @@ function setCropOrientation(orientation) {
     document.getElementById('cropOrientPotrait').classList.toggle('active', orientation==='portrait');
     document.getElementById('cropOrientLandscape').classList.toggle('active', orientation==='landscape');
     // Potrait/Lanskap adalah milik preset RASIO, bukan 1:1. Kalau sebelumnya
-    // lagi di preset 1:1, klik Potrait/Lanskap berarti user mau pindah ke
-    // preset rasio (pakai rasio terakhir yang pernah dipakai, atau rasio
-    // pertama kalau belum pernah pilih rasio sama sekali) — bukan diam saja.
+    // lagi di preset 1:1, klik Potrait/Lanskap TIDAK langsung memaksakan
+    // salah satu rasio (3:2/4:3/16:9/dst) — itu penyebab box kelihatan
+    // "mengecil tiba-tiba" alih-alih benar-benar kembali full dulu, karena
+    // rasio tertentu (apalagi yang jauh dari bentuk gambar aslinya) pasti
+    // menghasilkan box yang lebih kecil dari full image. Jadi di sini box
+    // cukup dikembalikan ke ukuran PENUH gambar dan status 1:1 dilepas —
+    // biar user sendiri yang pilih rasio mana yang mau dipakai berikutnya.
     if (cropModalState._activePresetIdx === 'square') {
         fitCropBoxToFullImage();
-        applyPreset(cropModalState._lastRatioPresetIdx >= 0 ? cropModalState._lastRatioPresetIdx : 0);
+        cropModalState._activePresetIdx = -1;
+        cropModalState._ratioLocked = false;
+        cropModalState._cropWcm = null;
+        cropModalState._cropHcm = null;
+        highlightPreset(-1);
+        var wEl=document.getElementById('cropWcm'), hEl=document.getElementById('cropHcm'), lblEl=document.getElementById('cropSizeLabel');
+        if (wEl) wEl.value = ''; if (hEl) hEl.value = '';
+        if (lblEl) lblEl.textContent = 'Pilih salah satu rasio di bawah';
         return;
     }
     // Selalu mulai dari kotak crop full image dulu sebelum di-reshape ke
