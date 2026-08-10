@@ -549,6 +549,7 @@ cropModalState._cropWcm = null;
 cropModalState._cropHcm = null;
 cropModalState._orientation = 'portrait';
 cropModalState._activePresetIdx = -1;
+cropModalState._lastRatioPresetIdx = -1; // ingat preset rasio (bukan 1:1) terakhir dipakai
 cropModalState._mode = 'default';
 cropModalState._presetRatio = 1;
 var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
@@ -1218,6 +1219,7 @@ function applyPreset(i) {
     var p = CROP_PRESETS[i];
     var ratioValue = Math.max(p.w,p.h) / Math.min(p.w,p.h);
     cropModalState._activePresetIdx = i;
+    cropModalState._lastRatioPresetIdx = i;
     var longSide = PRESET_DEFAULT_LONG_CM;
     var shortSide = Math.round((longSide/ratioValue)*10)/10;
     var w,h;
@@ -1229,10 +1231,15 @@ function setCropOrientation(orientation) {
     cropModalState._orientation = orientation;
     document.getElementById('cropOrientPotrait').classList.toggle('active', orientation==='portrait');
     document.getElementById('cropOrientLandscape').classList.toggle('active', orientation==='landscape');
-    // 1:1 tidak punya orientasi — kalau preset 1:1 yang lagi aktif, tombol
-    // Potrait/Lanskap cuma menyimpan pilihan untuk dipakai nanti kalau user
-    // pindah ke preset rasio lain, tapi TIDAK mengubah kotak crop sekarang.
-    if (cropModalState._activePresetIdx === 'square') return;
+    // Potrait/Lanskap adalah milik preset RASIO, bukan 1:1. Kalau sebelumnya
+    // lagi di preset 1:1, klik Potrait/Lanskap berarti user mau pindah ke
+    // preset rasio (pakai rasio terakhir yang pernah dipakai, atau rasio
+    // pertama kalau belum pernah pilih rasio sama sekali) — bukan diam saja.
+    if (cropModalState._activePresetIdx === 'square') {
+        fitCropBoxToFullImage();
+        applyPreset(cropModalState._lastRatioPresetIdx >= 0 ? cropModalState._lastRatioPresetIdx : 0);
+        return;
+    }
     // Selalu mulai dari kotak crop full image dulu sebelum di-reshape ke
     // rasio baru sesuai orientasi — supaya kotak tidak "nyangkut" di
     // ukuran/posisi lama waktu pindah Lanskap↔Potrait.
