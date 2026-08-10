@@ -1157,6 +1157,14 @@ function applySquarePreset() {
     fitCropBoxToFullImage();
     setLockedSize(side, side);
     highlightPreset('square');
+    // 1:1 tidak punya orientasi — lepas status aktif tombol Potrait/Lanskap
+    // supaya tidak kelihatan dua-duanya aktif bersamaan (1:1 + Potrait/Lanskap).
+    // Ini juga yang mencegah bug lama: box kelihatan "mengecil tiba-tiba" saat
+    // pindah dari 1:1 ke Potrait/Lanskap, karena sekarang begitu 1:1 aktif,
+    // tidak ada orientasi yang tertinggal aktif untuk ikut memicu reshape rasio.
+    var pB = document.getElementById('cropOrientPotrait'), lB = document.getElementById('cropOrientLandscape');
+    if (pB) pB.classList.remove('active');
+    if (lB) lB.classList.remove('active');
 }
 function getMaxForField(field) {
     if (cropModalState._mode === 'preset') {

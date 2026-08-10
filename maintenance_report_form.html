@@ -44,6 +44,13 @@
         .img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
         .img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
         .img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
+        /* OVERLAY NOTIFIKASI MULTI-UPLOAD */
+        #imgUploadOverlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.8);flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+        #imgUploadOverlay.show{display:flex}
+        #imgUploadOverlaySpinner{width:38px;height:38px;border:4px solid rgba(255,255,255,0.25);border-top-color:#2ecc71;border-radius:50%;animation:imgUploadSpin 0.8s linear infinite;margin-bottom:16px}
+        @keyframes imgUploadSpin{to{transform:rotate(360deg)}}
+        #imgUploadOverlayTitle{font-size:15px;font-weight:700;color:#fff}
+        #imgUploadOverlaySub{font-size:12px;color:#c9d6cf;margin-top:6px;max-width:280px}
         /* CROP MODAL */
         #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
         #cropModal.show{display:flex}
@@ -256,10 +263,13 @@
                             <button type="button" class="crop-orient-btn" id="cropOrientPotrait" onclick="setCropOrientation('portrait')">⬍ Potrait</button>
                             <button type="button" class="crop-orient-btn" id="cropOrientLandscape" onclick="setCropOrientation('landscape')">⬌ Lanskap</button>
                         </div>
+                        <div class="crop-size-row" style="margin-top:8px">
+                            <button type="button" class="crop-preset-btn" id="cropPresetSquare" onclick="applySquarePreset()" title="Rasio 1:1 berdiri sendiri, tidak ikut Potrait/Lanskap">◻ 1:1</button>
+                        </div>
                     </div>
                     <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
-                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="7" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
                         <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                     </div>
                 </div>
@@ -273,7 +283,14 @@
         </div>
     </div>
 
-    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <input type="file" id="fileInput" accept="image/*,.heic,.heif" style="display:none" multiple>
+
+    <!-- Overlay notifikasi multi-upload (mengikuti pola cems_calibration.html) -->
+    <div id="imgUploadOverlay" onclick="imgHideUploadOverlay()">
+        <div id="imgUploadOverlaySpinner"></div>
+        <div id="imgUploadOverlayTitle"></div>
+        <div id="imgUploadOverlaySub"></div>
+    </div>
 
     <!-- PDF PREVIEW MODAL -->
     <div id="pdfPreviewModal" class="pdf-preview-modal">
@@ -1050,11 +1067,10 @@ function applyImageEdits(){
 
         var DEFAULT_CROP_W_CM = 7.2;
         var DEFAULT_CROP_H_CM = 5.18;
-        var PRESET_DEFAULT_LONG_CM = 4;
-        var MANUAL_MAX_CM = 7;
+        var PRESET_DEFAULT_LONG_CM = 10;
+        var MANUAL_MAX_CM = 20;
 
         var CROP_PRESETS = [
-            {label:'1:1', w:1, h:1},
             {label:'3:2', w:3, h:2},
             {label:'4:3', w:4, h:3},
             {label:'5:4', w:5, h:4},
@@ -1062,6 +1078,7 @@ function applyImageEdits(){
             {label:'A4', w:210, h:297},
             {label:'Letter', w:216, h:279}
         ];
+        cropModal._lastRatioPresetIdx = -1; // ingat preset rasio (bukan 1:1) terakhir dipakai
 
         // ── INIT ───────────────────────────────────────────────────────────────────
         window.addEventListener('DOMContentLoaded', function() {
@@ -1155,6 +1172,30 @@ function applyImageEdits(){
                 var btn = document.getElementById('cropPreset-' + idx);
                 if (btn) btn.classList.toggle('active', idx === activeIdx);
             });
+            // 1:1 berdiri sendiri di luar daftar rasio — begitu salah satu preset
+            // rasio (yang ikut Potrait/Lanskap) dipilih, tombol 1:1 ikut nonaktif.
+            var sq = document.getElementById('cropPresetSquare');
+            if (sq) sq.classList.toggle('active', activeIdx === 'square');
+        }
+
+        // Preset 1:1 sengaja dipisah dari daftar CROP_PRESETS supaya TIDAK ikut
+        // terpengaruh toggle Potrait/Lanskap (bujur sangkar tidak punya orientasi).
+        function applySquarePreset() {
+            cropModal._activePresetIdx = 'square';
+            var side = Math.min(PRESET_DEFAULT_LONG_CM, MANUAL_MAX_CM);
+            cropModal._presetRatio = 1;
+            // Selalu mulai dari kotak crop full image dulu sebelum diperkecil ke rasio 1:1.
+            fitCropBoxToFullImage();
+            setLockedSize(side, side);
+            highlightPreset('square');
+            // 1:1 tidak punya orientasi — lepas status aktif tombol Potrait/Lanskap
+            // supaya tidak kelihatan dua-duanya aktif bersamaan (1:1 + Potrait/Lanskap).
+            // Ini juga yang mencegah bug lama: box kelihatan "mengecil tiba-tiba" saat
+            // pindah dari 1:1 ke Potrait/Lanskap, karena sekarang begitu 1:1 aktif,
+            // tidak ada orientasi yang tertinggal aktif untuk ikut memicu reshape rasio.
+            var pB = document.getElementById('cropOrientPotrait'), lB = document.getElementById('cropOrientLandscape');
+            if (pB) pB.classList.remove('active');
+            if (lB) lB.classList.remove('active');
         }
 
         function orientedWH(baseW, baseH, orientation) {
@@ -1163,11 +1204,10 @@ function applyImageEdits(){
         }
 
         // Batas maksimal per-field tergantung mode aktif & orientasi.
-        // Preset: sisi panjang (mengikuti orientasi) maks 7cm, sisi pendek maks 5cm.
-        // Manual: bebas kedua sisi, maks 7cm masing-masing.
+        // Preset & Manual: kedua sisi mengikuti MANUAL_MAX_CM (20cm).
         function getMaxForField(field) {
             if (cropModal._mode === 'preset') {
-                var longMax = 7, shortMax = 5;
+                var longMax = MANUAL_MAX_CM, shortMax = MANUAL_MAX_CM;
                 if (cropModal._orientation === 'landscape') {
                     return field === 'w' ? longMax : shortMax;
                 } else {
@@ -1176,6 +1216,17 @@ function applyImageEdits(){
             }
             if (cropModal._mode === 'manual') return MANUAL_MAX_CM;
             return 99;
+        }
+
+        function fitCropBoxToFullImage() {
+            var box = document.getElementById('cropBox');
+            var img = document.getElementById('cropImg');
+            if (!box || !img) return;
+            var iL = parseInt(img.style.left) || 0, iT = parseInt(img.style.top) || 0;
+            var iW = img.offsetWidth, iH = img.offsetHeight;
+            if (!iW || !iH) return;
+            box.style.left = iL + 'px'; box.style.top = iT + 'px';
+            box.style.width = iW + 'px'; box.style.height = iH + 'px';
         }
 
         function clampCmValue(v, maxV) {
@@ -1200,6 +1251,11 @@ function applyImageEdits(){
             var cmRow = document.getElementById('cropCmRow');
             var defaultLabel = document.getElementById('cropDefaultLabel');
 
+            // Selalu mulai dari kotak crop yang menutupi seluruh gambar dulu setiap
+            // pindah tab (Default/Preset/Manual), supaya user tidak perlu geser2
+            // manual kalau kotak sebelumnya kekecilan/di posisi lain.
+            fitCropBoxToFullImage();
+
             if (mode === 'default') {
                 if (presetControls) presetControls.style.display = 'none';
                 if (cmRow) cmRow.style.display = 'none';
@@ -1210,10 +1266,10 @@ function applyImageEdits(){
                 if (presetControls) presetControls.style.display = 'block';
                 if (cmRow) cmRow.style.display = 'flex';
                 if (defaultLabel) defaultLabel.style.display = 'none';
-                if (cropModal._activePresetIdx < 0) {
-                    applyPreset(0);
+                if (cropModal._activePresetIdx === 'square') {
+                    applySquarePreset();
                 } else {
-                    applyPreset(cropModal._activePresetIdx);
+                    applyPreset((cropModal._activePresetIdx === -1 || cropModal._activePresetIdx == null) ? 0 : cropModal._activePresetIdx);
                 }
             } else {
                 if (presetControls) presetControls.style.display = 'none';
@@ -1235,12 +1291,13 @@ function applyImageEdits(){
             reshapeCropBoxToRatio();
         }
 
-        // Mode Preset: pilih rasio + orientasi, ukuran awal dibuat kecil (sisi panjang 4cm)
+        // Mode Preset: pilih rasio + orientasi, ukuran awal dibuat dari sisi panjang 10cm
         // lalu user bisa membesarkan/mengecilkan lewat salah satu input (rasio tetap terkunci).
         function applyPreset(i) {
             var p = CROP_PRESETS[i];
             var ratioValue = Math.max(p.w, p.h) / Math.min(p.w, p.h);
             cropModal._activePresetIdx = i;
+            cropModal._lastRatioPresetIdx = i; // dicatat supaya bisa dipakai lagi kalau balik dari 1:1
             var longSide = PRESET_DEFAULT_LONG_CM;
             var shortSide = Math.round((longSide / ratioValue) * 10) / 10;
             var w, h;
@@ -1251,13 +1308,38 @@ function applyImageEdits(){
             highlightPreset(i);
         }
 
+        // Potrait/Lanskap adalah milik preset RASIO, bukan 1:1. Kalau sebelumnya
+        // lagi di preset 1:1, klik Potrait/Lanskap TIDAK langsung memaksakan
+        // salah satu rasio (3:2/4:3/dst) — itu penyebab box kelihatan
+        // "mengecil tiba-tiba" alih-alih benar-benar kembali full dulu, karena
+        // rasio tertentu (apalagi yang jauh dari bentuk gambar aslinya) pasti
+        // menghasilkan box yang lebih kecil dari full image. Jadi di sini box
+        // cukup dikembalikan ke ukuran PENUH gambar dan status 1:1 dilepas —
+        // biar user sendiri yang pilih rasio mana yang mau dipakai berikutnya.
         function setCropOrientation(orientation) {
             cropModal._orientation = orientation;
             var pB = document.getElementById('cropOrientPotrait');
             var lB = document.getElementById('cropOrientLandscape');
             if (pB) pB.classList.toggle('active', orientation === 'portrait');
             if (lB) lB.classList.toggle('active', orientation === 'landscape');
-            // Menukar panjang/lebar yang sedang aktif sesuai orientasi baru (rasio tetap sama)
+
+            if (cropModal._activePresetIdx === 'square') {
+                fitCropBoxToFullImage();
+                cropModal._activePresetIdx = -1;
+                cropModal._ratioLocked = false;
+                cropModal._cropWcm = null;
+                cropModal._cropHcm = null;
+                highlightPreset(-1);
+                var wEl = document.getElementById('cropWcm'), hEl = document.getElementById('cropHcm'), lblEl = document.getElementById('cropSizeLabel');
+                if (wEl) wEl.value = ''; if (hEl) hEl.value = '';
+                if (lblEl) lblEl.textContent = 'Pilih salah satu rasio di bawah';
+                return;
+            }
+
+            // Selalu mulai dari kotak crop full image dulu sebelum di-reshape ke
+            // rasio baru sesuai orientasi — supaya kotak tidak "nyangkut" di
+            // ukuran/posisi lama waktu pindah Lanskap↔Potrait.
+            fitCropBoxToFullImage();
             var w = cropModal._cropWcm || 1, h = cropModal._cropHcm || 1;
             var longVal = Math.max(w, h), shortVal = Math.min(w, h);
             var neww, newh;
@@ -1527,29 +1609,124 @@ function applyImageEdits(){
             openFileInputSource('fileInput', source || 'storage');
         }
 
-        // Drag & drop file gambar langsung ke area upload item (pola dari opacity.html, disederhanakan)
+        // Drag & drop file gambar langsung ke area upload item
         function handleItemDrop(e, type, idx) {
             e.preventDefault();
             var files = e.dataTransfer && e.dataTransfer.files;
             if (!files || !files.length) return;
-            cropModal._pending = {type:type, idx:idx, replaceIdx:-1};
-            fileToDataUrl(files[0], function(dataUrl) {
-                if (!dataUrl) return;
-                openCropModal(dataUrl);
-            });
-            if (files.length > 1) {
-                setTimeout(function(){ alert('Hanya gambar pertama yang diproses. Seret satu per satu untuk gambar lainnya.'); }, 300);
-            }
+            handleItemFiles(files, type, idx);
         }
 
         document.getElementById('fileInput').addEventListener('change', function(e) {
-            var file = e.target.files[0];
-            if (!file) return;
-            fileToDataUrl(file, function(dataUrl) {
-                if (!dataUrl) return;
-                openCropModal(dataUrl);
-            });
+            var files = Array.prototype.slice.call(e.target.files || []);
+            e.target.value = '';
+            if (!files.length || !cropModal._pending) return;
+            var p = cropModal._pending;
+            handleItemFiles(files, p.type, p.idx, p.replaceIdx);
         });
+
+        // ── Upload item: 1 file → crop modal seperti biasa (replaceIdx dipertahankan
+        // kalau ini upload pengganti foto lewat klik thumbnail);
+        // multi-select → skip crop (pakai ukuran default penuh) + overlay progress ──
+        function handleItemFiles(files, type, idx, replaceIdx) {
+            var fileArr = Array.prototype.slice.call(files || []);
+            if (!fileArr.length || !sections[type] || !sections[type][idx]) return;
+            var isMulti = fileArr.length > 1;
+            var imgArr = sections[type][idx].images;
+
+            if (!isMulti) {
+                cropModal._pending = {type:type, idx:idx, replaceIdx: (replaceIdx===undefined?-1:replaceIdx)};
+                fileToDataUrl(fileArr[0], function(dataUrl) {
+                    if (!dataUrl) return;
+                    openCropModal(dataUrl);
+                });
+                return;
+            }
+
+            var total = fileArr.length, done = 0;
+            imgShowUploadOverlay('loading', done, total);
+            var finishOne = function() {
+                done++;
+                if (done < total) imgShowUploadOverlay('loading', done, total);
+                else imgShowUploadOverlay('done');
+            };
+            fileArr.forEach(function(file) {
+                fileToDataUrl(file, function(rawDataUrl) {
+                    if (!rawDataUrl) { finishOne(); return; }
+                    imgCompressFullImage(rawDataUrl, imgArr, function(finalDataUrl) {
+                        if (!finalDataUrl) { finishOne(); return; }
+                        var slotIdx = imgArr.length;
+                        var entry = {name:(file.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
+                        imgArr.push(entry);
+                        renderSection(type, type + 'Box');
+                        if (typeof uploadFotoKeGDrive === 'function') {
+                            var gdriveFileName = 'maintenance_' + type + '_' + idx + '_' + slotIdx + '.jpg';
+                            uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, type || '');
+                        }
+                        finishOne();
+                    });
+                });
+            });
+        }
+
+        /* ── Overlay notifikasi multi-upload: "memproses foto X dari Y" ── */
+        var imgUploadOverlayTimer = null;
+        function imgShowUploadOverlay(mode, current, total) {
+            var ov = document.getElementById('imgUploadOverlay');
+            var spinner = document.getElementById('imgUploadOverlaySpinner');
+            var title = document.getElementById('imgUploadOverlayTitle');
+            var sub = document.getElementById('imgUploadOverlaySub');
+            if (!ov) return;
+            if (imgUploadOverlayTimer) { clearTimeout(imgUploadOverlayTimer); imgUploadOverlayTimer = null; }
+            if (mode === 'loading') {
+                spinner.style.display = '';
+                title.textContent = 'Memproses foto ' + Math.min(current+1,total) + ' dari ' + total;
+                sub.textContent = 'Upload banyak gambar mungkin membutuhkan waktu';
+                ov.classList.add('show');
+            } else if (mode === 'done') {
+                spinner.style.display = 'none';
+                title.textContent = 'Selesai — semua foto berhasil diupload';
+                sub.textContent = 'Ketuk di mana saja untuk menutup';
+                ov.classList.add('show');
+                imgUploadOverlayTimer = setTimeout(imgHideUploadOverlay, 3000);
+            }
+        }
+        function imgHideUploadOverlay() {
+            var ov = document.getElementById('imgUploadOverlay');
+            if (ov) ov.classList.remove('show');
+            if (imgUploadOverlayTimer) { clearTimeout(imgUploadOverlayTimer); imgUploadOverlayTimer = null; }
+        }
+
+        /* ── Compress dataUrl gambar penuh (tanpa dipotong) mengikuti budget ukuran
+           yang sama seperti cropAndSave, dipakai untuk auto-skip-crop multi-upload ── */
+        function imgCompressFullImage(dataUrl, imgArr, cb) {
+            var img = new Image();
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                var MAX = 1*1024*1024;
+                var out;
+                for (var q=0.9; q>=0.25; q-=0.1) {
+                    out = canvas.toDataURL('image/jpeg', q);
+                    var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
+                    var newSize = out.length*0.75;
+                    if (currentTotal+newSize <= MAX) break;
+                    if (q<=0.25) {
+                        var factor = Math.sqrt(MAX/(currentTotal+newSize));
+                        var c2 = document.createElement('canvas');
+                        c2.width = Math.max(50, Math.floor(canvas.width*factor));
+                        c2.height = Math.max(50, Math.floor(canvas.height*factor));
+                        c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+                        out = c2.toDataURL('image/jpeg', 0.7);
+                        break;
+                    }
+                }
+                cb(out);
+            };
+            img.onerror = function(){ cb(null); };
+            img.src = dataUrl;
+        }
 
         function fileToDataUrl(file, callback) {
             var looksLikeImage = file && (/^image\//i.test(file.type || '') || /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name || ''));
@@ -1730,7 +1907,7 @@ function applyImageEdits(){
                 imgArr.push(entry);
             }
             var gdriveFileName = 'maintenance_' + p.type + '_' + p.idx + '_' + slotIdx + '.jpg';
-            uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, p.type || '');
+            if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, p.type || '');
 
             closeCropModal();
             renderSection(p.type, p.type + 'Box');
@@ -1967,36 +2144,38 @@ function applyImageEdits(){
 
                     drawPdfBackground(doc,pw,ph);
 
-                    // INFO BOX
-                    doc.setDrawColor(180, 220, 190);
-                    doc.setLineWidth(0.4);
-                    doc.rect(marginX, y, contentW, 32, 'S');
-
-                    var infoRows = [
-                        ['Tipe', getReportTypeLabel(), 'WO No', safe(document.getElementById('wo').value)],
-                        ['Tanggal',safe(document.getElementById('workDate').value), 'Asset', safe(document.getElementById('assetTag').value)],
-                        ['PIC', safe(document.getElementById('pic').value), 'Material',safe(document.getElementById('material').value)]
+                    // ── INFO PEKERJAAN (Fitur L: grid full-width label|value) ──
+                    var padIn = 3, labelColW = 32;
+                    var valueX = marginX + labelColW + padIn, valueW = contentW - labelColW - padIn*2;
+                    var infoFields = [
+                        ['Tipe', getReportTypeLabel()],
+                        ['WO No', safe(document.getElementById('wo').value)],
+                        ['Tanggal', safe(document.getElementById('workDate').value)],
+                        ['Asset', safe(document.getElementById('assetTag').value)],
+                        ['PIC', safe(document.getElementById('pic').value)],
+                        ['Material', safe(document.getElementById('material').value)]
                     ];
-
-                    var iy = y + 7;
-                    infoRows.forEach(function(row) {
-                        doc.setFont('helvetica','bold');
-                        doc.setFontSize(8);
-                        doc.setTextColor(26,107,58);
-                        doc.text(row[0]+':', marginX+3, iy);
-                        doc.setFont('helvetica','normal');
-                        doc.setTextColor(30,30,30);
-                        doc.text(row[1].substring(0,40), marginX+22, iy);
-                        doc.setFont('helvetica','bold');
-                        doc.setTextColor(26,107,58);
-                        doc.text(row[2]+':', marginX+(contentW/2)+5, iy);
-                        doc.setFont('helvetica','normal');
-                        doc.setTextColor(30,30,30);
-                        doc.text(row[3].substring(0,40), marginX+(contentW/2)+22, iy);
-                        iy += 9;
+                    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+                    var infoRows = infoFields.map(function(f){
+                        var lines = doc.splitTextToSize(String(f[1]||'—'), valueW);
+                        var h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5);
+                        return {label:f[0], lines:lines, h:h};
                     });
-
-                    y += 36;
+                    var infoTotalH = infoRows.reduce(function(s,r){ return s+r.h; }, 0);
+                    checkPage(infoTotalH + 6);
+                    doc.setFillColor(255,251,214); doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
+                    doc.rect(marginX, y, contentW, infoTotalH, 'FD');
+                    doc.line(marginX+labelColW, y, marginX+labelColW, y+infoTotalH);
+                    var infoRowY = y; doc.setLineWidth(0.25);
+                    infoRows.forEach(function(r, idx){
+                        if (idx>0) doc.line(marginX, infoRowY, marginX+contentW, infoRowY);
+                        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
+                        doc.text(r.label, marginX+padIn, infoRowY+4.6);
+                        doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
+                        doc.text(r.lines, valueX, infoRowY+4.6);
+                        infoRowY += r.h;
+                    });
+                    y += infoTotalH + 8;
 
                     // Asset Desc
                     var assetDesc = safe(document.getElementById('assetDesc').value);
@@ -2021,6 +2200,19 @@ function applyImageEdits(){
                     }
 
                     // Sections
+                    function estimateFirstImgRowH(images, DEFAULT_IMG_W, DEFAULT_IMG_H, gap) {
+                        if (!images || !images.length) return 0;
+                        var maxRowRight = marginX + contentW - 3, rowX = marginX+3, rowW = 0, rowH = 0;
+                        for (var i=0;i<images.length;i++){
+                            var im = images[i];
+                            var imgW = (im.widthCm ? im.widthCm*10 : DEFAULT_IMG_W);
+                            var imgH = (im.heightCm ? im.heightCm*10 : DEFAULT_IMG_H);
+                            if (imgW > contentW - 6) { var f=(contentW-6)/imgW; imgW*=f; imgH*=f; }
+                            if (rowW && (rowX+imgW) > maxRowRight) break;
+                            rowW += imgW + gap; rowX += imgW + gap; rowH = Math.max(rowH, imgH + (im.caption?8:0));
+                        }
+                        return rowH;
+                    }
                     [['findings','Finding / Problem'],['actions','Action'],['restore','Restore']].forEach(function(pair) {
                         var type = pair[0];
                         var label = pair[1];
@@ -2028,7 +2220,9 @@ function applyImageEdits(){
                         var hasContent = items.some(function(it){ return it.title||it.desc||it.images.length; });
                         if (!hasContent) return;
 
-                        checkPage(12);
+                        // Judul bar section (Finding/Action/Restore) jangan orphan sendirian di
+                        // bawah halaman — pastikan minimal cukup ruang untuk bar + awal item pertama.
+                        checkPage(12 + 10);
                         doc.setFillColor(232,245,233);
                         doc.rect(marginX, y, contentW, 8, 'F');
                         doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(26,107,58);
@@ -2037,7 +2231,23 @@ function applyImageEdits(){
                         items.forEach(function(item, idx) {
                             if (!item.title && !item.desc && !item.images.length) return;
 
-                            checkPage(10);
+                            var DEFAULT_IMG_W = 52, DEFAULT_IMG_H = 40, gap = 4;
+
+                            // Judul item + foto BARU (bukan lanjutan) dipaksa 1 paket ke halaman
+                            // yang sama — kalau tidak cukup, judul+baris foto pertama pindah
+                            // bareng ke halaman selanjutnya. Lanjutan baris foto berikutnya
+                            // (di dalam loop gambar di bawah) TIDAK mengulang judul lagi.
+                            var titleH = item.title ? 5 : 0;
+                            var descLines = item.desc ? doc.splitTextToSize(item.desc, contentW-6) : [];
+                            var descPreviewH = Math.min(descLines.length, 2) * 4;
+                            var firstImgRowH = item.images.length ? (estimateFirstImgRowH(item.images, DEFAULT_IMG_W, DEFAULT_IMG_H, gap) + gap + 2) : 0;
+                            var neededFirstBlock = titleH + descPreviewH + firstImgRowH + 6;
+                            var pageUsableH = ph - marginTop - marginBottom;
+                            if (neededFirstBlock <= pageUsableH && (y + neededFirstBlock > ph - marginBottom)) {
+                                doc.addPage(); drawPdfBackground(doc,pw,ph); y = marginTop;
+                            } else {
+                                checkPage(10);
+                            }
                             if (item.title) {
                                 doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(30,30,30);
                                 doc.text((idx+1)+'. '+item.title, marginX+3, y); y += 5;
@@ -2050,7 +2260,6 @@ function applyImageEdits(){
                             }
 
                             if (item.images.length > 0) {
-                                var DEFAULT_IMG_W = 52, DEFAULT_IMG_H = 40, gap = 4;
                                 var rowStartX = marginX+3, maxRowRight = marginX + contentW - 3;
                                 var rowX = rowStartX, rowMaxH = 0;
                                 y += 2;
@@ -2069,7 +2278,10 @@ function applyImageEdits(){
                                         y += rowMaxH + gap;
                                         rowX = rowStartX; rowMaxH = 0;
                                     }
-                                    // pindah halaman jika tidak cukup tinggi tersisa
+                                    // Baris foto LANJUTAN (judul & baris sebelumnya sudah tercetak di
+                                    // atas) yang kelebihan tinggi halaman -> lanjut ke halaman baru
+                                    // TANPA mengulang judul, foto lanjutannya otomatis muncul di
+                                    // halaman berikutnya.
                                     if (y + imgH + capH + 5 > ph - marginBottom) {
                                         doc.addPage(); drawPdfBackground(doc,pw,ph);
                                         y = marginTop; rowX = rowStartX; rowMaxH = 0;
