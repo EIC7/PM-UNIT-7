@@ -88,6 +88,21 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
 .crop-btn-save{background:#2ecc71;color:#fff}
 .crop-size-panel{border-top:1px solid #2a3a30;padding-top:8px;margin-top:2px}
+
+/* ── Fitur reusable: geser posisi foto (nudge) ── */
+.img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
+.img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
+.img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ccc;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
+.img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
+
+/* ── 4000 HR PM Pulverizer Instrumentation ── */
+.cf4k-asset{border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;background:#fff}
+.cf4k-asset table.manual-table{border-collapse:collapse;width:100%}
+.cf4k-asset table.manual-table th,.cf4k-asset table.manual-table td{border:1px solid #c8d8ea}
+.cf4k-asset-title{font-size:12.5px;font-weight:700;color:var(--steel);margin-bottom:8px;letter-spacing:.2px}
+.cf4k-placeholder{font-size:12px;color:var(--text3);font-style:italic;padding:10px 2px}
+.cf4k-remark-input{width:100%;padding:5px 6px;font-size:12px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box}
+.cf4k-evid-title{font-size:12px;font-weight:600;color:var(--steel);margin:10px 0 6px}
 .crop-size-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .crop-preset-btn,.crop-orient-btn,.crop-mode-btn{padding:5px 10px;border-radius:6px;border:1px solid #3a4f42;background:#222e26;color:#aac8b5;font-size:11px;font-weight:600;cursor:pointer}
 .crop-preset-btn.active,.crop-orient-btn.active,.crop-mode-btn.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
@@ -131,9 +146,9 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 </style>
 <script>
 function cfToggleSection(type) {
-  var chkMap = {feeder:'chk-feeder', demand:'chk-demand'};
-  var secMap = {feeder:'section-feeder', demand:'section-demand'};
-  var lblMap = {feeder:'lbl-feeder', demand:'lbl-demand'};
+  var chkMap = {feeder:'chk-feeder', demand:'chk-demand', '4000hr':'chk-4000hr'};
+  var secMap = {feeder:'section-feeder', demand:'section-demand', '4000hr':'section-4000hr'};
+  var lblMap = {feeder:'lbl-feeder', demand:'lbl-demand', '4000hr':'lbl-4000hr'};
   var chk = document.getElementById(chkMap[type]);
   var sec = document.getElementById(secMap[type]);
   var lbl = document.getElementById(lblMap[type]);
@@ -170,6 +185,9 @@ function cfToggleSection(type) {
     </div>
     <div id="lbl-demand" onclick="cfToggleSection('demand')" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--steel);transition:all .15s;user-select:none;">
       <input type="checkbox" id="chk-demand" onclick="event.stopPropagation();cfToggleSection('demand')" onchange="event.stopPropagation()" style="width:16px;height:16px;cursor:pointer;"> &#9889; Test Demand Signal
+    </div>
+    <div id="lbl-4000hr" onclick="cfToggleSection('4000hr')" style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;border:2px solid var(--border);background:#fff;color:var(--steel);transition:all .15s;user-select:none;">
+      <input type="checkbox" id="chk-4000hr" onclick="event.stopPropagation();cfToggleSection('4000hr')" onchange="event.stopPropagation()" style="width:16px;height:16px;cursor:pointer;"> &#128295; 4000 HR PM Pulverizer Instrumentation
     </div>
   </div>
 
@@ -394,6 +412,10 @@ function cfToggleSection(type) {
     </table>
     </div>
   </div><!-- /section-demand -->
+
+  <div id="section-4000hr" style="display:none">
+    <div id="cf4kContainer"></div>
+  </div><!-- /section-4000hr -->
 
   <!-- ── CATATAN & EVIDENCE PHOTO ── -->
   <div class="panel">
@@ -1655,9 +1677,9 @@ function closePdfPreview() {
 
 // ── SECTION TOGGLE (pola dari maintenance_report_form) ──────────────
 function cfToggleSection(type) {
-  var chkMap  = {feeder:'chk-feeder', demand:'chk-demand'};
-  var secMap  = {feeder:'section-feeder', demand:'section-demand'};
-  var lblMap  = {feeder:'lbl-feeder', demand:'lbl-demand'};
+  var chkMap  = {feeder:'chk-feeder', demand:'chk-demand', '4000hr':'chk-4000hr'};
+  var secMap  = {feeder:'section-feeder', demand:'section-demand', '4000hr':'section-4000hr'};
+  var lblMap  = {feeder:'lbl-feeder', demand:'lbl-demand', '4000hr':'lbl-4000hr'};
   var chk = document.getElementById(chkMap[type]);
   var sec = document.getElementById(secMap[type]);
   var lbl = document.getElementById(lblMap[type]);
@@ -1689,6 +1711,248 @@ var CF_CAL2_ROWS = [
 ];
 
 var cfImages = [];
+
+// ── 4000 HR PM PULVERIZER INSTRUMENTATION ──────────────────────────────────
+var CF4K_SOLENOID_STEPS = [
+  {work:'Verification Leak Solenoid Valve', remarkPlaceholder:'Good/Leak'},
+  {work:'Check Resistance Solenoid Coil', remarkPlaceholder:'R = ....... Ohm'},
+  {work:'Proximity switch Open Feedback', remarkPlaceholder:'Good/Damaged'},
+  {work:'Proximity switch Close Feedback', remarkPlaceholder:'Good/Damaged'}
+];
+var CF4K_HADCAD_STEPS = [
+  {work:'Stroke Test CAD & HAD'},
+  {work:'Calibrate & Cleaning Positioner'},
+  {work:'Check Actuator Mounting & Switch Mounting Position'},
+  {work:'Check IA Supply Regulating Device & Pipe Connection and Replace The Filter Element'},
+  {work:'Check Limit Switch Feedback Position'}
+];
+var CF4K_HAGCAG_STEPS = [
+  {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure : ...... Kpa'},
+  {work:'Check Instrumentation Cable & Conduit', remarkPlaceholder:'Good'},
+  {work:'Check, Clean & Lubricate Actuator Stem', remarkPlaceholder:'Clean'},
+  {work:'Check Limit Switch Open Feedback'},
+  {work:'Check Limit Switch Close Feedback'}
+];
+var CF4K_DISCHGATE_STEPS = [
+  {work:'Cable & Conduit Inspection', remarkPlaceholder:'Good'},
+  {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure : .... Kpa'}
+];
+
+var CF4K_GROUPS = [
+  { key:'pyrite', title:'Pyrite System', assets:[
+    {slug:'fy330',    code:'7BA-FY-330',   desc:'PYRITE HOPPER 7 INLET SHUT OFF VALVE SOLENOID CONTROL VALVE', steps:CF4K_SOLENOID_STEPS},
+    {slug:'fy300',    code:'7BA-FY-300',   desc:'JET PUMP 7A SERVICE WATER INLET SHV SOLENOID CONTROL VALVE', steps:CF4K_SOLENOID_STEPS},
+    {slug:'fy320',    code:'7BA-FY-320',   desc:'PYRITE HOPPER 7 OUTLET SHUT OF SOLENOID CONTROL VALVE', steps:CF4K_SOLENOID_STEPS},
+    {slug:'fy325',    code:'7BA-FY-325',   desc:'PYRITE HOPPER 7 FLUSHING WATER SUPPLY ISV SOLENOID CONTROL VALVE', steps:CF4K_SOLENOID_STEPS},
+    {slug:'lsh300',   code:'7BA-LSH-300',  desc:'PYRITE HOPPER 7 LEVEL SWITCH HIGH', steps:null}
+  ]},
+  { key:'floor', title:'Feeder Floor Area', assets:[
+    {slug:'zs502',    code:'7BF-ZS-502',   desc:'COAL FEEDER 7 CONVEYOR COAL ON BELT SWITCH', steps:null},
+    {slug:'pdsh590',  code:'7BF-PDSH-590', desc:'PULVERIZER 7 BOWL PRESS DIFF SWITCH HIGH', steps:[
+        {work:'PURGING DP SENSING LINE'}
+    ]},
+    {slug:'isd662a',  code:'7BF-ISD-662A', desc:'PULVERIZER 7A HOT PRIMARY AIR GATE', steps:CF4K_HAGCAG_STEPS},
+    {slug:'fcd663',   code:'7BF-FCD-663',  desc:'PULVERIZER 7 HOT PRIMARY AIR FLOW CONTROL DAMPER', steps:CF4K_HADCAD_STEPS},
+    {slug:'isd664',   code:'7BF-ISD-664',  desc:'PULVERIZER 7 COLD PRIMARY AIR GATE', steps:CF4K_HAGCAG_STEPS},
+    {slug:'fcd665',   code:'7BF-FCD-665',  desc:'PULVERIZER 7 COLD PRIMARY AIR FLOW CONTROL DAMPER', steps:CF4K_HADCAD_STEPS},
+    {slug:'dischgate',code:'',             desc:'PULVERIZER DISCHARGE PIPE SLIDE GATE', steps:CF4K_DISCHGATE_STEPS}
+  ]}
+];
+var cf4kEvidence = {}; // keyed by "<groupKey>_<assetSlug>" → array foto
+
+function render4kAssets() {
+  var wrap = document.getElementById('cf4kContainer');
+  if (!wrap) return;
+  var html = '';
+  CF4K_GROUPS.forEach(function(group){
+    html += '<div class="panel"><div class="section-label">'+group.title+'</div>';
+    group.assets.forEach(function(asset){
+      var key = group.key+'_'+asset.slug;
+      var titleTxt = asset.code ? (asset.code+' \u2014 '+asset.desc) : asset.desc;
+      html += '<div class="cf4k-asset">';
+      html += '<div class="cf4k-asset-title">'+titleTxt+'</div>';
+      if (asset.steps && asset.steps.length) {
+        html += '<table class="manual-table"><thead><tr>'+
+          '<th style="width:32px">NO</th><th>Step Of Work</th>'+
+          '<th style="width:40px">Y</th><th style="width:40px">N</th><th>Remark/Note</th>'+
+          '</tr></thead><tbody>';
+        asset.steps.forEach(function(step, i){
+          var rid = 'cf4k_'+key+'_'+(i+1);
+          html += '<tr>'+
+            '<td style="text-align:center;font-size:12px">'+(i+1)+'</td>'+
+            '<td style="font-size:12px">'+step.work+'</td>'+
+            '<td style="text-align:center"><input type="radio" name="'+rid+'_yn" id="'+rid+'_y" value="Y" onchange="cf4kAutoRemark(\''+rid+'\')" style="width:16px;height:16px;cursor:pointer"></td>'+
+            '<td style="text-align:center"><input type="radio" name="'+rid+'_yn" id="'+rid+'_n" value="N" onchange="cf4kAutoRemark(\''+rid+'\')" style="width:16px;height:16px;cursor:pointer"></td>'+
+            '<td><input type="text" class="cf4k-remark-input" id="'+rid+'_remark" placeholder="'+(step.remarkPlaceholder||'Remark/Note...')+'" data-hint="'+(step.remarkPlaceholder?String(step.remarkPlaceholder).replace(/"/g,'&quot;'):'')+'"></td>'+
+            '</tr>';
+        });
+        html += '</tbody></table>';
+      } else {
+        html += '<div class="cf4k-placeholder">Tabel step of work belum ditambahkan \u2014 menyusul.</div>';
+      }
+      html += '<div class="cf4k-evid-title">&#128247; Evidence Photo</div>';
+      html += '<div id="cf4kDrop_'+key+'" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:14px;text-align:center;cursor:pointer;background:var(--bg2,#dceaf6)" onclick="toggleSourceChoices(\'cf4kSource_'+key+'\')" ondragover="event.preventDefault()" ondrop="cf4kHandleDrop(event,\''+key+'\')">'+
+        '<input type="file" id="cf4kInput_'+key+'" accept="image/*,.heic,.heif" multiple style="display:none" onchange="cf4kHandleFiles(this.files,\''+key+'\')">'+
+        '<div style="font-size:20px;margin-bottom:4px">&#128444;&#65039;</div>'+
+        '<div style="font-size:11px;color:var(--text3)">Klik untuk pilih sumber atau drag file untuk upload</div>'+
+        '<div id="cf4kSource_'+key+'" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">'+
+          '<button type="button" onclick="event.stopPropagation();openFileInputSource(\'cf4kInput_'+key+'\',\'storage\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block;margin-bottom:4px">Penyimpanan</button>'+
+          '<button type="button" onclick="event.stopPropagation();openFileInputSource(\'cf4kInput_'+key+'\',\'camera\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block">Kamera</button>'+
+        '</div>'+
+      '</div>';
+      html += '<div id="cf4kPreview_'+key+'" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>';
+      html += '</div>'; // /cf4k-asset
+    });
+    html += '</div>'; // /panel
+  });
+  wrap.innerHTML = html;
+}
+
+function cf4kHandleDrop(e, key) { e.preventDefault(); cf4kHandleFiles(e.dataTransfer.files, key); }
+
+function cf4kHandleFiles(files, key) {
+  if (!cf4kEvidence[key]) cf4kEvidence[key] = [];
+  var fileArr = Array.from(files);
+  if (!fileArr.length) return;
+  if (fileArr.length > 1) { puHandleMultiUpload(fileArr, cf4kEvidence[key], key, 'cf4k'); return; }
+  fileArr.forEach(function(file) {
+    if (!isImageFile(file)) {
+      var r = new FileReader();
+      r.onload = function(ev) { cf4kEvidence[key].push({name:file.name, dataUrl:ev.target.result, type:file.type||'', caption:''}); cf4kRenderPreviews(key); };
+      r.readAsDataURL(file); return;
+    }
+    fileToJpegDataUrl(file, function(dataUrl) {
+      if (!dataUrl) return;
+      imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', cf4kEvidence[key], key, 'cf4k', -1);
+    });
+  });
+}
+
+function cf4kRenderPreviews(key) {
+  cf4kSyncCaptions(key);
+  var container = document.getElementById('cf4kPreview_'+key);
+  if (!container) return;
+  var arr = cf4kEvidence[key] || [];
+  container.innerHTML = '';
+  arr.forEach(function(img, idx) {
+    if (!img || !img.name) return;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px';
+    var isImg = IMG_EXTS.test(img.name) || (img.type && img.type.startsWith('image/'));
+    var safe = function(s) { return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+    var thumb = isImg
+      ? '<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+safe(img.dataUrl)+'" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="cf4kReEdit(\''+key+'\','+idx+')" title="Klik crop ulang"></div>'
+      : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
+    var cropBtn = isImg ? '<button onclick="cf4kReEdit(\''+key+'\','+idx+')" style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>' : '';
+    var nudgeHtml = '<div class="img-nudge"><div class="img-nudge-controls">'+
+      '<button type="button" onclick="event.stopPropagation();nudgeImageInArray(cf4kEvidence[\''+key+'\'],'+idx+',-0.5,function(){cf4kRenderPreviews(\''+key+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>'+
+      '<span>'+(img.offsetX||0)+'cm</span>'+
+      '<button type="button" onclick="event.stopPropagation();nudgeImageInArray(cf4kEvidence[\''+key+'\'],'+idx+',0.5,function(){cf4kRenderPreviews(\''+key+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>'+
+      '</div></div>';
+    wrap.innerHTML = thumb + cropBtn +
+      '<button onclick="cf4kRemoveImg(\''+key+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'+
+      '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+
+      '<input id="cf4kCap_'+key+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="cf4kEvidence[\''+key+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
+      nudgeHtml;
+    container.appendChild(wrap);
+  });
+}
+
+function cf4kSyncCaptions(key) {
+  (cf4kEvidence[key]||[]).forEach(function(img, idx) {
+    var inp = document.getElementById('cf4kCap_'+key+'_'+idx);
+    if (inp) img.caption = inp.value || '';
+  });
+}
+
+function cf4kReEdit(key, idx) {
+  var img = cf4kEvidence[key][idx];
+  imgOpenCropper(img.dataUrl, img.name, img.type, cf4kEvidence[key], key, 'cf4k', idx);
+}
+
+function cf4kRemoveImg(key, idx) { cf4kEvidence[key].splice(idx, 1); cf4kRenderPreviews(key); }
+
+function cf4kGetYN(rid) {
+  var y = document.getElementById(rid+'_y'), n = document.getElementById(rid+'_n');
+  if (y && y.checked) return 'Y';
+  if (n && n.checked) return 'N';
+  return '';
+}
+function cf4kSetYN(rid, val) {
+  var y = document.getElementById(rid+'_y'), n = document.getElementById(rid+'_n');
+  if (y) y.checked = (val === 'Y');
+  if (n) n.checked = (val === 'N');
+}
+// Auto-isi Remark/Note begitu Y/N dicentang:
+// - kalau step punya hint format "Kata1/Kata2" (mis. Good/Leak) → Y=Kata1, N=Kata2
+// - kalau step punya hint tapi bukan format pasangan (mis. "R = ... Ohm") → Y=Good, N=Not Good
+// - kalau step belum ada hint remark sama sekali → Y=Completed, N=Not Completed
+function cf4kAutoRemark(rid) {
+  var yn = cf4kGetYN(rid);
+  var remarkEl = document.getElementById(rid+'_remark');
+  if (!remarkEl || !yn) return;
+  var hint = remarkEl.getAttribute('data-hint') || '';
+  var val;
+  if (hint.indexOf('/') > -1) {
+    var parts = hint.split('/');
+    val = (yn === 'Y') ? parts[0].trim() : parts[1].trim();
+  } else if (hint) {
+    val = (yn === 'Y') ? 'Good' : 'Not Good';
+  } else {
+    val = (yn === 'Y') ? 'Completed' : 'Not Completed';
+  }
+  remarkEl.value = val;
+}
+
+// Kumpulkan semua isian 4000HR (step Y/N + remark tiap asset, dan evidence foto tiap asset)
+function cf4kCollectData() {
+  var out = {};
+  CF4K_GROUPS.forEach(function(group){
+    group.assets.forEach(function(asset){
+      var key = group.key+'_'+asset.slug;
+      var entry = { steps: [], evidence: (cf4kEvidence[key]||[]).map(function(img){
+        return {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||'', offsetX:img.offsetX||0};
+      })};
+      if (asset.steps && asset.steps.length) {
+        asset.steps.forEach(function(step, i){
+          var rid = 'cf4k_'+key+'_'+(i+1);
+          entry.steps.push({ work: step.work, yn: cf4kGetYN(rid), remark: (document.getElementById(rid+'_remark')||{}).value || '' });
+        });
+      }
+      out[key] = entry;
+    });
+  });
+  return out;
+}
+
+// Terapkan data 4000HR yang tersimpan (dipanggil dari applyRecordToForm)
+function cf4kApplyData(saved) {
+  if (!saved) return;
+  CF4K_GROUPS.forEach(function(group){
+    group.assets.forEach(function(asset){
+      var key = group.key+'_'+asset.slug;
+      var entry = saved[key];
+      if (!entry) return;
+      if (entry.steps && asset.steps) {
+        entry.steps.forEach(function(s, i){
+          var rid = 'cf4k_'+key+'_'+(i+1);
+          cf4kSetYN(rid, s.yn||'');
+          var remarkEl = document.getElementById(rid+'_remark');
+          if (remarkEl) remarkEl.value = s.remark || '';
+        });
+      }
+      if (entry.evidence && entry.evidence.length) {
+        cf4kEvidence[key] = entry.evidence.map(function(img){
+          var o = {name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', caption:img.caption||''};
+          if (img.offsetX) o.offsetX = img.offsetX;
+          return o;
+        });
+        cf4kRenderPreviews(key);
+      }
+    });
+  });
+}
+
 
 // ── BACKGROUND ───────────────────────────────────────────────────────────────
 var reportBgImg = null;
@@ -1806,11 +2070,13 @@ function cfReset() {
   cfImages = [];
   var p = document.getElementById('cfImgPreview'); if(p) p.innerHTML='';
   updateSizeIndicator('cf', null);
+  cf4kEvidence = {};
+  render4kAssets();
   // Reset toggle "tampil di print" Feeder Calibration & Test Demand Signal ke kondisi awal (off, section tersembunyi)
-  ['feeder','demand'].forEach(function(type){
-    var chkMap = {feeder:'chk-feeder', demand:'chk-demand'};
-    var secMap = {feeder:'section-feeder', demand:'section-demand'};
-    var lblMap = {feeder:'lbl-feeder', demand:'lbl-demand'};
+  ['feeder','demand','4000hr'].forEach(function(type){
+    var chkMap = {feeder:'chk-feeder', demand:'chk-demand', '4000hr':'chk-4000hr'};
+    var secMap = {feeder:'section-feeder', demand:'section-demand', '4000hr':'section-4000hr'};
+    var lblMap = {feeder:'lbl-feeder', demand:'lbl-demand', '4000hr':'lbl-4000hr'};
     var chk = document.getElementById(chkMap[type]);
     var sec = document.getElementById(secMap[type]);
     var lbl = document.getElementById(lblMap[type]);
@@ -1851,6 +2117,8 @@ function dbCollectData(modul) {
       reference: gv('cfRef'),
       print_feeder: document.getElementById('chk-feeder') ? document.getElementById('chk-feeder').checked : false,
       print_demand: document.getElementById('chk-demand') ? document.getElementById('chk-demand').checked : false,
+      print_4000hr: document.getElementById('chk-4000hr') ? document.getElementById('chk-4000hr').checked : false,
+      cf4k: cf4kCollectData(),
       cal1: {
         deviation:         [gv('cal1_dev1'),  gv('cal1_dev2'),  gv('cal1_dev3')],
         pulses_per_length: [gv('cal1_ppl1'),  gv('cal1_ppl2'),  gv('cal1_ppl3')],
@@ -2197,6 +2465,7 @@ setInterval(function(){
 initReportBackground();
 renderPresetButtons();
 initCropDrag();
+render4kAssets();
 
 (function(){
   var today=new Date();
@@ -2244,6 +2513,10 @@ function applyRecordToForm(rec, editingId) {
   if (data.print_demand !== undefined) {
     var dc = document.getElementById('chk-demand'); if(dc) dc.checked = data.print_demand;
   }
+  if (data.print_4000hr !== undefined) {
+    var hc = document.getElementById('chk-4000hr'); if(hc) hc.checked = data.print_4000hr;
+  }
+  if (data.cf4k) { if (typeof render4kAssets === 'function') render4kAssets(); cf4kApplyData(data.cf4k); }
   if (typeof toggleSections === 'function') toggleSections();
 }
 
