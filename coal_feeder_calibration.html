@@ -1764,6 +1764,11 @@ var CF4K_CLEANHMI_STEPS = [
   {work:'Cleaning local panel Feeder', remarkPlaceholder:'Clean'},
   {work:'Cleaning HMI', remarkPlaceholder:'Clean'}
 ];
+var CF4K_CLEANOUT_STEPS = [
+  {work:'Check Contact NO Switch Feedback', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
+  {work:'Check Contact NC Switch Feedback', remarkPlaceholder:'R = ........ Ohm', fillIn:true},
+  {work:'Cleaning', remarkPlaceholder:'Clean/Dirty'}
+];
 
 var CF4K_GROUPS = [
   { key:'pyrite', title:'Pyrite System', assets:[
@@ -1775,6 +1780,7 @@ var CF4K_GROUPS = [
   ]},
   { key:'floor', title:'Feeder Floor Area', assets:[
     {slug:'zs502',    code:'7BF-ZS-502',   desc:'COAL FEEDER 7 CONVEYOR COAL ON BELT SWITCH', steps:CF4K_ZS502_STEPS},
+    {slug:'cleanout', code:'',             desc:'CLEAN OUT', steps:CF4K_CLEANOUT_STEPS},
     {slug:'cleanhmi', code:'',             desc:'CLEANING LOCAL PANEL AND HMI', steps:CF4K_CLEANHMI_STEPS},
     {slug:'pdsh590',  code:'7BF-PDSH-590', desc:'PULVERIZER 7 BOWL PRESS DIFF SWITCH HIGH', steps:[
         {work:'PURGING DP SENSING LINE'}
