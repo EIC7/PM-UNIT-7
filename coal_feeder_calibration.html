@@ -129,6 +129,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .edit-thick-swatch.active{background:#2ecc71;color:#0e150f;border-color:#2ecc71}
 /* ── PDF PREVIEW MODAL ── */
 .pdf-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
+#pdfPreviewModal.show{z-index:10050}
 .pdf-preview-modal.show{display:flex}
 .pdf-preview-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,900px);height:min(92vh,1100px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
 .pdf-preview-header{background:#243228;padding:10px 46px 10px 16px;flex:0 0 auto;position:relative}
@@ -1639,6 +1640,12 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    // Jaga-jaga: tutup dulu overlay/modal lain yang mungkin masih nyangkut terbuka
+    // (edit gambar, popup sumber upload, notifikasi upload) supaya tidak ada yang
+    // menghalangi tombol di preview PDF ini.
+    try { if (typeof closeImageEditor === 'function') { var eim = document.getElementById('editImgModal'); if (eim && eim.classList.contains('show')) closeImageEditor(true); } } catch(e){}
+    try { if (typeof puHideUploadOverlay === 'function') puHideUploadOverlay(); } catch(e){}
+    document.querySelectorAll('[id^="cf4kSource_"], [id^="evidSource_"], [id^="opSource"]').forEach(function(el){ el.style.display = 'none'; });
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
@@ -2361,6 +2368,32 @@ function cfDownloadPdf() {
       });
       y += infoBoxH + 5;
 
+      // ── ASSET INFO (auto-terisi dari checkbox 4000HR) — tampil kalau ada isinya ──
+      var assetListVal = gv('cfAssetList');
+      var assetDescVal = gv('cfAssetDescList');
+      if (assetListVal || assetDescVal) {
+        var assetRows = [];
+        if (assetListVal) assetRows.push({label:'Asset', text: assetListVal});
+        if (assetDescVal) assetRows.push({label:'Asset Description', text: assetDescVal});
+        var assetWrapped = assetRows.map(function(item){
+          return {label:item.label, lines: doc.splitTextToSize(safe(item.text), contentW-40)};
+        });
+        var assetBoxH = assetWrapped.reduce(function(sum,item){ return sum + Math.max(1,item.lines.length)*4.4; }, 0) + 4;
+        checkPage(assetBoxH+2);
+        doc.setFillColor(255, 251, 214);
+        doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
+        doc.rect(marginX, y, contentW, assetBoxH, 'FD');
+        var aiy = y + 5;
+        assetWrapped.forEach(function(item){
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+          doc.text(item.label+':', marginX+3, aiy);
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(20,30,25);
+          doc.text(item.lines, marginX+38, aiy);
+          aiy += Math.max(1,item.lines.length)*4.4;
+        });
+        y += assetBoxH + 5;
+      }
+
       // ── SECTION HEADER ──
       function secHeader(title) {
         checkPage(12);
@@ -2654,6 +2687,21 @@ function cfDownloadPdf() {
           y += 2;
         }
 
+        // Estimasi tinggi tabel SEBELUM digambar, supaya judul asset bisa dipaksa
+        // pindah halaman BERSAMA tabelnya (tidak nyangkut sendirian di ujung halaman).
+        function estimatePulvStepTableHeight(steps, key) {
+          var h = 8; // tinggi header
+          steps.forEach(function(step, i){
+            var rid = 'cf4k_'+key+'_'+(i+1);
+            var remark = gv(rid+'_remark');
+            var workLines = doc.splitTextToSize(step.work, PULV_COLS[1]-4);
+            var remLines = doc.splitTextToSize(safe(remark), PULV_COLS[4]-4);
+            h += Math.max(8, Math.max(workLines.length, remLines.length)*3.6 + 3.2);
+          });
+          return h + 3;
+        }
+        function estimateCalTableHeight(rows) { return 9 + rows.length*9 + 4; }
+
         CF4K_GROUPS.forEach(function(group){
           var anyChecked = group.assets.some(function(asset){
             var chk = document.getElementById('cf4kChk_'+group.key+'_'+asset.slug);
@@ -2666,12 +2714,27 @@ function cfDownloadPdf() {
             var chk = document.getElementById('cf4kChk_'+key);
             if (!chk || !chk.checked) return;
 
-            checkPage(10);
             var titleTxt = asset.code ? (asset.code+' \u2014 '+asset.desc) : asset.desc;
             var titleLines = doc.splitTextToSize(titleTxt, contentW-4);
+            var titleH = titleLines.length*4.2 + 3;
+
+            // Hitung perkiraan tinggi tabel yang mengikuti judul ini
+            var contentH;
+            if (asset.type === 'feedercal') {
+              contentH = estimateCalTableHeight(CF_CAL1_ROWS) + estimateCalTableHeight(CF_CAL2_ROWS);
+            } else if (asset.steps && asset.steps.length) {
+              contentH = estimatePulvStepTableHeight(asset.steps, key);
+            } else {
+              contentH = 8;
+            }
+            // Batasi supaya tidak melebihi 1 halaman penuh (kalau tabelnya sendiri
+            // memang lebih panjang dari 1 halaman, biarkan checkPage per-baris yang urus)
+            var maxUsable = ph - marginTop - marginBottom - 10;
+            checkPage(titleH + Math.min(contentH, maxUsable));
+
             doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(20,30,25);
             doc.text(titleLines, marginX+2, y+4);
-            y += titleLines.length*4.2 + 3;
+            y += titleH;
 
             if (asset.type === 'feedercal') {
               drawCalTable(cf4kRemapCalRows(CF_CAL1_ROWS,'cf4kcal1'), 1);
