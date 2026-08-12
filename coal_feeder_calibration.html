@@ -1739,6 +1739,24 @@ var CF4K_DISCHGATE_STEPS = [
   {work:'Cable & Conduit Inspection', remarkPlaceholder:'Good'},
   {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure : .... Kpa', fillIn:true}
 ];
+var CF4K_LSH_STEPS = [
+  {work:'Check Instrumentation Cable & Conduit', remarkPlaceholder:'Good/Damaged'},
+  {work:'Cleaning Level Switch', remarkPlaceholder:'Clean/Dirty'},
+  {work:'Check Terminal Contac NO.', remarkPlaceholder:'R = ..... Ohm', fillIn:true},
+  {work:'Check Terminal Contac NC.', remarkPlaceholder:'R = ..... Ohm', fillIn:true},
+  {work:'Check Flapper running Normal'}
+];
+var CF4K_ZS502_STEPS = [
+  {work:'Check Bearing coal on Belt', remarkPlaceholder:'Good/Jammed/Sized'},
+  {work:'Check Contact NO Switch Feedback PLC', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
+  {work:'Check Contact NC Switch Feedback PLC', remarkPlaceholder:'R = ........ Ohm', fillIn:true},
+  {work:'Check Contact NO Feedback Local Panel', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
+  {work:'Cleaning', remarkPlaceholder:'Clean/Dirty'}
+];
+var CF4K_CLEANHMI_STEPS = [
+  {work:'Cleaning local panel Feeder', remarkPlaceholder:'Clean'},
+  {work:'Cleaning HMI', remarkPlaceholder:'Clean'}
+];
 
 var CF4K_GROUPS = [
   { key:'pyrite', title:'Pyrite System', assets:[
@@ -1746,10 +1764,11 @@ var CF4K_GROUPS = [
     {slug:'fy300',    code:'7BA-FY-300',   desc:'JET PUMP 7A SERVICE WATER INLET SHV SOLENOID CONTROL VALVE', steps:CF4K_SOLENOID_STEPS},
     {slug:'fy320',    code:'7BA-FY-320',   desc:'PYRITE HOPPER 7 OUTLET SHUT OF SOLENOID CONTROL VALVE', steps:CF4K_SOLENOID_STEPS},
     {slug:'fy325',    code:'7BA-FY-325',   desc:'PYRITE HOPPER 7 FLUSHING WATER SUPPLY ISV SOLENOID CONTROL VALVE', steps:CF4K_SOLENOID_STEPS},
-    {slug:'lsh300',   code:'7BA-LSH-300',  desc:'PYRITE HOPPER 7 LEVEL SWITCH HIGH', steps:null}
+    {slug:'lsh300',   code:'7BA-LSH-300',  desc:'PYRITE HOPPER 7 LEVEL SWITCH HIGH', steps:CF4K_LSH_STEPS}
   ]},
   { key:'floor', title:'Feeder Floor Area', assets:[
-    {slug:'zs502',    code:'7BF-ZS-502',   desc:'COAL FEEDER 7 CONVEYOR COAL ON BELT SWITCH', steps:null},
+    {slug:'zs502',    code:'7BF-ZS-502',   desc:'COAL FEEDER 7 CONVEYOR COAL ON BELT SWITCH', steps:CF4K_ZS502_STEPS},
+    {slug:'cleanhmi', code:'',             desc:'CLEANING LOCAL PANEL AND HMI', steps:CF4K_CLEANHMI_STEPS},
     {slug:'pdsh590',  code:'7BF-PDSH-590', desc:'PULVERIZER 7 BOWL PRESS DIFF SWITCH HIGH', steps:[
         {work:'PURGING DP SENSING LINE'}
     ]},
@@ -1953,8 +1972,9 @@ function cf4kSetYN(rid, val) {
 }
 // Auto-isi Remark/Note begitu Y/N dicentang:
 // - kolom isian nilai terukur (mis. "R = ... Ohm", "Pressure : ... Kpa") → JANGAN diubah otomatis, biarkan user isi manual
-// - step punya hint format "Kata1/Kata2" (mis. Good/Leak) → Y=Kata1, N=Kata2
-// - step punya hint tapi bukan format pasangan/isian (mis. "Good", "Clean") → Y=Good, N=Not Good
+// - step punya hint format "KataY/KataN" (mis. Good/Leak, atau Good/Jammed/Sized) → dipecah di garis miring PERTAMA saja,
+//   supaya nilai N yang mengandung garis miring lagi (mis. "Jammed/Sized") tidak ikut kepotong
+// - step punya hint tapi bukan format pasangan (mis. "Clean", "Good") → Y = hint apa adanya, N = "Not <hint>"
 // - step belum ada hint remark sama sekali → Y=Completed, N=Not Completed
 function cf4kAutoRemark(rid) {
   var yn = cf4kGetYN(rid);
@@ -1963,11 +1983,13 @@ function cf4kAutoRemark(rid) {
   if (remarkEl.getAttribute('data-fillin') === '1') return; // kolom isian angka, bukan penilaian Y/N
   var hint = remarkEl.getAttribute('data-hint') || '';
   var val;
-  if (hint.indexOf('/') > -1) {
-    var parts = hint.split('/');
-    val = (yn === 'Y') ? parts[0].trim() : parts[1].trim();
+  var slashIdx = hint.indexOf('/');
+  if (slashIdx > -1) {
+    var yWord = hint.substring(0, slashIdx).trim();
+    var nWord = hint.substring(slashIdx+1).trim();
+    val = (yn === 'Y') ? yWord : nWord;
   } else if (hint) {
-    val = (yn === 'Y') ? 'Good' : 'Not Good';
+    val = (yn === 'Y') ? hint : ('Not ' + hint);
   } else {
     val = (yn === 'Y') ? 'Completed' : 'Not Completed';
   }
