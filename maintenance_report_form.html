@@ -268,8 +268,8 @@
                         </div>
                     </div>
                     <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
-                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="15" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="15" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
                         <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                     </div>
                 </div>
@@ -1068,7 +1068,7 @@ function applyImageEdits(){
         var DEFAULT_CROP_W_CM = 7.2;
         var DEFAULT_CROP_H_CM = 5.18;
         var PRESET_DEFAULT_LONG_CM = 10;
-        var MANUAL_MAX_CM = 20;
+        var MANUAL_MAX_CM = 15;
 
         var CROP_PRESETS = [
             {label:'3:2', w:3, h:2},
@@ -2231,7 +2231,7 @@ function applyImageEdits(){
                         items.forEach(function(item, idx) {
                             if (!item.title && !item.desc && !item.images.length) return;
 
-                            var DEFAULT_IMG_W = 52, DEFAULT_IMG_H = 40, gap = 4;
+                            var DEFAULT_IMG_W = 52, DEFAULT_IMG_H = 40, gap = 20;
 
                             // Judul item + foto BARU (bukan lanjutan) dipaksa 1 paket ke halaman
                             // yang sama — kalau tidak cukup, judul+baris foto pertama pindah
@@ -2261,8 +2261,15 @@ function applyImageEdits(){
 
                             if (item.images.length > 0) {
                                 var rowStartX = marginX+3, maxRowRight = marginX + contentW - 3;
-                                var rowX = rowStartX, rowMaxH = 0;
+                                var rowAvailW = maxRowRight - rowStartX;
                                 y += 2;
+
+                                // Pass 1: kelompokkan gambar ke baris-baris berdasarkan lebar yang
+                                // tersisa (sama seperti wrap logic lama), sambil hitung imgW/imgH
+                                // final (setelah dikecilkan kalau melebihi lebar halaman).
+                                var rows = [];
+                                var curRow = [];
+                                var curRowW = 0;
                                 item.images.forEach(function(im) {
                                     var imgW = (im.widthCm ? im.widthCm*10 : DEFAULT_IMG_W);
                                     var imgH = (im.heightCm ? im.heightCm*10 : DEFAULT_IMG_H);
@@ -2271,39 +2278,46 @@ function applyImageEdits(){
                                         var f = (contentW - 6) / imgW;
                                         imgW *= f; imgH *= f;
                                     }
-                                    var capH = im.caption ? 8 : 0;
-
-                                    // wrap ke baris baru jika tidak cukup lebar tersisa
-                                    if (rowX + imgW > maxRowRight && rowX > rowStartX) {
-                                        y += rowMaxH + gap;
-                                        rowX = rowStartX; rowMaxH = 0;
+                                    var addedW = curRow.length ? (gap + imgW) : imgW;
+                                    if (curRow.length && (curRowW + addedW) > rowAvailW) {
+                                        rows.push(curRow); curRow = []; curRowW = 0; addedW = imgW;
                                     }
-                                    // Baris foto LANJUTAN (judul & baris sebelumnya sudah tercetak di
-                                    // atas) yang kelebihan tinggi halaman -> lanjut ke halaman baru
-                                    // TANPA mengulang judul, foto lanjutannya otomatis muncul di
-                                    // halaman berikutnya.
-                                    if (y + imgH + capH + 5 > ph - marginBottom) {
-                                        doc.addPage(); drawPdfBackground(doc,pw,ph);
-                                        y = marginTop; rowX = rowStartX; rowMaxH = 0;
-                                    }
-
-                                    // Geser posisi horizontal sesuai pengaturan user, tetap dijaga agar tidak keluar halaman
-                                    var drawX = rowX + ((im.offsetX || 0) * 10);
-                                    drawX = Math.max(marginX, Math.min(drawX, pw - marginX - imgW));
-
-                                    try { doc.addImage(im.dataUrl, 'JPEG', drawX, y, imgW, imgH); } catch(e) {}
-                                    if (im.caption) {
-                                        doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(80,80,80);
-                                        doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, drawX, y+imgH+3+ci*3.5); });
-                                    }
-
-                                    rowMaxH = Math.max(rowMaxH, imgH + capH);
-                                    // Pakai posisi AKTUAL (drawX) sebagai titik awal gambar berikutnya,
-                                    // supaya kalau gambar ini digeser, gambar sebelahnya ikut ke-push
-                                    // dan tidak saling tumpuk.
-                                    rowX = drawX + imgW + gap;
+                                    curRow.push({im:im, imgW:imgW, imgH:imgH});
+                                    curRowW += addedW;
                                 });
-                                y += rowMaxH + gap + 2;
+                                if (curRow.length) rows.push(curRow);
+
+                                // Pass 2: gambar tiap baris RATA TENGAH terhadap lebar konten halaman,
+                                // dengan jarak tetap sebesar `gap` (2cm) antar gambar dalam satu baris.
+                                rows.forEach(function(row) {
+                                    var rowMaxH = 0;
+                                    var totalRowW = row.reduce(function(s,r,idx){ return s + r.imgW + (idx>0?gap:0); }, 0);
+                                    row.forEach(function(r){ rowMaxH = Math.max(rowMaxH, r.imgH + (r.im.caption?8:0)); });
+
+                                    // Baris LANJUTAN yang tidak muat lagi secara vertikal -> pindah
+                                    // halaman baru TANPA mengulang judul.
+                                    if (y + rowMaxH + 5 > ph - marginBottom) {
+                                        doc.addPage(); drawPdfBackground(doc,pw,ph);
+                                        y = marginTop;
+                                    }
+
+                                    var curX = marginX + (contentW - totalRowW) / 2;
+                                    row.forEach(function(r) {
+                                        var im = r.im, imgW = r.imgW, imgH = r.imgH;
+                                        // Geser posisi horizontal sesuai pengaturan user (nudge halus),
+                                        // tetap dijaga agar tidak keluar halaman.
+                                        var drawX = curX + ((im.offsetX || 0) * 10);
+                                        drawX = Math.max(marginX, Math.min(drawX, pw - marginX - imgW));
+
+                                        try { doc.addImage(im.dataUrl, 'JPEG', drawX, y, imgW, imgH); } catch(e) {}
+                                        if (im.caption) {
+                                            doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(80,80,80);
+                                            doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, drawX, y+imgH+3+ci*3.5); });
+                                        }
+                                        curX += imgW + gap;
+                                    });
+                                    y += rowMaxH + gap + 2;
+                                });
                             }
 
                             y += 2;
