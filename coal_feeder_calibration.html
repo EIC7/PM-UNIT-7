@@ -200,6 +200,8 @@ function cfToggleSection(type) {
       <div class="meta-field"><label>Date</label><input type="date" id="cfDate"></div>
       <div class="meta-field"><label>Reported By</label><input type="text" id="cfPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order</label><input type="text" id="cfWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Asset</label><input type="text" id="cfAssetList" placeholder="Terisi otomatis dari centang asset di bawah..."></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><textarea id="cfAssetDescList" rows="2" placeholder="Terisi otomatis dari centang asset di bawah..." style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea></div>
     </div>
   </div>
 
@@ -1698,16 +1700,16 @@ function updatePrintLabels() {}  // stub
 
 // ── FIELD DEFINITIONS ─────────────────────────────────────────────────────────
 var CF_CAL1_ROWS = [
-  {id:'cal1_dev',  selfTest:'CAL 1',  desc:'Deviation',           unit:'%',     acceptance:'\u00b10.25%'},
-  {id:'cal1_ppl',  selfTest:'P10.02', desc:'Pulses per Length',   unit:'l/m',   acceptance:'n/a'},
-  {id:'cal1_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'\u00b10.25%'},
-  {id:'cal1_bt',   selfTest:'P10.10', desc:'Basic Tare',          unit:'kg/m',  acceptance:'n/a'}
+  {id:'cal1_dev',  selfTest:'CAL 1',  desc:'Deviation',           unit:'%',     acceptance:'\u00b10.25%', placeholder:'0.000'},
+  {id:'cal1_ppl',  selfTest:'P10.02', desc:'Pulses per Length',   unit:'l/m',   acceptance:'n/a',         placeholder:'0000.0000'},
+  {id:'cal1_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'\u00b10.25%', placeholder:'00000'},
+  {id:'cal1_bt',   selfTest:'P10.10', desc:'Basic Tare',          unit:'kg/m',  acceptance:'n/a',         placeholder:'00.00000'}
 ];
 var CF_CAL2_ROWS = [
-  {id:'cal2_dev',  selfTest:'CAL 2',  desc:'Deviation',           unit:'%',     acceptance:'\u00b10.25%'},
-  {id:'cal2_ppl',  selfTest:'P10.02', desc:'Pulses per Length',   unit:'l/m',   acceptance:'n/a'},
-  {id:'cal2_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'\u00b10.25%'},
-  {id:'cal2_rctw', selfTest:'P10.03', desc:'Range Correction TW', unit:'',      acceptance:'n/a'}
+  {id:'cal2_dev',  selfTest:'CAL 2',  desc:'Deviation',           unit:'%',     acceptance:'\u00b10.25%', placeholder:'0.000'},
+  {id:'cal2_ppl',  selfTest:'P10.02', desc:'Pulses per Length',   unit:'l/m',   acceptance:'n/a',         placeholder:'0000.0000'},
+  {id:'cal2_bcn',  selfTest:'P10.11', desc:'Belt circuit no',     unit:'imp',   acceptance:'\u00b10.25%', placeholder:'00000'},
+  {id:'cal2_rctw', selfTest:'P10.03', desc:'Range Correction TW', unit:'',      acceptance:'n/a',         placeholder:'0.00000'}
 ];
 
 var cfImages = [];
@@ -1715,7 +1717,7 @@ var cfImages = [];
 // ── 4000 HR PM PULVERIZER INSTRUMENTATION ──────────────────────────────────
 var CF4K_SOLENOID_STEPS = [
   {work:'Verification Leak Solenoid Valve', remarkPlaceholder:'Good/Leak'},
-  {work:'Check Resistance Solenoid Coil', remarkPlaceholder:'R = ....... Ohm'},
+  {work:'Check Resistance Solenoid Coil', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
   {work:'Proximity switch Open Feedback', remarkPlaceholder:'Good/Damaged'},
   {work:'Proximity switch Close Feedback', remarkPlaceholder:'Good/Damaged'}
 ];
@@ -1727,7 +1729,7 @@ var CF4K_HADCAD_STEPS = [
   {work:'Check Limit Switch Feedback Position'}
 ];
 var CF4K_HAGCAG_STEPS = [
-  {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure : ...... Kpa'},
+  {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure : ...... Kpa', fillIn:true},
   {work:'Check Instrumentation Cable & Conduit', remarkPlaceholder:'Good'},
   {work:'Check, Clean & Lubricate Actuator Stem', remarkPlaceholder:'Clean'},
   {work:'Check Limit Switch Open Feedback'},
@@ -1735,7 +1737,7 @@ var CF4K_HAGCAG_STEPS = [
 ];
 var CF4K_DISCHGATE_STEPS = [
   {work:'Cable & Conduit Inspection', remarkPlaceholder:'Good'},
-  {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure : .... Kpa'}
+  {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure : .... Kpa', fillIn:true}
 ];
 
 var CF4K_GROUPS = [
@@ -1755,10 +1757,41 @@ var CF4K_GROUPS = [
     {slug:'fcd663',   code:'7BF-FCD-663',  desc:'PULVERIZER 7 HOT PRIMARY AIR FLOW CONTROL DAMPER', steps:CF4K_HADCAD_STEPS},
     {slug:'isd664',   code:'7BF-ISD-664',  desc:'PULVERIZER 7 COLD PRIMARY AIR GATE', steps:CF4K_HAGCAG_STEPS},
     {slug:'fcd665',   code:'7BF-FCD-665',  desc:'PULVERIZER 7 COLD PRIMARY AIR FLOW CONTROL DAMPER', steps:CF4K_HADCAD_STEPS},
-    {slug:'dischgate',code:'',             desc:'PULVERIZER DISCHARGE PIPE SLIDE GATE', steps:CF4K_DISCHGATE_STEPS}
+    {slug:'isd510',   code:'7BF-ISD-510',  desc:'PULVERIZER 7 OUTLET TO CORNER 1 ISOL DAMPER', steps:CF4K_DISCHGATE_STEPS},
+    {slug:'isd511',   code:'7BF-ISD-511',  desc:'PULVERIZER 7 OUTLET TO CORNER 2 ISOL DAMPER', steps:CF4K_DISCHGATE_STEPS},
+    {slug:'isd512',   code:'7BF-ISD-512',  desc:'PULVERIZER 7 OUTLET TO CORNER 3 ISOL DAMPER', steps:CF4K_DISCHGATE_STEPS},
+    {slug:'isd513',   code:'7BF-ISD-513',  desc:'PULVERIZER 7 OUTLET TO CORNER 4 ISOL DAMPER', steps:CF4K_DISCHGATE_STEPS},
+    {slug:'feedercal',code:'',             desc:'FEEDER CALIBRATION DATA SHEET \u2014 4 pieces of tape used', type:'feedercal', steps:null}
   ]}
 ];
 var cf4kEvidence = {}; // keyed by "<groupKey>_<assetSlug>" → array foto
+
+// Bangun ulang tabel CAL 1 / CAL 2 (dipakai juga di section Feeder Calibration)
+// dengan prefix id berbeda supaya tidak bentrok dengan tabel aslinya.
+function cf4kCalTableHtml(rows, calLabel, calTitle, prefix) {
+  var html = '<div style="font-size:13px;font-weight:700;color:var(--steel);margin:8px 0 6px;letter-spacing:0.5px">'+calLabel+' \u2014 '+calTitle+'</div>';
+  html += '<table class="manual-table" id="'+prefix+'Table"><thead><tr>'+
+    '<th style="width:80px">Self Test</th><th>Description</th>'+
+    '<th style="width:50px;text-align:center">TEST #1</th><th style="width:50px;text-align:center">TEST #2</th><th style="width:50px;text-align:center">TEST #3</th>'+
+    '<th style="width:50px;text-align:center">Acceptance Level</th></tr></thead><tbody>';
+  rows.forEach(function(row, idx){
+    var suffix = row.id.split('_')[1];
+    var base = prefix+'_'+suffix;
+    var unitBadge = row.unit ? '<span class="unit-badge">'+row.unit+'</span>' : '<span class="unit-badge no-unit">\u2014</span>';
+    var ph = row.placeholder || '0.000';
+    var selfTestStyle = idx===0 ? 'text-align:center;font-weight:700;font-size:12px;color:var(--steel)' : 'text-align:center;font-size:12px;color:var(--text3)';
+    html += '<tr>'+
+      '<td style="'+selfTestStyle+'">'+row.selfTest+'</td>'+
+      '<td style="font-size:12px">'+row.desc+'</td>'+
+      '<td><div class="input-unit-wrap"><input class="data-input" id="'+base+'1" placeholder="'+ph+'" value="">'+unitBadge+'</div></td>'+
+      '<td><div class="input-unit-wrap"><input class="data-input" id="'+base+'2" placeholder="'+ph+'" value="">'+unitBadge+'</div></td>'+
+      '<td><div class="input-unit-wrap"><input class="data-input" id="'+base+'3" placeholder="'+ph+'" value="">'+unitBadge+'</div></td>'+
+      '<td style="text-align:center;font-size:12px;color:var(--text3);font-style:italic">'+row.acceptance+'</td>'+
+      '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
 
 function render4kAssets() {
   var wrap = document.getElementById('cf4kContainer');
@@ -1770,8 +1803,16 @@ function render4kAssets() {
       var key = group.key+'_'+asset.slug;
       var titleTxt = asset.code ? (asset.code+' \u2014 '+asset.desc) : asset.desc;
       html += '<div class="cf4k-asset">';
-      html += '<div class="cf4k-asset-title">'+titleTxt+'</div>';
-      if (asset.steps && asset.steps.length) {
+      html += '<div class="cf4k-asset-title"><label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:700">'+
+        '<input type="checkbox" id="cf4kChk_'+key+'" onchange="cf4kToggleAsset(\''+key+'\')" style="width:16px;height:16px;cursor:pointer;flex:none">'+
+        '<span>'+titleTxt+'</span></label></div>';
+      html += '<div id="cf4kBody_'+key+'" style="display:none">';
+      if (asset.type === 'feedercal') {
+        html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+
+          cf4kCalTableHtml(CF_CAL1_ROWS, 'CAL 1', 'Zero Calibration', 'cf4kcal1')+
+          cf4kCalTableHtml(CF_CAL2_ROWS, 'CAL 2', 'Span Calibration', 'cf4kcal2')+
+        '</div>';
+      } else if (asset.steps && asset.steps.length) {
         html += '<table class="manual-table"><thead><tr>'+
           '<th style="width:32px">NO</th><th>Step Of Work</th>'+
           '<th style="width:40px">Y</th><th style="width:40px">N</th><th>Remark/Note</th>'+
@@ -1783,7 +1824,7 @@ function render4kAssets() {
             '<td style="font-size:12px">'+step.work+'</td>'+
             '<td style="text-align:center"><input type="radio" name="'+rid+'_yn" id="'+rid+'_y" value="Y" onchange="cf4kAutoRemark(\''+rid+'\')" style="width:16px;height:16px;cursor:pointer"></td>'+
             '<td style="text-align:center"><input type="radio" name="'+rid+'_yn" id="'+rid+'_n" value="N" onchange="cf4kAutoRemark(\''+rid+'\')" style="width:16px;height:16px;cursor:pointer"></td>'+
-            '<td><input type="text" class="cf4k-remark-input" id="'+rid+'_remark" placeholder="'+(step.remarkPlaceholder||'Remark/Note...')+'" data-hint="'+(step.remarkPlaceholder?String(step.remarkPlaceholder).replace(/"/g,'&quot;'):'')+'"></td>'+
+            '<td><input type="text" class="cf4k-remark-input" id="'+rid+'_remark" placeholder="'+(step.remarkPlaceholder||'Remark/Note...')+'" data-hint="'+(step.remarkPlaceholder?String(step.remarkPlaceholder).replace(/"/g,'&quot;'):'')+'" data-fillin="'+(step.fillIn?'1':'0')+'"></td>'+
             '</tr>';
         });
         html += '</tbody></table>';
@@ -1801,11 +1842,38 @@ function render4kAssets() {
         '</div>'+
       '</div>';
       html += '<div id="cf4kPreview_'+key+'" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>';
+      html += '</div>'; // /cf4kBody
       html += '</div>'; // /cf4k-asset
     });
     html += '</div>'; // /panel
   });
   wrap.innerHTML = html;
+}
+
+// Checkbox judul per-asset: tampilkan/sembunyikan tabel + evidence, dan
+// otomatis isi field Asset / Asset Description di panel Informasi Pekerjaan.
+function cf4kToggleAsset(key) {
+  var chk = document.getElementById('cf4kChk_'+key);
+  var body = document.getElementById('cf4kBody_'+key);
+  if (body) body.style.display = (chk && chk.checked) ? '' : 'none';
+  cf4kUpdateAssetInfo();
+}
+function cf4kUpdateAssetInfo() {
+  var codes = [], descs = [];
+  CF4K_GROUPS.forEach(function(group){
+    group.assets.forEach(function(asset){
+      var key = group.key+'_'+asset.slug;
+      var chk = document.getElementById('cf4kChk_'+key);
+      if (chk && chk.checked) {
+        if (asset.code) codes.push(asset.code);
+        descs.push(asset.desc);
+      }
+    });
+  });
+  var elCode = document.getElementById('cfAssetList');
+  var elDesc = document.getElementById('cfAssetDescList');
+  if (elCode) elCode.value = codes.join(', ');
+  if (elDesc) elDesc.value = descs.join('; ');
 }
 
 function cf4kHandleDrop(e, key) { e.preventDefault(); cf4kHandleFiles(e.dataTransfer.files, key); }
@@ -1884,13 +1952,15 @@ function cf4kSetYN(rid, val) {
   if (n) n.checked = (val === 'N');
 }
 // Auto-isi Remark/Note begitu Y/N dicentang:
-// - kalau step punya hint format "Kata1/Kata2" (mis. Good/Leak) → Y=Kata1, N=Kata2
-// - kalau step punya hint tapi bukan format pasangan (mis. "R = ... Ohm") → Y=Good, N=Not Good
-// - kalau step belum ada hint remark sama sekali → Y=Completed, N=Not Completed
+// - kolom isian nilai terukur (mis. "R = ... Ohm", "Pressure : ... Kpa") → JANGAN diubah otomatis, biarkan user isi manual
+// - step punya hint format "Kata1/Kata2" (mis. Good/Leak) → Y=Kata1, N=Kata2
+// - step punya hint tapi bukan format pasangan/isian (mis. "Good", "Clean") → Y=Good, N=Not Good
+// - step belum ada hint remark sama sekali → Y=Completed, N=Not Completed
 function cf4kAutoRemark(rid) {
   var yn = cf4kGetYN(rid);
   var remarkEl = document.getElementById(rid+'_remark');
   if (!remarkEl || !yn) return;
+  if (remarkEl.getAttribute('data-fillin') === '1') return; // kolom isian angka, bukan penilaian Y/N
   var hint = remarkEl.getAttribute('data-hint') || '';
   var val;
   if (hint.indexOf('/') > -1) {
@@ -1904,13 +1974,15 @@ function cf4kAutoRemark(rid) {
   remarkEl.value = val;
 }
 
-// Kumpulkan semua isian 4000HR (step Y/N + remark tiap asset, dan evidence foto tiap asset)
+// Kumpulkan semua isian 4000HR (checkbox aktif, step Y/N + remark, evidence foto tiap asset,
+// dan isian tabel Feeder Calibration yang dipakai ulang di Feeder Floor Area)
 function cf4kCollectData() {
   var out = {};
   CF4K_GROUPS.forEach(function(group){
     group.assets.forEach(function(asset){
       var key = group.key+'_'+asset.slug;
-      var entry = { steps: [], evidence: (cf4kEvidence[key]||[]).map(function(img){
+      var chk = document.getElementById('cf4kChk_'+key);
+      var entry = { checked: !!(chk && chk.checked), steps: [], evidence: (cf4kEvidence[key]||[]).map(function(img){
         return {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||'', offsetX:img.offsetX||0};
       })};
       if (asset.steps && asset.steps.length) {
@@ -1919,10 +1991,39 @@ function cf4kCollectData() {
           entry.steps.push({ work: step.work, yn: cf4kGetYN(rid), remark: (document.getElementById(rid+'_remark')||{}).value || '' });
         });
       }
+      if (asset.type === 'feedercal') {
+        entry.calValues = cf4kCollectCalValues();
+      }
       out[key] = entry;
     });
   });
   return out;
+}
+function cf4kCollectCalValues() {
+  var vals = {};
+  [['cf4kcal1',CF_CAL1_ROWS],['cf4kcal2',CF_CAL2_ROWS]].forEach(function(pair){
+    var prefix = pair[0], rows = pair[1];
+    rows.forEach(function(row){
+      var suffix = row.id.split('_')[1];
+      [1,2,3].forEach(function(n){
+        var id = prefix+'_'+suffix+n;
+        var el = document.getElementById(id);
+        if (el) vals[id] = el.value;
+      });
+    });
+  });
+  return vals;
+}
+// Remap array baris CAL1/CAL2 supaya id-nya pakai prefix lain (dipakai untuk baca
+// input dari tabel Feeder Calibration yang di-reuse di 4000HR, tanpa bentrok
+// dengan tabel aslinya di section Feeder Calibration).
+function cf4kRemapCalRows(rows, prefix) {
+  return rows.map(function(r){
+    var suffix = r.id.split('_')[1];
+    var c = {}; for (var k in r) c[k] = r[k];
+    c.id = prefix+'_'+suffix;
+    return c;
+  });
 }
 
 // Terapkan data 4000HR yang tersimpan (dipanggil dari applyRecordToForm)
@@ -1933,12 +2034,20 @@ function cf4kApplyData(saved) {
       var key = group.key+'_'+asset.slug;
       var entry = saved[key];
       if (!entry) return;
+      var chk = document.getElementById('cf4kChk_'+key);
+      if (chk) { chk.checked = !!entry.checked; cf4kToggleAsset(key); }
       if (entry.steps && asset.steps) {
         entry.steps.forEach(function(s, i){
           var rid = 'cf4k_'+key+'_'+(i+1);
           cf4kSetYN(rid, s.yn||'');
           var remarkEl = document.getElementById(rid+'_remark');
           if (remarkEl) remarkEl.value = s.remark || '';
+        });
+      }
+      if (entry.calValues) {
+        Object.keys(entry.calValues).forEach(function(id){
+          var el = document.getElementById(id);
+          if (el) el.value = entry.calValues[id];
         });
       }
       if (entry.evidence && entry.evidence.length) {
@@ -2057,7 +2166,7 @@ function cfReset() {
     'cal2_ppl1','cal2_ppl2','cal2_ppl3',
     'cal2_bcn1','cal2_bcn2','cal2_bcn3',
     'cal2_rctw1','cal2_rctw2','cal2_rctw3',
-    'cfDate','cfPIC','cfWO','cfNote',
+    'cfDate','cfPIC','cfWO','cfNote','cfAssetList','cfAssetDescList',
     'td_ai3_100','td_ao1_100','td_ao2_100','td_fr_act_100','td_sp_100','td_rpm_100','td_freq_100','td_load_100','td_volt_100','td_curr_100','td_blt_100',
     'td_ai3_75','td_ao1_75','td_ao2_75','td_fr_act_75','td_sp_75','td_rpm_75','td_freq_75','td_load_75','td_volt_75','td_curr_75','td_blt_75',
     'td_ai3_50','td_ao1_50','td_ao2_50','td_fr_act_50','td_sp_50','td_rpm_50','td_freq_50','td_load_50','td_volt_50','td_curr_50','td_blt_50',
@@ -2115,6 +2224,8 @@ function dbCollectData(modul) {
     data: {
       feeder_no: gv('cfFeederNo'),
       reference: gv('cfRef'),
+      asset_list: gv('cfAssetList'),
+      asset_desc_list: gv('cfAssetDescList'),
       print_feeder: document.getElementById('chk-feeder') ? document.getElementById('chk-feeder').checked : false,
       print_demand: document.getElementById('chk-demand') ? document.getElementById('chk-demand').checked : false,
       print_4000hr: document.getElementById('chk-4000hr') ? document.getElementById('chk-4000hr').checked : false,
@@ -2142,10 +2253,12 @@ function dbCollectData(modul) {
 function cfDownloadPdf() {
   var fChk = document.getElementById('chk-feeder');
   var dChk = document.getElementById('chk-demand');
+  var hChk = document.getElementById('chk-4000hr');
   var doFeeder = fChk && fChk.checked;
   var doDemand = dChk && dChk.checked;
-  // Auto-detect: if neither checked but one has data, include it
-  if (!doFeeder && !doDemand) {
+  var doPulv = hChk && hChk.checked;
+  // Auto-detect: if none checked but one has data, include it
+  if (!doFeeder && !doDemand && !doPulv) {
     // Check if any feeder field has data
     var feederHasData = ['cal1_dev1','cal1_dev2','cal1_dev3','cal2_dev1','cal2_dev2','cal2_dev3'].some(function(id){
       var e = document.getElementById(id); return e && e.value && e.value !== '0.000' && e.value !== '';
@@ -2443,6 +2556,119 @@ function cfDownloadPdf() {
         y += 4;
       } // end if(doDemand)
 
+      // ── 4000 HR PM PULVERIZER INSTRUMENTATION ──
+      if (doPulv) {
+        if (doFeeder || doDemand) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+        secHeader('4000 HR PM PULVERIZER INSTRUMENTATION');
+
+        var PULV_COLS = [14, 90, 16, 16, 34]; // NO, Step of Work, Y, N, Remark/Note → total 170 = contentW
+
+        function drawPulvStepTable(steps, key) {
+          var HEAD_H = 8;
+          checkPage(HEAD_H + 12);
+          var headers = ['NO','STEP OF WORK','Y','N','REMARK/NOTE'];
+          var hx = marginX;
+          doc.setFillColor(30,58,138); doc.setDrawColor(20,40,110); doc.setLineWidth(0.3);
+          doc.rect(marginX, y, contentW, HEAD_H, 'FD');
+          hx = marginX;
+          headers.forEach(function(h,i){ doc.rect(hx, y, PULV_COLS[i], HEAD_H, 'S'); hx += PULV_COLS[i]; });
+          doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(255,255,255);
+          hx = marginX;
+          headers.forEach(function(h,i){ doc.text(h, hx+PULV_COLS[i]/2, y+5.4, {align:'center'}); hx += PULV_COLS[i]; });
+          doc.setDrawColor(200,215,230); doc.setLineWidth(0.3);
+          y += HEAD_H;
+
+          steps.forEach(function(step, i){
+            var rid = 'cf4k_'+key+'_'+(i+1);
+            var yn = cf4kGetYN(rid);
+            var remark = gv(rid+'_remark');
+            var workLines = doc.splitTextToSize(step.work, PULV_COLS[1]-4);
+            var remLines = doc.splitTextToSize(safe(remark), PULV_COLS[4]-4);
+            var rowH = Math.max(8, Math.max(workLines.length, remLines.length)*3.6 + 3.2);
+            checkPage(rowH + 2);
+            var bg = (i%2===0) ? [255,255,255] : [246,249,253];
+            var rx = marginX;
+            doc.setFillColor(bg[0],bg[1],bg[2]);
+            PULV_COLS.forEach(function(w){ doc.rect(rx, y, w, rowH, 'FD'); rx += w; });
+            doc.setDrawColor(200,215,230); doc.setLineWidth(0.3);
+
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,138);
+            doc.text(String(i+1), marginX+PULV_COLS[0]/2, y+5, {align:'center'});
+
+            doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
+            doc.text(workLines, marginX+PULV_COLS[0]+2, y+4.8);
+
+            var yx = marginX+PULV_COLS[0]+PULV_COLS[1];
+            var nx = yx+PULV_COLS[2];
+            doc.setFont('helvetica','bold'); doc.setFontSize(9);
+            if (yn === 'Y') { doc.setTextColor(20,120,60); doc.text('\u2713', yx+PULV_COLS[2]/2, y+rowH/2+1.3, {align:'center'}); }
+            if (yn === 'N') { doc.setTextColor(180,40,40); doc.text('\u2713', nx+PULV_COLS[3]/2, y+rowH/2+1.3, {align:'center'}); }
+
+            var rmx = nx+PULV_COLS[3];
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,50,50);
+            doc.text(remLines, rmx+2, y+4.8);
+
+            y += rowH;
+          });
+          y += 3;
+        }
+
+        function drawPulvEvidence(key) {
+          var arr = cf4kEvidence[key] || [];
+          if (!arr.length) return;
+          var imgW=50, imgH=38, gap=4, perRow=3, rowX=marginX+3, col=0;
+          arr.forEach(function(img){
+            checkPage(imgH+12);
+            var x = rowX + col*(imgW+gap);
+            x = Math.max(marginX, Math.min(x + ((img.offsetX||0)*10), marginX+contentW-imgW));
+            try { doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH); } catch(e){}
+            doc.setDrawColor(200,200,200); doc.rect(x,y,imgW,imgH);
+            var cap = safe(img.caption||'');
+            if (cap) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW), x, y+imgH+3); }
+            col++;
+            if (col>=perRow) { col=0; y+=imgH+12; }
+          });
+          if (col!==0) y += imgH+12;
+          y += 2;
+        }
+
+        CF4K_GROUPS.forEach(function(group){
+          var anyChecked = group.assets.some(function(asset){
+            var chk = document.getElementById('cf4kChk_'+group.key+'_'+asset.slug);
+            return chk && chk.checked;
+          });
+          if (!anyChecked) return;
+          subHeader(group.title);
+          group.assets.forEach(function(asset){
+            var key = group.key+'_'+asset.slug;
+            var chk = document.getElementById('cf4kChk_'+key);
+            if (!chk || !chk.checked) return;
+
+            checkPage(10);
+            var titleTxt = asset.code ? (asset.code+' \u2014 '+asset.desc) : asset.desc;
+            var titleLines = doc.splitTextToSize(titleTxt, contentW-4);
+            doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(20,30,25);
+            doc.text(titleLines, marginX+2, y+4);
+            y += titleLines.length*4.2 + 3;
+
+            if (asset.type === 'feedercal') {
+              drawCalTable(cf4kRemapCalRows(CF_CAL1_ROWS,'cf4kcal1'), 1);
+              checkPage(5);
+              drawCalTable(cf4kRemapCalRows(CF_CAL2_ROWS,'cf4kcal2'), 2);
+            } else if (asset.steps && asset.steps.length) {
+              drawPulvStepTable(asset.steps, key);
+            } else {
+              checkPage(8);
+              doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(140,140,140);
+              doc.text('Tabel step of work belum ditambahkan.', marginX+2, y+4);
+              y += 8;
+            }
+            drawPulvEvidence(key);
+            y += 2;
+          });
+        });
+      } // end if(doPulv)
+
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
 
@@ -2483,6 +2709,7 @@ function applyRecordToForm(rec, editingId) {
   sv('cfPIC',      rec.pic        || data.pic        || '');
   sv('cfWO',       rec.work_order || data.work_order || '');
   sv('cfFeederNo', data.feeder_no||''); sv('cfRef', data.reference||''); sv('cfNote', data.note||'');
+  sv('cfAssetList', data.asset_list||''); sv('cfAssetDescList', data.asset_desc_list||'');
   if (data.cal1) {
     var map1 = {deviation:'cal1_dev', pulses_per_length:'cal1_ppl', belt_circuit_no:'cal1_bcn', basic_tare:'cal1_bt'};
     Object.keys(map1).forEach(function(k){
