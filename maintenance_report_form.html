@@ -268,8 +268,8 @@
                         </div>
                     </div>
                     <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="15" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
-                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="15" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                        <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="17.4" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
+                        <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="17.4" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
                         <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                     </div>
                 </div>
@@ -1068,7 +1068,7 @@ function applyImageEdits(){
         var DEFAULT_CROP_W_CM = 7.2;
         var DEFAULT_CROP_H_CM = 5.18;
         var PRESET_DEFAULT_LONG_CM = 10;
-        var MANUAL_MAX_CM = 15;
+        var MANUAL_MAX_CM = 17.4;
 
         var CROP_PRESETS = [
             {label:'3:2', w:3, h:2},
@@ -1204,7 +1204,7 @@ function applyImageEdits(){
         }
 
         // Batas maksimal per-field tergantung mode aktif & orientasi.
-        // Preset & Manual: kedua sisi mengikuti MANUAL_MAX_CM (20cm).
+        // Preset & Manual: kedua sisi mengikuti MANUAL_MAX_CM (17.4cm — batas aman lebar halaman A4 di file ini).
         function getMaxForField(field) {
             if (cropModal._mode === 'preset') {
                 var longMax = MANUAL_MAX_CM, shortMax = MANUAL_MAX_CM;
@@ -1282,13 +1282,14 @@ function applyImageEdits(){
             }
         }
 
-        // Mode Default: ukuran tetap 7.2 × 5.18 cm, sama seperti PM HG Analyzer, tanpa input tambahan.
+        // Mode Default: gambar PENUH (tidak dipotong), ukuran cetak tetap 7.2 × 5.18 cm
+        // terlepas dari rasio asli gambarnya.
         function applyDefaultSize() {
-            cropModal._ratioLocked = true;
+            cropModal._ratioLocked = false;
             cropModal._cropWcm = DEFAULT_CROP_W_CM;
             cropModal._cropHcm = DEFAULT_CROP_H_CM;
             updateSizeLabel();
-            reshapeCropBoxToRatio();
+            fitCropBoxToFullImage();
         }
 
         // Mode Preset: pilih rasio + orientasi, ukuran awal dibuat dari sisi panjang 10cm
