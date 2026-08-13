@@ -201,8 +201,8 @@ function cfToggleSection(type) {
       <div class="meta-field"><label>Date</label><input type="date" id="cfDate"></div>
       <div class="meta-field"><label>Reported By</label><input type="text" id="cfPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order</label><input type="text" id="cfWO" placeholder="Work Order..."></div>
-      <div class="meta-field"><label>Asset</label><input type="text" id="cfAssetList" placeholder="Terisi otomatis dari centang asset di bawah..."></div>
-      <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><textarea id="cfAssetDescList" rows="2" placeholder="Terisi otomatis dari centang asset di bawah..." style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Asset</label><textarea id="cfAssetList" rows="4" placeholder="Terisi otomatis dari centang asset di bawah..." style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><textarea id="cfAssetDescList" rows="4" placeholder="Terisi otomatis dari centang asset di bawah..." style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea></div>
     </div>
   </div>
 
@@ -1931,15 +1931,15 @@ function cf4kUpdateAssetInfo() {
       var key = group.key+'_'+asset.slug;
       var chk = document.getElementById('cf4kChk_'+key);
       if (chk && chk.checked) {
-        if (asset.code) codes.push(asset.code);
-        descs.push(asset.desc);
+        if (asset.code) { codes.push(asset.code); descs.push(asset.code+' \u2014 '+asset.desc); }
+        else { descs.push(asset.desc); }
       }
     });
   });
   var elCode = document.getElementById('cfAssetList');
   var elDesc = document.getElementById('cfAssetDescList');
-  if (elCode) elCode.value = codes.join(', ');
-  if (elDesc) elDesc.value = descs.join('; ');
+  if (elCode) elCode.value = codes.join('\n');
+  if (elDesc) elDesc.value = descs.join('\n');
 }
 
 function cf4kHandleDrop(e, key) { e.preventDefault(); cf4kHandleFiles(e.dataTransfer.files, key); }
@@ -2428,18 +2428,21 @@ function cfDownloadPdf() {
       var assetDescVal = gv('cfAssetDescList');
       if (assetListVal || assetDescVal) {
         var assetRows = [];
-        if (assetListVal) assetRows.push({label:'Asset', text: assetListVal});
-        if (assetDescVal) assetRows.push({label:'Asset Description', text: assetDescVal});
-        var assetWrapped = assetRows.map(function(item){
-          return {label:item.label, lines: doc.splitTextToSize(safe(item.text), contentW-40)};
-        });
-        var assetBoxH = assetWrapped.reduce(function(sum,item){ return sum + Math.max(1,item.lines.length)*4.4; }, 0) + 4;
+        function toBulletLines(raw) {
+          var items = raw.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+          var out = [];
+          items.forEach(function(it){ out = out.concat(doc.splitTextToSize('- '+safe(it), contentW-40)); });
+          return out;
+        }
+        if (assetListVal) assetRows.push({label:'Asset', lines: toBulletLines(assetListVal)});
+        if (assetDescVal) assetRows.push({label:'Asset Description', lines: toBulletLines(assetDescVal)});
+        var assetBoxH = assetRows.reduce(function(sum,item){ return sum + Math.max(1,item.lines.length)*4.4; }, 0) + 4;
         checkPage(assetBoxH+2);
         doc.setFillColor(255, 251, 214);
         doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
         doc.rect(marginX, y, contentW, assetBoxH, 'FD');
         var aiy = y + 5;
-        assetWrapped.forEach(function(item){
+        assetRows.forEach(function(item){
           doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
           doc.text(item.label+':', marginX+3, aiy);
           doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(20,30,25);
