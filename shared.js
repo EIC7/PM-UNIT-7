@@ -129,6 +129,44 @@ function supaFetch(method, path, body) {
     });
 }
 
+/* ── SUPA FETCH DENGAN PROGRESS (XMLHttpRequest) ──
+   fetch() tidak punya event progress bawaan utk upload (kirim data), jadi
+   dipakai XHR khusus di sini supaya dbSave (upload) & dbLoad (download) bisa
+   nampilin progress asli 0-100% berdasarkan ukuran data beneran, bukan
+   animasi kira-kira. onProgress(percent, phase) dipanggil berkali-kali
+   selama transfer; phase = 'upload' atau 'download'. */
+function supaFetchProgress(method, path, body, onProgress) {
+  return new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open(method, SUPA_URL + '/rest/v1/' + path, true);
+    xhr.setRequestHeader('apikey', SUPA_KEY);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + SUPA_KEY);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Prefer', 'return=representation');
+    if (onProgress && xhr.upload) {
+      xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100), 'upload');
+      };
+    }
+    if (onProgress) {
+      xhr.onprogress = function(e) {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100), 'download');
+      };
+    }
+    xhr.onload = function() {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        var text = xhr.responseText;
+        try { resolve(text ? JSON.parse(text) : []); }
+        catch (e) { resolve([]); }
+      } else {
+        reject(new Error(xhr.responseText || ('HTTP ' + xhr.status)));
+      }
+    };
+    xhr.onerror = function() { reject(new Error('Network error')); };
+    xhr.send(body ? JSON.stringify(body) : null);
+  });
+}
+
 /* ── GATE AKSES: LOGIC (device id, cek password, sinkron trusted device) ──
    Tabel Supabase yang dibutuhkan (jalankan sekali di SQL editor Supabase):
      create table trusted_devices (
@@ -367,7 +405,9 @@ function dbShowToast(msg) {
 /* ── DB LOAD (satu record by ID) ── */
 function dbLoad(id, callback) {
   dbShowSavingOverlay(true, 'Memuat data, mohon tunggu...', 'Data dengan banyak gambar membutuhkan waktu yang lama');
-  supaFetch('GET', SUPA_TABLE + '?id=eq.' + id + '&limit=1')
+  supaFetchProgress('GET', SUPA_TABLE + '?id=eq.' + id + '&limit=1', null, function(percent, phase) {
+    if (phase === 'download') dbSetSavingProgress(percent);
+  })
     .then(function(rows) {
       dbShowSavingOverlay(false);
       if (rows && rows[0]) callback(rows[0]);
@@ -397,7 +437,11 @@ function dbShowSavingOverlay(show, msg, submsg) {
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff';
       ov.innerHTML = '<div style="width:38px;height:38px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:dbSpin 0.8s linear infinite;margin-bottom:14px"></div>'
         + '<div id="dbSavingOverlayMsg" style="font-size:14px;font-weight:600;text-align:center;padding:0 20px"></div>'
-        + '<div id="dbSavingOverlaySub" style="font-size:12px;font-weight:400;text-align:center;padding:6px 30px 0;color:rgba(255,255,255,0.75)"></div>';
+        + '<div id="dbSavingOverlaySub" style="font-size:12px;font-weight:400;text-align:center;padding:6px 30px 0;color:rgba(255,255,255,0.75)"></div>'
+        + '<div id="dbSavingProgressWrap" style="width:220px;max-width:70vw;height:7px;background:rgba(255,255,255,0.2);border-radius:5px;margin-top:14px;overflow:hidden;display:none">'
+        +   '<div id="dbSavingProgressBar" style="height:100%;width:0%;background:#2ecc71;border-radius:5px;transition:width 0.12s linear"></div>'
+        + '</div>'
+        + '<div id="dbSavingProgressPct" style="font-size:12px;font-weight:600;color:#fff;margin-top:6px;display:none"></div>';
       document.body.appendChild(ov);
       if (!document.getElementById('dbSpinKeyframes')) {
         var style = document.createElement('style');
@@ -408,10 +452,32 @@ function dbShowSavingOverlay(show, msg, submsg) {
     }
     document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Menyimpan data, mohon tunggu...';
     document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
+    dbSetSavingProgress(null); // reset dulu, garis progress baru kelihatan begitu ada data asli
     ov.style.display = 'flex';
   } else if (ov) {
     ov.style.display = 'none';
+    dbSetSavingProgress(null);
   }
+}
+
+/* ── SET PROGRESS 0-100% di overlay ── (dipanggil dari onProgress supaFetchProgress)
+   percent = null/undefined -> sembunyikan garis progress (dipakai sebelum transfer mulai,
+   atau utk request yang ukurannya tidak diketahui / lengthComputable=false). */
+function dbSetSavingProgress(percent) {
+  var wrap = document.getElementById('dbSavingProgressWrap');
+  var bar  = document.getElementById('dbSavingProgressBar');
+  var pct  = document.getElementById('dbSavingProgressPct');
+  if (!wrap || !bar || !pct) return;
+  if (percent === null || percent === undefined || isNaN(percent)) {
+    wrap.style.display = 'none';
+    pct.style.display = 'none';
+    return;
+  }
+  var p = Math.max(0, Math.min(100, Math.round(percent)));
+  wrap.style.display = 'block';
+  pct.style.display = 'block';
+  bar.style.width = p + '%';
+  pct.textContent = p + '%';
 }
 
 /* ── DB SAVE (generic — modul-specific dbCollectData defined per page) ── */
@@ -445,7 +511,9 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
     path  = SUPA_TABLE;
     method = 'POST';
   }
-  supaFetch(method, path, rec)
+  supaFetchProgress(method, path, rec, function(percent, phase) {
+    if (phase === 'upload') dbSetSavingProgress(percent);
+  })
     .then(function(rows) {
       window._dbSaving = false;
       dbShowSavingOverlay(false);
