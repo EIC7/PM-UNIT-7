@@ -1785,7 +1785,9 @@ var CF4K_ZS502_STEPS = [
   {work:'Check Bearing coal on Belt', remarkPlaceholder:'Good/Jammed/Sized'},
   {work:'Check Contact NO Switch Feedback PLC', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
   {work:'Check Contact NC Switch Feedback PLC', remarkPlaceholder:'R = ........ Ohm', fillIn:true},
+  {work:'Check Voltage Common Contact PLC', remarkPlaceholder:'V = ....... Volt', fillIn:true},
   {work:'Check Contact NO Feedback Local Panel', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
+  {work:'Check Voltage Common Contact Local Panel', remarkPlaceholder:'V = ....... Volt', fillIn:true},
   {work:'Cleaning', remarkPlaceholder:'Clean/Dirty'}
 ];
 var CF4K_CLEANHMI_STEPS = [
@@ -1795,6 +1797,7 @@ var CF4K_CLEANHMI_STEPS = [
 var CF4K_CLEANOUT_STEPS = [
   {work:'Check Contact NO Switch Feedback', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
   {work:'Check Contact NC Switch Feedback', remarkPlaceholder:'R = ........ Ohm', fillIn:true},
+  {work:'Check Voltage Common Contact', remarkPlaceholder:'V = ....... Volt', fillIn:true},
   {work:'Cleaning', remarkPlaceholder:'Clean/Dirty'}
 ];
 
@@ -1808,9 +1811,9 @@ var CF4K_GROUPS = [
   ]},
   { key:'floor', title:'Feeder Floor Area', assets:[
     {slug:'zs502',    code:'7BF-ZS-502',   desc:'COAL FEEDER 7 CONVEYOR COAL ON BELT SWITCH', steps:CF4K_ZS502_STEPS},
-    {slug:'cleanout', code:'',             desc:'CLEAN OUT', steps:CF4K_CLEANOUT_STEPS},
+    {slug:'cleanout', code:'7BF-FDR-501',desc:'CLEAN OUT', steps:CF4K_CLEANOUT_STEPS},
     {slug:'cleanhmi', code:'',             desc:'CLEANING LOCAL PANEL AND HMI', steps:CF4K_CLEANHMI_STEPS},
-    {slug:'pdsh590',  code:'7BF-PDSH-590', desc:'PULVERIZER 7 BOWL PRESS DIFF SWITCH HIGH', steps:[
+    {slug:'pdsh590',  code:'7BF-PDT-590', desc:'PULVERIZER 7 BOWL PRESS DIFF SWITCH HIGH', steps:[
         {work:'PURGING DP SENSING LINE'}
     ]},
     {slug:'isd662a',  code:'7BF-ISD-662A', desc:'PULVERIZER 7A HOT PRIMARY AIR GATE', steps:CF4K_HAGCAG_STEPS},
@@ -2452,31 +2455,42 @@ function cfDownloadPdf() {
       y += infoBoxH + 5;
 
       // ── ASSET INFO (auto-terisi dari checkbox 4000HR) — tampil kalau ada isinya ──
+      // Layout 2 kolom: Asset (kode) di kiri, Asset Description di kanan — biar tidak
+      // banyak ruang kosong seperti sebelumnya (ditumpuk ke bawah, kolom kanan kosong).
       var assetListVal = gv('cfAssetList');
       var assetDescVal = gv('cfAssetDescList');
       if (assetListVal || assetDescVal) {
-        var assetRows = [];
-        function toBulletLines(raw) {
+        var leftColW = contentW * 0.28;
+        var rightColX = marginX + leftColW + 6;
+        var rightColW = contentW - leftColW - 6;
+        function toBulletLines(raw, w) {
           var items = raw.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
           var out = [];
-          items.forEach(function(it){ out = out.concat(doc.splitTextToSize('- '+safe(it), contentW-40)); });
+          items.forEach(function(it){ out = out.concat(doc.splitTextToSize('- '+safe(it), w)); });
           return out;
         }
-        if (assetListVal) assetRows.push({label:'Asset', lines: toBulletLines(assetListVal)});
-        if (assetDescVal) assetRows.push({label:'Asset Description', lines: toBulletLines(assetDescVal)});
-        var assetBoxH = assetRows.reduce(function(sum,item){ return sum + Math.max(1,item.lines.length)*4.4; }, 0) + 4;
+        var codeLines = assetListVal ? toBulletLines(assetListVal, leftColW-6) : [];
+        var descLines = assetDescVal ? toBulletLines(assetDescVal, rightColW-4) : [];
+        var lineH = 4.4;
+        var bodyLines = Math.max(codeLines.length, descLines.length) + 1; // +1 baris label
+        var assetBoxH = bodyLines*lineH + 4;
         checkPage(assetBoxH+2);
         doc.setFillColor(255, 251, 214);
         doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
         doc.rect(marginX, y, contentW, assetBoxH, 'FD');
-        var aiy = y + 5;
-        assetRows.forEach(function(item){
-          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
-          doc.text(item.label+':', marginX+3, aiy);
-          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(20,30,25);
-          doc.text(item.lines, marginX+38, aiy);
-          aiy += Math.max(1,item.lines.length)*4.4;
-        });
+        doc.setDrawColor(210,195,120); doc.setLineWidth(0.25);
+        doc.line(marginX+leftColW+3, y+2, marginX+leftColW+3, y+assetBoxH-2);
+
+        var aiy = y + 4.6;
+        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+        if (assetListVal) doc.text('Asset:', marginX+3, aiy);
+        if (assetDescVal) doc.text('Asset Description:', rightColX, aiy);
+        aiy += lineH;
+
+        doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
+        if (codeLines.length) doc.text(codeLines, marginX+3, aiy);
+        if (descLines.length) doc.text(descLines, rightColX, aiy);
+
         y += assetBoxH + 5;
       }
 
