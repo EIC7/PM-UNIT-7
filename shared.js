@@ -406,7 +406,7 @@ function dbShowToast(msg) {
 function dbLoad(id, callback) {
   dbShowSavingOverlay(true, 'Memuat data, mohon tunggu...', 'Data dengan banyak gambar membutuhkan waktu yang lama');
   supaFetchProgress('GET', SUPA_TABLE + '?id=eq.' + id + '&limit=1', null, function(percent, phase) {
-    if (phase === 'download') dbSetSavingProgress(percent);
+    if (phase === 'download') dbReportRealProgress(percent);
   })
     .then(function(rows) {
       dbShowSavingOverlay(false);
@@ -437,11 +437,11 @@ function dbShowSavingOverlay(show, msg, submsg) {
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff';
       ov.innerHTML = '<div style="width:38px;height:38px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:dbSpin 0.8s linear infinite;margin-bottom:14px"></div>'
         + '<div id="dbSavingOverlayMsg" style="font-size:14px;font-weight:600;text-align:center;padding:0 20px"></div>'
-        + '<div id="dbSavingOverlaySub" style="font-size:12px;font-weight:400;text-align:center;padding:6px 30px 0;color:rgba(255,255,255,0.75)"></div>'
-        + '<div id="dbSavingProgressWrap" style="width:220px;max-width:70vw;height:7px;background:rgba(255,255,255,0.2);border-radius:5px;margin-top:14px;overflow:hidden;display:none">'
+        + '<div id="dbSavingProgressWrap" style="width:220px;max-width:70vw;height:7px;background:rgba(255,255,255,0.2);border-radius:5px;margin-top:12px;overflow:hidden;display:none">'
         +   '<div id="dbSavingProgressBar" style="height:100%;width:0%;background:#2ecc71;border-radius:5px;transition:width 0.12s linear"></div>'
         + '</div>'
-        + '<div id="dbSavingProgressPct" style="font-size:12px;font-weight:600;color:#fff;margin-top:6px;display:none"></div>';
+        + '<div id="dbSavingProgressPct" style="font-size:13px;font-weight:700;color:#fff;margin-top:6px;display:none"></div>'
+        + '<div id="dbSavingOverlaySub" style="font-size:12px;font-weight:400;text-align:center;padding:10px 30px 0;color:rgba(255,255,255,0.75)"></div>';
       document.body.appendChild(ov);
       if (!document.getElementById('dbSpinKeyframes')) {
         var style = document.createElement('style');
@@ -452,17 +452,53 @@ function dbShowSavingOverlay(show, msg, submsg) {
     }
     document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Menyimpan data, mohon tunggu...';
     document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
-    dbSetSavingProgress(null); // reset dulu, garis progress baru kelihatan begitu ada data asli
     ov.style.display = 'flex';
+    dbStartFakeProgress(); // langsung tampil & jalan 0% -> ~90%, di-override begitu ada progress asli
   } else if (ov) {
     ov.style.display = 'none';
+    dbStopFakeProgress();
     dbSetSavingProgress(null);
   }
 }
 
-/* ── SET PROGRESS 0-100% di overlay ── (dipanggil dari onProgress supaFetchProgress)
-   percent = null/undefined -> sembunyikan garis progress (dipakai sebelum transfer mulai,
-   atau utk request yang ukurannya tidak diketahui / lengthComputable=false). */
+/* ── PROGRESS SIMULASI (fallback) ──
+   Banyak respons Supabase/PostgREST (terutama GET/download) tidak mengirim
+   header Content-Length (chunked transfer), sehingga e.lengthComputable
+   selalu false dan event progress ASLI tidak pernah terpanggil. Supaya
+   garis loading tidak diam/kosong, kita jalankan simulasi 0% -> ~90% yang
+   melambat (asymptotic). Begitu progress ASLI datang (dbReportRealProgress),
+   simulasi langsung berhenti dan angka asli yang dipakai. */
+var _dbFakeProgressTimer = null;
+var _dbFakeProgressVal = 0;
+var _dbRealProgressSeen = false;
+
+function dbStartFakeProgress() {
+  _dbFakeProgressVal = 0;
+  _dbRealProgressSeen = false;
+  dbSetSavingProgress(0);
+  clearInterval(_dbFakeProgressTimer);
+  _dbFakeProgressTimer = setInterval(function () {
+    if (_dbRealProgressSeen) { clearInterval(_dbFakeProgressTimer); return; }
+    _dbFakeProgressVal += (90 - _dbFakeProgressVal) * 0.08 + 0.4;
+    if (_dbFakeProgressVal > 90) _dbFakeProgressVal = 90;
+    dbSetSavingProgress(_dbFakeProgressVal);
+  }, 180);
+}
+
+function dbStopFakeProgress() {
+  clearInterval(_dbFakeProgressTimer);
+  _dbFakeProgressTimer = null;
+}
+
+/* Dipanggil dari callback onProgress supaFetchProgress ketika ada progress ASLI
+   (lengthComputable true). Menghentikan simulasi & memakai angka sebenarnya. */
+function dbReportRealProgress(percent) {
+  _dbRealProgressSeen = true;
+  dbSetSavingProgress(percent);
+}
+
+/* ── SET PROGRESS 0-100% di overlay ──
+   percent = null/undefined -> sembunyikan garis progress (dipakai saat overlay ditutup). */
 function dbSetSavingProgress(percent) {
   var wrap = document.getElementById('dbSavingProgressWrap');
   var bar  = document.getElementById('dbSavingProgressBar');
@@ -512,7 +548,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
     method = 'POST';
   }
   supaFetchProgress(method, path, rec, function(percent, phase) {
-    if (phase === 'upload') dbSetSavingProgress(percent);
+    if (phase === 'upload') dbReportRealProgress(percent);
   })
     .then(function(rows) {
       window._dbSaving = false;
