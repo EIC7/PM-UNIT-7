@@ -1770,9 +1770,9 @@ var CF4K_HAGCAG_STEPS = [
   {work:'Check Limit Switch Open Feedback'},
   {work:'Check Limit Switch Close Feedback'}
 ];
-var CF4K_DISCHGATE_STEPS = [
-  {work:'Cable & Conduit Inspection', remarkPlaceholder:'Good'},
-  {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure : .... Kpa', fillIn:true}
+var CF4K_FY590_STEPS = [
+  {work:'Cable & Conduit Solenoid Valve Inspection', remarkPlaceholder:'Good'},
+  {work:'Cleaning Filter Main Purging Air Flow Regulator & Check Output Air Pressure', remarkPlaceholder:'Pressure = ....', fillIn:true}
 ];
 var CF4K_LSH_STEPS = [
   {work:'Check Instrumentation Cable & Conduit', remarkPlaceholder:'Good/Damaged'},
@@ -1820,10 +1820,23 @@ var CF4K_GROUPS = [
     {slug:'fcd663',   code:'7BF-FCD-663',  desc:'PULVERIZER 7 HOT PRIMARY AIR FLOW CONTROL DAMPER', steps:CF4K_HADCAD_STEPS},
     {slug:'isd664',   code:'7BF-ISD-664',  desc:'PULVERIZER 7 COLD PRIMARY AIR GATE', steps:CF4K_HAGCAG_STEPS},
     {slug:'fcd665',   code:'7BF-FCD-665',  desc:'PULVERIZER 7 COLD PRIMARY AIR FLOW CONTROL DAMPER', steps:CF4K_HADCAD_STEPS},
-    {slug:'isd510',   code:'7BF-ISD-510',  desc:'PULVERIZER 7 OUTLET TO CORNER 1 ISOL DAMPER', steps:CF4K_DISCHGATE_STEPS},
-    {slug:'isd511',   code:'7BF-ISD-511',  desc:'PULVERIZER 7 OUTLET TO CORNER 2 ISOL DAMPER', steps:CF4K_DISCHGATE_STEPS},
-    {slug:'isd512',   code:'7BF-ISD-512',  desc:'PULVERIZER 7 OUTLET TO CORNER 3 ISOL DAMPER', steps:CF4K_DISCHGATE_STEPS},
-    {slug:'isd513',   code:'7BF-ISD-513',  desc:'PULVERIZER 7 OUTLET TO CORNER 4 ISOL DAMPER', steps:CF4K_DISCHGATE_STEPS},
+    {slug:'fy590',    code:'7BF-FY-590',   desc:'PULVERIZER 7 OUTLET GATE AND PURGE AIR SOLENOID VALVE', steps:CF4K_FY590_STEPS},
+    {slug:'isd510',   code:'7BF-ISD-510',  desc:'PULVERIZER 7 OUTLET TO CORNER 1 ISOL DAMPER', steps:[
+      {work:'Cable & Conduit Inspection 7BF-ZSC-510', remarkPlaceholder:'Good'},
+      {work:'Cable & Conduit Inspection 7BF-ZSO-510', remarkPlaceholder:'Good'}
+    ]},
+    {slug:'isd511',   code:'7BF-ISD-511',  desc:'PULVERIZER 7 OUTLET TO CORNER 2 ISOL DAMPER', steps:[
+      {work:'Cable & Conduit Inspection 7BF-ZSC-511', remarkPlaceholder:'Good'},
+      {work:'Cable & Conduit Inspection 7BF-ZSO-511', remarkPlaceholder:'Good'}
+    ]},
+    {slug:'isd512',   code:'7BF-ISD-512',  desc:'PULVERIZER 7 OUTLET TO CORNER 3 ISOL DAMPER', steps:[
+      {work:'Cable & Conduit Inspection 7BF-ZSC-512', remarkPlaceholder:'Good'},
+      {work:'Cable & Conduit Inspection 7BF-ZSO-512', remarkPlaceholder:'Good'}
+    ]},
+    {slug:'isd513',   code:'7BF-ISD-513',  desc:'PULVERIZER 7 OUTLET TO CORNER 4 ISOL DAMPER', steps:[
+      {work:'Cable & Conduit Inspection 7BF-ZSC-513', remarkPlaceholder:'Good'},
+      {work:'Cable & Conduit Inspection 7BF-ZSO-513', remarkPlaceholder:'Good'}
+    ]},
     {slug:'feedercal',code:'',             desc:'FEEDER CALIBRATION DATA SHEET \u2014 4 pieces of tape used', type:'feedercal', steps:null}
   ]}
 ];
