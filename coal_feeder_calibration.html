@@ -1829,8 +1829,21 @@ function render4kAssets() {
   var wrap = document.getElementById('cf4kContainer');
   if (!wrap) return;
   var html = '';
+  html += '<div class="panel" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+    '<div class="section-label" style="margin:0;border:none;padding:0">4000 HR PM Pulverizer Instrumentation</div>'+
+    '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--steel);cursor:pointer">'+
+      '<input type="checkbox" id="cf4kGroupChk_all" onchange="cf4kToggleGroupAll(\'all\')" style="width:16px;height:16px;cursor:pointer">'+
+      '&#9989; Centang Semua Asset'+
+    '</label>'+
+  '</div>';
   CF4K_GROUPS.forEach(function(group){
-    html += '<div class="panel"><div class="section-label">'+group.title+'</div>';
+    html += '<div class="panel"><div class="section-label" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+      '<span>'+group.title+'</span>'+
+      '<label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--steel);cursor:pointer;text-transform:none;letter-spacing:normal">'+
+        '<input type="checkbox" id="cf4kGroupChk_'+group.key+'" onchange="cf4kToggleGroupAll(\''+group.key+'\')" style="width:15px;height:15px;cursor:pointer">'+
+        'Centang Semua'+
+      '</label>'+
+    '</div>';
     group.assets.forEach(function(asset){
       var key = group.key+'_'+asset.slug;
       var titleTxt = asset.code ? (asset.code+' \u2014 '+asset.desc) : asset.desc;
@@ -1888,6 +1901,27 @@ function cf4kToggleAsset(key) {
   var chk = document.getElementById('cf4kChk_'+key);
   var body = document.getElementById('cf4kBody_'+key);
   if (body) body.style.display = (chk && chk.checked) ? '' : 'none';
+  cf4kUpdateAssetInfo();
+}
+// Checkbox "Centang Semua" — groupKey='all' berlaku utk seluruh grup sekaligus,
+// atau groupKey spesifik ('pyrite'/'floor') hanya utk grup itu saja.
+function cf4kToggleGroupAll(groupKey) {
+  var master = document.getElementById('cf4kGroupChk_'+groupKey);
+  var checked = !!(master && master.checked);
+  var groups = (groupKey === 'all') ? CF4K_GROUPS : CF4K_GROUPS.filter(function(g){ return g.key === groupKey; });
+  groups.forEach(function(group){
+    group.assets.forEach(function(asset){
+      var key = group.key+'_'+asset.slug;
+      var chk = document.getElementById('cf4kChk_'+key);
+      if (chk) chk.checked = checked;
+      var body = document.getElementById('cf4kBody_'+key);
+      if (body) body.style.display = checked ? '' : 'none';
+    });
+    if (groupKey === 'all') {
+      var gchk = document.getElementById('cf4kGroupChk_'+group.key);
+      if (gchk) gchk.checked = checked;
+    }
+  });
   cf4kUpdateAssetInfo();
 }
 function cf4kUpdateAssetInfo() {
@@ -2095,6 +2129,21 @@ function cf4kApplyData(saved) {
       }
     });
   });
+  // Sinkronkan checkbox "Centang Semua" per grup & global sesuai state asset yang barusan dipulihkan
+  CF4K_GROUPS.forEach(function(group){
+    var allChecked = group.assets.every(function(asset){
+      var c = document.getElementById('cf4kChk_'+group.key+'_'+asset.slug);
+      return c && c.checked;
+    });
+    var gchk = document.getElementById('cf4kGroupChk_'+group.key);
+    if (gchk) gchk.checked = allChecked;
+  });
+  var allGroupsChecked = CF4K_GROUPS.every(function(group){
+    var gchk = document.getElementById('cf4kGroupChk_'+group.key);
+    return gchk && gchk.checked;
+  });
+  var allChk = document.getElementById('cf4kGroupChk_all');
+  if (allChk) allChk.checked = allGroupsChecked;
 }
 
 
@@ -2420,6 +2469,43 @@ function cfDownloadPdf() {
         y += 9;
       }
 
+      // ── EVIDENCE PHOTO (flow layout, HORMATI ukuran/orientasi hasil crop) ──
+      // Sebelumnya semua foto dipaksa ukuran tetap (imgW/imgH hardcoded) di PDF,
+      // jadi preset ukuran & orientasi (potrait/lanskap/A4/Letter/dst) yang dipilih
+      // saat crop tidak pernah kepakai di hasil cetak. Sekarang tiap foto digambar
+      // sesuai widthCm/heightCm yang tersimpan dari crop-nya masing-masing, dengan
+      // layout flow (baris baru otomatis kalau lebar sisa tidak cukup).
+      function drawEvidenceFlow(arr) {
+        if (!arr || !arr.length) return;
+        var gap = 4, rowGapExtra = 8;
+        var maxW = contentW - 6;
+        var rowX = marginX + 3, rowH = 0, firstInRow = true;
+        arr.forEach(function(img){
+          var wMm = (img.widthCm || DEFAULT_CROP_W_CM) * 10;
+          var hMm = (img.heightCm || DEFAULT_CROP_H_CM) * 10;
+          if (wMm > maxW) { var scale = maxW / wMm; wMm = maxW; hMm = hMm * scale; }
+          if (!firstInRow && (rowX + wMm) > (marginX + contentW - 3)) {
+            y += rowH + rowGapExtra;
+            rowX = marginX + 3; rowH = 0; firstInRow = true;
+          }
+          checkPage(hMm + rowGapExtra + 4);
+          var x = rowX;
+          x = Math.max(marginX, Math.min(x + ((img.offsetX||0)*10), marginX+contentW-wMm));
+          try { doc.addImage(img.dataUrl,'JPEG', x, y, wMm, hMm); } catch(e){}
+          doc.setDrawColor(200,200,200); doc.setLineWidth(0.25); doc.rect(x, y, wMm, hMm);
+          var cap = safe(img.caption||'');
+          if (cap) {
+            doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130);
+            doc.text(doc.splitTextToSize(cap, wMm), x, y+hMm+3);
+          }
+          rowH = Math.max(rowH, hMm);
+          rowX += wMm + gap;
+          firstInRow = false;
+        });
+        y += rowH + rowGapExtra;
+        y += 2;
+      }
+
       // col widths: 20+55+30+30+30+15 = 180 (contentW 170 \u2014 tweak)
       // contentW=170: 18+52+28+28+28+16 = 170
       var COL_W = [22, 52, 26, 26, 26, 18];
@@ -2509,17 +2595,7 @@ function cfDownloadPdf() {
           y += 3;
         }
         if (cfImages.length) {
-          var imgW=54, imgH=42, gap=4, perRow=3, ix=marginX+3;
-          cfImages.forEach(function(img, i) {
-            if (y+imgH+12 > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; ix=marginX+3; }
-            try { doc.addImage(img.dataUrl,'JPEG',ix,y,imgW,imgH); } catch(e) {}
-            var cap = safe(img.caption||'');
-            if (cap) { doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW), ix, y+imgH+3); }
-            ix += imgW+gap;
-            if ((i+1)%perRow===0) { ix=marginX+3; y+=imgH+12; }
-          });
-          if (cfImages.length%perRow!==0) y+=imgH+12;
-          y+=3;
+          drawEvidenceFlow(cfImages);
         }
       }
 
@@ -2675,22 +2751,7 @@ function cfDownloadPdf() {
         }
 
         function drawPulvEvidence(key) {
-          var arr = cf4kEvidence[key] || [];
-          if (!arr.length) return;
-          var imgW=50, imgH=38, gap=4, perRow=3, rowX=marginX+3, col=0;
-          arr.forEach(function(img){
-            checkPage(imgH+12);
-            var x = rowX + col*(imgW+gap);
-            x = Math.max(marginX, Math.min(x + ((img.offsetX||0)*10), marginX+contentW-imgW));
-            try { doc.addImage(img.dataUrl,'JPEG',x,y,imgW,imgH); } catch(e){}
-            doc.setDrawColor(200,200,200); doc.rect(x,y,imgW,imgH);
-            var cap = safe(img.caption||'');
-            if (cap) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,imgW), x, y+imgH+3); }
-            col++;
-            if (col>=perRow) { col=0; y+=imgH+12; }
-          });
-          if (col!==0) y += imgH+12;
-          y += 2;
+          drawEvidenceFlow(cf4kEvidence[key] || []);
         }
 
         // Estimasi tinggi tabel SEBELUM digambar, supaya judul asset bisa dipaksa
