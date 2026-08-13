@@ -486,8 +486,8 @@ function cfToggleSection(type) {
                     </div>
                 </div>
                 <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('w')"></div>
-                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="20" step="0.1" value="5" oninput="onCustomCmChange('h')"></div>
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="16.4" step="0.1" value="5" oninput="onCustomCmChange('w')" onblur="onCustomCmCommit('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="25" step="0.1" value="5" oninput="onCustomCmChange('h')" onblur="onCustomCmCommit('h')"></div>
                     <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                 </div>
             </div>
@@ -571,8 +571,13 @@ cropModalState._mode = 'default';
 cropModalState._presetRatio = 1;
 
 var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
-var PRESET_DEFAULT_LONG_CM = 10;
-var MANUAL_MAX_CM = 20;
+var PRESET_DEFAULT_LONG_CM = 7;
+// Panjang (cropWcm) = dimensi HORIZONTAL saat dicetak di PDF -> dibatasi ketat
+// oleh lebar kertas A4 (marginX=20mm di sini): 210mm - 20mm*2 - buffer 6mm = 164mm.
+var MANUAL_MAX_W_CM = 16.4;
+// Lebar (cropHcm) = dimensi VERTIKAL saat dicetak -> lebih longgar karena kalau
+// kelebihan cuma pindah halaman: 297mm - marginTop(20) - marginBottom(20) - buffer 7mm = 250mm.
+var MANUAL_MAX_H_CM = 25;
 
 /* ══════════════════════════════════════════════════════════════════════════
    EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
@@ -1171,7 +1176,7 @@ function highlightPreset(activeIdx) {
 // toggle Potrait/Lanskap (bujur sangkar tidak punya orientasi).
 function applySquarePreset() {
     cropModalState._activePresetIdx = 'square';
-    var side = Math.min(PRESET_DEFAULT_LONG_CM, MANUAL_MAX_CM);
+    var side = Math.min(PRESET_DEFAULT_LONG_CM, MANUAL_MAX_W_CM, MANUAL_MAX_H_CM);
     cropModalState._presetRatio = 1;
     fitCropBoxToFullImage(); // selalu mulai dari full image dulu sebelum diperkecil ke 1:1
     setLockedSize(side, side);
@@ -1184,14 +1189,11 @@ function applySquarePreset() {
     if (pB) pB.classList.remove('active');
     if (lB) lB.classList.remove('active');
 }
+// Batas maksimal per-field (Panjang/Lebar) berlaku sama untuk Preset & Manual,
+// tidak tergantung orientasi Potrait/Lanskap -- yang menentukan aman/tidaknya
+// adalah field-nya (posisi di kertas), bukan konsep rasionya.
 function getMaxForField(field) {
-    if (cropModalState._mode === 'preset') {
-        var longMax=MANUAL_MAX_CM, shortMax=MANUAL_MAX_CM;
-        if (cropModalState._orientation === 'landscape') return field==='w' ? longMax : shortMax;
-        return field==='w' ? shortMax : longMax;
-    }
-    if (cropModalState._mode === 'manual') return MANUAL_MAX_CM;
-    return 99;
+    return field === 'w' ? MANUAL_MAX_W_CM : MANUAL_MAX_H_CM;
 }
 function clampCmValue(v, maxV) {
     v = parseFloat(v);
@@ -1288,8 +1290,26 @@ function setCropOrientation(orientation) {
     cropModalState._presetRatio = neww/newh;
     setLockedSize(neww, newh);
 }
+// Selama user masih MENGETIK (oninput): update preview kotak crop kalau
+// angkanya sudah valid, tapi JANGAN menimpa balik nilai input -- dulu di sini
+// langsung clamp+tulis-ulang tiap ketikan, akibatnya begitu field dikosongkan
+// (mau ganti angka) langsung "dipaksa" balik ke angka lain sebelum sempat
+// mengetik angka barunya. Validasi/pembulatan final baru terjadi di
+// onCustomCmCommit() saat field kehilangan fokus (blur).
 function onCustomCmChange(field) {
-    if (cropModalState._mode === 'preset') { onPresetFieldChange(field); return; }
+    if (cropModalState._mode === 'preset') { onPresetFieldChange(field, false); return; }
+    if (cropModalState._mode === 'manual') {
+        var wRaw = parseFloat(document.getElementById('cropWcm').value);
+        var hRaw = parseFloat(document.getElementById('cropHcm').value);
+        var w = (isFinite(wRaw) && wRaw > 0) ? wRaw : cropModalState._cropWcm;
+        var h = (isFinite(hRaw) && hRaw > 0) ? hRaw : cropModalState._cropHcm;
+        setFreeSize(w, h, true); // skipInputSync=true -> jangan timpa input yang lagi diketik
+    }
+}
+// Dipanggil saat field kehilangan fokus (blur) -- baru di sini nilai
+// di-clamp ke batas min/max, dibulatkan, dan ditulis ulang ke input.
+function onCustomCmCommit(field) {
+    if (cropModalState._mode === 'preset') { onPresetFieldChange(field, true); return; }
     if (cropModalState._mode === 'manual') {
         var w = clampCmValue(document.getElementById('cropWcm').value, getMaxForField('w'));
         var h = clampCmValue(document.getElementById('cropHcm').value, getMaxForField('h'));
@@ -1297,18 +1317,26 @@ function onCustomCmChange(field) {
         setFreeSize(w, h, true);
     }
 }
-function onPresetFieldChange(field) {
+function onPresetFieldChange(field, commit) {
     var ratio = cropModalState._presetRatio || 1;
     var wEl=document.getElementById('cropWcm'), hEl=document.getElementById('cropHcm');
+    var raw = parseFloat((field==='w'?wEl:hEl).value);
+    if (!isFinite(raw) || raw<=0) {
+        // Field masih kosong/lagi diketik ulang -> jangan paksa apa-apa dulu
+        // (biar bisa dihapus bebas), kecuali ini commit (blur), baru dianggap
+        // 0.5 sebagai fallback paling minim.
+        if (!commit) return;
+        raw = 0.5;
+    }
     var w,h;
-    if (field==='w') { w=parseFloat(wEl.value)||0.5; h=w/ratio; } else { h=parseFloat(hEl.value)||0.5; w=h*ratio; }
+    if (field==='w') { w=raw; h=w/ratio; } else { h=raw; w=h*ratio; }
     var maxW=getMaxForField('w'), maxH=getMaxForField('h');
     var scale = Math.min(1, maxW/w, maxH/h); w*=scale; h*=scale;
     if (w<0.5) { w=0.5; h=w/ratio; }
     if (h<0.5) { h=0.5; w=h*ratio; }
     w=Math.round(w*10)/10; h=Math.round(h*10)/10;
-    wEl.value=w; hEl.value=h;
     cropModalState._ratioLocked=true; cropModalState._cropWcm=w; cropModalState._cropHcm=h;
+    if (commit) { wEl.value=w; hEl.value=h; }
     updateSizeLabel(); reshapeCropBoxToRatio();
 }
 function setLockedSize(w,h,skipInputSync) {
@@ -1328,7 +1356,7 @@ function updateSizeLabel() {
     var w=cropModalState._cropWcm, h=cropModalState._cropHcm;
     lbl.textContent = cropModalState._mode==='preset'
         ? 'Ukuran cetak: '+w+' cm × '+h+' cm (rasio terkunci)'
-        : 'Ukuran cetak: '+w+' cm × '+h+' cm (bebas, maks '+MANUAL_MAX_CM+'×'+MANUAL_MAX_CM+'cm)';
+        : 'Ukuran cetak: '+w+' cm × '+h+' cm (bebas, maks Panjang '+MANUAL_MAX_W_CM+'cm × Lebar '+MANUAL_MAX_H_CM+'cm)';
 }
 function clampNum(val, min, max) { return Math.max(min, Math.min(max, val)); }
 
@@ -1757,9 +1785,7 @@ var CF4K_ZS502_STEPS = [
   {work:'Check Bearing coal on Belt', remarkPlaceholder:'Good/Jammed/Sized'},
   {work:'Check Contact NO Switch Feedback PLC', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
   {work:'Check Contact NC Switch Feedback PLC', remarkPlaceholder:'R = ........ Ohm', fillIn:true},
-  {work:'Check Voltage Common Contact PLC', remarkPlaceholder:'V = ....... Volt', fillIn:true},
   {work:'Check Contact NO Feedback Local Panel', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
-  {work:'Check Voltage Common Contact Local Panel', remarkPlaceholder:'V = ....... Volt', fillIn:true},
   {work:'Cleaning', remarkPlaceholder:'Clean/Dirty'}
 ];
 var CF4K_CLEANHMI_STEPS = [
@@ -1769,7 +1795,6 @@ var CF4K_CLEANHMI_STEPS = [
 var CF4K_CLEANOUT_STEPS = [
   {work:'Check Contact NO Switch Feedback', remarkPlaceholder:'R = ....... Ohm', fillIn:true},
   {work:'Check Contact NC Switch Feedback', remarkPlaceholder:'R = ........ Ohm', fillIn:true},
-  {work:'Check Voltage Common Contact', remarkPlaceholder:'V = ....... Volt', fillIn:true},
   {work:'Cleaning', remarkPlaceholder:'Clean/Dirty'}
 ];
 
@@ -1783,9 +1808,9 @@ var CF4K_GROUPS = [
   ]},
   { key:'floor', title:'Feeder Floor Area', assets:[
     {slug:'zs502',    code:'7BF-ZS-502',   desc:'COAL FEEDER 7 CONVEYOR COAL ON BELT SWITCH', steps:CF4K_ZS502_STEPS},
-    {slug:'cleanout', code:'7BF-FDR-501',desc:'CLEAN OUT', steps:CF4K_CLEANOUT_STEPS},
+    {slug:'cleanout', code:'',             desc:'CLEAN OUT', steps:CF4K_CLEANOUT_STEPS},
     {slug:'cleanhmi', code:'',             desc:'CLEANING LOCAL PANEL AND HMI', steps:CF4K_CLEANHMI_STEPS},
-    {slug:'pdsh590',  code:'7BF-PDT-590', desc:'PULVERIZER 7 BOWL PRESS DIFF SWITCH HIGH', steps:[
+    {slug:'pdsh590',  code:'7BF-PDSH-590', desc:'PULVERIZER 7 BOWL PRESS DIFF SWITCH HIGH', steps:[
         {work:'PURGING DP SENSING LINE'}
     ]},
     {slug:'isd662a',  code:'7BF-ISD-662A', desc:'PULVERIZER 7A HOT PRIMARY AIR GATE', steps:CF4K_HAGCAG_STEPS},
@@ -2427,42 +2452,31 @@ function cfDownloadPdf() {
       y += infoBoxH + 5;
 
       // ── ASSET INFO (auto-terisi dari checkbox 4000HR) — tampil kalau ada isinya ──
-      // Layout 2 kolom: Asset (kode) di kiri, Asset Description di kanan — biar tidak
-      // banyak ruang kosong seperti sebelumnya (ditumpuk ke bawah, kolom kanan kosong).
       var assetListVal = gv('cfAssetList');
       var assetDescVal = gv('cfAssetDescList');
       if (assetListVal || assetDescVal) {
-        var leftColW = contentW * 0.28;
-        var rightColX = marginX + leftColW + 6;
-        var rightColW = contentW - leftColW - 6;
-        function toBulletLines(raw, w) {
+        var assetRows = [];
+        function toBulletLines(raw) {
           var items = raw.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
           var out = [];
-          items.forEach(function(it){ out = out.concat(doc.splitTextToSize('- '+safe(it), w)); });
+          items.forEach(function(it){ out = out.concat(doc.splitTextToSize('- '+safe(it), contentW-40)); });
           return out;
         }
-        var codeLines = assetListVal ? toBulletLines(assetListVal, leftColW-6) : [];
-        var descLines = assetDescVal ? toBulletLines(assetDescVal, rightColW-4) : [];
-        var lineH = 4.4;
-        var bodyLines = Math.max(codeLines.length, descLines.length) + 1; // +1 baris label
-        var assetBoxH = bodyLines*lineH + 4;
+        if (assetListVal) assetRows.push({label:'Asset', lines: toBulletLines(assetListVal)});
+        if (assetDescVal) assetRows.push({label:'Asset Description', lines: toBulletLines(assetDescVal)});
+        var assetBoxH = assetRows.reduce(function(sum,item){ return sum + Math.max(1,item.lines.length)*4.4; }, 0) + 4;
         checkPage(assetBoxH+2);
         doc.setFillColor(255, 251, 214);
         doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
         doc.rect(marginX, y, contentW, assetBoxH, 'FD');
-        doc.setDrawColor(210,195,120); doc.setLineWidth(0.25);
-        doc.line(marginX+leftColW+3, y+2, marginX+leftColW+3, y+assetBoxH-2);
-
-        var aiy = y + 4.6;
-        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
-        if (assetListVal) doc.text('Asset:', marginX+3, aiy);
-        if (assetDescVal) doc.text('Asset Description:', rightColX, aiy);
-        aiy += lineH;
-
-        doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
-        if (codeLines.length) doc.text(codeLines, marginX+3, aiy);
-        if (descLines.length) doc.text(descLines, rightColX, aiy);
-
+        var aiy = y + 5;
+        assetRows.forEach(function(item){
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
+          doc.text(item.label+':', marginX+3, aiy);
+          doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(20,30,25);
+          doc.text(item.lines, marginX+38, aiy);
+          aiy += Math.max(1,item.lines.length)*4.4;
+        });
         y += assetBoxH + 5;
       }
 
@@ -2492,34 +2506,58 @@ function cfDownloadPdf() {
       // saat crop tidak pernah kepakai di hasil cetak. Sekarang tiap foto digambar
       // sesuai widthCm/heightCm yang tersimpan dari crop-nya masing-masing, dengan
       // layout flow (baris baru otomatis kalau lebar sisa tidak cukup).
+      //
+      // Dua tahap (sama seperti maintenance_report_form.html): Pass 1 kelompokkan
+      // gambar ke baris-baris dulu berdasarkan lebar yang tersisa (sambil hitung
+      // wMm/hMm final setelah dikecilkan kalau melebihi lebar halaman), baru Pass 2
+      // gambar tiap baris RATA TENGAH terhadap lebar konten halaman -- perlu tahu
+      // dulu total lebar 1 baris sebelum bisa dipusatkan, makanya dipisah jadi 2 pass.
       function drawEvidenceFlow(arr) {
         if (!arr || !arr.length) return;
         var gap = 4, rowGapExtra = 8;
         var maxW = contentW - 6;
-        var rowX = marginX + 3, rowH = 0, firstInRow = true;
+        var rowStartX = marginX + 3, maxRowRight = marginX + contentW - 3;
+        var rowAvailW = maxRowRight - rowStartX;
+
+        // Pass 1: kelompokkan ke baris-baris.
+        var rows = [];
+        var curRow = [];
+        var curRowW = 0;
         arr.forEach(function(img){
           var wMm = (img.widthCm || DEFAULT_CROP_W_CM) * 10;
           var hMm = (img.heightCm || DEFAULT_CROP_H_CM) * 10;
           if (wMm > maxW) { var scale = maxW / wMm; wMm = maxW; hMm = hMm * scale; }
-          if (!firstInRow && (rowX + wMm) > (marginX + contentW - 3)) {
-            y += rowH + rowGapExtra;
-            rowX = marginX + 3; rowH = 0; firstInRow = true;
+          var addedW = curRow.length ? (gap + wMm) : wMm;
+          if (curRow.length && (curRowW + addedW) > rowAvailW) {
+            rows.push(curRow); curRow = []; curRowW = 0; addedW = wMm;
           }
-          checkPage(hMm + rowGapExtra + 4);
-          var x = rowX;
-          x = Math.max(marginX, Math.min(x + ((img.offsetX||0)*10), marginX+contentW-wMm));
-          try { doc.addImage(img.dataUrl,'JPEG', x, y, wMm, hMm); } catch(e){}
-          doc.setDrawColor(200,200,200); doc.setLineWidth(0.25); doc.rect(x, y, wMm, hMm);
-          var cap = safe(img.caption||'');
-          if (cap) {
-            doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130);
-            doc.text(doc.splitTextToSize(cap, wMm), x, y+hMm+3);
-          }
-          rowH = Math.max(rowH, hMm);
-          rowX += wMm + gap;
-          firstInRow = false;
+          curRow.push({img:img, wMm:wMm, hMm:hMm});
+          curRowW += addedW;
         });
-        y += rowH + rowGapExtra;
+        if (curRow.length) rows.push(curRow);
+
+        // Pass 2: gambar tiap baris rata tengah terhadap lebar konten halaman.
+        rows.forEach(function(row) {
+          var rowMaxH = 0;
+          var totalRowW = row.reduce(function(s,r,idx){ return s + r.wMm + (idx>0?gap:0); }, 0);
+          row.forEach(function(r){ rowMaxH = Math.max(rowMaxH, r.hMm); });
+
+          checkPage(rowMaxH + rowGapExtra + 4);
+          var curX = marginX + (contentW - totalRowW) / 2;
+          row.forEach(function(r) {
+            var img = r.img, wMm = r.wMm, hMm = r.hMm;
+            var x = Math.max(marginX, Math.min(curX + ((img.offsetX||0)*10), marginX+contentW-wMm));
+            try { doc.addImage(img.dataUrl,'JPEG', x, y, wMm, hMm); } catch(e){}
+            doc.setDrawColor(200,200,200); doc.setLineWidth(0.25); doc.rect(x, y, wMm, hMm);
+            var cap = safe(img.caption||'');
+            if (cap) {
+              doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130);
+              doc.text(doc.splitTextToSize(cap, wMm), x, y+hMm+3);
+            }
+            curX += wMm + gap;
+          });
+          y += rowMaxH + rowGapExtra;
+        });
         y += 2;
       }
 
