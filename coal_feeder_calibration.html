@@ -1873,28 +1873,22 @@ function render4kAssets() {
   var wrap = document.getElementById('cf4kContainer');
   if (!wrap) return;
   var html = '';
-  html += '<div class="panel" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
-    '<div class="section-label" style="margin:0;border:none;padding:0">4000 HR PM Pulverizer Instrumentation</div>'+
-    '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--steel);cursor:pointer">'+
-      '<input type="checkbox" id="cf4kGroupChk_all" onchange="cf4kToggleGroupAll(\'all\')" style="width:16px;height:16px;cursor:pointer">'+
-      '&#9989; Centang Semua Asset'+
-    '</label>'+
-  '</div>';
+  html += '<div class="panel"><div class="section-label" style="border:none;padding:0">4000 HR PM Pulverizer Instrumentation</div></div>';
   CF4K_GROUPS.forEach(function(group){
-    html += '<div class="panel"><div class="section-label" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
-      '<span>'+group.title+'</span>'+
-      '<label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--steel);cursor:pointer;text-transform:none;letter-spacing:normal">'+
-        '<input type="checkbox" id="cf4kGroupChk_'+group.key+'" onchange="cf4kToggleGroupAll(\''+group.key+'\')" style="width:15px;height:15px;cursor:pointer">'+
-        'Centang Semua'+
-      '</label>'+
-    '</div>';
+    html += '<div class="panel"><div class="section-label">'+group.title+'</div>';
     group.assets.forEach(function(asset){
       var key = group.key+'_'+asset.slug;
       var titleTxt = asset.code ? (asset.code+' \u2014 '+asset.desc) : asset.desc;
       html += '<div class="cf4k-asset">';
-      html += '<div class="cf4k-asset-title"><label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:700">'+
-        '<input type="checkbox" id="cf4kChk_'+key+'" onchange="cf4kToggleAsset(\''+key+'\')" style="width:16px;height:16px;cursor:pointer;flex:none">'+
-        '<span>'+titleTxt+'</span></label></div>';
+      html += '<div class="cf4k-asset-title" style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap">'+
+        '<label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:700;flex:1 1 auto;min-width:200px">'+
+          '<input type="checkbox" id="cf4kChk_'+key+'" onchange="cf4kToggleAsset(\''+key+'\')" style="width:16px;height:16px;cursor:pointer;flex:none">'+
+          '<span>'+titleTxt+'</span>'+
+        '</label>';
+      if (asset.steps && asset.steps.length) {
+        html += '<button type="button" onclick="cf4kCheckAllY(\''+key+'\')" style="font-size:10.5px;padding:5px 10px;border:1px solid #bfe3cc;border-radius:6px;background:#eaf9ef;color:#1a7a3d;cursor:pointer;font-weight:700;white-space:nowrap;flex:none">&#9989; Centang Semua Y</button>';
+      }
+      html += '</div>';
       html += '<div id="cf4kBody_'+key+'" style="display:none">';
       if (asset.type === 'feedercal') {
         html += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+
@@ -1939,33 +1933,27 @@ function render4kAssets() {
   wrap.innerHTML = html;
 }
 
+// "Centang Semua Y" per asset — sekali klik, semua step di tabel asset INI
+// (bukan grup/global) langsung ditandai Y, dan Remark/Note ikut auto-terisi.
+function cf4kCheckAllY(key) {
+  var asset = null;
+  CF4K_GROUPS.forEach(function(group){
+    group.assets.forEach(function(a){ if (group.key+'_'+a.slug === key) asset = a; });
+  });
+  if (!asset || !asset.steps) return;
+  asset.steps.forEach(function(step, i){
+    var rid = 'cf4k_'+key+'_'+(i+1);
+    var yEl = document.getElementById(rid+'_y');
+    if (yEl) { yEl.checked = true; cf4kAutoRemark(rid); }
+  });
+}
+
 // Checkbox judul per-asset: tampilkan/sembunyikan tabel + evidence, dan
 // otomatis isi field Asset / Asset Description di panel Informasi Pekerjaan.
 function cf4kToggleAsset(key) {
   var chk = document.getElementById('cf4kChk_'+key);
   var body = document.getElementById('cf4kBody_'+key);
   if (body) body.style.display = (chk && chk.checked) ? '' : 'none';
-  cf4kUpdateAssetInfo();
-}
-// Checkbox "Centang Semua" — groupKey='all' berlaku utk seluruh grup sekaligus,
-// atau groupKey spesifik ('pyrite'/'floor') hanya utk grup itu saja.
-function cf4kToggleGroupAll(groupKey) {
-  var master = document.getElementById('cf4kGroupChk_'+groupKey);
-  var checked = !!(master && master.checked);
-  var groups = (groupKey === 'all') ? CF4K_GROUPS : CF4K_GROUPS.filter(function(g){ return g.key === groupKey; });
-  groups.forEach(function(group){
-    group.assets.forEach(function(asset){
-      var key = group.key+'_'+asset.slug;
-      var chk = document.getElementById('cf4kChk_'+key);
-      if (chk) chk.checked = checked;
-      var body = document.getElementById('cf4kBody_'+key);
-      if (body) body.style.display = checked ? '' : 'none';
-    });
-    if (groupKey === 'all') {
-      var gchk = document.getElementById('cf4kGroupChk_'+group.key);
-      if (gchk) gchk.checked = checked;
-    }
-  });
   cf4kUpdateAssetInfo();
 }
 function cf4kUpdateAssetInfo() {
@@ -2173,21 +2161,6 @@ function cf4kApplyData(saved) {
       }
     });
   });
-  // Sinkronkan checkbox "Centang Semua" per grup & global sesuai state asset yang barusan dipulihkan
-  CF4K_GROUPS.forEach(function(group){
-    var allChecked = group.assets.every(function(asset){
-      var c = document.getElementById('cf4kChk_'+group.key+'_'+asset.slug);
-      return c && c.checked;
-    });
-    var gchk = document.getElementById('cf4kGroupChk_'+group.key);
-    if (gchk) gchk.checked = allChecked;
-  });
-  var allGroupsChecked = CF4K_GROUPS.every(function(group){
-    var gchk = document.getElementById('cf4kGroupChk_'+group.key);
-    return gchk && gchk.checked;
-  });
-  var allChk = document.getElementById('cf4kGroupChk_all');
-  if (allChk) allChk.checked = allGroupsChecked;
 }
 
 
@@ -2468,41 +2441,32 @@ function cfDownloadPdf() {
       y += infoBoxH + 5;
 
       // ── ASSET INFO (auto-terisi dari checkbox 4000HR) — tampil kalau ada isinya ──
-      // Layout 2 kolom: Asset (kode) di kiri, Asset Description di kanan — biar tidak
-      // banyak ruang kosong seperti sebelumnya (ditumpuk ke bawah, kolom kanan kosong).
-      var assetListVal = gv('cfAssetList');
+      // Cuma "Asset Description" saja yang ditampilkan (satu kolom penuh) — kode
+      // asset-nya sudah ikut tertulis di depan tiap baris deskripsi, jadi kolom
+      // "Asset" terpisah dulu dihapus karena isinya duplikat.
       var assetDescVal = gv('cfAssetDescList');
-      if (assetListVal || assetDescVal) {
-        var leftColW = contentW * 0.16;
-        var rightColX = marginX + leftColW + 6;
-        var rightColW = contentW - leftColW - 6;
+      if (assetDescVal) {
         function toBulletLines(raw, w) {
           var items = raw.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
           var out = [];
           items.forEach(function(it){ out = out.concat(doc.splitTextToSize('- '+safe(it), w)); });
           return out;
         }
-        var codeLines = assetListVal ? toBulletLines(assetListVal, leftColW-6) : [];
-        var descLines = assetDescVal ? toBulletLines(assetDescVal, rightColW-4) : [];
+        var descLines = toBulletLines(assetDescVal, contentW-6);
         var lineH = 4.4;
-        var bodyLines = Math.max(codeLines.length, descLines.length) + 1; // +1 baris label
-        var assetBoxH = bodyLines*lineH + 4;
+        var assetBoxH = (descLines.length+1)*lineH + 4;
         checkPage(assetBoxH+2);
         doc.setFillColor(255, 251, 214);
         doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
         doc.rect(marginX, y, contentW, assetBoxH, 'FD');
-        doc.setDrawColor(210,195,120); doc.setLineWidth(0.25);
-        doc.line(marginX+leftColW+3, y+2, marginX+leftColW+3, y+assetBoxH-2);
 
         var aiy = y + 4.6;
         doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(55,80,140);
-        if (assetListVal) doc.text('Asset:', marginX+3, aiy);
-        if (assetDescVal) doc.text('Asset Description:', rightColX, aiy);
+        doc.text('Asset Description:', marginX+3, aiy);
         aiy += lineH;
 
         doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
-        if (codeLines.length) doc.text(codeLines, marginX+3, aiy);
-        if (descLines.length) doc.text(descLines, rightColX, aiy);
+        doc.text(descLines, marginX+3, aiy);
 
         y += assetBoxH + 5;
       }
