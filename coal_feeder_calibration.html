@@ -2824,9 +2824,18 @@ function cfDownloadPdf() {
             var rid = 'cf4k_'+key+'_'+(i+1);
             var yn = cf4kGetYN(rid);
             var remark = gv(rid+'_remark');
+            // PENTING: font di-set SEBELUM splitTextToSize supaya lebar wrap yang
+            // dihitung PERSIS sama dengan font yang beneran dipakai buat gambar
+            // teksnya nanti -- kalau beda (misal masih kebawa font header sebelumnya),
+            // jumlah baris hasil wrap bisa meleset dari rowH yang dihitung, dan
+            // selnya jadi ada sisa ruang kosong (bug yang sama seperti kotak
+            // Asset Description sebelumnya).
+            doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
             var workLines = doc.splitTextToSize(step.work, PULV_COLS[1]-4);
+            doc.setFontSize(7);
             var remLines = doc.splitTextToSize(safe(remark), PULV_COLS[4]-4);
-            var rowH = Math.max(8, Math.max(workLines.length, remLines.length)*3.6 + 3.2);
+            var lineH = 3.6;
+            var rowH = Math.max(8, Math.max(workLines.length, remLines.length)*lineH + 3.2);
             checkPage(rowH + 2);
             var bg = (i%2===0) ? [255,255,255] : [246,249,253];
             var rx = marginX;
@@ -2838,7 +2847,12 @@ function cfDownloadPdf() {
             doc.text(String(i+1), marginX+PULV_COLS[0]/2, y+5, {align:'center'});
 
             doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
-            doc.text(workLines, marginX+PULV_COLS[0]+2, y+4.8);
+            // Digambar per-baris manual (bukan doc.text(array,...)) dengan jarak
+            // lineH yang SAMA dipakai buat hitung rowH -- jsPDF punya jarak
+            // antar-baris bawaan sendiri kalau dikasih array, yang bisa beda dari
+            // lineH kita, jadi teksnya berpotensi lebih pendek dari sel dan nyisa
+            // ruang kosong di bawah.
+            workLines.forEach(function(ln, li){ doc.text(ln, marginX+PULV_COLS[0]+2, y+4.8+li*lineH); });
 
             var yx = marginX+PULV_COLS[0]+PULV_COLS[1];
             var nx = yx+PULV_COLS[2];
@@ -2847,7 +2861,7 @@ function cfDownloadPdf() {
 
             var rmx = nx+PULV_COLS[3];
             doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,50,50);
-            doc.text(remLines, rmx+2, y+4.8);
+            remLines.forEach(function(ln, li){ doc.text(ln, rmx+2, y+4.8+li*lineH); });
 
             y += rowH;
           });
@@ -2865,7 +2879,11 @@ function cfDownloadPdf() {
           steps.forEach(function(step, i){
             var rid = 'cf4k_'+key+'_'+(i+1);
             var remark = gv(rid+'_remark');
+            // Font di-set sama seperti render aslinya di drawPulvStepTable, supaya
+            // estimasi tinggi ini akurat (dipakai buat keputusan page-break).
+            doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
             var workLines = doc.splitTextToSize(step.work, PULV_COLS[1]-4);
+            doc.setFontSize(7);
             var remLines = doc.splitTextToSize(safe(remark), PULV_COLS[4]-4);
             h += Math.max(8, Math.max(workLines.length, remLines.length)*3.6 + 3.2);
           });

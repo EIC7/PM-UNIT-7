@@ -409,11 +409,10 @@ function dbLoad(id, callback) {
     if (phase === 'download') dbReportRealProgress(percent);
   })
     .then(function(rows) {
-      dbShowSavingOverlay(false);
-      if (rows && rows[0]) callback(rows[0]);
-      else alert('Data tidak ditemukan.');
+      if (rows && rows[0]) { dbShowSavingOverlay(false); callback(rows[0]); }
+      else dbShowSavingOverlayError('Data tidak ditemukan.', 'Kemungkinan data sudah dihapus atau ID tidak valid.');
     })
-    .catch(function(err){ dbShowSavingOverlay(false); alert('Gagal memuat data: ' + (err.message||err)); });
+    .catch(function(err){ dbShowSavingOverlayError('Gagal memuat data.', err.message || String(err)); });
 }
 
 /* ── DB DELETE ── */
@@ -434,15 +433,23 @@ function dbShowSavingOverlay(show, msg, submsg) {
     if (!ov) {
       ov = document.createElement('div');
       ov.id = 'dbSavingOverlay';
-      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff';
-      ov.innerHTML = '<div style="width:38px;height:38px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:dbSpin 0.8s linear infinite;margin-bottom:14px"></div>'
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;transition:background-color 0.2s';
+      ov.innerHTML = '<div id="dbSavingSpinner" style="width:38px;height:38px;border:4px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:dbSpin 0.8s linear infinite;margin-bottom:14px"></div>'
+        + '<div id="dbSavingErrorIcon" style="display:none;width:44px;height:44px;border-radius:50%;background:#e74c3c;color:#fff;font-size:24px;font-weight:700;align-items:center;justify-content:center;margin-bottom:14px;line-height:1">&#10005;</div>'
         + '<div id="dbSavingOverlayMsg" style="font-size:14px;font-weight:600;text-align:center;padding:0 20px"></div>'
         + '<div id="dbSavingProgressWrap" style="width:220px;max-width:70vw;height:7px;background:rgba(255,255,255,0.2);border-radius:5px;margin-top:12px;overflow:hidden;display:none">'
         +   '<div id="dbSavingProgressBar" style="height:100%;width:0%;background:#2ecc71;border-radius:5px;transition:width 0.12s linear"></div>'
         + '</div>'
         + '<div id="dbSavingProgressPct" style="font-size:13px;font-weight:700;color:#fff;margin-top:6px;display:none"></div>'
-        + '<div id="dbSavingOverlaySub" style="font-size:12px;font-weight:400;text-align:center;padding:10px 30px 0;color:rgba(255,255,255,0.75)"></div>';
+        + '<div id="dbSavingOverlaySub" style="font-size:12px;font-weight:400;text-align:center;padding:10px 30px 0;color:rgba(255,255,255,0.75)"></div>'
+        + '<div id="dbSavingOverlayTapHint" style="display:none;font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);margin-top:18px;letter-spacing:0.3px">Tap dimana saja untuk menutup</div>';
       document.body.appendChild(ov);
+      // Tap-to-close HANYA berfungsi kalau overlay lagi dalam mode error
+      // (ov._isError === true) -- supaya overlay TIDAK bisa ke-tap-tutup
+      // sengaja/gak-sengaja pas proses simpan/muat masih benar-benar berjalan.
+      ov.addEventListener('click', function() {
+        if (ov._isError) dbShowSavingOverlay(false);
+      });
       if (!document.getElementById('dbSpinKeyframes')) {
         var style = document.createElement('style');
         style.id = 'dbSpinKeyframes';
@@ -452,13 +459,47 @@ function dbShowSavingOverlay(show, msg, submsg) {
     }
     document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Menyimpan data, mohon tunggu...';
     document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
+    // Pastikan overlay balik ke mode NORMAL (spinner) setiap kali dipanggil
+    // buat proses baru -- jaga-jaga kalau sebelumnya sempat ditinggal dalam
+    // mode error (mestinya sudah ditutup manual, tapi ini pengaman tambahan).
+    ov._isError = false;
+    ov.style.cursor = 'default';
+    ov.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    document.getElementById('dbSavingSpinner').style.display = 'block';
+    document.getElementById('dbSavingErrorIcon').style.display = 'none';
+    document.getElementById('dbSavingOverlayTapHint').style.display = 'none';
     ov.style.display = 'flex';
     dbStartFakeProgress(); // langsung tampil & jalan 0% -> ~90%, di-override begitu ada progress asli
   } else if (ov) {
     ov.style.display = 'none';
+    ov._isError = false;
     dbStopFakeProgress();
     dbSetSavingProgress(null);
   }
+}
+
+/* ── OVERLAY MODE ERROR ──
+   Dipanggil sebagai pengganti dbShowSavingOverlay(false) + alert() di titik
+   .catch() proses simpan/muat data. BEDA dari alert(): overlay ini TETAP
+   NEMPEL di layar sampai user sendiri yang tap untuk menutup -- alasannya,
+   kalau user kebetulan lagi AFK / HP diletak pas errornya kejadian, alert()
+   gampang kelewat/ke-skip (apalagi di HP: alert() browser bisa otomatis
+   ke-dismiss kalau tab pindah fokus/HP dikunci). Overlay full-screen begini
+   jauh lebih susah kelewat karena nutupin seluruh layar terus sampai dibuka. */
+function dbShowSavingOverlayError(msg, submsg) {
+  var ov = document.getElementById('dbSavingOverlay');
+  if (!ov) { alert(msg || 'Terjadi kesalahan.'); return; } // safety net kalau overlay belum sempat dibuat
+  dbStopFakeProgress();
+  dbSetSavingProgress(null);
+  ov._isError = true;
+  ov.style.cursor = 'pointer';
+  ov.style.backgroundColor = 'rgba(80,0,0,0.7)'; // semburat merah gelap, beda dari overlay normal
+  document.getElementById('dbSavingSpinner').style.display = 'none';
+  document.getElementById('dbSavingErrorIcon').style.display = 'flex';
+  document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Terjadi kesalahan, proses tidak selesai.';
+  document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
+  document.getElementById('dbSavingOverlayTapHint').style.display = 'block';
+  ov.style.display = 'flex';
 }
 
 /* ── PROGRESS SIMULASI (fallback) ──
@@ -565,9 +606,12 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
     })
     .catch(function(err) {
       window._dbSaving = false;
-      dbShowSavingOverlay(false);
       if (btn) { btn.innerHTML = origText; btn.disabled = false; }
-      dbShowToast('✗ Gagal simpan: ' + (err.message || err));
+      // Sengaja TIDAK pakai dbShowToast di sini -- toast otomatis hilang
+      // dalam 3 detik, jadi kalau user lagi AFK/HP diletak pas errornya
+      // kejadian, notifikasinya kelewat dan data yang gagal simpan
+      // (kadang sudah termasuk banyak foto) jadi tidak ketahuan.
+      dbShowSavingOverlayError('Gagal menyimpan data.', err.message || String(err));
     });
 }
 
