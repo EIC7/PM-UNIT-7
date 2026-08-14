@@ -857,9 +857,9 @@ function cropAndSave() {
   canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
   modal.style.display = 'none';
   var caption = '';
-  if (p.replaceIdx >= 0 && p.imgArr[p.replaceIdx]) caption = p.imgArr[p.replaceIdx].caption || '';
-  if (p.replaceIdx >= 0) p.imgArr.splice(p.replaceIdx, 1);
-  imgCompressAndStore(canvas, p.name, p.imgArr, p.side, p.modulePrefix, null, caption);
+  var existing = (p.replaceIdx >= 0 && p.imgArr[p.replaceIdx]) ? p.imgArr[p.replaceIdx] : null;
+  if (existing) caption = existing.caption || '';
+  imgCompressAndStore(canvas, p.name, p.imgArr, p.side, p.modulePrefix, null, caption, existing ? p.replaceIdx : -1);
 }
 
 function skipCrop() {
@@ -867,20 +867,20 @@ function skipCrop() {
   var p = modal._pending;
   modal.style.display = 'none';
   var caption = '';
-  if (p.replaceIdx >= 0 && p.imgArr[p.replaceIdx]) caption = p.imgArr[p.replaceIdx].caption || '';
-  if (p.replaceIdx >= 0) p.imgArr.splice(p.replaceIdx, 1);
+  var existing = (p.replaceIdx >= 0 && p.imgArr[p.replaceIdx]) ? p.imgArr[p.replaceIdx] : null;
+  if (existing) caption = existing.caption || '';
   var img2 = new Image();
   img2.onload = function(){
     var c = document.createElement('canvas');
     c.width = img2.naturalWidth; c.height = img2.naturalHeight;
     c.getContext('2d').drawImage(img2,0,0);
-    imgCompressAndStore(c, p.name, p.imgArr, p.side, p.modulePrefix, null, caption);
+    imgCompressAndStore(c, p.name, p.imgArr, p.side, p.modulePrefix, null, caption, existing ? p.replaceIdx : -1);
   };
-  img2.onerror = function(){ imgCompressAndStore(null, p.name, p.imgArr, p.side, p.modulePrefix, p.dataUrl, caption); };
+  img2.onerror = function(){ imgCompressAndStore(null, p.name, p.imgArr, p.side, p.modulePrefix, p.dataUrl, caption, existing ? p.replaceIdx : -1); };
   img2.src = p.dataUrl;
 }
 
-function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUrl, caption) {
+function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUrl, caption, replaceIdx) {
   var MAX_TOTAL = 1 * 1024 * 1024;
   var quality = 0.85, dataUrl;
   if (!canvas && rawDataUrl) { dataUrl = rawDataUrl; }
@@ -888,7 +888,7 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
   if (canvas) {
     for (var q = quality; q >= 0.25; q -= 0.1) {
       dataUrl = canvas.toDataURL('image/jpeg', q);
-      var currentTotal = imgArr.reduce(function(acc,im){return acc+(im.dataUrl?im.dataUrl.length*0.75:0);},0);
+      var currentTotal = imgArr.reduce(function(acc,im,i){return acc+((replaceIdx>=0 && i===replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0));},0);
       var newSize = dataUrl.length * 0.75;
       if (currentTotal + newSize <= MAX_TOTAL) break;
       if (q <= 0.25) {
@@ -902,7 +902,12 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
       }
     }
   }
-  imgArr.push({name: name.replace(/\.[^.]+$/, '.jpg'), dataUrl: dataUrl, type: 'image/jpeg', caption: caption||''});
+  var entry = {name: name.replace(/\.[^.]+$/, '.jpg'), dataUrl: dataUrl, type: 'image/jpeg', caption: caption||''};
+  // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama,
+  // bukan dihapus lalu ditambahkan di akhir array — supaya urutan galeri (dan
+  // keterangan yang mengikuti indexnya saat render) tidak berubah/tertukar.
+  if (replaceIdx >= 0 && imgArr[replaceIdx]) imgArr.splice(replaceIdx, 1, entry);
+  else imgArr.push(entry);
   uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption);
   if (modulePrefix === 'op') { opRenderPreviews(side); updateSizeIndicator('op', side); }
   else if (modulePrefix === 'bs') { bsRenderPreviews(side); updateSizeIndicator('bs', side); }
