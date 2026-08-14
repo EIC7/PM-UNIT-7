@@ -1203,17 +1203,15 @@ function cropAndSave() {
     var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
     var caption = existing ? (existing.caption||'') : '';
     var offsetX = existing ? (existing.offsetX||0) : 0;
-    if (p.replaceIdx >= 0) imgArr.splice(p.replaceIdx, 1);
-
     var MAX = 1*1024*1024;
+    var otherTotal = imgArr.reduce(function(a,im,i){ return a+((existing && i===p.replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0)); }, 0);
     var dataUrl;
     for (var q=0.85; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);
-        var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
         var newSize = dataUrl.length*0.75;
-        if (currentTotal+newSize <= MAX) break;
+        if (otherTotal+newSize <= MAX) break;
         if (q<=0.25) {
-            var factor = Math.sqrt(MAX/(currentTotal+newSize));
+            var factor = Math.sqrt(MAX/(otherTotal+newSize));
             var c2 = document.createElement('canvas');
             c2.width = Math.max(50, Math.floor(canvas.width*factor));
             c2.height = Math.max(50, Math.floor(canvas.height*factor));
@@ -1226,7 +1224,11 @@ function cropAndSave() {
     var entry = {name:(p.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl: dataUrl, type:'image/jpeg', caption: caption};
     if (offsetX) entry.offsetX = offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
-    imgArr.push(entry);
+    // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama,
+    // bukan dihapus lalu ditambahkan di akhir array — supaya urutan galeri (dan
+    // keterangan yang mengikuti indexnya saat render) tidak berubah/tertukar.
+    if (existing) imgArr.splice(p.replaceIdx, 1, entry);
+    else imgArr.push(entry);
     uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '');
 
     closeCropModal();
@@ -1742,12 +1744,40 @@ function buildAndShowPdf() {
     ['Supervisor', document.getElementById('t1Supervisor').value]
   ], 40);
 
+  // Kotak centang digambar sebagai checkbox visual (kotak + centang vektor),
+  // bukan karakter unicode ✓ — karena font standar jsPDF (helvetica) tidak
+  // punya glyph untuk ✓ sehingga tercetak sebagai titik.
+  function drawCheckboxBs(doc, x, y, w, h, checked, tone){
+    var size = Math.min(w, h) * 0.55;
+    var bx = x + w/2 - size/2, by = y + h/2 - size/2;
+    doc.setLineWidth(0.4);
+    if (checked) {
+      var fill = tone === 'red' ? [204,60,60] : [46,204,113];
+      var strk = tone === 'red' ? [140,30,30] : [30,140,74];
+      doc.setDrawColor(strk[0],strk[1],strk[2]); doc.setFillColor(fill[0],fill[1],fill[2]);
+      doc.rect(bx, by, size, size, 'FD');
+      doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+      doc.line(bx+size*0.18, by+size*0.52, bx+size*0.40, by+size*0.76);
+      doc.line(bx+size*0.40, by+size*0.76, bx+size*0.84, by+size*0.22);
+    } else {
+      doc.setDrawColor(150,160,155); doc.setFillColor(255,255,255);
+      doc.rect(bx, by, size, size, 'FD');
+    }
+  }
+
   // TABLE 2 - CHECKLIST
   secHeader('TABLE 2 — CHECKLIST');
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:7.5, cellPadding:1.5}, margin:{left:marginX,right:marginX},
     head: [['No','Activity','Acceptance Criteria','As Found','As Left','Pass','Fail','Remarks']],
-    body: CHECKLIST_DATA.map(function(r){ return [r.no, r.activity, r.acceptance, r.asFound, r.asLeft, r.pass?'✓':'', r.fail?'✓':'', r.remarks]; }),
+    body: CHECKLIST_DATA.map(function(r){ return [r.no, r.activity, r.acceptance, r.asFound, r.asLeft, '', '', r.remarks]; }),
     columnStyles:{0:{cellWidth:8,halign:'center'},5:{cellWidth:10,halign:'center'},6:{cellWidth:10,halign:'center'}},
+    didDrawCell:function(d){
+      if (d.section!=='body') return;
+      var r = CHECKLIST_DATA[d.row.index];
+      if (!r) return;
+      if (d.column.index===5 && r.pass) drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'green');
+      if (d.column.index===6 && r.fail) drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'red');
+    },
     willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
@@ -1761,9 +1791,14 @@ function buildAndShowPdf() {
 
   // TABLE 4 - SPARE PARTS
   secHeader('TABLE 4 — SPARE PARTS');
-  var sp = SPAREPARTS_DATA.length ? SPAREPARTS_DATA.map(function(r){ return [r.partName, r.partNumber, r.qty, r.installed?'✓':'']; }) : [['-','-','-','-']];
+  var sp = SPAREPARTS_DATA.length ? SPAREPARTS_DATA.map(function(r){ return [r.partName, r.partNumber, r.qty, '']; }) : [['-','-','-','-']];
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:marginX,right:marginX},
     head: [['Part Name','Part Number','Qty','Installed']], body: sp,
+    didDrawCell:function(d){
+      if (d.section!=='body' || d.column.index!==3) return;
+      var r = SPAREPARTS_DATA[d.row.index];
+      if (r && r.installed) drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'green');
+    },
     willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 8;
 

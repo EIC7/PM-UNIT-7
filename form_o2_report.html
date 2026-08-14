@@ -1216,17 +1216,15 @@ function cropAndSave() {
     var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
     var caption = existing ? (existing.caption||'') : '';
     var offsetX = existing ? (existing.offsetX||0) : 0;
-    if (p.replaceIdx >= 0) imgArr.splice(p.replaceIdx, 1);
-
     var MAX = 1*1024*1024;
+    var otherTotal = imgArr.reduce(function(a,im,i){ return a+((existing && i===p.replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0)); }, 0);
     var dataUrl;
     for (var q=0.9; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);
-        var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
         var newSize = dataUrl.length*0.75;
-        if (currentTotal+newSize <= MAX) break;
+        if (otherTotal+newSize <= MAX) break;
         if (q<=0.25) {
-            var factor = Math.sqrt(MAX/(currentTotal+newSize));
+            var factor = Math.sqrt(MAX/(otherTotal+newSize));
             var c2 = document.createElement('canvas');
             c2.width = Math.max(50, Math.floor(canvas.width*factor));
             c2.height = Math.max(50, Math.floor(canvas.height*factor));
@@ -1239,7 +1237,11 @@ function cropAndSave() {
     var entry = {name:(p.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl: dataUrl, type:'image/jpeg', caption: caption};
     if (offsetX) entry.offsetX = offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
-    imgArr.push(entry);
+    // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama,
+    // bukan dihapus lalu ditambahkan di akhir array — supaya urutan galeri (dan
+    // keterangan yang mengikuti indexnya saat render) tidak berubah/tertukar.
+    if (existing) imgArr.splice(p.replaceIdx, 1, entry);
+    else imgArr.push(entry);
 
     // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
     uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '');
