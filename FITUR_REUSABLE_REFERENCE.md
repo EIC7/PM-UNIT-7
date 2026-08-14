@@ -1,8 +1,18 @@
-> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai M di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-13 huruf (A–M) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai M.**
+> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai N di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M → N**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-14 huruf (A–N) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai N.**
 
 
 
 # Fitur Reusable — Referensi dari `fegt.html`
+
+## 📅 Riwayat Revisi Dokumen
+> Setiap kali dokumen ini diupdate karena ada fitur/fix baru yang perlu direplikasi ke file lain, tambahkan baris baru di tabel ini (jangan timpa baris lama) — supaya gampang dibandingkan versi mana yang terakhir dicek ke suatu file.
+
+| Versi | Tanggal | Perubahan |
+|---|---|---|
+| v1.1 | 2026-08-14 | Tambah **Fitur N: Checkbox Vektor untuk PDF** (kotak+centang digambar via `drawCheckboxBs`, bukan karakter unicode `✓` yang tidak didukung font standar jsPDF dan tercetak sebagai titik). Perkuat **Fitur C (Crop Ulang)** dengan catatan wajib: foto hasil re-crop harus mengganti entry LAMA di index yang sama (`imgArr.splice(replaceIdx,1,entry)`), bukan dihapus lalu `push` ke akhir array — sebelumnya ini bikin foto pindah urutan ke paling akhir sementara keterangannya tertukar. Update contoh kode di **Fitur M** yang masih menampilkan pola `imgArr.push(entry)` lama. Diterapkan ke 15 file (14 HTML + `shared.js`), sumber: `coal_feeder_calibration.html`. |
+| v1.0 | (sebelum dicatat) | Versi awal dokumen — Fitur A–M. |
+
+---
 
 > **Cara pakai dokumen ini (untuk Claude):** Saat user upload HTML lain dan minta salah satu/semua fitur di bawah diterapkan:
 > 1. Baca dulu file yang diupload SECARA UTUH — cek struktur tabel/checksheet dan CSS/tema warnanya. **JANGAN diubah/disentuh.**
@@ -37,6 +47,7 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 - [ ] [K. Rotasi Kotak & Oval](#k-rotasi-kotak--oval-ekstensi--belum-ada-di-fegthtml)
 - [ ] [L. Tabel Info Pekerjaan — Grid Full-Width (Label | Value)](#l-tabel-info-pekerjaan--grid-full-width-label--value)
 - [ ] [M. Upload Otomatis Foto ke Google Drive (backup, via shared.js)](#m-upload-otomatis-foto-ke-google-drive)
+- [ ] [N. Checkbox Vektor untuk PDF (Y/N, Pass/Fail)](#n-checkbox-vektor-untuk-pdf)
 - [ ] [Checklist Konfigurasi per File Baru](#checklist-konfigurasi)
 - [ ] [⚠️ Potensi Konflik Global](#potensi-konflik-global)
 
@@ -526,6 +537,9 @@ function reEditCrop(type, idx, imgIdx) {
 // openCropModal di file tujuan sudah menerima ini (lihat Fitur B).
 ```
 **Butuh dari user:** nama variabel/struktur data gambar di file itu (kalau bukan `sections[type][idx].images[]`).
+
+**⚠️ WAJIB DIPERHATIKAN saat implementasi `cropAndSave()` (bukan cuma `reEditCrop`):** ketika `p.replaceIdx >= 0` (artinya user sedang re-crop foto lama, bukan upload baru), entry hasil crop yang baru **HARUS mengganti entry lama tepat di index yang sama** — pakai `imgArr.splice(p.replaceIdx, 1, entry)` — **JANGAN** pola lama `imgArr.splice(p.replaceIdx,1)` (hapus) lalu `imgArr.push(entry)` (tambah di akhir). Pola lama itu bikin foto pindah ke posisi PALING KANAN/AKHIR galeri setiap kali di-crop ulang, sementara keterangan (`caption`) yang di-sync ulang dari input DOM berdasarkan index (lihat `cf4kSyncCaptions`/`cfSyncCaptions` sebelum render) jadi tertukar dengan foto lain karena urutan array sudah berubah duluan sebelum DOM-nya. Bug ini pernah ditemukan di 14 file HTML + `shared.js` (Agustus 2026) — lihat Riwayat Revisi v1.1 di atas.
+Efek samping lain yang perlu ikut disesuaikan: kalau ada penghitungan budget ukuran total foto (mis. loop kompresi `for (var q=0.9; ...)` yang menjumlahkan `imgArr.reduce(...)` untuk cek batas 1MB), pastikan entry yang SEDANG diganti (`i === p.replaceIdx`) dikecualikan dari total tersebut — supaya tidak dihitung dobel (ukuran lama + ukuran baru sekaligus).
 
 ---
 
@@ -1599,11 +1613,14 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
 
 **Titik integrasi berbeda tergantung pola crop yang dipakai file tujuan (cek dulu, lihat item #5 di Checklist Konfigurasi):**
 
-1. **File yang masih pakai pola lama `imgOpenCropper` / `imgCompressAndStore` (shared.js)** — **TIDAK PERLU diubah sama sekali**. Panggilan `uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption)` sudah ditempel otomatis di dalam `imgCompressAndStore()` di `shared.js` sendiri (tepat setelah `imgArr.push(...)`), jadi semua modul yang lewat fungsi ini (op, bs, cf, dcs, cl, ld, fm, hg, dst) otomatis ke-backup ke Drive begitu `shared.js` di-update.
+1. **File yang masih pakai pola lama `imgOpenCropper` / `imgCompressAndStore` (shared.js)** — **TIDAK PERLU diubah sama sekali**. Panggilan `uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption)` sudah ditempel otomatis di dalam `imgCompressAndStore()` di `shared.js` sendiri (tepat setelah entry disimpan ke `imgArr` — sejak v1.1, `imgCompressAndStore` menerima parameter `replaceIdx` dan mengganti entry di posisi yang sama kalau re-crop, bukan selalu `push` ke akhir), jadi semua modul yang lewat fungsi ini (op, bs, cf, dcs, cl, ld, fm, hg, dst) otomatis ke-backup ke Drive begitu `shared.js` di-update.
 
-2. **File yang pakai pola baru `cropAndSave()` 3-mode (Fitur B, duplikat per file — mis. `ph-analyzer.html`)** — fungsi `cropAndSave()`-nya ada LOKAL di tiap file (bukan di `shared.js`), jadi perlu **1 baris tambahan manual** tepat setelah `imgArr.push(entry)`:
+2. **File yang pakai pola baru `cropAndSave()` 3-mode (Fitur B, duplikat per file — mis. `ph-analyzer.html`)** — fungsi `cropAndSave()`-nya ada LOKAL di tiap file (bukan di `shared.js`), jadi perlu **beberapa baris tambahan manual** tepat di titik penyimpanan entry (lihat juga catatan wajib di Fitur C soal in-place replace):
    ```js
-   imgArr.push(entry);
+   // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama,
+   // bukan dihapus lalu ditambahkan di akhir array.
+   if (existing) imgArr.splice(p.replaceIdx, 1, entry);
+   else imgArr.push(entry);
    uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '');
    closeCropModal();
    ```
@@ -1625,7 +1642,58 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
 
 ---
 
-## Checklist Konfigurasi per File Baru
+## N. Checkbox Vektor untuk PDF
+**Tujuan:** menampilkan tanda centang/silang (Y/N, Pass/Fail, OK/NG, dsb) di tabel hasil PDF sebagai kotak+centang yang digambar vektor — bukan karakter unicode (`✓`, `✔`, `☑`, dst) yang ditulis langsung lewat `doc.text(...)`.
+
+**⚠️ Kenapa ini penting:** font standar bawaan jsPDF (`helvetica`, `times`, `courier`) memakai encoding WinAnsi dan **tidak punya glyph untuk karakter centang unicode**. Kalau `doc.text('\u2713', ...)` atau `doc.text('✓', ...)` dipakai langsung, hasil cetak PDF-nya bukan tanda centang, melainkan **titik** (atau kotak kosong/`.notdef`, tergantung viewer PDF). Ini baru ketahuan setelah user cek preview PDF asli — tidak kelihatan dari kode-nya doang.
+
+**Ditemukan pertama kali di:** `coal_feeder_calibration.html` (Agustus 2026), lalu direplikasi ke file lain yang punya pola serupa (checklist Y/N, Pass/Fail) — lihat Riwayat Revisi v1.1.
+
+```js
+// Kotak centang digambar sebagai checkbox visual (kotak + centang vektor),
+// bukan karakter unicode ✓ — karena font standar jsPDF (helvetica) tidak
+// punya glyph untuk \u2713 sehingga tercetak sebagai titik.
+function drawCheckboxBs(doc, x, y, w, h, checked, tone){
+  var size = Math.min(w, h) * 0.55;
+  var bx = x + w/2 - size/2, by = y + h/2 - size/2;
+  doc.setLineWidth(0.4);
+  if (checked) {
+    var fill = tone === 'red' ? [204,60,60] : [46,204,113];
+    var strk = tone === 'red' ? [140,30,30] : [30,140,74];
+    doc.setDrawColor(strk[0],strk[1],strk[2]); doc.setFillColor(fill[0],fill[1],fill[2]);
+    doc.rect(bx, by, size, size, 'FD');
+    doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+    doc.line(bx+size*0.18, by+size*0.52, bx+size*0.40, by+size*0.76);
+    doc.line(bx+size*0.40, by+size*0.76, bx+size*0.84, by+size*0.22);
+  } else {
+    doc.setDrawColor(150,160,155); doc.setFillColor(255,255,255);
+    doc.rect(bx, by, size, size, 'FD');
+  }
+}
+```
+
+**Cara pakai di dalam `autoTable`:** JANGAN taruh `'✓'`/`'\u2713'` sebagai isi cell di array `body`. Kosongkan cell itu (`''`), lalu gambar checkbox-nya lewat callback `didDrawCell` (dieksekusi setelah cell digambar, jadi posisi `d.cell.x/y/width/height` sudah pasti benar termasuk di halaman lanjutan):
+```js
+doc.autoTable({
+  // ...
+  body: rows.map(function(r){ return [r.no, r.deskripsi, '', '']; }), // kolom Y/N dikosongkan
+  didDrawCell:function(d){
+    if (d.section!=='body') return;
+    var r = rows[d.row.index];
+    if (!r) return;
+    if (d.column.index===2 && r.yn==='Y') drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'green');
+    if (d.column.index===3 && r.yn==='N') drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'red');
+  }
+});
+```
+
+**Butuh dari user:** tidak ada — ini pure PDF-rendering fix, tidak menyentuh struktur data/form. Cukup cek kolom mana di tabel PDF yang pakai centang unicode, lalu ganti dengan pola di atas.
+
+**⚠️ Potensi Konflik:** kalau file tujuan sudah punya fungsi bernama `drawCheckboxBs` dengan tanda tangan (signature) beda — samakan dulu ke pola di atas, jangan biarkan 2 definisi beda saling menimpa.
+
+---
+
+
 Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditanyakan:
 
 | # | Yang perlu dipastikan | Kalau tidak ada di prompt user |
@@ -1641,6 +1709,6 @@ Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditany
 
 ## ⚠️ Potensi Konflik Global
 Karena semua fitur di atas dan fungsi bawaan `shared.js` sama-sama pakai **global function declaration** (bukan modul/namespace), nama-nama berikut **rawan bentrok** kalau file tujuan sudah punya fungsi dengan nama sama tapi perilaku beda:
-`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `applySquarePreset`, `fitCropBoxToFullImage`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`.
+`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `applySquarePreset`, `fitCropBoxToFullImage`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`, `drawCheckboxBs`.
 
 **Sebelum menempel kode dari dokumen ini, selalu `grep` dulu nama-nama fungsi di atas pada file tujuan.** Kalau sudah ada dan isinya beda, diskusikan dulu ke user mana yang mau dipakai / digabung, jangan main timpa.
