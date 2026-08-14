@@ -1003,6 +1003,22 @@ var CROP_PRESETS = [
     {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
 ];
 
+// Kenali kembali preset rasio (3:2, 4:3, dst / bujur sangkar 1:1) dari ukuran cm
+// yang tersimpan di foto, supaya waktu buka ulang foto lama dari data tersimpan
+// (mis. dari Riwayat), mode Preset & tombol rasionya otomatis kepilih lagi --
+// sebelumnya selalu jatuh ke Manual/Custom karena tidak pernah dicek sama sekali.
+function matchCropPreset(w, h) {
+    if (!w || !h) return null;
+    if (Math.abs(w - h) < 0.15) return {idx:'square'};
+    var ratio = Math.max(w, h) / Math.min(w, h);
+    for (var i = 0; i < CROP_PRESETS.length; i++) {
+        var p = CROP_PRESETS[i];
+        var pRatio = Math.max(p.w, p.h) / Math.min(p.w, p.h);
+        if (Math.abs(ratio - pRatio) < 0.018) return {idx:i};
+    }
+    return null;
+}
+
 function renderPresetButtons() {
     var row = document.getElementById('cropPresetRow');
     if (!row) return;
@@ -1243,8 +1259,20 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
     if (preferredSize) {
         document.getElementById('cropWcm').value = preferredSize.w;
         document.getElementById('cropHcm').value = preferredSize.h;
-        if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) setCropMode('default');
-        else { setCropMode('manual'); setFreeSize(preferredSize.w, preferredSize.h); }
+        if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) {
+            setCropMode('default');
+        } else {
+            var _match = matchCropPreset(preferredSize.w, preferredSize.h);
+            if (_match) {
+                cropModalState._orientation = (preferredSize.w >= preferredSize.h) ? 'landscape' : 'portrait';
+                cropModalState._activePresetIdx = _match.idx;
+                setCropMode('preset');
+                setLockedSize(preferredSize.w, preferredSize.h, true);
+                cropModalState._presetRatio = preferredSize.w / preferredSize.h;
+            } else {
+                setCropMode('manual'); setFreeSize(preferredSize.w, preferredSize.h);
+            }
+        }
     } else {
         document.getElementById('cropWcm').value = 5; document.getElementById('cropHcm').value = 5;
         setCropMode('default');

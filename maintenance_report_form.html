@@ -1152,6 +1152,22 @@ function applyImageEdits(){
         }
 
         // ── CROP SIZE / RATIO CONTROLS ────────────────────────────────────────────
+        // Kenali kembali preset rasio (3:2, 4:3, dst / bujur sangkar 1:1) dari ukuran
+        // cm yang tersimpan di foto, supaya waktu buka ulang foto lama dari data
+        // tersimpan (mis. dari Riwayat), mode Preset & tombol rasionya otomatis
+        // kepilih lagi -- sebelumnya selalu jatuh ke Manual/Custom karena tidak
+        // pernah dicek sama sekali.
+        function matchCropPreset(w, h) {
+            if (!w || !h) return null;
+            if (Math.abs(w - h) < 0.15) return {idx:'square'};
+            var ratio = Math.max(w, h) / Math.min(w, h);
+            for (var i = 0; i < CROP_PRESETS.length; i++) {
+                var p = CROP_PRESETS[i];
+                var pRatio = Math.max(p.w, p.h) / Math.min(p.w, p.h);
+                if (Math.abs(ratio - pRatio) < 0.018) return {idx:i};
+            }
+            return null;
+        }
         function renderPresetButtons() {
             var row = document.getElementById('cropPresetRow');
             if (!row) return;
@@ -1778,8 +1794,17 @@ function applyImageEdits(){
                 if (preferredSize.w === DEFAULT_CROP_W_CM && preferredSize.h === DEFAULT_CROP_H_CM) {
                     setCropMode('default');
                 } else {
-                    setCropMode('manual');
-                    setFreeSize(preferredSize.w, preferredSize.h);
+                    var _match = matchCropPreset(preferredSize.w, preferredSize.h);
+                    if (_match) {
+                        cropModal._orientation = (preferredSize.w >= preferredSize.h) ? 'landscape' : 'portrait';
+                        cropModal._activePresetIdx = _match.idx;
+                        setCropMode('preset');
+                        setLockedSize(preferredSize.w, preferredSize.h, true);
+                        cropModal._presetRatio = preferredSize.w / preferredSize.h;
+                    } else {
+                        setCropMode('manual');
+                        setFreeSize(preferredSize.w, preferredSize.h);
+                    }
                 }
             } else {
                 document.getElementById('cropWcm').value = 5;
