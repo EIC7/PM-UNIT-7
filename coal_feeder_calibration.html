@@ -2466,7 +2466,14 @@ function cfDownloadPdf() {
         aiy += lineH;
 
         doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
-        doc.text(descLines, marginX+3, aiy);
+        // Digambar baris per baris dengan jarak lineH manual (BUKAN doc.text(array,...))
+        // karena jsPDF punya jarak antar-baris bawaan sendiri (lebih rapat dari lineH),
+        // sehingga kalau dipakai array langsung, isi teks jadi lebih pendek dari tinggi
+        // kotak yang sudah dihitung -> nyisa ruang kosong di bawah kotak.
+        descLines.forEach(function(line) {
+          doc.text(line, marginX+3, aiy);
+          aiy += lineH;
+        });
 
         y += assetBoxH + 5;
       }
