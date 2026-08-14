@@ -2425,6 +2425,18 @@ function cfDownloadPdf() {
       function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
       function safe(s){ return String(s||''); }
       function pad(n){ return String(n).padStart(2,'0'); }
+      // Ambil SATU bagian buat nama file PDF -- kalau field-nya berisi beberapa
+      // baris (misal Work Order/Asset diisi lebih dari satu nomor), yang dipakai
+      // cuma baris PALING DEPAN/PERTAMA. Karakter yang tidak valid di nama file
+      // (\ / : * ? " < > |) dibuang, spasi dirapikan jadi tanpa-spasi.
+      function pdfNamePart(s, maxLen) {
+        s = String(s || '').trim();
+        s = s.split(/\r?\n/)[0] || '';
+        s = s.replace(/[\\\/:*?"<>|]/g, '');
+        s = s.replace(/\s+/g, '');
+        if (maxLen && s.length > maxLen) s = s.substring(0, maxLen);
+        return s;
+      }
 
       var y = marginTop;
 
@@ -2946,9 +2958,22 @@ function cfDownloadPdf() {
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
 
-      var dateStr = (gv('cfDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
+      // Penamaan file PDF khusus modul Coal Feeder:
+      // - Kalau 4000 HR PM (Pulverizer Instrumentation) ikut dicetak -> ini yang
+      //   menentukan nama, TIDAK PEDULI Feeder Calibration/Test Demand Signal
+      //   ikut dicentang atau tidak.
+      // - Kalau 4000 HR PM TIDAK dicentang (jadi cuma Feeder Calibration dan/atau
+      //   Test Demand Signal yang dicetak) -> pakai format Workorder_FeederCalibration_Feedernomor.
+      var feederNoPart = pdfNamePart(gv('cfFeederNo'), 20) || 'FeederNo';
+      var pdfFilename;
+      if (doPulv) {
+        pdfFilename = 'PM_4000Hr_and_Feedercalibration_' + feederNoPart + '.pdf';
+      } else {
+        var woPart = pdfNamePart(gv('cfWO'), 30) || 'NoWO';
+        pdfFilename = woPart + '_FeederCalibration_' + feederNoPart + '.pdf';
+      }
       dbShowSavingOverlay(false);
-      showPdfPreview(doc, 'CoalFeeder_Calibration_'+dateStr+'.pdf');
+      showPdfPreview(doc, pdfFilename);
 
     } catch(err) { dbShowSavingOverlay(false); alert('PDF Error: '+err.message); console.error(err); }
   });
