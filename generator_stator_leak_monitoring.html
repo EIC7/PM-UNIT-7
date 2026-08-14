@@ -1755,18 +1755,51 @@ function buildAndShowPdf() {
   y = doc.lastAutoTable.finalY + 8;
 
   // EVIDENCE PHOTOS
+  // Sebelumnya foto dipaksa ukuran grid tetap (picW/picH hardcoded), jadi
+  // ukuran hasil crop (widthCm/heightCm) tidak pernah kepakai di PDF.
+  // Sekarang tiap foto digambar sesuai widthCm/heightCm-nya masing-masing,
+  // dengan layout flow (2 pass: kelompokkan ke baris dulu, baru rata tengah
+  // per baris terhadap contentW) -- sama seperti modul lain.
   var photosWithImg = evidenceItems.filter(function(it){ return it.images.length > 0; });
   if (photosWithImg.length) {
     secHeader('UPLOAD EVIDENCE');
-    var picW = (contentW - 6) / 2, picH = 60, gap = 6, colX = marginX, startXRight = marginX + picW + gap;
-    photosWithImg.forEach(function(item, i) {
-      checkPage(picH + 10);
-      var x = (i % 2 === 0) ? colX : startXRight;
-      try { doc.addImage(item.images[0].dataUrl, 'JPEG', x, y, picW, picH); } catch(e) {}
-      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
-      var capLines = doc.splitTextToSize(item.caption || '-', picW);
-      doc.text(capLines, x, y + picH + 4);
-      if (i % 2 === 1) y += picH + 12;
+    function iePhotoDrawSize(entry, maxW, maxH) {
+      var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
+      var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+      var w = wCm * 10, h = hCm * 10; // cm -> mm
+      if (w > maxW) { h = h * (maxW / w); w = maxW; }
+      if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
+      return { w: w, h: h };
+    }
+    var gap = 6, maxPhotoW = contentW - 6, maxPhotoH = 60, maxRowW = contentW - 6;
+    // Pass 1: kelompokkan foto ke baris-baris dulu.
+    var rows = [], curRow = [], curRowW = 0;
+    photosWithImg.forEach(function(item){
+      var img = item.images[0];
+      var dim = iePhotoDrawSize(img, maxPhotoW, maxPhotoH);
+      var addW = curRow.length ? gap + dim.w : dim.w;
+      if (curRow.length && curRowW + addW > maxRowW) { rows.push(curRow); curRow = []; curRowW = 0; addW = dim.w; }
+      curRow.push({item:item, img:img, dim:dim});
+      curRowW += addW;
+    });
+    if (curRow.length) rows.push(curRow);
+    // Pass 2: gambar tiap baris rata tengah terhadap contentW.
+    rows.forEach(function(row) {
+      var totalRowW = row.reduce(function(s,it,idx){ return s + it.dim.w + (idx>0?gap:0); }, 0);
+      var capLinesArr = row.map(function(it){ return doc.splitTextToSize(it.item.caption || '-', it.dim.w); });
+      var capH = Math.max.apply(null, capLinesArr.map(function(l){ return l.length*3.5 + 4; }));
+      var rowMaxH = Math.max.apply(null, row.map(function(it){ return it.dim.h; })) + capH;
+      checkPage(rowMaxH + 6);
+      var curX = marginX + (contentW - totalRowW) / 2;
+      row.forEach(function(it, idx){
+        var img=it.img, dim=it.dim;
+        var drawX = Math.max(marginX, Math.min(curX + ((img.offsetX||0)*10), pw - marginX - dim.w));
+        try { doc.addImage(img.dataUrl, 'JPEG', drawX, y, dim.w, dim.h); } catch(e) {}
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
+        doc.text(capLinesArr[idx], drawX, y + dim.h + 4);
+        curX += dim.w + gap;
+      });
+      y += rowMaxH + 8;
     });
   }
 
