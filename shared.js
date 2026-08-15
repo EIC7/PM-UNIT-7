@@ -579,10 +579,12 @@ function dbShowSavingOverlayError(msg, submsg) {
 var _dbFakeProgressTimer = null;
 var _dbFakeProgressVal = 0;
 var _dbRealProgressSeen = false;
+var _dbLastShownPercent = 0; // dipakai supaya progress gak pernah keliatan mundur/reset (lihat dbSetSavingProgress)
 
 function dbStartFakeProgress() {
   _dbFakeProgressVal = 0;
   _dbRealProgressSeen = false;
+  _dbLastShownPercent = 0;
   dbSetSavingProgress(0);
   clearInterval(_dbFakeProgressTimer);
   _dbFakeProgressTimer = setInterval(function () {
@@ -599,14 +601,20 @@ function dbStopFakeProgress() {
 }
 
 /* Dipanggil dari callback onProgress supaFetchProgress ketika ada progress ASLI
-   (lengthComputable true). Menghentikan simulasi & memakai angka sebenarnya. */
+   (lengthComputable true, atau expectedTotal sudah diketahui duluan). Menghentikan
+   simulasi & memakai angka sebenarnya. */
 function dbReportRealProgress(percent) {
   _dbRealProgressSeen = true;
   dbSetSavingProgress(percent);
 }
 
 /* ── SET PROGRESS 0-100% di overlay ──
-   percent = null/undefined -> sembunyikan garis progress (dipakai saat overlay ditutup). */
+   percent = null/undefined -> sembunyikan garis progress (dipakai saat overlay ditutup,
+   ini juga me-reset _dbLastShownPercent supaya overlay berikutnya mulai dari 0 lagi).
+   Progress SENGAJA dibikin gak pernah mundur (selalu ambil nilai terbesar antara yang
+   lama & yang baru) -- soalnya kalau simulasi sempat jalan duluan lalu progress ASLI
+   datang mulai dari angka lebih kecil, angkanya bakal keliatan "loncat balik ke 0%
+   terus naik lagi", yang kesannya kayak loading dua kali padahal cuma satu proses. */
 function dbSetSavingProgress(percent) {
   var wrap = document.getElementById('dbSavingProgressWrap');
   var bar  = document.getElementById('dbSavingProgressBar');
@@ -615,9 +623,12 @@ function dbSetSavingProgress(percent) {
   if (percent === null || percent === undefined || isNaN(percent)) {
     wrap.style.display = 'none';
     pct.style.display = 'none';
+    _dbLastShownPercent = 0;
     return;
   }
   var p = Math.max(0, Math.min(100, Math.round(percent)));
+  if (p < _dbLastShownPercent) p = _dbLastShownPercent; // jangan pernah mundur
+  _dbLastShownPercent = p;
   wrap.style.display = 'block';
   pct.style.display = 'block';
   bar.style.width = p + '%';
