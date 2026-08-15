@@ -1596,7 +1596,7 @@ var PROC_IODINE_STEPS = [
 ];
 
 /* ── STATE ── */
-var activeFreq = '3M';
+var activeFreq = '2M';
 var stepState = {};
 STEP_DATA.forEach(function(s){ stepState[s.no] = {check:false, sparepart:'', done:false}; });
 var hgEvidence = {};
@@ -1667,7 +1667,7 @@ function renderProcIodineHtml() {
 
 /* ── RENDER: Konten per tab frequency ── */
 function hgRenderFreqContent(freq) {
-  var html = renderTable51Html() + renderTable52Html();
+  var html = renderTable51Html() + (freq === '2M' ? '' : renderTable52Html());
   if (freq === '2Y' || freq === '5Y') {
     html += renderTable54Html(freq);
     html += renderTable55Html();
@@ -1833,30 +1833,32 @@ function hgDownloadPdf() {
       });
       y = doc.lastAutoTable.finalY + 8;
 
-      /* Table 5.2 Regularly Maintenance Check */
-      secHeader('Table 5.2 \u2014 Regularly Maintenance Check');
-      var CHK_COL_52 = {2:true,3:true,4:true,5:true};
-      doc.autoTable({
-        startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
-        head: [['No','Maintenance Work','3','6','9','12','Resp.']],
-        body: TABLE52.map(function(r){
-          var lbl = pdfSafe(r.label) + (r.ref?(' ['+pdfSafe(r.ref)+']'):'');
-          var m = [3,6,9,12].map(function(mm){ var on = r.onlyMonth?(mm===r.onlyMonth):true; return on?'__CHK__':''; });
-          return [String(r.no), lbl].concat(m).concat(['Specialist']);
-        }),
-        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
-        bodyStyles:{fontSize:6.8,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-        columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:97},2:{cellWidth:8,halign:'center'},3:{cellWidth:8,halign:'center'},4:{cellWidth:8,halign:'center'},5:{cellWidth:8,halign:'center'},6:{cellWidth:20,halign:'center'}},
-        didDrawCell:function(d){
-          if (d.section!=='body' || !CHK_COL_52[d.column.index]) return;
-          var val = d.cell.raw; if (val!=='__CHK__') return;
-          var bg=(d.row.index%2===0)?[255,255,255]:[246,249,247];
-          doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(d.cell.x+0.2,d.cell.y+0.2,d.cell.width-0.4,d.cell.height-0.4,'F');
-          drawCheckbox(d.cell.x, d.cell.y, d.cell.width, d.cell.height, true);
-        },
-        willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
-      });
-      y = doc.lastAutoTable.finalY + 8;
+      /* Table 5.2 Regularly Maintenance Check (tidak tampil untuk 2 Monthly) */
+      if (activeFreq !== '2M') {
+        secHeader('Table 5.2 \u2014 Regularly Maintenance Check');
+        var CHK_COL_52 = {2:true,3:true,4:true,5:true};
+        doc.autoTable({
+          startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
+          head: [['No','Maintenance Work','3','6','9','12','Resp.']],
+          body: TABLE52.map(function(r){
+            var lbl = pdfSafe(r.label) + (r.ref?(' ['+pdfSafe(r.ref)+']'):'');
+            var m = [3,6,9,12].map(function(mm){ var on = r.onlyMonth?(mm===r.onlyMonth):true; return on?'__CHK__':''; });
+            return [String(r.no), lbl].concat(m).concat(['Specialist']);
+          }),
+          headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
+          bodyStyles:{fontSize:6.8,textColor:[20,30,25],font:'helvetica',cellPadding:2},
+          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:97},2:{cellWidth:8,halign:'center'},3:{cellWidth:8,halign:'center'},4:{cellWidth:8,halign:'center'},5:{cellWidth:8,halign:'center'},6:{cellWidth:20,halign:'center'}},
+          didDrawCell:function(d){
+            if (d.section!=='body' || !CHK_COL_52[d.column.index]) return;
+            var val = d.cell.raw; if (val!=='__CHK__') return;
+            var bg=(d.row.index%2===0)?[255,255,255]:[246,249,247];
+            doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(d.cell.x+0.2,d.cell.y+0.2,d.cell.width-0.4,d.cell.height-0.4,'F');
+            drawCheckbox(d.cell.x, d.cell.y, d.cell.width, d.cell.height, true);
+          },
+          willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
 
       if (activeFreq === '2Y' || activeFreq === '5Y') {
         /* Table 5.4 (2/5 Yearly) */
@@ -2131,7 +2133,7 @@ initCropDrag();
       var t = new Date();
       todayEl.value = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
     }
-    hgSwitchTab('3M');
+    hgSwitchTab('2M');
     return;
   }
   dbLoad(id, function(rec){
