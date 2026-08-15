@@ -1,4 +1,4 @@
-> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai Q di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M → N → O → P → Q**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-17 huruf (A–Q) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai Q.**
+> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai R di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M → N → O → P → Q → R**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-18 huruf (A–R) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai R.**
 
 
 
@@ -9,6 +9,7 @@
 
 | Versi | Tanggal | Perubahan |
 |---|---|---|
+| v1.4 | 2026-08-15 | Tambah **Fitur R: Rotasi Gambar 90° di Crop Modal** (tombol ⟲/⟳ mengambang di crop modal, memutar foto SUMBER lewat canvas — beda dari Fitur K yang rotasi shape anotasi, bukan foto). Ditemukan sudah diterapkan di `pm-hg-analyzer.html` oleh sesi lain tapi belum pernah didokumentasikan. Mulai roll-out sistematis **Fitur O (Urutkan Foto) + Fitur R (Rotasi Gambar)** ke seluruh modul yang belum punya, satu file per commit/push. |
 | v1.3 | 2026-08-15 | Audit penuh `pm-hg-analyzer.html` terhadap Fitur A–Q. Ditemukan & diperbaiki 3 hal: (1) **Fitur A** — dropdown "Penyimpanan"/"Kamera" kepotong/tidak bisa diklik karena `position:absolute` di dalam tabel `overflow-x:auto` (efek clip vertikal ikut kena, sesuai perilaku standar CSS); fix pakai `position:fixed` dihitung dari `getBoundingClientRect()` tombolnya, ditambahkan sebagai catatan wajib-cek baru di Fitur A. (2) Input **"Keterangan"** foto belum ada sama sekali di galeri evidence-nya padahal field `caption` sudah ada di data model & PDF-mapping sejak lama — ditambahkan input-nya + render caption ke PDF. (3) **Fitur D** (Geser Posisi Gambar) ternyata "mati": CSS & fungsi `nudgeImageInArray` sudah ada, PDF-nya sudah baca `offsetX`, tapi tombol ◀▶-nya tidak pernah ditempel ke markup — diaktifkan. Ditambahkan juga catatan bahwa `mark_vie_inspection.html` SENGAJA tidak punya input caption (desain 1-foto-per-baris, caption otomatis dari label baris) — bukan gap yang perlu diperbaiki. |
 | v1.2 | 2026-08-15 | Tambah **Fitur O: Urutkan Foto (Tukar Posisi Kiri/Kanan)**, **Fitur P: Header + Baris Foto Pertama Tidak Terpisah Halaman (page-break keep-together)**, dan **Fitur Q: Sinkronisasi Caption SEBELUM Array Diubah** (fix bug caption ketuker yang kejadian pas reorder maupun hapus foto). Ketiganya ditemukan/diterapkan pertama kali di `form_o2_report.html`. |
 | v1.1 | 2026-08-14 | Tambah **Fitur N: Checkbox Vektor untuk PDF** (kotak+centang digambar via `drawCheckboxBs`, bukan karakter unicode `✓` yang tidak didukung font standar jsPDF dan tercetak sebagai titik). Perkuat **Fitur C (Crop Ulang)** dengan catatan wajib: foto hasil re-crop harus mengganti entry LAMA di index yang sama (`imgArr.splice(replaceIdx,1,entry)`), bukan dihapus lalu `push` ke akhir array — sebelumnya ini bikin foto pindah urutan ke paling akhir sementara keterangannya tertukar. Update contoh kode di **Fitur M** yang masih menampilkan pola `imgArr.push(entry)` lama. Diterapkan ke 15 file (14 HTML + `shared.js`), sumber: `coal_feeder_calibration.html`. |
@@ -53,6 +54,7 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 - [ ] [O. Urutkan Foto (Tukar Posisi Kiri/Kanan)](#o-urutkan-foto-tukar-posisi-kirikanan)
 - [ ] [P. Header + Baris Foto Pertama Tidak Terpisah Halaman](#p-header--baris-foto-pertama-tidak-terpisah-halaman)
 - [ ] [Q. Sinkronisasi Caption SEBELUM Array Diubah](#q-sinkronisasi-caption-sebelum-array-diubah)
+- [ ] [R. Rotasi Gambar 90° di Crop Modal](#r-rotasi-gambar-90-di-crop-modal)
 - [ ] [Checklist Konfigurasi per File Baru](#checklist-konfigurasi)
 - [ ] [⚠️ Potensi Konflik Global](#potensi-konflik-global)
 
@@ -1857,6 +1859,48 @@ function {{prefix}}RemoveImg(chKey, phase, idx) {
 **Butuh dari user:** tidak ada. Tapi **WAJIB dicek di SEMUA fungsi** yang mengubah urutan/isi array foto di file tujuan (reorder, hapus, insert-ulang setelah crop-ulang jika itu memindah posisi) — bukan cuma yang baru ditambah dari Fitur O.
 
 **⚠️ Potensi Konflik:** kalau file tujuan sudah punya pola sync-caption yang berbeda (mis. sync per-input `oninput` SAJA tanpa fungsi sync terpisah), fix ini mungkin tidak relevan — cek dulu apakah bug-nya benar-benar bisa terjadi di sana sebelum menempel pola ini secara membabi buta.
+
+---
+
+## R. Rotasi Gambar 90° di Crop Modal
+**Tujuan:** 2 tombol bulat mengambang (⟲ kiri / ⟳ kanan) di pojok kanan-atas area gambar DI DALAM crop modal, buat memutar foto yang ke-upload miring/terbalik 90° (potret↔lanskap tertukar) tanpa perlu upload ulang dari HP.
+
+**Ditemukan pertama kali di:** `pm-hg-analyzer.html` (Agustus 2026, dikerjakan sesi Claude lain, commit `56a8065`).
+
+**Cara kerja:** klik tombol memutar gambar **SUMBER** (bukan cuma crop box-nya) lewat `<canvas>` (translate ke tengah, `ctx.rotate(dir*90*Math.PI/180)`, gambar ulang), hasilnya dipasang balik ke `#cropImg.src`. Ini otomatis memicu ulang event `onload` yang sudah ada di crop modal (dari `imgOpenCropper`), yang menyesuaikan ukuran/posisi gambar dan crop box — termasuk kalau lagi mode Preset/Manual dengan rasio terkunci — jadi TIDAK perlu logika reposisi terpisah. `cropAndSave()` menggambar dari elemen `#cropImg` langsung, jadi hasil akhir crop otomatis ikut orientasi gambar yang sudah diputar.
+
+```css
+.crop-rotate-toolbar{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:6}
+.crop-rotate-btn{width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35)}
+.crop-rotate-btn:active{background:rgba(0,0,0,0.85)}
+```
+```html
+<!-- Ditaruh di dalam #cropWrap, sebagai sibling dari #cropImg (sebelum #cropBox) -->
+<div class="crop-rotate-toolbar">
+    <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(-1)" title="Putar gambar 90° ke kiri">&#8634;</button>
+    <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(1)" title="Putar gambar 90° ke kanan">&#8635;</button>
+</div>
+```
+```js
+/* dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise). */
+function rotateCropImage(dir) {
+    var img = document.getElementById('cropImg');
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(dir * 90 * Math.PI/180);
+    ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+    var rotatedUrl = canvas.toDataURL('image/jpeg', 0.95);
+    img.src = rotatedUrl; // memicu ulang img.onload -> refit gambar & crop box
+    if (cropModalState._pending) cropModalState._pending.dataUrl = rotatedUrl;
+}
+```
+**Butuh dari user:** tidak ada — murni tambahan di crop modal, tidak menyentuh struktur data. Cukup pastikan file tujuan punya `#cropImg`/`#cropWrap`/`#cropBox`/`cropModalState._pending` (struktur crop modal kanonis yang sudah di-backport ke semua modul — lihat Fitur B) sebelum tempel.
+
+**⚠️ Potensi Konflik:** kalau file tujuan punya `#cropWrap` dengan `position` bukan `relative` (dropdown/toolbar butuh ancestor `position:relative` biar `position:absolute` toolbar-nya nempel ke area gambar, bukan ke seluruh halaman) — cek dulu CSS `#cropWrap`-nya, sesuaikan kalau beda. Jangan disamakan dengan **Fitur K** (Rotasi Kotak & Oval) — itu rotasi SHAPE ANOTASI di editor "Edit Gambar" (Insert Shape), fitur yang beda total dari rotasi FOTO ASLI ini.
 
 ---
 

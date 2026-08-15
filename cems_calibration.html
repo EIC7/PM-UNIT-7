@@ -101,6 +101,9 @@
 .crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
 .crop-header-hint{font-size:10px;color:#8aab96}
 #cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+.crop-rotate-toolbar{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:6}
+.crop-rotate-btn{width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35)}
+.crop-rotate-btn:active{background:rgba(0,0,0,0.85)}
 #cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
 #cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
 .crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
@@ -313,6 +316,10 @@
         </div>
         <div id="cropWrap">
             <img id="cropImg" src="">
+            <div class="crop-rotate-toolbar">
+                <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(-1)" title="Putar gambar 90° ke kiri">&#8634;</button>
+                <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(1)" title="Putar gambar 90° ke kanan">&#8635;</button>
+            </div>
             <div id="cropBox">
                 <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
                 <div class="crop-handle sw"></div><div class="crop-handle se"></div>
@@ -1423,6 +1430,29 @@ function cropReset() {
     if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
 }
 function skipCrop() { closeCropModal(); processNextEvidUpload(); }
+/* ── Rotasi gambar 90° kiri/kanan di dalam modal crop ──
+   dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise).
+   Gambar SUMBER (bukan cuma crop box) diputar lewat canvas, lalu hasilnya
+   dipasang balik ke #cropImg -- ini otomatis memicu ulang event onload yang
+   sudah ada (lihat imgOpenCropper), yang menyesuaikan ulang ukuran/posisi
+   gambar dan crop box (termasuk kalau lagi mode Preset/Manual dengan rasio
+   terkunci), jadi tidak perlu logika reposisi terpisah. cropAndSave()
+   menggambar dari elemen #cropImg langsung, jadi hasil akhirnya otomatis
+   ikut gambar yang sudah diputar. */
+function rotateCropImage(dir) {
+    var img = document.getElementById('cropImg');
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(dir * 90 * Math.PI/180);
+    ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+    var rotatedUrl = canvas.toDataURL('image/jpeg', 0.95);
+    img.src = rotatedUrl; // memicu ulang img.onload -> refit gambar & crop box
+    if (cropModalState._pending) cropModalState._pending.dataUrl = rotatedUrl;
+}
 function cropAndSave() {
     var img = document.getElementById('cropImg');
     var box = document.getElementById('cropBox');
@@ -1829,14 +1859,20 @@ function renderEvidence(groupOrSide){
   function thumbHtml(img, idx, group, phase){
     var phaseArg = phase ? '\''+phase+'\'' : 'null';
     var nudgeTarget = 'calEvidence.'+group+(phase ? '.'+phase : '');
+    var stKey = group+(phase?'_'+phase:'');
+    var st = evidReorderState[stKey] || {active:false, selectedIdx:null};
     var nudgeHtml = '<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">'+
       '<button type="button" onclick="event.stopPropagation();nudgeImageInArray('+nudgeTarget+','+idx+',-0.5,function(){renderEvidence(\''+group+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>'+
       '<span>'+(img.offsetX||0)+'cm</span>'+
       '<button type="button" onclick="event.stopPropagation();nudgeImageInArray('+nudgeTarget+','+idx+',0.5,function(){renderEvidence(\''+group+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>'+
       '</div></div>';
+    var actionBtns = !st.active
+      ? ('<button type="button" class="redo" title="Crop Ulang" onclick="reEditEvidence(\''+group+'\','+phaseArg+','+idx+')">✂️</button>' +
+         '<button type="button" class="del" onclick="deleteEvidence(\''+group+'\','+phaseArg+','+idx+')">✕</button>')
+      : ('<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#2563eb);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2">' +
+         '<input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="evidSelectForReorder(\''+group+'\','+phaseArg+','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>');
     return '<div class="evidence-thumb">' +
-      '<button type="button" class="redo" title="Crop Ulang" onclick="reEditEvidence(\''+group+'\','+phaseArg+','+idx+')">✂️</button>' +
-      '<button type="button" class="del" onclick="deleteEvidence(\''+group+'\','+phaseArg+','+idx+')">✕</button>' +
+      actionBtns +
       '<img src="'+img.dataUrl+'">' +
       '<input class="cap" placeholder="Keterangan..." value="'+(img.caption||'').replace(/"/g,'&quot;')+'" onchange="'+nudgeTarget+'['+idx+'].caption=this.value">' +
       nudgeHtml +
@@ -1853,6 +1889,23 @@ function renderEvidence(groupOrSide){
       '</div>' +
     '</div>';
   }
+  function reorderCtrlHtml(group, phase, arrLen){
+    if (arrLen <= 1) return '';
+    var stKey = group+(phase?'_'+phase:'');
+    var st = evidReorderState[stKey] || {active:false, selectedIdx:null};
+    var phaseArg = phase ? '\''+phase+'\'' : 'null';
+    var out = '<div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px">';
+    out += '<button type="button" onclick="evidToggleReorder(\''+group+'\','+phaseArg+')" style="background:'+(st.active?'var(--ok,#16a34a)':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--panel-border,#ccc);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap">'+(st.active?'&#10003; Selesai':'&#128256; Urutkan Foto')+'</button>';
+    if (st.active && st.selectedIdx !== null) {
+      var atStart = st.selectedIdx <= 0, atEnd = st.selectedIdx >= arrLen - 1;
+      out += '<div style="display:flex;gap:4px">' +
+        '<button type="button" '+(atStart?'disabled':'')+' onclick="evidMoveImg(\''+group+'\','+phaseArg+',-1)" style="flex:1;background:#eef2f7;border:1px solid var(--panel-border,#ccc);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atStart?'default':'pointer')+';opacity:'+(atStart?'0.4':'1')+'">&#9664; Kiri</button>' +
+        '<button type="button" '+(atEnd?'disabled':'')+' onclick="evidMoveImg(\''+group+'\','+phaseArg+',1)" style="flex:1;background:#eef2f7;border:1px solid var(--panel-border,#ccc);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atEnd?'default':'pointer')+';opacity:'+(atEnd?'0.4':'1')+'">Kanan &#9654;</button>' +
+        '</div>';
+    }
+    out += '</div>';
+    return out;
+  }
 
   if (isBeforeAfterGroup(group)) {
     ['before','after'].forEach(function(phase){
@@ -1863,6 +1916,7 @@ function renderEvidence(groupOrSide){
       html += '<div class="evidence-grid">';
       arr.forEach(function(img, idx){ html += thumbHtml(img, idx, group, phase); });
       html += addTileHtml(group, phase);
+      html += reorderCtrlHtml(group, phase, arr.length);
       html += '</div></div>';
     });
   } else {
@@ -1870,9 +1924,35 @@ function renderEvidence(groupOrSide){
     html += '<div class="evidence-grid">';
     flatArr.forEach(function(img, idx){ html += thumbHtml(img, idx, group, null); });
     html += addTileHtml(group, null);
+    html += reorderCtrlHtml(group, null, flatArr.length);
     html += '</div>';
   }
   box.innerHTML = html;
+}
+var evidReorderState = {};
+function evidToggleReorder(group, phase){
+  var stKey = group+(phase?'_'+phase:'');
+  var st = evidReorderState[stKey] || (evidReorderState[stKey] = {active:false, selectedIdx:null});
+  st.active = !st.active;
+  st.selectedIdx = null;
+  renderEvidence(group);
+}
+function evidSelectForReorder(group, phase, idx, checked){
+  var stKey = group+(phase?'_'+phase:'');
+  var st = evidReorderState[stKey] || (evidReorderState[stKey] = {active:false, selectedIdx:null});
+  st.selectedIdx = checked ? idx : null;
+  renderEvidence(group);
+}
+function evidMoveImg(group, phase, dir){
+  var stKey = group+(phase?'_'+phase:'');
+  var st = evidReorderState[stKey];
+  if (!st || st.selectedIdx === null) return;
+  var arr = getEvidArr(group, phase);
+  var i = st.selectedIdx, j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp; // swap 1 object utuh — caption/crop/offset ikut (tidak ada bug Fitur Q di sini, caption sudah live-synced via onchange langsung ke array, tidak ada re-sync by-posisi terpisah)
+  st.selectedIdx = j;
+  renderEvidence(group);
 }
 function evidOpenSource(group, phase, source){
   evidPendingGroup = group;
