@@ -434,27 +434,25 @@ function dbShowSavingOverlay(show, msg, submsg) {
       ov = document.createElement('div');
       ov.id = 'dbSavingOverlay';
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;transition:background-color 0.2s';
-      ov.innerHTML = '<div id="dbSavingSpinner" style="width:300px;height:192px;max-width:80vw;position:relative;margin-bottom:10px">'
-        +   '<div style="position:absolute;bottom:2px;left:50%;width:44%;height:8%;background:rgba(255,255,255,0.25);border-radius:50%;transform:translateX(-50%);animation:dbCatShadow 0.6s ease-in-out infinite alternate"></div>'
-        +   '<div style="position:absolute;bottom:10%;left:50%;width:62%;height:75%;transform:translateX(-50%);animation:dbCatBob 0.6s ease-in-out infinite alternate">'
-        +     '<svg viewBox="0 0 230 150" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block">'
-        +       '<path d="M60,95 C25,95 15,60 45,50 C65,43 70,60 55,63 C45,65 42,75 60,80" fill="none" stroke="#fff" stroke-opacity="0.92" stroke-width="14" stroke-linecap="round" style="transform-origin:100% 100%;animation:dbCatSwish 1.2s ease-in-out infinite"/>'
-        +       '<rect x="82" y="105" width="14" height="34" rx="7" fill="#fff" fill-opacity="0.92" style="transform-origin:50% 0%;animation:dbCatWalk 0.6s ease-in-out infinite"/>'
-        +       '<rect x="150" y="108" width="14" height="30" rx="7" fill="#fff" fill-opacity="0.92" style="transform-origin:50% 0%;animation:dbCatWalk 0.6s ease-in-out infinite 0s"/>'
-        +       '<ellipse cx="118" cy="95" rx="55" ry="35" fill="#fff" fill-opacity="0.92"/>'
-        +       '<rect x="100" y="108" width="14" height="32" rx="7" fill="#fff" fill-opacity="0.92" style="transform-origin:50% 0%;animation:dbCatWalk 0.6s ease-in-out infinite 0.3s"/>'
-        +       '<rect x="130" y="110" width="14" height="30" rx="7" fill="#fff" fill-opacity="0.98" style="transform-origin:50% 0%;animation:dbCatWalk 0.6s ease-in-out infinite 0.3s"/>'
-        +       '<path d="M140,35 L128,55 L160,60 Z" fill="#fff" fill-opacity="0.92"/>'
-        +       '<path d="M195,35 L207,55 L175,60 Z" fill="#fff" fill-opacity="0.92"/>'
-        +       '<circle cx="168" cy="65" r="42" fill="#fff" fill-opacity="0.92"/>'
-        +       '<circle cx="150" cy="62" r="4.5" fill="#2b2b2b"/>'
-        +       '<circle cx="188" cy="62" r="4.5" fill="#2b2b2b"/>'
-        +       '<path d="M160,78 C163,83 167,83 170,78 C173,83 177,83 180,78" fill="none" stroke="#2b2b2b" stroke-width="2.5" stroke-linecap="round"/>'
-        +       '<line x1="150" y1="72" x2="118" y2="68" stroke="#2b2b2b" stroke-width="1.5"/>'
-        +       '<line x1="150" y1="78" x2="118" y2="80" stroke="#2b2b2b" stroke-width="1.5"/>'
-        +       '<line x1="188" y1="72" x2="220" y2="68" stroke="#2b2b2b" stroke-width="1.5"/>'
-        +       '<line x1="188" y1="78" x2="220" y2="80" stroke="#2b2b2b" stroke-width="1.5"/>'
-        +     '</svg>'
+      ov.innerHTML = '<div id="dbSavingSpinner" style="width:170px;height:170px;position:relative;margin-bottom:14px">'
+        +   '<svg viewBox="0 0 320 320" style="width:100%;height:100%;display:block;overflow:visible">'
+        +     '<defs><path id="dbBoltShape" d="M14 0 L2 20 L11 20 L8 40 L23 16 L13 16 Z"/></defs>'
+        +     '<circle cx="160" cy="160" r="128" fill="none" stroke="#3ad4ff" stroke-width="1.5" stroke-dasharray="3 9" opacity="0.5" style="filter:drop-shadow(0 0 5px #35c9ff);transform-origin:160px 160px;animation:dbEicRingSpin 10s linear infinite"/>'
+        +     '<circle cx="160" cy="160" r="112" fill="none" stroke="#3ad4ff" stroke-width="2.5" style="filter:drop-shadow(0 0 5px #35c9ff) drop-shadow(0 0 14px #0aa8ff);animation:dbEicRingPulse 2s ease-in-out infinite"/>'
+        +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(268.2,189.0) rotate(105) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:0s"/>'
+        +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(216.0,257.0) rotate(150) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:0.2s"/>'
+        +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(131.0,268.2) rotate(195) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:0.4s"/>'
+        +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(63.0,216.0) rotate(240) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:0.6s"/>'
+        +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(51.8,131.0) rotate(285) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:0.8s"/>'
+        +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(104.0,63.0) rotate(330) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:1s"/>'
+        +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(189.0,51.8) rotate(15) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:1.2s"/>'
+        +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(257.0,104.0) rotate(60) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:1.4s"/>'
+        +   '</svg>'
+        +   '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:\'Arial Black\',Impact,-apple-system,sans-serif;font-weight:900;font-size:28px;letter-spacing:2px;color:#eaffff">'
+        +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">E</span>'
+        +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.15s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">I</span>'
+        +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.3s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">C</span>'
+        +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.45s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">7</span>'
         +   '</div>'
         + '</div>'
         + '<div id="dbSavingErrorIcon" style="display:none;width:44px;height:44px;border-radius:50%;background:#e74c3c;color:#fff;font-size:24px;font-weight:700;align-items:center;justify-content:center;margin-bottom:14px;line-height:1">&#10005;</div>'
@@ -476,10 +474,10 @@ function dbShowSavingOverlay(show, msg, submsg) {
         var style = document.createElement('style');
         style.id = 'dbSpinKeyframes';
         style.textContent = '@keyframes dbSpin{to{transform:rotate(360deg)}}'
-          + '@keyframes dbCatBob{from{transform:translateX(-50%) translateY(0)}to{transform:translateX(-50%) translateY(-4px)}}'
-          + '@keyframes dbCatWalk{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}'
-          + '@keyframes dbCatSwish{0%,100%{transform:rotate(0deg)}50%{transform:rotate(6deg)}}'
-          + '@keyframes dbCatShadow{from{transform:translateX(-50%) scaleX(1);opacity:0.6}to{transform:translateX(-50%) scaleX(0.85);opacity:0.3}}';
+          + '@keyframes dbEicRingSpin{to{transform:rotate(360deg)}}'
+          + '@keyframes dbEicRingPulse{0%,100%{stroke-opacity:0.55}50%{stroke-opacity:1}}'
+          + '@keyframes dbEicBoltPulse{0%,100%{opacity:0.6}50%{opacity:1}}'
+          + '@keyframes dbEicFlicker{0%,92%,100%{opacity:1}93%{opacity:0.35}95%{opacity:1}96%{opacity:0.5}98%{opacity:1}}';
         document.head.appendChild(style);
       }
     }
