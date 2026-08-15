@@ -1532,7 +1532,8 @@ var STEP_DATA = [
   {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", refImg:"assets/hg-step3-ref.png", replace:true,  freq:[3,6,9,12], proc:'iodine'},
   {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", refImg:"assets/hg-step4-ref.png", replace:false, freq:[2,3,6,9,12]},
   {no:5,  label:"Adjust the flow at the needle valve (15)", ref:"", refImg:"assets/hg-step5-ref.png", replace:false, freq:[3,6,9,12]},
-  {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"Menu 32111", refImg:"", replace:false, freq:[2,3,6,9,12]},
+  {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"Menu 32111", refImg:"", replace:false, freq:[2,3,6,9,12], evidenceMode:'single'},
+  {no:6.5, label:"Validation", ref:"", refImg:"", replace:false, freq:[2,3,6,9,12], evidenceMode:'single'},
   {no:7,  label:"Rinse the wash bottles of the gas cooler (M1) with water", ref:"", refImg:"assets/hg-step7-ref.png", replace:false, freq:[6,12]},
   {no:8,  label:"Replace the reactor filling (A6.1 and A6.2)*", ref:"", refImg:"assets/hg-step8-ref.png", replace:true,  freq:[6,12], proc:'reactor'},
   {no:9,  label:"Replace the condensate blocking membrane (16)", ref:"", refImg:"assets/hg-step9-ref.png", replace:true,  freq:[6,12]},
@@ -1542,7 +1543,8 @@ var STEP_DATA = [
   {no:13, label:"Replace all hoses in the gas path from the reactor to the photometer", ref:"", refImg:"assets/hg-step13-ref.png", replace:true,  freq:[12]},
   {no:14, label:"Adjust the flow", ref:"", refImg:"assets/hg-step14-ref.png", replace:false, freq:[12]},
   {no:15, label:"Test the AC unit in accordance with the manufacturer's specifications", ref:"", refImg:"", replace:false, freq:[12]},
-  {no:16, label:"Replace the hoses in the pumps (M31) for the HgCl\u2082", ref:"", refImg:"assets/hg-step16-ref.png", replace:true,  freq:[12]}
+  {no:16, label:"Replace the hoses in the pumps (M31) for the HgCl\u2082", ref:"", refImg:"assets/hg-step16-ref.png", replace:true,  freq:[12]},
+  {no:17, label:"Reading HG After Calibration", ref:"", refImg:"", replace:false, freq:[2,3,6,9,12], evidenceMode:'single'}
 ];
 var FREQ_MONTH = {'2M':2, '3M':3, '6M':6, '9M':9, '1Y':12};
 var FREQ_LABEL = {'2M':'2 Monthly', '3M':'3 Monthly', '6M':'6 Monthly', '9M':'9 Monthly', '1Y':'1 Yearly', '2Y':'2 Yearly', '5Y':'5 Yearly'};
@@ -2005,6 +2007,36 @@ function hgDownloadPdf() {
           }
           var gap=6, colW=(contentW-gap)/2, maxPhotoH=90;
           evidRows.forEach(function(s){
+            if (s.evidenceMode === 'single') {
+              // Step single-evidence (Zero Adjustment/Validation/Reading HG After
+              // Calibration): fotonya disimpan di array 'before', dirender 1 kolom
+              // penuh (bukan split before/after), label header "EVIDENCE".
+              var imgs = hgEvidence[s.no].before.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
+              if (!imgs.length) return;
+              var firstDim = iePhotoDrawSize(imgs[0], contentW-6, maxPhotoH);
+              var firstBlockH2 = 10 + 5 + (firstDim.h + 9);
+              if (firstBlockH2 <= (ph-marginTop-marginBottom) && (y+firstBlockH2 > ph-marginBottom)) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
+              else { checkPage(14); }
+              doc.setFillColor(60,90,70);
+              doc.rect(marginX, y, contentW, 7, 'F');
+              doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220,240,225);
+              doc.text('Step '+s.no+'  |  '+pdfSafe(s.label).substring(0,70), marginX+4, y+5);
+              y += 10;
+              doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,90,70);
+              doc.text('EVIDENCE', marginX+3, y);
+              y += 5;
+              imgs.forEach(function(im){
+                var dim = iePhotoDrawSize(im, contentW-6, maxPhotoH);
+                var rowH = dim.h + 9;
+                if (y+rowH > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
+                var ix = Math.max(marginX, Math.min(marginX+3 + (im.offsetX||0)*10, pw-marginX-dim.w));
+                try{ doc.addImage(im.dataUrl,'JPEG',ix,y,dim.w,dim.h); }catch(e){}
+                if (im.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(im.caption), dim.w), ix, y+dim.h+2.5); }
+                y += rowH;
+              });
+              y += 3;
+              return;
+            }
             var befImgs = hgEvidence[s.no].before.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
             var aftImgs = hgEvidence[s.no].after.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
             if (!befImgs.length && !aftImgs.length) return;
@@ -2222,8 +2254,8 @@ function hgAddBtnHtml(no, phase) {
     '<input type="file" accept="image/*,.heic,.heif" multiple style="display:none" id="hgFile_'+no+'_'+phase+'" onchange="hgHandleFiles(this.files,'+no+',\''+phase+'\')">'+
     '<div onclick="hgOpenSrcMenu(this,\'hgSrc_'+no+'_'+phase+'\')" style="width:110px;height:85px;border:1.5px dashed var(--panel-border);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:26px;color:var(--text3)" title="Upload foto">+</div>'+
     '<div id="hgSrc_'+no+'_'+phase+'" style="display:none;position:fixed;background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.15);padding:8px;z-index:9999;white-space:nowrap">'+
-      '<button type="button" onclick="event.stopPropagation();toggleSourceChoices(\'hgSrc_'+no+'_'+phase+'\');openFileInputSource(\'hgFile_'+no+'_'+phase+'\',\'storage\')" style="display:block;width:100%;margin-bottom:4px;padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer">&#128193; Penyimpanan</button>'+
-      '<button type="button" onclick="event.stopPropagation();toggleSourceChoices(\'hgSrc_'+no+'_'+phase+'\');openFileInputSource(\'hgFile_'+no+'_'+phase+'\',\'camera\')" style="display:block;width:100%;padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer">&#128247; Kamera</button>'+
+      '<button type="button" onclick="event.stopPropagation();hgCloseAllSrcMenus();openFileInputSource(\'hgFile_'+no+'_'+phase+'\',\'storage\')" style="display:block;width:100%;margin-bottom:4px;padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer">&#128193; Penyimpanan</button>'+
+      '<button type="button" onclick="event.stopPropagation();hgCloseAllSrcMenus();openFileInputSource(\'hgFile_'+no+'_'+phase+'\',\'camera\')" style="display:block;width:100%;padding:6px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer">&#128247; Kamera</button>'+
     '</div>'+
   '</div>';
 }
@@ -2234,12 +2266,30 @@ function hgAddBtnHtml(no, phase) {
    otomatis meng-clip arah vertikal juga (perilaku standar CSS), jadi dropdown versi
    absolute sering KEPOTONG/tidak kelihatan/tidak bisa diklik terutama kalau baris
    foto sudah panjang. position:fixed relatif ke viewport, jadi lolos dari clipping
-   tabel apa pun. */
+   tabel apa pun.
+
+   BUG lanjutan yang ditemukan: karena position:fixed menempel ke posisi LAYAR (bukan
+   ke posisi tombolnya di dalam halaman/tabel), begitu halaman di-scroll SETELAH
+   dropdown terbuka, dropdown-nya diam di posisi layar semula sementara tombol "+"
+   pemicunya sudah ikut bergeser/hilang dari layar — jadi kelihatan "kejauhan"/nyangkut
+   sendirian, tidak nempel lagi ke tombolnya. Fix: begitu dropdown dibuka, pasang
+   listener scroll (capture:true, supaya kedeteksi juga kalau yang di-scroll adalah
+   tabel di dalamnya, bukan cuma window/halaman utama) yang langsung menutup dropdown.
+   Listener-nya dilepas lagi begitu dropdown ditutup, supaya tidak numpuk. */
+var _hgSrcMenuScrollHandler = null;
+function hgCloseAllSrcMenus() {
+  document.querySelectorAll('[id^="hgSrc_"]').forEach(function(d){ d.style.display = 'none'; });
+  if (_hgSrcMenuScrollHandler) {
+    window.removeEventListener('scroll', _hgSrcMenuScrollHandler, true);
+    document.removeEventListener('click', _hgSrcMenuScrollHandler, true);
+    _hgSrcMenuScrollHandler = null;
+  }
+}
 function hgOpenSrcMenu(anchorEl, elId) {
   var el = document.getElementById(elId);
   if (!el) return;
   var alreadyOpen = (el.style.display === 'flex' || el.style.display === 'block');
-  document.querySelectorAll('[id^="hgSrc_"]').forEach(function(d){ d.style.display = 'none'; });
+  hgCloseAllSrcMenus();
   if (alreadyOpen) return;
   var r = anchorEl.getBoundingClientRect();
   el.style.display = 'block';
@@ -2249,6 +2299,14 @@ function hgOpenSrcMenu(anchorEl, elId) {
   if (top + elH > window.innerHeight - 8) top = r.top - elH - 4; // kalau kepotong di bawah, tampilkan di atas tombol
   el.style.left = left + 'px';
   el.style.top = top + 'px';
+  // Tutup otomatis begitu ada scroll (di mana pun, termasuk di dalam tabel) atau
+  // klik di luar dropdown — supaya tidak pernah "nyangkut" ketinggalan posisi.
+  _hgSrcMenuScrollHandler = function(ev){
+    if (ev.type === 'click' && (el.contains(ev.target) || anchorEl.contains(ev.target))) return;
+    hgCloseAllSrcMenus();
+  };
+  window.addEventListener('scroll', _hgSrcMenuScrollHandler, true);
+  document.addEventListener('click', _hgSrcMenuScrollHandler, true);
 }
 
 function hgHandleFiles(files, no, phase) {
@@ -2338,14 +2396,20 @@ function renderStepTableHtml(month) {
         '</select>'
       : '<input type="checkbox" '+(st.done?'checked':'')+' onchange="stepState['+s.no+'].done=this.checked" style="width:20px;height:20px;cursor:pointer">';
     var procBadge = s.proc ? ' <span style="font-size:10px;color:#c0392b;font-weight:700">&#9888; lihat prosedur</span>' : '';
+    // Step dengan evidenceMode:'single' (mis. Zero Adjustment, Validation, Reading HG
+    // After Calibration) tidak punya Before/After -- cuma 1 kolom Evidence gabungan
+    // (colspan 2), fotonya disimpan di array 'before' (array 'after' sengaja tidak
+    // dipakai sama sekali untuk step jenis ini).
+    var evidenceCells = (s.evidenceMode === 'single')
+      ? '<td colspan="2">'+hgEvidenceCellHtml(s.no,'before')+'</td>'
+      : '<td>'+hgEvidenceCellHtml(s.no,'before')+'</td>'+'<td>'+hgEvidenceCellHtml(s.no,'after')+'</td>';
     return '<tr>'+
       '<td style="text-align:center">'+s.no+'</td>'+
       '<td>'+safe(s.label)+procBadge+'</td>'+
       '<td id="hgRef_'+s.no+'" style="min-width:80px;color:var(--text3);font-size:11px;text-align:center">'+hgRefCellHtml(s)+'</td>'+
       '<td style="text-align:center"><input type="checkbox" '+(st.check?'checked':'')+' onchange="stepState['+s.no+'].check=this.checked" style="width:20px;height:20px;cursor:pointer"></td>'+
       '<td style="text-align:center">'+sparepartCell+'</td>'+
-      '<td>'+hgEvidenceCellHtml(s.no,'before')+'</td>'+
-      '<td>'+hgEvidenceCellHtml(s.no,'after')+'</td>'+
+      evidenceCells+
     '</tr>';
   }).join('');
   return '<div class="section-label" style="margin-top:8px">Table 5.3 — Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')</div>'+
