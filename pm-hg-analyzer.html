@@ -165,6 +165,7 @@ input[type="checkbox"]:checked::after {
       <div class="meta-field" style="max-width:230px;margin:0">
         <label style="font-size:11px;color:var(--text3)">Frequency</label>
         <select id="hgFreqSelect" onchange="hgSwitchTab(this.value)">
+          <option value="2M">2 Monthly</option>
           <option value="3M">3 Monthly</option>
           <option value="6M">6 Monthly</option>
           <option value="9M">9 Monthly</option>
@@ -1496,12 +1497,12 @@ function closePdfPreview() {
 /* freq: bulan-bulan di mana step ini muncul (3/6/9/12). replace: true => kolom
    "Sparepart Replacement" berupa dropdown Ready/Kosong. false => checkbox "Sudah Dikerjakan". */
 var STEP_DATA = [
-  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[3,6,9,12]},
+  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[2,3,6,9,12]},
   {no:2,  label:"Replace the particle protection filter (13) upstream from the photometer", ref:"", refImg:"assets/hg-step2-ref.png", replace:true,  freq:[3,6,9,12]},
   {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", refImg:"assets/hg-step3-ref.png", replace:true,  freq:[3,6,9,12], proc:'iodine'},
-  {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", refImg:"assets/hg-step4-ref.png", replace:false, freq:[3,6,9,12]},
+  {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", refImg:"assets/hg-step4-ref.png", replace:false, freq:[2,3,6,9,12]},
   {no:5,  label:"Adjust the flow at the needle valve (15)", ref:"", refImg:"assets/hg-step5-ref.png", replace:false, freq:[3,6,9,12]},
-  {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"Menu 32111", refImg:"", replace:false, freq:[3,6,9,12]},
+  {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"Menu 32111", refImg:"", replace:false, freq:[2,3,6,9,12]},
   {no:7,  label:"Rinse the wash bottles of the gas cooler (M1) with water", ref:"", refImg:"assets/hg-step7-ref.png", replace:false, freq:[6,12]},
   {no:8,  label:"Replace the reactor filling (A6.1 and A6.2)*", ref:"", refImg:"assets/hg-step8-ref.png", replace:true,  freq:[6,12], proc:'reactor'},
   {no:9,  label:"Replace the condensate blocking membrane (16)", ref:"", refImg:"assets/hg-step9-ref.png", replace:true,  freq:[6,12]},
@@ -1513,8 +1514,8 @@ var STEP_DATA = [
   {no:15, label:"Test the AC unit in accordance with the manufacturer's specifications", ref:"", refImg:"", replace:false, freq:[12]},
   {no:16, label:"Replace the hoses in the pumps (M31) for the HgCl\u2082", ref:"", refImg:"assets/hg-step16-ref.png", replace:true,  freq:[12]}
 ];
-var FREQ_MONTH = {'3M':3, '6M':6, '9M':9, '1Y':12};
-var FREQ_LABEL = {'3M':'3 Monthly', '6M':'6 Monthly', '9M':'9 Monthly', '1Y':'1 Yearly', '2Y':'2 Yearly', '5Y':'5 Yearly'};
+var FREQ_MONTH = {'2M':2, '3M':3, '6M':6, '9M':9, '1Y':12};
+var FREQ_LABEL = {'2M':'2 Monthly', '3M':'3 Monthly', '6M':'6 Monthly', '9M':'9 Monthly', '1Y':'1 Yearly', '2Y':'2 Yearly', '5Y':'5 Yearly'};
 
 /* ── DATA: Table 5.1 — Daily Routine Check (selalu tampil, statis) ── */
 var TABLE51 = [
