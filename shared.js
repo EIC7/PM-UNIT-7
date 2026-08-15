@@ -434,8 +434,8 @@ function dbShowSavingOverlay(show, msg, submsg) {
       ov = document.createElement('div');
       ov.id = 'dbSavingOverlay';
       ov.style.cssText = 'position:fixed;inset:0;background:#060a10;z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;transition:background-color 0.2s;overflow:hidden';
-      ov.innerHTML = '<div id="dbSavingGlowField" style="position:absolute;width:min(78vw,320px);height:min(78vw,320px);border-radius:50%;background:radial-gradient(ellipse at center, rgba(66,220,255,0.16) 0%, rgba(66,220,255,0) 70%);filter:blur(2px);animation:dbEicFieldPulse 2.6s ease-in-out infinite;pointer-events:none;z-index:0"></div>'
-        + '<div id="dbSavingSpinner" style="width:min(82vw,425px);height:min(82vw,425px);position:relative;margin-bottom:10px;z-index:1">'
+      ov.innerHTML = '<div id="dbSavingGlowField" style="position:absolute;width:min(92vw,440px);height:min(92vw,440px);border-radius:50%;background:radial-gradient(ellipse at center, rgba(66,220,255,0.16) 0%, rgba(66,220,255,0) 70%);filter:blur(2px);animation:dbEicFieldPulse 2.6s ease-in-out infinite;pointer-events:none;z-index:0"></div>'
+        + '<div id="dbSavingSpinner" style="width:min(96vw,560px);height:min(96vw,560px);position:relative;margin-bottom:10px;z-index:1">'
         +   '<svg id="dbSavingRingSvg" viewBox="0 0 320 320" style="width:100%;height:100%;display:block;overflow:visible">'
         +     '<defs><path id="dbBoltShape" d="M14 0 L2 20 L11 20 L8 40 L23 16 L13 16 Z"/></defs>'
         +     '<circle cx="160" cy="160" r="128" fill="none" stroke="#3ad4ff" stroke-width="1.5" stroke-dasharray="3 9" opacity="0.5" style="filter:drop-shadow(0 0 5px #35c9ff);transform-origin:160px 160px;animation:dbEicRingSpin 10s linear infinite"/>'
@@ -449,14 +449,14 @@ function dbShowSavingOverlay(show, msg, submsg) {
         +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(189.0,51.8) rotate(15) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:1.2s"/>'
         +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(257.0,104.0) rotate(60) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:1.4s"/>'
         +   '</svg>'
-        +   '<div id="dbSavingEicWrap" style="position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);display:flex;font-family:\'Arial Black\',Impact,-apple-system,sans-serif;font-weight:900;font-size:clamp(24px,7.5vw,32px);letter-spacing:2px;color:#eaffff">'
+        +   '<div id="dbSavingEicWrap" style="position:absolute;left:50%;top:32%;transform:translate(-50%,-50%);display:flex;font-family:\'Arial Black\',Impact,-apple-system,sans-serif;font-weight:900;font-size:clamp(24px,7.5vw,32px);letter-spacing:2px;color:#eaffff">'
         +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">E</span>'
         +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.15s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">I</span>'
         +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.3s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">C</span>'
         +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.45s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">7</span>'
         +   '</div>'
-        +   '<div id="dbSavingErrorIcon" style="display:none;position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:#e74c3c;color:#fff;font-size:26px;font-weight:700;align-items:center;justify-content:center;line-height:1">&#10005;</div>'
-        +   '<div id="dbSavingMsgGroup" style="position:absolute;left:50%;top:65%;transform:translate(-50%,-50%);width:64%;max-width:250px;text-align:center">'
+        +   '<div id="dbSavingErrorIcon" style="display:none;position:absolute;left:50%;top:32%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:#e74c3c;color:#fff;font-size:26px;font-weight:700;align-items:center;justify-content:center;line-height:1">&#10005;</div>'
+        +   '<div id="dbSavingMsgGroup" style="position:absolute;left:50%;top:63%;transform:translate(-50%,-50%);width:62%;max-width:320px;text-align:center">'
         +     '<div id="dbSavingOverlayMsg" style="font-size:clamp(11px,3.4vw,14px);font-weight:600;line-height:1.35"></div>'
         +     '<div id="dbSavingProgressWrap" style="width:100%;max-width:180px;height:6px;background:rgba(255,255,255,0.2);border-radius:5px;margin:10px auto 0;overflow:hidden;display:none">'
         +       '<div id="dbSavingProgressBar" style="height:100%;width:0%;background:#2ecc71;border-radius:5px;transition:width 0.12s linear"></div>'
