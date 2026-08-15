@@ -33,6 +33,9 @@
 .crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
 .crop-header-hint{font-size:10px;color:#8aab96}
 #cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+.crop-rotate-toolbar{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:6}
+.crop-rotate-btn{width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35)}
+.crop-rotate-btn:active{background:rgba(0,0,0,0.85)}
 #cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
 #cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
 .crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
@@ -246,6 +249,10 @@
         </div>
         <div id="cropWrap">
             <img id="cropImg" src="">
+            <div class="crop-rotate-toolbar">
+                <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(-1)" title="Putar gambar 90° ke kiri">&#8634;</button>
+                <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(1)" title="Putar gambar 90° ke kanan">&#8635;</button>
+            </div>
             <div id="cropBox">
                 <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
                 <div class="crop-handle sw"></div><div class="crop-handle se"></div>
@@ -1316,6 +1323,29 @@ function closeCropModal() {
     cropModalState.classList.remove('show');
     cropModalState._pending = null;
 }
+
+/* ── Fitur R: Rotasi gambar 90° kiri/kanan di dalam modal crop ──
+   dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise).
+   Gambar SUMBER (bukan cuma crop box) diputar lewat canvas, lalu hasilnya
+   dipasang balik ke #cropImg -- otomatis memicu ulang event onload yang sudah
+   ada, yang menyesuaikan ukuran/posisi gambar & crop box (termasuk mode
+   Preset/Manual dengan rasio terkunci). cropAndSave() menggambar dari elemen
+   #cropImg langsung, jadi hasil akhir crop otomatis ikut gambar yang sudah
+   diputar. */
+function rotateCropImage(dir) {
+    var img = document.getElementById('cropImg');
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(dir * 90 * Math.PI/180);
+    ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+    var rotatedUrl = canvas.toDataURL('image/jpeg', 0.95);
+    img.src = rotatedUrl; // memicu ulang img.onload -> refit gambar & crop box
+    if (cropModalState._pending) cropModalState._pending.dataUrl = rotatedUrl;
+}
 function cropReset() {
     var img = document.getElementById('cropImg');
     if (img && img.src) openCropModal(img.src, (cropModalState._cropWcm && cropModalState._cropHcm) ? {w:cropModalState._cropWcm,h:cropModalState._cropHcm} : null);
@@ -1403,26 +1433,75 @@ function nudgeImage(groupKey, imgIdx, delta) {
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function escAttr(s) { return String(s||'').replace(/"/g,'&quot;'); }
 
+var so2ReorderState = {};
+
+function so2ToggleReorder(groupKey) {
+    var st = so2ReorderState[groupKey] || (so2ReorderState[groupKey] = {active:false, selectedIdx:null});
+    st.active = !st.active;
+    st.selectedIdx = null;
+    renderPhotoGallery(groupKey, 'gallery-'+groupKey);
+}
+
+function so2SelectForReorder(groupKey, idx, checked) {
+    var st = so2ReorderState[groupKey] || (so2ReorderState[groupKey] = {active:false, selectedIdx:null});
+    st.selectedIdx = checked ? idx : null;
+    renderPhotoGallery(groupKey, 'gallery-'+groupKey);
+}
+
+function so2MoveImg(groupKey, dir) {
+    var st = so2ReorderState[groupKey];
+    if (!st || st.selectedIdx === null) return;
+    var arr = getPhotoArr(groupKey);
+    var i = st.selectedIdx, j = i + dir;
+    if (j < 0 || j >= arr.length) return;
+    // Caption di file ini sudah live-sync lewat oninput langsung ke array
+    // (tidak ada fungsi sync-dari-DOM terpisah), jadi aman langsung tukar
+    // posisi tanpa perlu sync manual dulu -- beda dari file lain yang masih
+    // pakai pola sync-sebelum-splice.
+    var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    st.selectedIdx = j;
+    renderPhotoGallery(groupKey, 'gallery-'+groupKey);
+}
+
 function renderPhotoGallery(groupKey, containerId) {
     var container = document.getElementById(containerId);
     if (!container) return;
     var arr = getPhotoArr(groupKey);
     if (!arr.length) { container.innerHTML = ''; return; }
+    var st = so2ReorderState[groupKey] || (so2ReorderState[groupKey] = {active:false, selectedIdx:null});
     var html = '<div class="img-gallery">';
     arr.forEach(function(img, imgIdx) {
         html += '<div class="img-thumb">';
-        html += '<img src="'+escAttr(img.dataUrl)+'" onclick="triggerUpload(\''+groupKey+'\','+imgIdx+',\'storage\')">';
+        html += '<img src="'+escAttr(img.dataUrl)+'" onclick="'+(st.active?'':'triggerUpload(\''+groupKey+'\','+imgIdx+',\'storage\')')+'">';
         if (img.widthCm && img.heightCm) html += '<span class="size-badge">'+img.widthCm+'×'+img.heightCm+'cm</span>';
-        html += '<button class="reedit" onclick="reEditCrop(\''+groupKey+'\','+imgIdx+')" title="Crop ulang">✂️</button>';
-        html += '<button class="del" onclick="deletePhoto(\''+groupKey+'\','+imgIdx+')">×</button>';
-        html += '<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">';
-        html += '<button type="button" onclick="nudgeImage(\''+groupKey+'\','+imgIdx+',-0.5)" title="Geser posisi gambar ini ke kiri di hasil PDF">◀</button>';
-        html += '<span>'+(img.offsetX||0)+'cm</span>';
-        html += '<button type="button" onclick="nudgeImage(\''+groupKey+'\','+imgIdx+',0.5)" title="Geser posisi gambar ini ke kanan di hasil PDF">▶</button>';
-        html += '</div></div>';
+        if (!st.active) {
+            html += '<button class="reedit" onclick="reEditCrop(\''+groupKey+'\','+imgIdx+')" title="Crop ulang">✂️</button>';
+            html += '<button class="del" onclick="deletePhoto(\''+groupKey+'\','+imgIdx+')">×</button>';
+        } else {
+            html += '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#2563eb);display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(st.selectedIdx===imgIdx?'checked':'')+' onchange="so2SelectForReorder(\''+groupKey+'\','+imgIdx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
+        }
+        if (!st.active) {
+            html += '<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">';
+            html += '<button type="button" onclick="nudgeImage(\''+groupKey+'\','+imgIdx+',-0.5)" title="Geser posisi gambar ini ke kiri di hasil PDF">◀</button>';
+            html += '<span>'+(img.offsetX||0)+'cm</span>';
+            html += '<button type="button" onclick="nudgeImage(\''+groupKey+'\','+imgIdx+',0.5)" title="Geser posisi gambar ini ke kanan di hasil PDF">▶</button>';
+            html += '</div></div>';
+        }
         html += '<input type="text" class="img-caption-input" placeholder="Keterangan" value="'+escAttr(img.caption||'')+'" oninput="getPhotoArr(\''+groupKey+'\')['+imgIdx+'].caption=this.value">';
         html += '</div>';
     });
+    if (arr.length > 1) {
+        html += '<div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px">';
+        html += '<button type="button" onclick="so2ToggleReorder(\''+groupKey+'\')" style="background:'+(st.active?'var(--ok,#16a34a)':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap">'+(st.active?'&#10003; Selesai':'&#128256; Urutkan Foto')+'</button>';
+        if (st.active && st.selectedIdx !== null) {
+            var atStart = st.selectedIdx <= 0, atEnd = st.selectedIdx >= arr.length - 1;
+            html += '<div style="display:flex;gap:4px">';
+            html += '<button type="button" '+(atStart?'disabled':'')+' onclick="so2MoveImg(\''+groupKey+'\',-1)" style="flex:1;opacity:'+(atStart?'0.4':'1')+'">&#9664; Kiri</button>';
+            html += '<button type="button" '+(atEnd?'disabled':'')+' onclick="so2MoveImg(\''+groupKey+'\',1)" style="flex:1;opacity:'+(atEnd?'0.4':'1')+'">Kanan &#9654;</button>';
+            html += '</div>';
+        }
+        html += '</div>';
+    }
     html += '</div>';
     container.innerHTML = html;
 }
