@@ -37,6 +37,9 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
 .crop-header-hint{font-size:10px;color:#8aab96}
 #cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+.crop-rotate-toolbar{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:6}
+.crop-rotate-btn{width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35)}
+.crop-rotate-btn:active{background:rgba(0,0,0,0.85)}
 #cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
 #cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
 .crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
@@ -180,6 +183,10 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
         </div>
         <div id="cropWrap">
             <img id="cropImg" src="">
+            <div class="crop-rotate-toolbar">
+                <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(-1)" title="Putar gambar 90° ke kiri">&#8634;</button>
+                <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(1)" title="Putar gambar 90° ke kanan">&#8635;</button>
+            </div>
             <div id="cropBox">
                 <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
                 <div class="crop-handle sw"></div><div class="crop-handle se"></div>
@@ -288,6 +295,22 @@ cropModalState._activePresetIdx = -1;
 cropModalState._lastRatioPresetIdx = -1; // ingat preset rasio (bukan 1:1) terakhir dipakai
 cropModalState._mode = 'default';
 cropModalState._presetRatio = 1;
+
+/* dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise). */
+function rotateCropImage(dir) {
+    var img = document.getElementById('cropImg');
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(dir * 90 * Math.PI/180);
+    ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+    var rotatedUrl = canvas.toDataURL('image/jpeg', 0.95);
+    img.src = rotatedUrl; // memicu ulang img.onload -> refit gambar & crop box
+    if (cropModalState._pending) cropModalState._pending.dataUrl = rotatedUrl;
+}
 
 var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
 var PRESET_DEFAULT_LONG_CM = 7;
@@ -1569,25 +1592,74 @@ function opHandleFiles(files, side) {
 }
 
 function opRenderPreviews(side) {
-  opSyncCaptions();
   var container=document.getElementById('opImgPreview'+side); if(!container)return;
   container.innerHTML='';
+  var st = opReorderState[side] || {active:false, selectedIdx:null};
   opImages[side].forEach(function(img,idx){
     if(!img||!img.name)return;
     var wrap=document.createElement('div'); wrap.style.cssText='position:relative;display:inline-block;text-align:center;width:112px';
     var isImg=IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
     var safe=function(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
     var thumb=isImg?'<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+safe(img.dataUrl)+'" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="imgReEditOp(\''+side+'\','+idx+')" title="Klik crop ulang"></div>':'<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
-    var cropBtn=isImg?'<button onclick="imgReEditOp(\''+side+'\','+idx+')" style="position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>':'';
+    var cropBtn=(isImg && !st.active)?'<button onclick="imgReEditOp(\''+side+'\','+idx+')" style="position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>':'';
     var nudgeHtml=isImg?('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">'+
       '<button type="button" onclick="nudgeImageInArray(opImages[\''+side+'\'],'+idx+',-0.5,function(){opRenderPreviews(\''+side+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>'+
       '<span>'+(img.offsetX||0)+'cm</span>'+
       '<button type="button" onclick="nudgeImageInArray(opImages[\''+side+'\'],'+idx+',0.5,function(){opRenderPreviews(\''+side+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>'+
       '</div></div>'):'';
-    wrap.innerHTML=thumb+cropBtn+'<button onclick="opRemoveImg(\''+side+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button><div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+nudgeHtml+'<input id="opCap_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="opImages[\''+side+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+    var actionBtn = !st.active
+      ? '<button onclick="opRemoveImg(\''+side+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
+      : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #2563eb;display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="opSelectForReorder(\''+side+'\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
+    wrap.innerHTML=thumb+cropBtn+actionBtn+'<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+nudgeHtml+'<input id="opCap_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="opImages[\''+side+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
+  if (opImages[side].length > 1) {
+    var ctrl=document.createElement('div');
+    ctrl.style.cssText='display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px';
+    var toggleBtn=document.createElement('button');
+    toggleBtn.type='button'; toggleBtn.textContent = st.active ? '✓ Selesai' : '🔀 Urutkan Foto';
+    toggleBtn.style.cssText='background:'+(st.active?'#16a34a':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap';
+    toggleBtn.onclick=function(){ opToggleReorder(side); };
+    ctrl.appendChild(toggleBtn);
+    if (st.active && st.selectedIdx !== null) {
+      var arrows=document.createElement('div'); arrows.style.cssText='display:flex;gap:4px';
+      var atStart=st.selectedIdx<=0, atEnd=st.selectedIdx>=opImages[side].length-1;
+      var leftBtn=document.createElement('button');
+      leftBtn.type='button'; leftBtn.textContent='◀ Kiri'; leftBtn.disabled=atStart;
+      leftBtn.style.cssText='flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atStart?'default':'pointer')+';opacity:'+(atStart?'0.4':'1');
+      leftBtn.onclick=function(){ opMoveImg(side,-1); };
+      var rightBtn=document.createElement('button');
+      rightBtn.type='button'; rightBtn.textContent='Kanan ▶'; rightBtn.disabled=atEnd;
+      rightBtn.style.cssText='flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atEnd?'default':'pointer')+';opacity:'+(atEnd?'0.4':'1');
+      rightBtn.onclick=function(){ opMoveImg(side,1); };
+      arrows.appendChild(leftBtn); arrows.appendChild(rightBtn);
+      ctrl.appendChild(arrows);
+    }
+    container.appendChild(ctrl);
+  }
   updateSizeIndicator('op', side);
+}
+var opReorderState = {};
+function opToggleReorder(side){
+  var st = opReorderState[side] || (opReorderState[side] = {active:false, selectedIdx:null});
+  st.active = !st.active;
+  st.selectedIdx = null;
+  opRenderPreviews(side);
+}
+function opSelectForReorder(side, idx, checked){
+  var st = opReorderState[side] || (opReorderState[side] = {active:false, selectedIdx:null});
+  st.selectedIdx = checked ? idx : null;
+  opRenderPreviews(side);
+}
+function opMoveImg(side, dir){
+  var st = opReorderState[side];
+  if (!st || st.selectedIdx === null) return;
+  var arr = opImages[side];
+  var i = st.selectedIdx, j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp; // swap 1 object utuh — caption/crop/offset ikut
+  st.selectedIdx = j;
+  opRenderPreviews(side);
 }
 
 function opSyncCaptions() {
@@ -1596,8 +1668,8 @@ function opSyncCaptions() {
   });
 }
 
-function imgReEditOp(side,idx){ var img=opImages[side][idx]; imgOpenCropper(img.dataUrl,img.name,img.type,opImages[side],side,'op',idx); }
-function opRemoveImg(side,idx){ opImages[side].splice(idx,1); opRenderPreviews(side); }
+function imgReEditOp(side,idx){ opSyncCaptions(); var img=opImages[side][idx]; imgOpenCropper(img.dataUrl,img.name,img.type,opImages[side],side,'op',idx); }
+function opRemoveImg(side,idx){ opSyncCaptions(); opImages[side].splice(idx,1); opRenderPreviews(side); }
 
 function opReset() {
   if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
