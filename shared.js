@@ -433,9 +433,10 @@ function dbShowSavingOverlay(show, msg, submsg) {
     if (!ov) {
       ov = document.createElement('div');
       ov.id = 'dbSavingOverlay';
-      ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;transition:background-color 0.2s';
-      ov.innerHTML = '<div id="dbSavingSpinner" style="width:170px;height:170px;position:relative;margin-bottom:14px">'
-        +   '<svg viewBox="0 0 320 320" style="width:100%;height:100%;display:block;overflow:visible">'
+      ov.style.cssText = 'position:fixed;inset:0;background:#060a10;z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;transition:background-color 0.2s;overflow:hidden';
+      ov.innerHTML = '<div id="dbSavingGlowField" style="position:absolute;width:min(78vw,320px);height:min(78vw,320px);border-radius:50%;background:radial-gradient(ellipse at center, rgba(66,220,255,0.16) 0%, rgba(66,220,255,0) 70%);filter:blur(2px);animation:dbEicFieldPulse 2.6s ease-in-out infinite;pointer-events:none;z-index:0"></div>'
+        + '<div id="dbSavingSpinner" style="width:min(82vw,425px);height:min(82vw,425px);position:relative;margin-bottom:10px;z-index:1">'
+        +   '<svg id="dbSavingRingSvg" viewBox="0 0 320 320" style="width:100%;height:100%;display:block;overflow:visible">'
         +     '<defs><path id="dbBoltShape" d="M14 0 L2 20 L11 20 L8 40 L23 16 L13 16 Z"/></defs>'
         +     '<circle cx="160" cy="160" r="128" fill="none" stroke="#3ad4ff" stroke-width="1.5" stroke-dasharray="3 9" opacity="0.5" style="filter:drop-shadow(0 0 5px #35c9ff);transform-origin:160px 160px;animation:dbEicRingSpin 10s linear infinite"/>'
         +     '<circle cx="160" cy="160" r="112" fill="none" stroke="#3ad4ff" stroke-width="2.5" style="filter:drop-shadow(0 0 5px #35c9ff) drop-shadow(0 0 14px #0aa8ff);animation:dbEicRingPulse 2s ease-in-out infinite"/>'
@@ -448,21 +449,23 @@ function dbShowSavingOverlay(show, msg, submsg) {
         +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(189.0,51.8) rotate(15) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:1.2s"/>'
         +     '<use href="#dbBoltShape" fill="#cdf9ff" transform="translate(257.0,104.0) rotate(60) scale(1.3) translate(-11.5,-20)" style="filter:drop-shadow(0 0 4px #9fefff) drop-shadow(0 0 10px #35c9ff);animation:dbEicBoltPulse 1.6s ease-in-out infinite;animation-delay:1.4s"/>'
         +   '</svg>'
-        +   '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:\'Arial Black\',Impact,-apple-system,sans-serif;font-weight:900;font-size:28px;letter-spacing:2px;color:#eaffff">'
+        +   '<div id="dbSavingEicWrap" style="position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);display:flex;font-family:\'Arial Black\',Impact,-apple-system,sans-serif;font-weight:900;font-size:clamp(24px,7.5vw,32px);letter-spacing:2px;color:#eaffff">'
         +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">E</span>'
         +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.15s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">I</span>'
         +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.3s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">C</span>'
         +     '<span style="display:inline-block;animation:dbEicFlicker 2.4s infinite;animation-delay:0.45s;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff,0 0 24px #0aa8ff">7</span>'
         +   '</div>'
+        +   '<div id="dbSavingErrorIcon" style="display:none;position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:#e74c3c;color:#fff;font-size:26px;font-weight:700;align-items:center;justify-content:center;line-height:1">&#10005;</div>'
+        +   '<div id="dbSavingMsgGroup" style="position:absolute;left:50%;top:65%;transform:translate(-50%,-50%);width:64%;max-width:250px;text-align:center">'
+        +     '<div id="dbSavingOverlayMsg" style="font-size:clamp(11px,3.4vw,14px);font-weight:600;line-height:1.35"></div>'
+        +     '<div id="dbSavingProgressWrap" style="width:100%;max-width:180px;height:6px;background:rgba(255,255,255,0.2);border-radius:5px;margin:10px auto 0;overflow:hidden;display:none">'
+        +       '<div id="dbSavingProgressBar" style="height:100%;width:0%;background:#2ecc71;border-radius:5px;transition:width 0.12s linear"></div>'
+        +     '</div>'
+        +     '<div id="dbSavingProgressPct" style="font-size:12px;font-weight:700;color:#fff;margin-top:5px;display:none"></div>'
+        +     '<div id="dbSavingOverlaySub" style="font-size:clamp(9px,2.8vw,11px);font-weight:400;margin-top:8px;color:rgba(255,255,255,0.75);line-height:1.3"></div>'
+        +   '</div>'
         + '</div>'
-        + '<div id="dbSavingErrorIcon" style="display:none;width:44px;height:44px;border-radius:50%;background:#e74c3c;color:#fff;font-size:24px;font-weight:700;align-items:center;justify-content:center;margin-bottom:14px;line-height:1">&#10005;</div>'
-        + '<div id="dbSavingOverlayMsg" style="font-size:14px;font-weight:600;text-align:center;padding:0 20px"></div>'
-        + '<div id="dbSavingProgressWrap" style="width:220px;max-width:70vw;height:7px;background:rgba(255,255,255,0.2);border-radius:5px;margin-top:12px;overflow:hidden;display:none">'
-        +   '<div id="dbSavingProgressBar" style="height:100%;width:0%;background:#2ecc71;border-radius:5px;transition:width 0.12s linear"></div>'
-        + '</div>'
-        + '<div id="dbSavingProgressPct" style="font-size:13px;font-weight:700;color:#fff;margin-top:6px;display:none"></div>'
-        + '<div id="dbSavingOverlaySub" style="font-size:12px;font-weight:400;text-align:center;padding:10px 30px 0;color:rgba(255,255,255,0.75)"></div>'
-        + '<div id="dbSavingOverlayTapHint" style="display:none;font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);margin-top:18px;letter-spacing:0.3px">Tap dimana saja untuk menutup</div>';
+        + '<div id="dbSavingOverlayTapHint" style="display:none;font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);margin-top:14px;letter-spacing:0.3px;z-index:1">Tap dimana saja untuk menutup</div>';
       document.body.appendChild(ov);
       // Tap-to-close HANYA berfungsi kalau overlay lagi dalam mode error
       // (ov._isError === true) -- supaya overlay TIDAK bisa ke-tap-tutup
@@ -477,7 +480,8 @@ function dbShowSavingOverlay(show, msg, submsg) {
           + '@keyframes dbEicRingSpin{to{transform:rotate(360deg)}}'
           + '@keyframes dbEicRingPulse{0%,100%{stroke-opacity:0.55}50%{stroke-opacity:1}}'
           + '@keyframes dbEicBoltPulse{0%,100%{opacity:0.6}50%{opacity:1}}'
-          + '@keyframes dbEicFlicker{0%,92%,100%{opacity:1}93%{opacity:0.35}95%{opacity:1}96%{opacity:0.5}98%{opacity:1}}';
+          + '@keyframes dbEicFlicker{0%,92%,100%{opacity:1}93%{opacity:0.35}95%{opacity:1}96%{opacity:0.5}98%{opacity:1}}'
+          + '@keyframes dbEicFieldPulse{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}';
         document.head.appendChild(style);
       }
     }
@@ -488,8 +492,9 @@ function dbShowSavingOverlay(show, msg, submsg) {
     // mode error (mestinya sudah ditutup manual, tapi ini pengaman tambahan).
     ov._isError = false;
     ov.style.cursor = 'default';
-    ov.style.backgroundColor = 'rgba(0,0,0,0.5)';
-    document.getElementById('dbSavingSpinner').style.display = 'block';
+    ov.style.backgroundColor = '#060a10';
+    document.getElementById('dbSavingRingSvg').style.display = 'block';
+    document.getElementById('dbSavingEicWrap').style.display = 'flex';
     document.getElementById('dbSavingErrorIcon').style.display = 'none';
     document.getElementById('dbSavingOverlayTapHint').style.display = 'none';
     ov.style.display = 'flex';
@@ -517,8 +522,9 @@ function dbShowSavingOverlayError(msg, submsg) {
   dbSetSavingProgress(null);
   ov._isError = true;
   ov.style.cursor = 'pointer';
-  ov.style.backgroundColor = 'rgba(80,0,0,0.7)'; // semburat merah gelap, beda dari overlay normal
-  document.getElementById('dbSavingSpinner').style.display = 'none';
+  ov.style.backgroundColor = '#1a0505'; // semburat merah gelap solid, beda dari overlay normal
+  document.getElementById('dbSavingRingSvg').style.display = 'none';
+  document.getElementById('dbSavingEicWrap').style.display = 'none';
   document.getElementById('dbSavingErrorIcon').style.display = 'flex';
   document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Terjadi kesalahan, proses tidak selesai.';
   document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
