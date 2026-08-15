@@ -2050,6 +2050,17 @@ initReportBackground();
    COLLECT DATA
    ══════════════════════════════════════════════════════════════ */
 function val(id){ var el=document.getElementById(id); return el ? el.value : ''; }
+// Ambil SATU bagian buat nama file PDF -- kalau field-nya berisi beberapa baris
+// (misal diisi lebih dari satu nomor), yang dipakai cuma baris PALING DEPAN/PERTAMA.
+// Karakter yang tidak valid di nama file dibuang, spasi dirapikan jadi tanpa-spasi.
+function pdfNamePart(s, maxLen) {
+  s = String(s || '').trim();
+  s = s.split(/\r?\n/)[0] || '';
+  s = s.replace(/[\\\/:*?"<>|]/g, '');
+  s = s.replace(/\s+/g, '');
+  if (maxLen && s.length > maxLen) s = s.substring(0, maxLen);
+  return s;
+}
 function chk(id){ var el=document.getElementById(id); return el ? el.checked : false; }
 
 function collectOptical(prefix){
@@ -2499,7 +2510,7 @@ function exportPdf(){
     }
 
     if (typeof hideImgLoading === 'function') hideImgLoading();
-    var fn = 'CEMS_Calibration_U7_'+(d.meta.tanggal||'draft')+'.pdf';
+    var fn = (pdfNamePart(d.meta.workorder,30)||'NoWO')+'_'+(pdfNamePart(d.meta.asset,25)||'NoAsset')+'_'+(pdfNamePart(d.meta.descAsset,40)||'NoDesc')+'.pdf';
     if (typeof showPdfPreview === 'function') { showPdfPreview(doc, fn); }
     else { doc.save(fn); }
   } catch (err) {
