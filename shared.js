@@ -129,13 +129,35 @@ function supaFetch(method, path, body) {
     });
 }
 
+/* ── UKURAN BYTE (UTF-8) DARI STRING ──
+   Dipakai buat ngukur ukuran payload JSON yang beneran mau dikirim, supaya
+   nanti pas dbLoad progress-nya bisa dihitung dari ukuran ASLI (bukan
+   estimasi), meski respons Supabase gzip/chunked dan lengthComputable
+   selalu false. */
+function _dbByteLength(str) {
+  if (window.TextEncoder) return new TextEncoder().encode(str).length;
+  return unescape(encodeURIComponent(str)).length; // fallback browser lama
+}
+
 /* ── SUPA FETCH DENGAN PROGRESS (XMLHttpRequest) ──
    fetch() tidak punya event progress bawaan utk upload (kirim data), jadi
    dipakai XHR khusus di sini supaya dbSave (upload) & dbLoad (download) bisa
    nampilin progress asli 0-100% berdasarkan ukuran data beneran, bukan
    animasi kira-kira. onProgress(percent, phase) dipanggil berkali-kali
-   selama transfer; phase = 'upload' atau 'download'. */
-function supaFetchProgress(method, path, body, onProgress) {
+   selama transfer; phase = 'upload' atau 'download'.
+
+   expectedTotal (opsional) = ukuran byte ASLI (uncompressed) dari payload
+   yang sudah kita tahu duluan (disimpan sebagai kolom payload_size waktu
+   dbSave). Kalau diisi, progress download dihitung manual dari e.loaded
+   (jumlah byte yang sudah diterima -- ini SELALU ada di event progress,
+   walau lengthComputable false) dibagi expectedTotal, karena Supabase GET
+   selalu dikirim gzip/chunked sehingga lengthComputable bawaan browser
+   tidak pernah true. Dibatasi maksimal 97% selama transfer (baru dipaksa
+   100% pas xhr.onload) sebab byte yang lewat jaringan = ukuran ter-gzip,
+   biasanya LEBIH KECIL dari expectedTotal (ukuran JSON asli sebelum
+   dikompres), jadi kalau tidak dibatasi progress bisa "mentok" duluan
+   sebelum respons beneran selesai diterima. */
+function supaFetchProgress(method, path, body, onProgress, expectedTotal) {
   return new Promise(function(resolve, reject) {
     var xhr = new XMLHttpRequest();
     xhr.open(method, SUPA_URL + '/rest/v1/' + path, true);
@@ -150,11 +172,17 @@ function supaFetchProgress(method, path, body, onProgress) {
     }
     if (onProgress) {
       xhr.onprogress = function(e) {
-        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100), 'download');
+        if (expectedTotal) {
+          var p = Math.min(97, Math.round((e.loaded / expectedTotal) * 100));
+          onProgress(p, 'download');
+        } else if (e.lengthComputable) {
+          onProgress(Math.round((e.loaded / e.total) * 100), 'download');
+        }
       };
     }
     xhr.onload = function() {
       if (xhr.status >= 200 && xhr.status < 300) {
+        if (onProgress) onProgress(100, 'download'); // paksa 100% begitu respons full diterima
         var text = xhr.responseText;
         try { resolve(text ? JSON.parse(text) : []); }
         catch (e) { resolve([]); }
@@ -405,9 +433,18 @@ function dbShowToast(msg) {
 /* ── DB LOAD (satu record by ID) ── */
 function dbLoad(id, callback) {
   dbShowSavingOverlay(true, 'Memuat data, mohon tunggu...', 'Data dengan banyak gambar membutuhkan waktu yang lama');
-  supaFetchProgress('GET', SUPA_TABLE + '?id=eq.' + id + '&limit=1', null, function(percent, phase) {
-    if (phase === 'download') dbReportRealProgress(percent);
-  })
+  // Step 1: query ringan buat ambil payload_size (ukuran asli data) duluan,
+  // supaya progress bar di step 2 bisa dihitung dari ukuran ASLI -- bukan
+  // simulasi -- walau Supabase GET selalu gzip/chunked (lengthComputable browser
+  // gak pernah true). Kalau record lama belum punya payload_size (null),
+  // otomatis fallback ke simulasi asymptotic seperti biasa.
+  supaFetch('GET', SUPA_TABLE + '?id=eq.' + id + '&select=payload_size&limit=1')
+    .then(function(sizeRows) {
+      var expectedSize = (sizeRows && sizeRows[0] && sizeRows[0].payload_size) ? sizeRows[0].payload_size : null;
+      return supaFetchProgress('GET', SUPA_TABLE + '?id=eq.' + id + '&limit=1', null, function(percent, phase) {
+        if (phase === 'download') dbReportRealProgress(percent);
+      }, expectedSize);
+    })
     .then(function(rows) {
       if (rows && rows[0]) { dbShowSavingOverlay(false); callback(rows[0]); }
       else dbShowSavingOverlayError('Data tidak ditemukan.', 'Kemungkinan data sudah dihapus atau ID tidak valid.');
@@ -604,6 +641,11 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
     existingId = (typeof arg2 === 'string' && arg2.length > 10) ? arg2 : (window._editingId || null);
     callback = null;
   }
+  // Hitung ukuran byte ASLI (uncompressed) dari payload sebelum dikirim, dan
+  // simpan sebagai payload_size di record itu sendiri. Nanti dbLoad baca
+  // angka ini duluan supaya progress bar loading bisa dihitung dari ukuran
+  // data yang SEBENARNYA, bukan simulasi kira-kira.
+  rec.payload_size = _dbByteLength(JSON.stringify(rec));
   var btn = null;
   try { btn = event && event.target && event.target.tagName === 'BUTTON' ? event.target : null; } catch(e){}
   var origText = btn ? btn.innerHTML : '';
