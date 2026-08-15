@@ -93,6 +93,22 @@
 .o2-job-title-text{font-size:16px;font-weight:700;color:var(--steel);line-height:1.4}
 .o2-job-title-text span{font-weight:500;font-size:13px;color:var(--text2)}
 .o2-channel-card{background:var(--bg2,#dde3de);border:1px solid var(--border);border-radius:8px;padding:14px}
+.o2-readings-wrap{margin-bottom:18px}
+.o2-readings-title{font-size:13px;font-weight:700;color:var(--steel);margin-bottom:8px}
+.o2-readings-table,.o2-avg-table{width:100%;border-collapse:separate;border-spacing:0;font-size:clamp(10px,1.2vw,13px);background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--panel-border)}
+.o2-readings-table th{background:#159957;color:#fff;font-weight:700;padding:9px 10px;text-align:center;white-space:nowrap}
+.o2-readings-table th:first-child,.o2-readings-table td:first-child{text-align:left}
+.o2-readings-table td{padding:7px 8px;border-top:1px solid rgba(180,200,220,0.35);text-align:center;color:var(--text)}
+.o2-readings-table tr:nth-child(even) td{background:#f4f7f6}
+.o2-readings-table td:first-child{font-weight:700;color:var(--steel)}
+.o2-readings-table input{width:100%;min-width:56px;box-sizing:border-box;border:1.5px solid var(--panel-border);border-radius:5px;padding:5px 6px;font-family:'Courier New',monospace;font-size:12px;text-align:center;color:var(--text)}
+.o2-readings-table input:focus{outline:none;border-color:#159957;background:#f0fbf5}
+.o2-avg-table th{background:#6366f1;color:#fff;font-weight:700;padding:9px 12px;text-align:center;white-space:nowrap}
+.o2-avg-table th:first-child,.o2-avg-table td:first-child{text-align:left}
+.o2-avg-table td{padding:9px 12px;border-top:1px solid rgba(180,200,220,0.35);text-align:center;color:var(--text)}
+.o2-avg-table tr:nth-child(even) td{background:#f4f5fe}
+.o2-avg-table td:first-child{font-weight:700;color:var(--steel)}
+.o2-avg-table td.o2-avg-val{font-family:'Courier New',monospace;font-weight:700}
 .o2-channel-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;flex-wrap:wrap}
 .o2-channel-head-num{font-size:14px;font-weight:700;color:var(--steel);white-space:nowrap}
 .o2-channel-tag-input{flex:1;min-width:140px;border:1px solid var(--panel-border);border-radius:6px;padding:6px 9px;font-size:12px;background:#fff;color:var(--text)}
@@ -165,6 +181,29 @@
     <div class="o2-session-tabs">
       <button type="button" class="o2-session-tab active" id="o2TabInlet" onclick="o2SwitchSession('inlet')">🔵 Inlet (8 Channel)</button>
       <button type="button" class="o2-session-tab" id="o2TabOutlet" onclick="o2SwitchSession('outlet')">🟢 Outlet (6 Channel)</button>
+    </div>
+    <div id="o2OutletReadingsWrap" style="display:none">
+      <div class="o2-readings-wrap">
+        <div class="o2-readings-title">📊 Channel Readings</div>
+        <div style="overflow-x:auto">
+          <table class="o2-readings-table" id="o2ReadingsTable">
+            <thead><tr>
+              <th>Channel</th><th>O2 (%)<br>Before</th><th>O2 (%)<br>After</th>
+              <th>Voltage (mV)</th><th>Temp (°C)</th><th>Lifetime (months)</th><th>Resistance (Ohm)</th>
+            </tr></thead>
+            <tbody><!-- built by JS: buildO2ReadingsTables() --></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="o2-readings-wrap">
+        <div class="o2-readings-title">📈 Average O2 Readings</div>
+        <div style="overflow-x:auto">
+          <table class="o2-avg-table" id="o2AvgTable">
+            <thead><tr><th>Channel Group</th><th>Average O2 (%)<br>Before</th><th>Average O2 (%)<br>After</th></tr></thead>
+            <tbody><!-- built by JS: buildO2ReadingsTables() --></tbody>
+          </table>
+        </div>
+      </div>
     </div>
     <div id="o2ChannelGrid" style="display:flex;flex-direction:column;gap:16px"></div>
     <div id="o2ChannelGridOutlet" style="display:none;flex-direction:column;gap:16px"></div>
@@ -1507,7 +1546,67 @@ var O2_OUTLET_CHANNELS = [
   {id:6, tag:'7BG-AI-571B - SECONDARY AIR HEATER 7B GAS OUT O2 ANALYZER 2'}
 ];
 
-// o2Images['ch1'] = {evidence:[], before:[], after:[]}  — tiap array isi {name,dataUrl,type,caption,offsetX?,widthCm?,heightCm?}
+// o2Readings['och'+id] = {before:'', after:'', voltage:'', temp:'', lifetime:'', resistance:''}
+// Hanya dipakai untuk sesi Outlet (2 tabel di atas dokumentasi per channel).
+var o2Readings = {};
+O2_OUTLET_CHANNELS.forEach(function(c){ o2Readings['och'+c.id] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''}; });
+
+// Pengelompokan untuk tabel "Average O2 Readings" — id merujuk ke O2_OUTLET_CHANNELS.id
+var O2_OUTLET_AVG_GROUPS = [
+  {label:'Secondary A (570A + 571A)', ids:[1,2]},
+  {label:'Primary (572 + 573)', ids:[3,4]},
+  {label:'Secondary B (570B + 571B)', ids:[5,6]}
+];
+
+function o2ReadingsChannelCode(tag) {
+  var raw = String(tag||'').trim();
+  var sep = raw.indexOf('—') >= 0 ? '—' : (raw.indexOf(' - ') >= 0 ? ' - ' : null);
+  return sep ? raw.substring(0, raw.indexOf(sep)).trim() : raw;
+}
+
+function buildO2ReadingsTables() {
+  var tbody = document.querySelector('#o2ReadingsTable tbody');
+  if (!tbody || tbody.children.length > 0) return;
+  tbody.innerHTML = O2_OUTLET_CHANNELS.map(function(c){
+    var ck = 'och'+c.id;
+    var code = o2ReadingsChannelCode(c.tag);
+    return '<tr>'+
+      '<td>'+code+'</td>'+
+      '<td><input type="number" step="0.01" id="o2rd_'+ck+'_before" oninput="o2UpdateReading(\''+ck+'\',\'before\',this.value)"></td>'+
+      '<td><input type="number" step="0.01" id="o2rd_'+ck+'_after" oninput="o2UpdateReading(\''+ck+'\',\'after\',this.value)"></td>'+
+      '<td><input type="number" step="0.1" id="o2rd_'+ck+'_voltage" oninput="o2UpdateReading(\''+ck+'\',\'voltage\',this.value)"></td>'+
+      '<td><input type="number" step="1" id="o2rd_'+ck+'_temp" oninput="o2UpdateReading(\''+ck+'\',\'temp\',this.value)"></td>'+
+      '<td><input type="number" step="1" id="o2rd_'+ck+'_lifetime" oninput="o2UpdateReading(\''+ck+'\',\'lifetime\',this.value)"></td>'+
+      '<td><input type="number" step="1" id="o2rd_'+ck+'_resistance" oninput="o2UpdateReading(\''+ck+'\',\'resistance\',this.value)"></td>'+
+    '</tr>';
+  }).join('');
+
+  var avgBody = document.querySelector('#o2AvgTable tbody');
+  if (avgBody && avgBody.children.length === 0) {
+    avgBody.innerHTML = O2_OUTLET_AVG_GROUPS.map(function(g,i){
+      return '<tr><td>'+g.label+'</td><td class="o2-avg-val" id="o2avg_'+i+'_before">—</td><td class="o2-avg-val" id="o2avg_'+i+'_after">—</td></tr>';
+    }).join('');
+  }
+}
+
+function o2UpdateReading(ck, field, val) {
+  if (!o2Readings[ck]) o2Readings[ck] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''};
+  o2Readings[ck][field] = val;
+  if (field === 'before' || field === 'after') o2RecalcAvg();
+}
+
+function o2RecalcAvg() {
+  O2_OUTLET_AVG_GROUPS.forEach(function(g, i){
+    ['before','after'].forEach(function(field){
+      var vals = g.ids.map(function(id){ var r = o2Readings['och'+id]; var v = r ? parseFloat(r[field]) : NaN; return v; }).filter(function(v){ return !isNaN(v); });
+      var el = document.getElementById('o2avg_'+i+'_'+field);
+      if (!el) return;
+      el.textContent = vals.length ? (vals.reduce(function(a,b){return a+b;},0) / g.ids.length).toFixed(2) : '—';
+    });
+  });
+}
+
+
 // Inlet pakai prefix 'ch', Outlet pakai prefix 'och' (supaya tidak bentrok)
 var o2Images = {};
 O2_CHANNELS.forEach(function(c){ o2Images['ch'+c.id] = {evidence:[], before:[], after:[]}; });
@@ -1550,13 +1649,16 @@ function o2SetSelectedFreq(list) {
 function o2SwitchSession(session) {
   var gridIn = document.getElementById('o2ChannelGrid');
   var gridOut = document.getElementById('o2ChannelGridOutlet');
+  var readingsWrap = document.getElementById('o2OutletReadingsWrap');
   var tabIn = document.getElementById('o2TabInlet');
   var tabOut = document.getElementById('o2TabOutlet');
   if (session === 'outlet') {
     gridIn.style.display = 'none'; gridOut.style.display = 'flex';
+    if (readingsWrap) readingsWrap.style.display = 'block';
     tabIn.classList.remove('active'); tabOut.classList.add('active');
   } else {
     gridOut.style.display = 'none'; gridIn.style.display = 'flex';
+    if (readingsWrap) readingsWrap.style.display = 'none';
     tabOut.classList.remove('active'); tabIn.classList.add('active');
   }
 }
@@ -2011,6 +2113,52 @@ function downloadPdf(){
       }
 
       printChannelGroup(O2_CHANNELS, 'ch', 'DOKUMENTASI PER CHANNEL — INLET (8 CHANNEL)');
+
+      // Tabel Channel Readings & Average O2 Readings (Outlet) — tampil sebelum
+      // dokumentasi per channel Outlet (evidence/before/after), sama urutannya
+      // seperti di layar form.
+      var anyOutletReading = O2_OUTLET_CHANNELS.some(function(c){
+        var r = o2Readings['och'+c.id];
+        return r && (r.before || r.after || r.voltage || r.temp || r.lifetime || r.resistance);
+      });
+      if (anyOutletReading) {
+        checkPage(16);
+        secHeader('CHANNEL READINGS — OUTLET');
+        doc.autoTable({
+          startY: y, theme: 'grid', styles: { fontSize: 8, cellPadding: 2, halign: 'center' },
+          margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
+          headStyles: { fillColor: [21, 153, 87], textColor: [255,255,255], fontStyle: 'bold' },
+          columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+          head: [['Channel','O2 (%)\nBefore','O2 (%)\nAfter','Voltage (mV)','Temp (°C)','Lifetime (months)','Resistance (Ohm)']],
+          body: O2_OUTLET_CHANNELS.map(function(c){
+            var r = o2Readings['och'+c.id] || {};
+            var dash = function(v){ return (v===undefined||v===null||v==='') ? '—' : safe(v); };
+            return [safe(o2ReadingsChannelCode(c.tag)), dash(r.before), dash(r.after), dash(r.voltage), dash(r.temp), dash(r.lifetime), dash(r.resistance)];
+          }),
+          willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+
+        checkPage(16);
+        secHeader('AVERAGE O2 READINGS — OUTLET');
+        doc.autoTable({
+          startY: y, theme: 'grid', styles: { fontSize: 8.5, cellPadding: 2.5, halign: 'center' },
+          margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
+          headStyles: { fillColor: [99, 102, 241], textColor: [255,255,255], fontStyle: 'bold' },
+          columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+          head: [['Channel Group','Average O2 (%) Before','Average O2 (%) After']],
+          body: O2_OUTLET_AVG_GROUPS.map(function(g,i){
+            var read = function(field){
+              var vals = g.ids.map(function(id){ var r=o2Readings['och'+id]; var v=r?parseFloat(r[field]):NaN; return v; }).filter(function(v){return !isNaN(v);});
+              return vals.length ? (vals.reduce(function(a,b){return a+b;},0)/g.ids.length).toFixed(2) : '—';
+            };
+            return [safe(g.label), read('before'), read('after')];
+          }),
+          willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
+
       printChannelGroup(O2_OUTLET_CHANNELS, 'och', 'DOKUMENTASI PER CHANNEL — OUTLET (6 CHANNEL)');
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2085,7 +2233,7 @@ function dbCollectData(modul) {
     pic: header.pic,
     work_order: (header.workorder && header.workorder !== '—') ? header.workorder : '',
     unit: 'Unit 7',
-    data: { header: header, channels: channels }
+    data: { header: header, channels: channels, outletReadings: o2Readings }
   };
 }
 
@@ -2146,6 +2294,20 @@ function applyRecordToForm(rec, editingId) {
     restoreChannelData(O2_OUTLET_CHANNELS, 'och');
     o2UpdateAssetFromChannels();
   }
+
+  if (data.outletReadings) {
+    O2_OUTLET_CHANNELS.forEach(function(c){
+      var ck = 'och'+c.id;
+      var r = data.outletReadings[ck];
+      if (!r) return;
+      o2Readings[ck] = {before:r.before||'',after:r.after||'',voltage:r.voltage||'',temp:r.temp||'',lifetime:r.lifetime||'',resistance:r.resistance||''};
+      ['before','after','voltage','temp','lifetime','resistance'].forEach(function(field){
+        var el = document.getElementById('o2rd_'+ck+'_'+field);
+        if (el) el.value = o2Readings[ck][field];
+      });
+    });
+    o2RecalcAvg();
+  }
 }
 
 // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
@@ -2183,6 +2345,14 @@ function resetAll() {
   }
   resetChannelList(O2_CHANNELS, 'ch');
   resetChannelList(O2_OUTLET_CHANNELS, 'och');
+  O2_OUTLET_CHANNELS.forEach(function(c){
+    var ck = 'och'+c.id;
+    o2Readings[ck] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''};
+    ['before','after','voltage','temp','lifetime','resistance'].forEach(function(field){
+      var el = document.getElementById('o2rd_'+ck+'_'+field); if (el) el.value = '';
+    });
+  });
+  o2RecalcAvg();
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
@@ -2201,6 +2371,7 @@ function resetAll() {
 /* ── INIT ── */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 buildO2ChannelGrid();
+buildO2ReadingsTables();
 o2BuildFreqChips();
 initO2Background();
 renderPresetButtons();
