@@ -64,6 +64,9 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
 .crop-header-hint{font-size:10px;color:#8aab96}
 #cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+.crop-rotate-toolbar{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:6}
+.crop-rotate-btn{width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35)}
+.crop-rotate-btn:active{background:rgba(0,0,0,0.85)}
 #cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
 #cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
 .crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
@@ -184,6 +187,10 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
         </div>
         <div id="cropWrap">
             <img id="cropImg" src="">
+            <div class="crop-rotate-toolbar">
+                <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(-1)" title="Putar gambar 90° ke kiri">&#8634;</button>
+                <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(1)" title="Putar gambar 90° ke kanan">&#8635;</button>
+            </div>
             <div id="cropBox">
                 <div class="crop-handle nw"></div><div class="crop-handle ne"></div>
                 <div class="crop-handle sw"></div><div class="crop-handle se"></div>
@@ -1201,6 +1208,29 @@ function cropReset() {
 }
 function skipCrop() { closeCropModal(); }
 
+/* ── Fitur R: Rotasi gambar 90° kiri/kanan di dalam modal crop ──
+   dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise).
+   Gambar SUMBER (bukan cuma crop box) diputar lewat canvas, lalu hasilnya
+   dipasang balik ke #cropImg -- otomatis memicu ulang event onload yang sudah
+   ada, yang menyesuaikan ukuran/posisi gambar & crop box (termasuk mode
+   Preset/Manual dengan rasio terkunci). cropAndSave() menggambar dari elemen
+   #cropImg langsung, jadi hasil akhir crop otomatis ikut gambar yang sudah
+   diputar. */
+function rotateCropImage(dir) {
+    var img = document.getElementById('cropImg');
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(dir * 90 * Math.PI/180);
+    ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+    var rotatedUrl = canvas.toDataURL('image/jpeg', 0.95);
+    img.src = rotatedUrl; // memicu ulang img.onload -> refit gambar & crop box
+    if (cropModalState._pending) cropModalState._pending.dataUrl = rotatedUrl;
+}
+
 function cropAndSave() {
     var img = document.getElementById('cropImg');
     var box = document.getElementById('cropBox');
@@ -1789,27 +1819,74 @@ function phHandleFiles(files, uid){
   });
 }
 
-function phRenderPreviews(uid){
-  phSyncCaptions(uid);
+var phReorderState = {};
+
+function phToggleReorder(uid) {
+  var st = phReorderState[uid] || (phReorderState[uid] = {active:false, selectedIdx:null});
+  st.active = !st.active;
+  st.selectedIdx = null;
+  phRenderPreviews(uid);
+}
+
+function phSelectForReorder(uid, idx, checked) {
+  var st = phReorderState[uid] || (phReorderState[uid] = {active:false, selectedIdx:null});
+  st.selectedIdx = checked ? idx : null;
+  phRenderPreviews(uid);
+}
+
+function phMoveImg(uid, dir) {
+  var st = phReorderState[uid];
+  if (!st || st.selectedIdx === null) return;
+  var arr = phImages[uid];
+  var i = st.selectedIdx, j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  phSyncCaptions(uid); // commit caption dari DOM SEBELUM urutan array berubah
+  var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  st.selectedIdx = j;
+  phRenderPreviews(uid, true); // skip sync — sudah dilakukan di atas, sebelum swap
+}
+
+function phRenderPreviews(uid, skipSync){
+  if (!skipSync) phSyncCaptions(uid);
   var uid2=uid.replace(/-/g,'_');
   var container=document.getElementById('phImgPreview_'+uid2); if(!container)return;
   container.innerHTML='';
-  phImages[uid].forEach(function(img,idx){
+  var arr = phImages[uid];
+  var st = phReorderState[uid] || (phReorderState[uid] = {active:false, selectedIdx:null});
+  arr.forEach(function(img,idx){
     if(!img||!img.name)return;
     var wrap=document.createElement('div'); wrap.style.cssText='position:relative;display:inline-block;text-align:center;width:112px';
     var isImg=IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
     var safe=function(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
     var thumb=isImg?'<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+safe(img.dataUrl)+'" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="imgReEditPh(\''+uid+'\','+idx+')" title="Klik crop ulang"></div>':'<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
-    var nudgeHtml=isImg?('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">'+
+    var nudgeHtml=(isImg && !st.active)?('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">'+
       '<button type="button" onclick="nudgeImageInArray(phImages[\''+uid+'\'],'+idx+',-0.5,function(){phRenderPreviews(\''+uid+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>'+
       '<span>'+((phImages[uid][idx].offsetX||0).toFixed(1))+' cm</span>'+
       '<button type="button" onclick="nudgeImageInArray(phImages[\''+uid+'\'],'+idx+',0.5,function(){phRenderPreviews(\''+uid+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>'+
       '</div></div>'):'';
+    var removeBtn = !st.active
+      ? '<button onclick="phImgDelete(\''+uid+'\','+idx+')" style="position:absolute;top:2px;right:2px;background:rgba(200,0,0,0.8);color:#fff;border:none;border-radius:3px;font-size:10px;padding:1px 5px;cursor:pointer">✕</button>'
+      : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#2563eb);display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="phSelectForReorder(\''+uid+'\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
     wrap.innerHTML=thumb+
-      '<input type="text" placeholder="Caption..." value="'+safe(img.caption||'')+'" id="phCap_'+uid2+'_'+idx+'" style="width:110px;font-size:9px;padding:2px 4px;margin-top:3px;border:1px solid var(--border);border-radius:3px;color:#222;background:#fff">'+
-      '<button onclick="phImgDelete(\''+uid+'\','+idx+')" style="position:absolute;top:2px;right:2px;background:rgba(200,0,0,0.8);color:#fff;border:none;border-radius:3px;font-size:10px;padding:1px 5px;cursor:pointer">✕</button>'+nudgeHtml;
+      '<input type="text" placeholder="Caption..." value="'+safe(img.caption||'')+'" id="phCap_'+uid2+'_'+idx+'" oninput="phImages[\''+uid+'\']['+idx+'].caption=this.value" style="width:110px;font-size:9px;padding:2px 4px;margin-top:3px;border:1px solid var(--border);border-radius:3px;color:#222;background:#fff">'+
+      removeBtn+nudgeHtml;
     container.appendChild(wrap);
   });
+  if (arr.length > 1) {
+    var ctrl = document.createElement('div');
+    ctrl.style.cssText = 'display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px';
+    var toggleBtn = '<button type="button" onclick="phToggleReorder(\''+uid+'\')" style="background:'+(st.active?'var(--ok,#16a34a)':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap">'+(st.active?'&#10003; Selesai':'&#128256; Urutkan Foto')+'</button>';
+    var arrowsHtml = '';
+    if (st.active && st.selectedIdx !== null) {
+      var atStart = st.selectedIdx <= 0, atEnd = st.selectedIdx >= arr.length - 1;
+      arrowsHtml = '<div style="display:flex;gap:4px">' +
+        '<button type="button" '+(atStart?'disabled':'')+' onclick="phMoveImg(\''+uid+'\',-1)" style="flex:1;opacity:'+(atStart?'0.4':'1')+'">&#9664; Kiri</button>' +
+        '<button type="button" '+(atEnd?'disabled':'')+' onclick="phMoveImg(\''+uid+'\',1)" style="flex:1;opacity:'+(atEnd?'0.4':'1')+'">Kanan &#9654;</button>' +
+        '</div>';
+    }
+    ctrl.innerHTML = toggleBtn + arrowsHtml;
+    container.appendChild(ctrl);
+  }
   phUpdateSizeInfo(uid);
 }
 
@@ -1821,9 +1898,9 @@ function phSyncCaptions(uid){
   });
 }
 function phImgDelete(uid,idx){
-  phSyncCaptions(uid);
+  phSyncCaptions(uid); // commit caption dari DOM SEBELUM foto dihapus (geser indeks)
   phImages[uid].splice(idx,1);
-  phRenderPreviews(uid);
+  phRenderPreviews(uid, true); // skip sync — sudah dilakukan di atas, sebelum splice
 }
 function imgReEditPh(uid,idx){
   phSyncCaptions(uid);
