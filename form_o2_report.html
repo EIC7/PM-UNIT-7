@@ -1811,14 +1811,18 @@ function o2ReEdit(chKey, phase, idx) {
   imgOpenCropper(img.dataUrl, img.name, img.type, o2Images[chKey][phase], side, 'o2', idx);
 }
 
-function o2RenderPreviews(chKey, phase) {
+function o2RenderPreviews(chKey, phase, skipSync) {
   // dipanggil dari cropAndSave() dengan 1 argumen 'ch1_before' — dukung juga 2 argumen terpisah
   if (phase === undefined) {
     var lastUs = chKey.lastIndexOf('_');
     phase = chKey.slice(lastUs + 1);
     chKey = chKey.slice(0, lastUs);
   }
-  o2SyncCaptions(chKey, phase);
+  // skipSync: dipakai saat pemanggil (tukar posisi/hapus foto) SUDAH menyinkronkan
+  // caption dari DOM SEBELUM array-nya diubah urutan/isinya. Kalau tetap sync di sini
+  // (setelah array berubah), pembacaan input by-posisi jadi salah pasang ke foto yang
+  // sudah pindah/bergeser posisi — caption bisa ketuker/nempel ke foto yang salah.
+  if (!skipSync) o2SyncCaptions(chKey, phase);
   var uid = 'o2_'+chKey+'_'+phase;
   var container = document.getElementById(uid+'_preview');
   if (!container) return;
@@ -1902,9 +1906,10 @@ function o2MoveImg(chKey, phase, dir) {
   var arr = o2Images[chKey][phase];
   var i = st.selectedIdx, j = i + dir;
   if (j < 0 || j >= arr.length) return;
+  o2SyncCaptions(chKey, phase); // commit caption dari DOM SEBELUM urutan array berubah
   var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
   st.selectedIdx = j;
-  o2RenderPreviews(chKey, phase);
+  o2RenderPreviews(chKey, phase, true); // skip sync — sudah dilakukan di atas, sebelum swap
 }
 
 function o2SyncCaptions(chKey, phase) {
@@ -1916,8 +1921,9 @@ function o2SyncCaptions(chKey, phase) {
 }
 
 function o2RemoveImg(chKey, phase, idx) {
+  o2SyncCaptions(chKey, phase); // commit caption dari DOM SEBELUM foto dihapus (geser indeks)
   o2Images[chKey][phase].splice(idx,1);
-  o2RenderPreviews(chKey+'_'+phase);
+  o2RenderPreviews(chKey, phase, true); // skip sync — sudah dilakukan di atas, sebelum splice
 }
 
 /* ─── BACKGROUND TEMPLATE PDF (sama seperti modul lain — DRAFT PM KOSONG.jpg) ─── */
@@ -2089,7 +2095,33 @@ function downloadPdf(){
           var befImgs = o2Images[ck].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
           var aftImgs = o2Images[ck].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
 
-          checkPage(14);
+          // Estimasi tinggi header + catatan (dihitung dulu, tanpa digambar) supaya
+          // bisa dipakai untuk cek "header + konten pertama tidak boleh terpisah halaman".
+          var catLinesPre = catatan ? doc.splitTextToSize('Catatan: '+safe(catatan), contentW-4) : null;
+          var headerBlockH = 10 + (catLinesPre ? (catLinesPre.length*4 + 5) : 0);
+
+          // Konten pertama yang menempel langsung di bawah header: BEFORE/AFTER
+          // (kalau ada) atau EVIDENCE (kalau before/after kosong tapi evidence ada).
+          var firstContentH = 0;
+          if (befImgs.length || aftImgs.length) {
+            var firstB0 = befImgs[0] ? iePhotoDrawSize(befImgs[0], bfColW, maxPhotoH) : null;
+            var firstA0 = aftImgs[0] ? iePhotoDrawSize(aftImgs[0], bfColW, maxPhotoH) : null;
+            firstContentH = 5 + Math.max(firstB0?firstB0.h:0, firstA0?firstA0.h:0, 20) + 9;
+          } else if (evImgs.length) {
+            var firstE10 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
+            var firstE20 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
+            firstContentH = 5 + Math.max(firstE10?firstE10.h:0, firstE20?firstE20.h:0, 20) + 9;
+          }
+
+          // Header (+catatan) + konten pertama harus 1 paket (tidak terpisah halaman).
+          // Kalau memang tidak muat walau di halaman baru sekalipun, biarkan alur
+          // normal (checkPage per-baris) yang menangani — jangan maksa loop tak berujung.
+          var firstBlockH = headerBlockH + firstContentH;
+          if (firstBlockH <= (ph - marginTop - marginBottom) && (y + firstBlockH > ph - marginBottom)) {
+            doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+          } else {
+            checkPage(14);
+          }
           doc.setFillColor(60, 90, 70);
           doc.rect(marginX, y, contentW, 7, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
@@ -2098,8 +2130,7 @@ function downloadPdf(){
 
           if (catatan) {
             doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(60,80,60);
-            var catLines = doc.splitTextToSize('Catatan: '+safe(catatan), contentW-4);
-            checkPage(catLines.length*4+4);
+            var catLines = catLinesPre;
             doc.text(catLines, marginX+2, y+3);
             y += catLines.length*4 + 5;
           }
@@ -2136,7 +2167,18 @@ function downloadPdf(){
 
           // EVIDENCE — 2 foto per baris
           if (evImgs.length) {
-            checkPage(7);
+            // Label EVIDENCE + baris foto pertama juga tidak boleh terpisah halaman
+            // (dicek terpisah dari header Channel, karena bisa saja mulai di halaman lain
+            // kalau BEFORE/AFTER sudah menghabiskan banyak tempat).
+            var firstE1 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
+            var firstE2 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
+            var firstEvRowH = Math.max(firstE1?firstE1.h:0, firstE2?firstE2.h:0, 20);
+            var firstEvBlockH = 5 + firstEvRowH + 9;
+            if (firstEvBlockH <= (ph - marginTop - marginBottom) && (y + firstEvBlockH > ph - marginBottom)) {
+              doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+            } else {
+              checkPage(7);
+            }
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(37,99,235);
             doc.text('EVIDENCE', marginX+3, y);
             y += 5;
@@ -2286,8 +2328,14 @@ function dbCollectData(modul) {
   }
   collectChannelData(O2_CHANNELS, 'ch');
   collectChannelData(O2_OUTLET_CHANNELS, 'och');
+  var anyInletEnabled = O2_CHANNELS.some(function(c){ return o2ChannelEnabled['ch'+c.id]; });
+  var anyOutletEnabled = O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelEnabled['och'+c.id]; });
+  var modulName = 'O2';
+  if (anyInletEnabled && anyOutletEnabled) modulName = 'O2 Inlet & Outlet';
+  else if (anyInletEnabled) modulName = 'O2 Inlet';
+  else if (anyOutletEnabled) modulName = 'O2 Outlet';
   return {
-    modul: 'O2',
+    modul: modulName,
     tanggal: header.tanggal,
     pic: header.pic,
     work_order: (header.workorder && header.workorder !== '—') ? header.workorder : '',
