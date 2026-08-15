@@ -1612,6 +1612,9 @@ var o2Images = {};
 O2_CHANNELS.forEach(function(c){ o2Images['ch'+c.id] = {evidence:[], before:[], after:[]}; });
 O2_OUTLET_CHANNELS.forEach(function(c){ o2Images['och'+c.id] = {evidence:[], before:[], after:[]}; });
 
+// Status mode "Urutkan Foto" per galeri (key: chKey_phase) -> {active:bool, selectedIdx:number|null}
+var o2ReorderState = {};
+
 // Status centang tiap channel (buka/tutup section + menentukan ikut PDF & auto-isi Asset)
 var o2ChannelEnabled = {};
 O2_CHANNELS.forEach(function(c){ o2ChannelEnabled['ch'+c.id] = false; });
@@ -1821,6 +1824,8 @@ function o2RenderPreviews(chKey, phase) {
   if (!container) return;
   container.innerHTML = '';
   var arr = o2Images[chKey][phase];
+  var stKey = chKey+'_'+phase;
+  var st = o2ReorderState[stKey] || (o2ReorderState[stKey] = {active:false, selectedIdx:null});
   if (!arr || arr.length === 0) return;
   arr.forEach(function(img, idx) {
     if (!img||!img.name) return;
@@ -1834,24 +1839,72 @@ function o2RenderPreviews(chKey, phase) {
     var thumb = isImg
       ? '<div style="'+thumbStyle+'"><img src="'+safe(img.dataUrl)+'" alt="" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="imgOpenCropper(o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].dataUrl,o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].name,o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].type,o2Images[\''+chKey+'\'][\''+phase+'\'],\''+side+'\',\'o2\','+idx+')" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\''+fallback+'\'" title="Klik untuk crop ulang"></div>'
       : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
-    var cropBtn = isImg
+    var cropBtn = (isImg && !st.active)
       ? '<button onclick="imgOpenCropper(o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].dataUrl,o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].name,o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].type,o2Images[\''+chKey+'\'][\''+phase+'\'],\''+side+'\',\'o2\','+idx+')" style="position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
       : '';
-    var nudgeHtml = isImg ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
+    var nudgeHtml = (isImg && !st.active) ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
       '<button type="button" onclick="nudgeImageInArray(o2Images[\''+chKey+'\'][\''+phase+'\'],'+idx+',-0.5,function(){o2RenderPreviews(\''+chKey+'\',\''+phase+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>' +
       '<span>'+(img.offsetX||0)+'cm</span>' +
       '<button type="button" onclick="nudgeImageInArray(o2Images[\''+chKey+'\'][\''+phase+'\'],'+idx+',0.5,function(){o2RenderPreviews(\''+chKey+'\',\''+phase+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>' +
       '</div></div>') : '';
-    wrap.innerHTML = thumb + cropBtn
-      + '<button onclick="o2RemoveImg(\''+chKey+'\',\''+phase+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
+    var removeBtn = !st.active
+      ? '<button onclick="o2RemoveImg(\''+chKey+'\',\''+phase+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
+      : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#2563eb);display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="o2SelectForReorder(\''+chKey+'\',\''+phase+'\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
+    wrap.innerHTML = thumb + cropBtn + removeBtn
       + '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'
       + nudgeHtml
       + '<input id="o2_cap_'+chKey+'_'+phase+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
+
+  // Kontrol "Urutkan Foto" — diposisikan di sebelah kanan foto terakhir
+  if (arr.length > 1) {
+    var ctrl = document.createElement('div');
+    ctrl.style.cssText = 'display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px';
+    var toggleBtn = '<button type="button" onclick="o2ToggleReorder(\''+chKey+'\',\''+phase+'\')" style="background:'+(st.active?'var(--ok,#16a34a)':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap">'+(st.active?'&#10003; Selesai':'&#128256; Urutkan Foto')+'</button>';
+    var arrowsHtml = '';
+    if (st.active && st.selectedIdx !== null) {
+      var atStart = st.selectedIdx <= 0;
+      var atEnd = st.selectedIdx >= arr.length - 1;
+      arrowsHtml = '<div style="display:flex;gap:4px">' +
+        '<button type="button" '+(atStart?'disabled':'')+' onclick="o2MoveImg(\''+chKey+'\',\''+phase+'\',-1)" title="Geser ke kiri" style="flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atStart?'default':'pointer')+';opacity:'+(atStart?'0.4':'1')+'">&#9664; Kiri</button>' +
+        '<button type="button" '+(atEnd?'disabled':'')+' onclick="o2MoveImg(\''+chKey+'\',\''+phase+'\',1)" title="Geser ke kanan" style="flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atEnd?'default':'pointer')+';opacity:'+(atEnd?'0.4':'1')+'">Kanan &#9654;</button>' +
+        '</div>';
+    }
+    ctrl.innerHTML = toggleBtn + arrowsHtml;
+    container.appendChild(ctrl);
+  }
+
   var totalKb = arr.reduce(function(a,img){return a+(img.dataUrl?Math.round(img.dataUrl.length*0.75/1024):0);},0);
   var sizeEl = document.getElementById(uid+'_size');
   if (sizeEl) sizeEl.textContent = totalKb+' KB / 1024 KB';
+}
+
+function o2ToggleReorder(chKey, phase) {
+  var stKey = chKey+'_'+phase;
+  var st = o2ReorderState[stKey] || (o2ReorderState[stKey] = {active:false, selectedIdx:null});
+  st.active = !st.active;
+  st.selectedIdx = null;
+  o2RenderPreviews(chKey, phase);
+}
+
+function o2SelectForReorder(chKey, phase, idx, checked) {
+  var stKey = chKey+'_'+phase;
+  var st = o2ReorderState[stKey] || (o2ReorderState[stKey] = {active:false, selectedIdx:null});
+  st.selectedIdx = checked ? idx : null;
+  o2RenderPreviews(chKey, phase);
+}
+
+function o2MoveImg(chKey, phase, dir) {
+  var stKey = chKey+'_'+phase;
+  var st = o2ReorderState[stKey];
+  if (!st || st.selectedIdx === null) return;
+  var arr = o2Images[chKey][phase];
+  var i = st.selectedIdx, j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  st.selectedIdx = j;
+  o2RenderPreviews(chKey, phase);
 }
 
 function o2SyncCaptions(chKey, phase) {
