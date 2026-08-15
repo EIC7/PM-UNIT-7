@@ -59,6 +59,9 @@
         .crop-header-title{font-weight:700;font-size:13px;color:#e0f0e8;letter-spacing:0.5px}
         .crop-header-hint{font-size:10px;color:#8aab96}
         #cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+        .crop-rotate-toolbar{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:6}
+        .crop-rotate-btn{width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35)}
+        .crop-rotate-btn:active{background:rgba(0,0,0,0.85)}
         #cropImg{position:absolute;max-width:none;pointer-events:none;display:block}
         #cropBox{position:absolute;border:2px solid #2ecc71;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);cursor:move;touch-action:none;min-width:40px;min-height:40px}
         .crop-handle{position:absolute;width:12px;height:12px;background:#2ecc71;border-radius:2px}
@@ -237,6 +240,10 @@
             </div>
             <div id="cropWrap">
                 <img id="cropImg" src="">
+                <div class="crop-rotate-toolbar">
+                    <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(-1)" title="Putar gambar 90° ke kiri">&#8634;</button>
+                    <button type="button" class="crop-rotate-btn" onclick="rotateCropImage(1)" title="Putar gambar 90° ke kanan">&#8635;</button>
+                </div>
                 <div id="cropBox">
                     <div class="crop-handle nw"></div>
                     <div class="crop-handle ne"></div>
@@ -1036,8 +1043,8 @@ function applyImageEdits(){
                 var dw = cropImg.naturalWidth*scale, dh = cropImg.naturalHeight*scale;
                 cropImg.style.width = dw+'px'; cropImg.style.height = dh+'px';
                 cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
-                if (cropModalState._mode === 'default') fitCropBoxToFullImage();
-                else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+                if (cropModal._mode === 'default') fitCropBoxToFullImage();
+                else if (cropModal._ratioLocked) reshapeCropBoxToRatio();
             };
             cropImg.src = outUrl;
             closeImageEditor(false);
@@ -1057,6 +1064,23 @@ function applyImageEdits(){
 
         var cropModal = document.getElementById('cropModal');
         cropModal._pending = null;
+
+        /* dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise).
+           cropAndSave() di file ini baca langsung dari elemen #cropImg (bukan dari
+           cropModal._pending.dataUrl), jadi cukup ganti img.src -- onload yang lagi
+           aktif (openCropModal atau alur kembali dari Edit Gambar) otomatis refit. */
+        function rotateCropImage(dir) {
+            var img = document.getElementById('cropImg');
+            if (!img || !img.naturalWidth || !img.naturalHeight) return;
+            var canvas = document.createElement('canvas');
+            canvas.width = img.naturalHeight;
+            canvas.height = img.naturalWidth;
+            var ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width/2, canvas.height/2);
+            ctx.rotate(dir * 90 * Math.PI/180);
+            ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+            img.src = canvas.toDataURL('image/jpeg', 0.95);
+        }
         cropModal._ratioLocked = false;
         cropModal._cropWcm = null;
         cropModal._cropHcm = null;
@@ -1539,6 +1563,8 @@ function applyImageEdits(){
                 html += '</div>';
 
                 if (item.images.length > 0) {
+                    var mrfStKey = type+'_'+idx;
+                    var mrfSt = mrfReorderState[mrfStKey] || {active:false, selectedIdx:null};
                     html += '<div class="img-gallery">';
                     item.images.forEach(function(img, imgIdx) {
                         html += '<div class="img-thumb">';
@@ -1546,8 +1572,12 @@ function applyImageEdits(){
                         if (img.widthCm && img.heightCm) {
                             html += '<span class="size-badge">'+img.widthCm+'×'+img.heightCm+'cm</span>';
                         }
-                        html += '<button class="reedit" onclick="reEditCrop(\''+type+'\','+idx+','+imgIdx+')" title="Crop ulang">✂️</button>';
-                        html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
+                        if (!mrfSt.active) {
+                            html += '<button class="reedit" onclick="reEditCrop(\''+type+'\','+idx+','+imgIdx+')" title="Crop ulang">✂️</button>';
+                            html += '<button class="del" onclick="deleteImg(\''+type+'\','+idx+','+imgIdx+')">×</button>';
+                        } else {
+                            html += '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #2563eb;display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(mrfSt.selectedIdx===imgIdx?'checked':'')+' onchange="mrfSelectForReorder(\''+type+'\','+idx+','+imgIdx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
+                        }
                         html += '<div class="img-nudge">';
                         html += '<div class="img-nudge-label">Geser posisi di hasil PDF</div>';
                         html += '<div class="img-nudge-controls">';
@@ -1559,6 +1589,18 @@ function applyImageEdits(){
                         html += '<input type="text" placeholder="Keterangan" value="'+esc(img.caption||'')+'" oninput="sections.'+type+'['+idx+'].images['+imgIdx+'].caption=this.value" style="width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#111;box-sizing:border-box">';
                         html += '</div>';
                     });
+                    if (item.images.length > 1) {
+                        html += '<div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px">';
+                        html += '<button type="button" onclick="mrfToggleReorder(\''+type+'\','+idx+')" style="background:'+(mrfSt.active?'#16a34a':'#eef2f7')+';color:'+(mrfSt.active?'#fff':'#333')+';border:1px solid var(--border,#ddd);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap">'+(mrfSt.active?'✓ Selesai':'🔀 Urutkan Foto')+'</button>';
+                        if (mrfSt.active && mrfSt.selectedIdx !== null) {
+                            var mrfAtStart = mrfSt.selectedIdx <= 0, mrfAtEnd = mrfSt.selectedIdx >= item.images.length - 1;
+                            html += '<div style="display:flex;gap:4px">';
+                            html += '<button type="button" '+(mrfAtStart?'disabled':'')+' onclick="mrfMoveImg(\''+type+'\','+idx+',-1)" style="flex:1;background:#eef2f7;border:1px solid var(--border,#ddd);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(mrfAtStart?'default':'pointer')+';opacity:'+(mrfAtStart?'0.4':'1')+'">◀ Kiri</button>';
+                            html += '<button type="button" '+(mrfAtEnd?'disabled':'')+' onclick="mrfMoveImg(\''+type+'\','+idx+',1)" style="flex:1;background:#eef2f7;border:1px solid var(--border,#ddd);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(mrfAtEnd?'default':'pointer')+';opacity:'+(mrfAtEnd?'0.4':'1')+'">Kanan ▶</button>';
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                    }
                     html += '</div>';
                 }
 
@@ -1588,6 +1630,32 @@ function applyImageEdits(){
 
         function deleteImg(type, idx, imgIdx) {
             sections[type][idx].images.splice(imgIdx, 1);
+            renderSection(type, type+'Box');
+        }
+
+        var mrfReorderState = {};
+        function mrfToggleReorder(type, idx) {
+            var key = type+'_'+idx;
+            var st = mrfReorderState[key] || (mrfReorderState[key] = {active:false, selectedIdx:null});
+            st.active = !st.active;
+            st.selectedIdx = null;
+            renderSection(type, type+'Box');
+        }
+        function mrfSelectForReorder(type, idx, imgIdx, checked) {
+            var key = type+'_'+idx;
+            var st = mrfReorderState[key] || (mrfReorderState[key] = {active:false, selectedIdx:null});
+            st.selectedIdx = checked ? imgIdx : null;
+            renderSection(type, type+'Box');
+        }
+        function mrfMoveImg(type, idx, dir) {
+            var key = type+'_'+idx;
+            var st = mrfReorderState[key];
+            if (!st || st.selectedIdx === null) return;
+            var arr = sections[type][idx].images;
+            var i = st.selectedIdx, j = i + dir;
+            if (j < 0 || j >= arr.length) return;
+            var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp; // swap 1 object utuh — caption/crop/offset ikut
+            st.selectedIdx = j;
             renderSection(type, type+'Box');
         }
 
