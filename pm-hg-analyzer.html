@@ -2285,25 +2285,44 @@ function hgCloseAllSrcMenus() {
     _hgSrcMenuScrollHandler = null;
   }
 }
-function hgOpenSrcMenu(anchorEl, elId) {
-  var el = document.getElementById(elId);
-  if (!el) return;
-  var alreadyOpen = (el.style.display === 'flex' || el.style.display === 'block');
-  hgCloseAllSrcMenus();
-  if (alreadyOpen) return;
+function hgPositionSrcMenu(el, anchorEl) {
   var r = anchorEl.getBoundingClientRect();
-  el.style.display = 'block';
   var elW = el.offsetWidth || 150, elH = el.offsetHeight || 90;
   var left = Math.min(Math.max(8, r.left), window.innerWidth - elW - 8);
   var top = r.bottom + 4;
   if (top + elH > window.innerHeight - 8) top = r.top - elH - 4; // kalau kepotong di bawah, tampilkan di atas tombol
   el.style.left = left + 'px';
   el.style.top = top + 'px';
-  // Tutup otomatis begitu ada scroll (di mana pun, termasuk di dalam tabel) atau
-  // klik di luar dropdown — supaya tidak pernah "nyangkut" ketinggalan posisi.
+  return r;
+}
+function hgOpenSrcMenu(anchorEl, elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var alreadyOpen = (el.style.display === 'flex' || el.style.display === 'block');
+  hgCloseAllSrcMenus();
+  if (alreadyOpen) return;
+  el.style.display = 'block';
+  hgPositionSrcMenu(el, anchorEl);
+  // Dulu: tutup otomatis begitu ada scroll. Ternyata di HP, sekadar men-tap
+  // tombol "+" sering memicu event scroll/reflow otomatis dari browser (address
+  // bar menyusut, dsb) SESAAT setelah dropdown terbuka -- akibatnya dropdown
+  // langsung tertutup sendiri sebelum sempat dipakai (kelihatan seperti pilihan
+  // "hilang"). Fix: saat discroll, dropdown REPOSISI ikut tombolnya (bukan
+  // ditutup) -- ini tetap mencegah "nyangkut" di posisi lama tanpa membuatnya
+  // hilang tiba-tiba. Ditutup hanya kalau tombolnya benar-benar sudah keluar
+  // dari area layar (discroll jauh), atau kalau user klik di luar dropdown.
   _hgSrcMenuScrollHandler = function(ev){
-    if (ev.type === 'click' && (el.contains(ev.target) || anchorEl.contains(ev.target))) return;
-    hgCloseAllSrcMenus();
+    if (ev.type === 'click') {
+      if (el.contains(ev.target) || anchorEl.contains(ev.target)) return;
+      hgCloseAllSrcMenus();
+      return;
+    }
+    // ev.type === 'scroll' -> reposisi, bukan tutup
+    if (!document.body.contains(anchorEl)) { hgCloseAllSrcMenus(); return; }
+    var r = hgPositionSrcMenu(el, anchorEl);
+    if (r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) {
+      hgCloseAllSrcMenus(); // tombolnya sudah keluar layar sama sekali
+    }
   };
   window.addEventListener('scroll', _hgSrcMenuScrollHandler, true);
   document.addEventListener('click', _hgSrcMenuScrollHandler, true);
