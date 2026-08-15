@@ -9,6 +9,7 @@
 
 | Versi | Tanggal | Perubahan |
 |---|---|---|
+| v1.3 | 2026-08-15 | Audit penuh `pm-hg-analyzer.html` terhadap Fitur A–Q. Ditemukan & diperbaiki 3 hal: (1) **Fitur A** — dropdown "Penyimpanan"/"Kamera" kepotong/tidak bisa diklik karena `position:absolute` di dalam tabel `overflow-x:auto` (efek clip vertikal ikut kena, sesuai perilaku standar CSS); fix pakai `position:fixed` dihitung dari `getBoundingClientRect()` tombolnya, ditambahkan sebagai catatan wajib-cek baru di Fitur A. (2) Input **"Keterangan"** foto belum ada sama sekali di galeri evidence-nya padahal field `caption` sudah ada di data model & PDF-mapping sejak lama — ditambahkan input-nya + render caption ke PDF. (3) **Fitur D** (Geser Posisi Gambar) ternyata "mati": CSS & fungsi `nudgeImageInArray` sudah ada, PDF-nya sudah baca `offsetX`, tapi tombol ◀▶-nya tidak pernah ditempel ke markup — diaktifkan. Ditambahkan juga catatan bahwa `mark_vie_inspection.html` SENGAJA tidak punya input caption (desain 1-foto-per-baris, caption otomatis dari label baris) — bukan gap yang perlu diperbaiki. |
 | v1.2 | 2026-08-15 | Tambah **Fitur O: Urutkan Foto (Tukar Posisi Kiri/Kanan)**, **Fitur P: Header + Baris Foto Pertama Tidak Terpisah Halaman (page-break keep-together)**, dan **Fitur Q: Sinkronisasi Caption SEBELUM Array Diubah** (fix bug caption ketuker yang kejadian pas reorder maupun hapus foto). Ketiganya ditemukan/diterapkan pertama kali di `form_o2_report.html`. |
 | v1.1 | 2026-08-14 | Tambah **Fitur N: Checkbox Vektor untuk PDF** (kotak+centang digambar via `drawCheckboxBs`, bukan karakter unicode `✓` yang tidak didukung font standar jsPDF dan tercetak sebagai titik). Perkuat **Fitur C (Crop Ulang)** dengan catatan wajib: foto hasil re-crop harus mengganti entry LAMA di index yang sama (`imgArr.splice(replaceIdx,1,entry)`), bukan dihapus lalu `push` ke akhir array — sebelumnya ini bikin foto pindah urutan ke paling akhir sementara keterangannya tertukar. Update contoh kode di **Fitur M** yang masih menampilkan pola `imgArr.push(entry)` lama. Diterapkan ke 15 file (14 HTML + `shared.js`), sumber: `coal_feeder_calibration.html`. |
 | v1.0 | (sebelum dicatat) | Versi awal dokumen — Fitur A–M. |
@@ -62,7 +63,31 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 ## A. Upload Gambar
 **Tujuan:** user pilih sumber foto (kamera langsung / galeri), file dikonversi ke JPEG dataURL, siap dilempar ke crop modal.
 
+**⚠️ POLA TERKINI (sejak beberapa file terakhir) — bukan lagi pola `triggerUpload`/`fileInput` tunggal di bawah:** file-file yang sudah direvisi (`form_o2_report.html`, `pm-hg-analyzer.html`, `coal_feeder_calibration.html`, dll) pakai pola **1 `<input type="file" multiple>` PER slot galeri** (id dinamis per channel/step/item), dengan tombol "+" yang toggle dropdown "Penyimpanan"/"Kamera" via `toggleSourceChoices(elementId)` + `openFileInputSource(inputId, source)` (keduanya dari `shared.js`, signature 1-2 argumen — BUKAN pola 2-argumen `toggleSourceChoices(type, idx)` di kode contoh bawah, itu sudah usang). Upload banyak file sekaligus (`multiple`) dialihkan ke `puHandleMultiUpload(fileArr, imgArr, side, modulePrefix)` (skip-crop otomatis, lihat Fitur N di bawah); upload 1 file tetap lewat `imgOpenCropper(...)` seperti biasa (buka crop modal). **Cek dulu file tujuan pakai pola yang mana sebelum menempel kode contoh Fitur A di bawah** — kode contoh ini cuma fallback untuk file yang belum punya upload sama sekali.
+
+**⚠️ BUG DITEMUKAN (Agustus 2026, `pm-hg-analyzer.html`) — dropdown Penyimpanan/Kamera "kepotong"/tidak bisa diklik:** kalau tombol "+" upload ditaruh **di dalam tabel yang dibungkus elemen `overflow-x:auto`** (mis. class `.preview-wrap` di `shared.css`, dipakai buat tabel lebar yang perlu di-scroll horizontal di HP), dropdown pilihan sumber (`position:absolute` relatif ke tombol) sering **kepotong dan tidak kelihatan/tidak bisa diklik**. Penyebabnya: `overflow-x:auto` tanpa `overflow-y` eksplisit membuat browser otomatis mengubah `overflow-y` jadi `auto` juga (perilaku standar CSS) — jadi arah vertikal ikut ke-clip, bukan cuma horizontal. Ini gampang lolos dari review kode karena tidak kelihatan dari HTML/JS-nya doang, baru ketahuan pas dites di tabel yang benar-benar lebar/banyak baris.
+**Fix:** dropdown-nya JANGAN `position:absolute`, pakai **`position:fixed`** yang dihitung dari `getBoundingClientRect()` tombol saat diklik (jadi lolos dari clipping ancestor manapun):
+```js
+function xxOpenSrcMenu(anchorEl, elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var alreadyOpen = (el.style.display === 'flex' || el.style.display === 'block');
+  document.querySelectorAll('[id^="xxSrc_"]').forEach(function(d){ d.style.display = 'none'; }); // tutup dropdown lain yg masih terbuka
+  if (alreadyOpen) return;
+  var r = anchorEl.getBoundingClientRect();
+  el.style.display = 'block';
+  var elW = el.offsetWidth || 150, elH = el.offsetHeight || 90;
+  var left = Math.min(Math.max(8, r.left), window.innerWidth - elW - 8);
+  var top = r.bottom + 4;
+  if (top + elH > window.innerHeight - 8) top = r.top - elH - 4; // kalau kepotong di bawah layar, tampil di ATAS tombol
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+}
+```
+Lalu HTML dropdown-nya: `style="display:none;position:fixed;...;z-index:9999"` (bukan `position:absolute;top:...px`), dan tombol "+" pakai `onclick="xxOpenSrcMenu(this,'xxSrc_...')"` (kirim `this` sebagai anchor). **Cek dulu apakah upload button di file tujuan ada di dalam elemen `overflow-x:auto`/`overflow:auto`/`overflow:scroll`** — kalau tidak (mis. galeri berdiri sendiri di luar tabel, seperti di `form_o2_report.html`), bug ini tidak terjadi dan tidak perlu fix ini.
+
 **⚠️ Potensi Konflik:** `shared.js` sudah py fungsi serupa: `fileToJpegDataUrl(file, callback)` + `strategy2()` — lebih baik dari versi lokal di bawah karena sudah otomatis panggil `showImgLoading()`/`hideImgLoading()` dan `showHeicWarning()` untuk file HEIC. **Kalau file tujuan sudah manggil `fileToJpegDataUrl` dari shared.js, JANGAN diganti** — biarkan pakai itu. Kode di bawah hanya untuk file yang belum punya converter sama sekali.
+
+**📝 Soal input "Keterangan"/caption per foto — bukan bagian resmi Fitur A, tapi sering dicek bareng:** hampir semua file dengan galeri multi-foto (banyak foto per section/channel/step) punya `<input placeholder="Keterangan"...>` atau `placeholder="Caption..."` (nama placeholder BEDA-BEDA antar file, jangan cuma grep 1 kata) yang nulis ke `imgArr[idx].caption` lewat `oninput`, lalu dibaca lagi di generator PDF buat dicetak di bawah foto. **Pengecualian yang VALID (bukan bug):** file dengan pola **1 foto per baris checklist** (mis. `mark_vie_inspection.html`) sengaja TIDAK punya input caption terpisah — caption di PDF-nya diambil otomatis dari label baris checklist itu sendiri (`{caption: label baris}`), karena sudah jelas foto itu punya konteks apa tanpa perlu diketik ulang. **Cek dulu pola galerinya (banyak-foto-bebas vs satu-foto-per-baris) sebelum menyimpulkan caption "belum ada" itu gap atau memang desain yang disengaja.**
 
 ```html
 <!-- tombol sumber upload -->
@@ -549,6 +574,8 @@ Efek samping lain yang perlu ikut disesuaikan: kalau ada penghitungan budget uku
 
 ## D. Geser Posisi Gambar
 **Tujuan:** kontrol ◀▶ di bawah tiap thumbnail untuk menggeser posisi horizontal gambar itu di HASIL PDF (bukan di form), dengan reflow otomatis supaya gambar sesudahnya di baris yang sama ikut ke-push (tidak tumpang tindih).
+
+**⚠️ DITEMUKAN (Agustus 2026, `pm-hg-analyzer.html`) — fitur ini bisa "mati" tanpa kelihatan:** waktu dicek, file itu sudah punya CSS `.img-nudge` LENGKAP dan fungsi generik `nudgeImageInArray(imgArr, imgIdx, delta, rerenderFn)` sudah ada di dalam file — bahkan generator PDF-nya sudah baca `img.offsetX` dengan benar — tapi **tombol ◀▶-nya sendiri tidak pernah ditempel di markup thumbnail manapun**. Efeknya: user tidak pernah bisa geser posisi gambar sama sekali walau semua "mesin" di baliknya sudah siap — dan ini gampang kelewat karena tidak error, tidak ada di console, cuma "fiturnya nggak ada" secara visual. **Saat cek Fitur D di file manapun: jangan cuma `grep nudgeImageInArray` (function declaration) — pastikan juga ada PEMANGGILAN-nya (`nudgeImageInArray(...)`) di kode yang generate HTML thumbnail.** Grep 2 tahap: `function nudgeImageInArray` (harus ada 1×, biasanya definisi generik dipakai bareng banyak modul) DAN `nudgeImageInArray(` dengan argumen aktual (harus ada ≥1× per galeri foto yang butuh fitur ini, di dalam fungsi render thumbnail-nya).
 
 ```html
 <div class="img-nudge">
