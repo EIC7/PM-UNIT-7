@@ -2334,7 +2334,7 @@ function hgRenderPreviews(side) {
   var us = side.lastIndexOf('_');
   var stepKey = side.slice(0, us);           // "step3"
   var phase = side.slice(us+1);              // "before" / "after"
-  var no = parseInt(stepKey.replace('step',''), 10);
+  var no = parseFloat(stepKey.replace('step',''));
   var box = document.getElementById('hgEvBox_'+no+'_'+phase);
   if (!box) return;
   var arr = hgEvidence[no][phase];
