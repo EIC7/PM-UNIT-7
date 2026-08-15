@@ -434,7 +434,7 @@ function dbShowSavingOverlay(show, msg, submsg) {
       ov = document.createElement('div');
       ov.id = 'dbSavingOverlay';
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;transition:background-color 0.2s';
-      ov.innerHTML = '<div id="dbSavingSpinner" style="width:100px;height:64px;position:relative;margin-bottom:10px">'
+      ov.innerHTML = '<div id="dbSavingSpinner" style="width:300px;height:192px;max-width:80vw;position:relative;margin-bottom:10px">'
         +   '<div style="position:absolute;bottom:2px;left:50%;width:44%;height:8%;background:rgba(255,255,255,0.25);border-radius:50%;transform:translateX(-50%);animation:dbCatShadow 0.6s ease-in-out infinite alternate"></div>'
         +   '<div style="position:absolute;bottom:10%;left:50%;width:62%;height:75%;transform:translateX(-50%);animation:dbCatBob 0.6s ease-in-out infinite alternate">'
         +     '<svg viewBox="0 0 230 150" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block">'
