@@ -663,27 +663,78 @@ function handleTsImgFile(file) {
   reader.readAsDataURL(file);
 }
 
+var tsReorderState = {active:false, selectedIdx:null};
 function renderTsImgPreview() {
   var el = document.getElementById('tsImgPreview');
   el.innerHTML = '';
+  var st = tsReorderState;
   tsImages.forEach(function(img, i) {
     var wrap = document.createElement('div');
     wrap.style.cssText = 'position:relative;display:inline-block;border-radius:6px;overflow:hidden;border:1px solid var(--border)';
     var im = document.createElement('img');
     im.src = img.dataUrl;
     im.style.cssText = 'width:100px;height:80px;object-fit:cover;display:block';
-    var del = document.createElement('button');
-    del.textContent = '×';
-    del.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:14px;line-height:1';
-    del.onclick = function(){ tsImages.splice(i,1); renderTsImgPreview(); updateTsSizeInfo(); };
+    wrap.appendChild(im);
+    if (!st.active) {
+      var del = document.createElement('button');
+      del.textContent = '×';
+      del.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:3px;width:20px;height:20px;cursor:pointer;font-size:14px;line-height:1';
+      del.onclick = function(){ tsImages.splice(i,1); renderTsImgPreview(); updateTsSizeInfo(); };
+      wrap.appendChild(del);
+    } else {
+      var lbl = document.createElement('label');
+      lbl.style.cssText = 'position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #2563eb;display:flex;align-items:center;justify-content:center;cursor:pointer';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = (st.selectedIdx === i);
+      cb.style.cssText = 'margin:0;width:14px;height:14px;cursor:pointer';
+      cb.onchange = function(){ st.selectedIdx = cb.checked ? i : null; renderTsImgPreview(); };
+      lbl.appendChild(cb);
+      wrap.appendChild(lbl);
+    }
     var cap = document.createElement('input');
     cap.placeholder = 'Caption...';
     cap.value = img.caption;
     cap.style.cssText = 'width:100px;font-size:10px;padding:2px 4px;border:none;border-top:1px solid var(--border);font-family:inherit';
     cap.oninput = function(){ tsImages[i].caption = cap.value; };
-    wrap.appendChild(im); wrap.appendChild(del); wrap.appendChild(cap);
+    wrap.appendChild(cap);
     el.appendChild(wrap);
   });
+  if (tsImages.length > 1) {
+    var ctrl = document.createElement('div');
+    ctrl.style.cssText = 'display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px';
+    var toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.textContent = st.active ? '✓ Selesai' : '🔀 Urutkan Foto';
+    toggleBtn.style.cssText = 'background:'+(st.active?'#16a34a':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap';
+    toggleBtn.onclick = function(){ st.active = !st.active; st.selectedIdx = null; renderTsImgPreview(); };
+    ctrl.appendChild(toggleBtn);
+    if (st.active && st.selectedIdx !== null) {
+      var arrows = document.createElement('div');
+      arrows.style.cssText = 'display:flex;gap:4px';
+      var atStart = st.selectedIdx <= 0, atEnd = st.selectedIdx >= tsImages.length - 1;
+      var leftBtn = document.createElement('button');
+      leftBtn.type = 'button'; leftBtn.textContent = '◀ Kiri'; leftBtn.disabled = atStart;
+      leftBtn.style.cssText = 'flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atStart?'default':'pointer')+';opacity:'+(atStart?'0.4':'1');
+      leftBtn.onclick = function(){ tsMoveImg(-1); };
+      var rightBtn = document.createElement('button');
+      rightBtn.type = 'button'; rightBtn.textContent = 'Kanan ▶'; rightBtn.disabled = atEnd;
+      rightBtn.style.cssText = 'flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atEnd?'default':'pointer')+';opacity:'+(atEnd?'0.4':'1');
+      rightBtn.onclick = function(){ tsMoveImg(1); };
+      arrows.appendChild(leftBtn); arrows.appendChild(rightBtn);
+      ctrl.appendChild(arrows);
+    }
+    el.appendChild(ctrl);
+  }
+}
+function tsMoveImg(dir) {
+  var st = tsReorderState;
+  if (st.selectedIdx === null) return;
+  var i = st.selectedIdx, j = i + dir;
+  if (j < 0 || j >= tsImages.length) return;
+  var tmp = tsImages[i]; tsImages[i] = tsImages[j]; tsImages[j] = tmp; // swap 1 object utuh — caption ikut (caption sudah live-synced via oninput, tidak ada re-sync by-posisi terpisah, jadi tidak ada bug Fitur Q di sini)
+  st.selectedIdx = j;
+  renderTsImgPreview();
 }
 
 function updateTsSizeInfo() {
