@@ -167,7 +167,12 @@ function supaFetchProgress(method, path, body, onProgress, expectedTotal) {
     xhr.setRequestHeader('Prefer', 'return=representation');
     if (onProgress && xhr.upload) {
       xhr.upload.onprogress = function(e) {
-        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100), 'upload');
+        // Dibatasi maks 95% -- begitu semua byte selesai terkirim, e.loaded/e.total
+        // sudah 100% padahal Supabase masih proses INSERT/UPDATE + nyiapin respons
+        // di baliknya. Kalau gak dibatasi, progress keliatan "selesai" (100%) padahal
+        // masih proses beneran. Baru dianggap benar-benar kelar begitu xhr.onload
+        // kepanggil (lihat .then di dbSave -> overlay langsung ditutup).
+        if (e.lengthComputable) onProgress(Math.min(95, Math.round((e.loaded / e.total) * 100)), 'upload');
       };
     }
     if (onProgress) {
