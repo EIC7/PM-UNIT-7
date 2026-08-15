@@ -1,8 +1,19 @@
-> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai M di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-13 huruf (A–M) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai M.**
+> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai Q di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M → N → O → P → Q**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-17 huruf (A–Q) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai Q.**
 
 
 
 # Fitur Reusable — Referensi dari `fegt.html`
+
+## 📅 Riwayat Revisi Dokumen
+> Setiap kali dokumen ini diupdate karena ada fitur/fix baru yang perlu direplikasi ke file lain, tambahkan baris baru di tabel ini (jangan timpa baris lama) — supaya gampang dibandingkan versi mana yang terakhir dicek ke suatu file.
+
+| Versi | Tanggal | Perubahan |
+|---|---|---|
+| v1.2 | 2026-08-15 | Tambah **Fitur O: Urutkan Foto (Tukar Posisi Kiri/Kanan)**, **Fitur P: Header + Baris Foto Pertama Tidak Terpisah Halaman (page-break keep-together)**, dan **Fitur Q: Sinkronisasi Caption SEBELUM Array Diubah** (fix bug caption ketuker yang kejadian pas reorder maupun hapus foto). Ketiganya ditemukan/diterapkan pertama kali di `form_o2_report.html`. |
+| v1.1 | 2026-08-14 | Tambah **Fitur N: Checkbox Vektor untuk PDF** (kotak+centang digambar via `drawCheckboxBs`, bukan karakter unicode `✓` yang tidak didukung font standar jsPDF dan tercetak sebagai titik). Perkuat **Fitur C (Crop Ulang)** dengan catatan wajib: foto hasil re-crop harus mengganti entry LAMA di index yang sama (`imgArr.splice(replaceIdx,1,entry)`), bukan dihapus lalu `push` ke akhir array — sebelumnya ini bikin foto pindah urutan ke paling akhir sementara keterangannya tertukar. Update contoh kode di **Fitur M** yang masih menampilkan pola `imgArr.push(entry)` lama. Diterapkan ke 15 file (14 HTML + `shared.js`), sumber: `coal_feeder_calibration.html`. |
+| v1.0 | (sebelum dicatat) | Versi awal dokumen — Fitur A–M. |
+
+---
 
 > **Cara pakai dokumen ini (untuk Claude):** Saat user upload HTML lain dan minta salah satu/semua fitur di bawah diterapkan:
 > 1. Baca dulu file yang diupload SECARA UTUH — cek struktur tabel/checksheet dan CSS/tema warnanya. **JANGAN diubah/disentuh.**
@@ -23,7 +34,7 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 
 ---
 
-## Daftar Fitur — Checklist A→M (cek SEMUA, urut, jangan lompat)
+## Daftar Fitur — Checklist A→Q (cek SEMUA, urut, jangan lompat)
 - [ ] [A. Upload Gambar (kamera/galeri + convert + HEIC)](#a-upload-gambar)
 - [ ] [B. Crop Modal 3-Mode (Default / Preset / Manual)](#b-crop-modal-3-mode)
 - [ ] [C. Crop Ulang (✂️ scissors, re-edit tanpa upload baru)](#c-crop-ulang)
@@ -37,6 +48,10 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 - [ ] [K. Rotasi Kotak & Oval](#k-rotasi-kotak--oval-ekstensi--belum-ada-di-fegthtml)
 - [ ] [L. Tabel Info Pekerjaan — Grid Full-Width (Label | Value)](#l-tabel-info-pekerjaan--grid-full-width-label--value)
 - [ ] [M. Upload Otomatis Foto ke Google Drive (backup, via shared.js)](#m-upload-otomatis-foto-ke-google-drive)
+- [ ] [N. Checkbox Vektor untuk PDF (Y/N, Pass/Fail)](#n-checkbox-vektor-untuk-pdf)
+- [ ] [O. Urutkan Foto (Tukar Posisi Kiri/Kanan)](#o-urutkan-foto-tukar-posisi-kirikanan)
+- [ ] [P. Header + Baris Foto Pertama Tidak Terpisah Halaman](#p-header--baris-foto-pertama-tidak-terpisah-halaman)
+- [ ] [Q. Sinkronisasi Caption SEBELUM Array Diubah](#q-sinkronisasi-caption-sebelum-array-diubah)
 - [ ] [Checklist Konfigurasi per File Baru](#checklist-konfigurasi)
 - [ ] [⚠️ Potensi Konflik Global](#potensi-konflik-global)
 
@@ -526,6 +541,9 @@ function reEditCrop(type, idx, imgIdx) {
 // openCropModal di file tujuan sudah menerima ini (lihat Fitur B).
 ```
 **Butuh dari user:** nama variabel/struktur data gambar di file itu (kalau bukan `sections[type][idx].images[]`).
+
+**⚠️ WAJIB DIPERHATIKAN saat implementasi `cropAndSave()` (bukan cuma `reEditCrop`):** ketika `p.replaceIdx >= 0` (artinya user sedang re-crop foto lama, bukan upload baru), entry hasil crop yang baru **HARUS mengganti entry lama tepat di index yang sama** — pakai `imgArr.splice(p.replaceIdx, 1, entry)` — **JANGAN** pola lama `imgArr.splice(p.replaceIdx,1)` (hapus) lalu `imgArr.push(entry)` (tambah di akhir). Pola lama itu bikin foto pindah ke posisi PALING KANAN/AKHIR galeri setiap kali di-crop ulang, sementara keterangan (`caption`) yang di-sync ulang dari input DOM berdasarkan index (lihat `cf4kSyncCaptions`/`cfSyncCaptions` sebelum render) jadi tertukar dengan foto lain karena urutan array sudah berubah duluan sebelum DOM-nya. Bug ini pernah ditemukan di 14 file HTML + `shared.js` (Agustus 2026) — lihat Riwayat Revisi v1.1 di atas.
+Efek samping lain yang perlu ikut disesuaikan: kalau ada penghitungan budget ukuran total foto (mis. loop kompresi `for (var q=0.9; ...)` yang menjumlahkan `imgArr.reduce(...)` untuk cek batas 1MB), pastikan entry yang SEDANG diganti (`i === p.replaceIdx`) dikecualikan dari total tersebut — supaya tidak dihitung dobel (ukuran lama + ukuran baru sekaligus).
 
 ---
 
@@ -1599,11 +1617,14 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
 
 **Titik integrasi berbeda tergantung pola crop yang dipakai file tujuan (cek dulu, lihat item #5 di Checklist Konfigurasi):**
 
-1. **File yang masih pakai pola lama `imgOpenCropper` / `imgCompressAndStore` (shared.js)** — **TIDAK PERLU diubah sama sekali**. Panggilan `uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption)` sudah ditempel otomatis di dalam `imgCompressAndStore()` di `shared.js` sendiri (tepat setelah `imgArr.push(...)`), jadi semua modul yang lewat fungsi ini (op, bs, cf, dcs, cl, ld, fm, hg, dst) otomatis ke-backup ke Drive begitu `shared.js` di-update.
+1. **File yang masih pakai pola lama `imgOpenCropper` / `imgCompressAndStore` (shared.js)** — **TIDAK PERLU diubah sama sekali**. Panggilan `uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption)` sudah ditempel otomatis di dalam `imgCompressAndStore()` di `shared.js` sendiri (tepat setelah entry disimpan ke `imgArr` — sejak v1.1, `imgCompressAndStore` menerima parameter `replaceIdx` dan mengganti entry di posisi yang sama kalau re-crop, bukan selalu `push` ke akhir), jadi semua modul yang lewat fungsi ini (op, bs, cf, dcs, cl, ld, fm, hg, dst) otomatis ke-backup ke Drive begitu `shared.js` di-update.
 
-2. **File yang pakai pola baru `cropAndSave()` 3-mode (Fitur B, duplikat per file — mis. `ph-analyzer.html`)** — fungsi `cropAndSave()`-nya ada LOKAL di tiap file (bukan di `shared.js`), jadi perlu **1 baris tambahan manual** tepat setelah `imgArr.push(entry)`:
+2. **File yang pakai pola baru `cropAndSave()` 3-mode (Fitur B, duplikat per file — mis. `ph-analyzer.html`)** — fungsi `cropAndSave()`-nya ada LOKAL di tiap file (bukan di `shared.js`), jadi perlu **beberapa baris tambahan manual** tepat di titik penyimpanan entry (lihat juga catatan wajib di Fitur C soal in-place replace):
    ```js
-   imgArr.push(entry);
+   // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama,
+   // bukan dihapus lalu ditambahkan di akhir array.
+   if (existing) imgArr.splice(p.replaceIdx, 1, entry);
+   else imgArr.push(entry);
    uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '');
    closeCropModal();
    ```
@@ -1625,7 +1646,194 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
 
 ---
 
-## Checklist Konfigurasi per File Baru
+## N. Checkbox Vektor untuk PDF
+**Tujuan:** menampilkan tanda centang/silang (Y/N, Pass/Fail, OK/NG, dsb) di tabel hasil PDF sebagai kotak+centang yang digambar vektor — bukan karakter unicode (`✓`, `✔`, `☑`, dst) yang ditulis langsung lewat `doc.text(...)`.
+
+**⚠️ Kenapa ini penting:** font standar bawaan jsPDF (`helvetica`, `times`, `courier`) memakai encoding WinAnsi dan **tidak punya glyph untuk karakter centang unicode**. Kalau `doc.text('\u2713', ...)` atau `doc.text('✓', ...)` dipakai langsung, hasil cetak PDF-nya bukan tanda centang, melainkan **titik** (atau kotak kosong/`.notdef`, tergantung viewer PDF). Ini baru ketahuan setelah user cek preview PDF asli — tidak kelihatan dari kode-nya doang.
+
+**Ditemukan pertama kali di:** `coal_feeder_calibration.html` (Agustus 2026), lalu direplikasi ke file lain yang punya pola serupa (checklist Y/N, Pass/Fail) — lihat Riwayat Revisi v1.1.
+
+```js
+// Kotak centang digambar sebagai checkbox visual (kotak + centang vektor),
+// bukan karakter unicode ✓ — karena font standar jsPDF (helvetica) tidak
+// punya glyph untuk \u2713 sehingga tercetak sebagai titik.
+function drawCheckboxBs(doc, x, y, w, h, checked, tone){
+  var size = Math.min(w, h) * 0.55;
+  var bx = x + w/2 - size/2, by = y + h/2 - size/2;
+  doc.setLineWidth(0.4);
+  if (checked) {
+    var fill = tone === 'red' ? [204,60,60] : [46,204,113];
+    var strk = tone === 'red' ? [140,30,30] : [30,140,74];
+    doc.setDrawColor(strk[0],strk[1],strk[2]); doc.setFillColor(fill[0],fill[1],fill[2]);
+    doc.rect(bx, by, size, size, 'FD');
+    doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+    doc.line(bx+size*0.18, by+size*0.52, bx+size*0.40, by+size*0.76);
+    doc.line(bx+size*0.40, by+size*0.76, bx+size*0.84, by+size*0.22);
+  } else {
+    doc.setDrawColor(150,160,155); doc.setFillColor(255,255,255);
+    doc.rect(bx, by, size, size, 'FD');
+  }
+}
+```
+
+**Cara pakai di dalam `autoTable`:** JANGAN taruh `'✓'`/`'\u2713'` sebagai isi cell di array `body`. Kosongkan cell itu (`''`), lalu gambar checkbox-nya lewat callback `didDrawCell` (dieksekusi setelah cell digambar, jadi posisi `d.cell.x/y/width/height` sudah pasti benar termasuk di halaman lanjutan):
+```js
+doc.autoTable({
+  // ...
+  body: rows.map(function(r){ return [r.no, r.deskripsi, '', '']; }), // kolom Y/N dikosongkan
+  didDrawCell:function(d){
+    if (d.section!=='body') return;
+    var r = rows[d.row.index];
+    if (!r) return;
+    if (d.column.index===2 && r.yn==='Y') drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'green');
+    if (d.column.index===3 && r.yn==='N') drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'red');
+  }
+});
+```
+
+**Butuh dari user:** tidak ada — ini pure PDF-rendering fix, tidak menyentuh struktur data/form. Cukup cek kolom mana di tabel PDF yang pakai centang unicode, lalu ganti dengan pola di atas.
+
+**⚠️ Potensi Konflik:** kalau file tujuan sudah punya fungsi bernama `drawCheckboxBs` dengan tanda tangan (signature) beda — samakan dulu ke pola di atas, jangan biarkan 2 definisi beda saling menimpa.
+
+---
+
+## O. Urutkan Foto (Tukar Posisi Kiri/Kanan)
+**Tujuan:** membetulkan urutan foto dalam satu galeri (mis. foto ke-3 dan ke-5 kebalik) tanpa drag & drop — cukup centang 1 foto lalu tekan panah kiri/kanan untuk menukar posisinya dengan tetangga.
+
+**Ditemukan pertama kali di:** `form_o2_report.html` (Agustus 2026).
+
+**Cara kerja:** tombol toggle "🔀 Urutkan Foto" ditaruh nempel di sebelah kanan foto terakhir galeri (bukan modal terpisah). Saat mode aktif: tombol crop & hapus tiap foto disembunyikan sementara, diganti checkbox single-select (centang 1 foto membatalkan pilihan sebelumnya). Setelah 1 foto dicentang, muncul tombol ◀ Kiri / ▶ Kanan yang menukar **seluruh object foto** (bukan cuma src-nya) dengan tetangganya — jadi caption, ukuran/preset crop, dan offset posisi PDF otomatis ikut pindah karena itu satu kesatuan object yang di-swap, bukan field-per-field. Foto yang sama tetap tercentang di posisi barunya supaya bisa digeser berkali-kali. Tombol "✓ Selesai" keluar dari mode, balikin tombol crop/hapus.
+
+**⚠️ WAJIB dipasangkan dengan Fitur Q** — kalau file tujuan masih pakai pola render lama yang selalu re-sync caption dari DOM di awal fungsi render (tanpa `skipSync`), fitur tukar posisi ini akan **bikin caption ketuker** (lihat Fitur Q).
+
+```js
+// State per galeri (key: '{{chKey}}_{{phase}}' atau sejenisnya — sesuaikan skema key file tujuan)
+var {{prefix}}ReorderState = {};
+
+function {{prefix}}ToggleReorder(chKey, phase) {
+  var stKey = chKey+'_'+phase;
+  var st = {{prefix}}ReorderState[stKey] || ({{prefix}}ReorderState[stKey] = {active:false, selectedIdx:null});
+  st.active = !st.active;
+  st.selectedIdx = null;
+  {{prefix}}RenderPreviews(chKey, phase);
+}
+
+function {{prefix}}SelectForReorder(chKey, phase, idx, checked) {
+  var stKey = chKey+'_'+phase;
+  var st = {{prefix}}ReorderState[stKey] || ({{prefix}}ReorderState[stKey] = {active:false, selectedIdx:null});
+  st.selectedIdx = checked ? idx : null;
+  {{prefix}}RenderPreviews(chKey, phase);
+}
+
+function {{prefix}}MoveImg(chKey, phase, dir) {
+  var stKey = chKey+'_'+phase;
+  var st = {{prefix}}ReorderState[stKey];
+  if (!st || st.selectedIdx === null) return;
+  var arr = {{imgArr}}; // mis. o2Images[chKey][phase]
+  var i = st.selectedIdx, j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  {{prefix}}SyncCaptions(chKey, phase); // WAJIB — lihat Fitur Q, commit caption SEBELUM swap
+  var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp; // swap 1 object utuh — caption/crop/offset ikut
+  st.selectedIdx = j;
+  {{prefix}}RenderPreviews(chKey, phase, true); // skipSync=true — lihat Fitur Q
+}
+```
+Di dalam fungsi render thumbnail (yang menggambar tiap foto), tambahkan pengecekan `st.active` untuk tukar tombol crop/hapus dengan checkbox, dan render tombol toggle+panah setelah loop foto:
+```js
+// Di dalam .forEach(function(img, idx){ ... }) — ganti tombol crop & hapus:
+var cropBtn = (isImg && !st.active) ? '<button onclick="...">✂️ Crop</button>' : '';
+var removeBtn = !st.active
+  ? '<button onclick="{{prefix}}RemoveImg(...)">&#215;</button>'
+  : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#2563eb);display:flex;align-items:center;justify-content:center;cursor:pointer">'
+    + '<input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="{{prefix}}SelectForReorder(\'{{chKey}}\',\'{{phase}}\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
+
+// Setelah container.appendChild(wrap) di dalam forEach selesai — tombol kontrol di ujung galeri:
+if (arr.length > 1) {
+  var toggleBtn = '<button type="button" onclick="{{prefix}}ToggleReorder(\'{{chKey}}\',\'{{phase}}\')" style="background:'+(st.active?'var(--ok,#16a34a)':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap">'+(st.active?'&#10003; Selesai':'&#128256; Urutkan Foto')+'</button>';
+  var arrowsHtml = '';
+  if (st.active && st.selectedIdx !== null) {
+    var atStart = st.selectedIdx <= 0, atEnd = st.selectedIdx >= arr.length - 1;
+    arrowsHtml = '<div style="display:flex;gap:4px">'
+      + '<button type="button" '+(atStart?'disabled':'')+' onclick="{{prefix}}MoveImg(\'{{chKey}}\',\'{{phase}}\',-1)" style="flex:1;opacity:'+(atStart?'0.4':'1')+'">&#9664; Kiri</button>'
+      + '<button type="button" '+(atEnd?'disabled':'')+' onclick="{{prefix}}MoveImg(\'{{chKey}}\',\'{{phase}}\',1)" style="flex:1;opacity:'+(atEnd?'0.4':'1')+'">Kanan &#9654;</button>'
+      + '</div>';
+  }
+  // ctrl div ditaruh SEBAGAI SIBLING TERAKHIR di dalam container yang sama, vertical-align:top,
+  // supaya nempel di sebelah kanan foto terakhir (bukan overlay/modal terpisah)
+}
+```
+**Butuh dari user:** tidak ada — cukup baca nama array gambar (`{{imgArr}}`), nama fungsi render (`{{prefix}}RenderPreviews`), dan skema key galeri (`{{chKey}}`/`{{phase}}`, atau bisa lebih sederhana kalau file tujuan cuma punya 1 galeri per section tanpa sub-key) langsung dari kode file tujuan.
+
+**⚠️ Potensi Konflik:** kalau file tujuan render foto dari template string (bukan `container.innerHTML=''` lalu `appendChild` per foto seperti O2), pola checkbox-gantikan-tombol tetap sama, tinggal disuntik ke template string-nya. Kalau nama tombol hapus/crop beda, sesuaikan seleksinya.
+
+---
+
+## P. Header + Baris Foto Pertama Tidak Terpisah Halaman
+**Tujuan:** mencegah judul section/channel (kotak hijau/label BEFORE-AFTER/EVIDENCE, dst) tercetak sendirian di ujung bawah halaman PDF sementara baris foto pertamanya "kelempar" ke halaman berikutnya — kesalahan umum kalau page-break cuma dicek per-baris-foto tanpa mempertimbangkan header di atasnya.
+
+**⚠️ Sudah lama diterapkan** di `fegt.html` (BAGIAN 3 & 4 — Cleaning Hole) dan `pm-hg-analyzer.html` (Evidence per Step) — baru diformalkan jadi entri dokumen ini saat di-port ke `form_o2_report.html` (Agustus 2026). Cek dulu apakah file tujuan sudah punya pola ini sebelum menambahkan ulang.
+
+**Prinsip:** hitung dulu (tanpa menggambar apa pun) perkiraan tinggi total **header + konten pertama yang menempel langsung di bawahnya** (label + 1 baris foto). Kalau ternyata tidak muat di sisa halaman SEKARANG tapi muat kalau pindah ke halaman baru → `addPage()` DULU sebelum header digambar. Kalau bahkan di halaman baru pun tidak muat (foto raksasa) → biarkan alur normal per-baris yang menangani, jangan sampai infinite-loop. Baris foto ke-2/3/dst (lanjutan) TETAP boleh pindah halaman sendiri tanpa menyeret header lagi — cuma header + baris PERTAMA yang dijaga.
+
+**Kalau section punya 2 subsection foto berurutan (mis. BEFORE/AFTER lalu EVIDENCE, seperti di O2), lakukan pengecekan INI TERPISAH untuk masing-masing** — subsection kedua bisa saja mulai di tengah halaman (setelah subsection pertama menghabiskan tempat), jadi labelnya sendiri juga butuh dijaga agar tidak terpisah dari baris foto pertamanya, independen dari header section.
+
+```js
+// Sebelum menggambar header section/channel — estimasi dulu tanpa efek samping:
+var firstImg = imgs[0] ? {{iePhotoDrawSize}}(imgs[0], colW, maxPhotoH) : null;
+var firstImg2 = imgs[1] ? {{iePhotoDrawSize}}(imgs[1], colW, maxPhotoH) : null; // kalau layout 2-kolom
+var firstRowH = Math.max(firstImg?firstImg.h:0, firstImg2?firstImg2.h:0, 20);
+var firstBlockH = 10 /* tinggi kotak header */ + 5 /* tinggi label sub-header */ + (firstRowH + 9);
+
+if (firstBlockH <= (ph - marginTop - marginBottom) && (y + firstBlockH > ph - marginBottom)) {
+  doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+} else {
+  checkPage(14); // fallback normal kalau memang tidak muat sama sekali
+}
+// ...baru setelah ini gambar kotak header + label + loop foto seperti biasa...
+```
+Kalau ada blok teks dinamis di antara header dan foto (mis. catatan/notes yang panjangnya berubah-ubah), hitung dulu jumlah barisnya lewat `doc.splitTextToSize(...)` (ini tidak menggambar apa-apa, aman dipanggil duluan) dan masukkan tingginya ke `firstBlockH` juga — simpan hasil `splitTextToSize` di variabel supaya tidak perlu dihitung ulang saat benar-benar digambar.
+
+**Butuh dari user:** tidak ada — murni perbaikan page-break PDF, tidak menyentuh struktur data/form. Cukup baca nama variabel `ph`/`marginTop`/`marginBottom`/`marginX`/`checkPage`/fungsi ukur foto (`iePhotoDrawSize` atau sejenis) yang sudah ada di file tujuan.
+
+**⚠️ Potensi Konflik:** kalau file tujuan belum punya fungsi `checkPage(minH)` generik, pastikan definisinya (biasanya `if (y+minH > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }`) ada dulu sebelum menempel pola ini.
+
+---
+
+## Q. Sinkronisasi Caption SEBELUM Array Diubah
+**Tujuan:** mencegah caption/keterangan foto "ketuker" (nempel ke foto yang salah) setiap kali urutan array foto berubah — baik karena **Fitur O (tukar posisi)** maupun **hapus foto** (tombol ×).
+
+**Ditemukan pertama kali di:** `form_o2_report.html` (Agustus 2026), saat menambahkan Fitur O — ternyata bug yang sama juga sudah lama ada di tombol hapus foto yang sudah dipakai di banyak modul lain, jadi ikut dicek/diperbaiki di file mana pun fitur ini diterapkan.
+
+**Akar masalahnya:** banyak fungsi render galeri (`{{prefix}}RenderPreviews`) selalu memanggil sync-caption-dari-DOM ("SyncCaptions") di baris pertamanya, sebelum menggambar ulang. Fungsi sync itu membaca `<input>` keterangan **berdasarkan posisi index** (`id="..._"+idx`) dan menulisnya ke `arr[idx].caption`. Ini aman kalau dipanggil SEBELUM array berubah urutan/isi. Tapi kalau dipanggil SESUDAH `splice()` (hapus) atau swap (tukar posisi) — DOM lama masih menampilkan urutan LAMA, sementara `arr[idx]` sekarang sudah jadi object yang BEDA di posisi itu. Akibatnya caption ketulis ke foto yang salah.
+
+**Fix — 2 bagian:**
+1. Tambahkan parameter `skipSync` (opsional, default `false`) di fungsi render galeri, supaya pemanggil yang SUDAH sync duluan bisa melewati sync kedua yang salah-waktu itu:
+```js
+function {{prefix}}RenderPreviews(chKey, phase, skipSync) {
+  // ...normalisasi argumen kalau perlu...
+  if (!skipSync) {{prefix}}SyncCaptions(chKey, phase); // cuma sync kalau BUKAN dipanggil sesudah array berubah
+  // ...sisa fungsi render seperti biasa...
+}
+```
+2. Di setiap fungsi yang mengubah URUTAN atau ISI array foto (swap/reorder, hapus, insert-di-tengah — bukan yang cuma `push` di akhir, itu aman), panggil sync DULU sebelum mutasi, lalu render dengan `skipSync=true`:
+```js
+function {{prefix}}RemoveImg(chKey, phase, idx) {
+  {{prefix}}SyncCaptions(chKey, phase); // commit caption dari DOM SEBELUM index bergeser
+  {{imgArr}}.splice(idx, 1);
+  {{prefix}}RenderPreviews(chKey, phase, true); // skip sync — sudah dilakukan di atas
+}
+```
+(Untuk kode swap/reorder-nya sendiri lihat Fitur O — pola `SyncCaptions` → mutasi array → `RenderPreviews(..., true)` itu persis sama.)
+
+**Catatan:** bug ini CUMA menyerang caption. Data lain per foto (ukuran/preset crop `widthCm`/`heightCm`, offset posisi PDF `offsetX`, `dataUrl`, `type`) tidak kena karena itu semua ikut nempel ke object yang di-swap/displace — cuma caption yang di-assign ulang secara terpisah berdasarkan posisi DOM, makanya cuma dia yang butuh fix ini.
+
+**Butuh dari user:** tidak ada. Tapi **WAJIB dicek di SEMUA fungsi** yang mengubah urutan/isi array foto di file tujuan (reorder, hapus, insert-ulang setelah crop-ulang jika itu memindah posisi) — bukan cuma yang baru ditambah dari Fitur O.
+
+**⚠️ Potensi Konflik:** kalau file tujuan sudah punya pola sync-caption yang berbeda (mis. sync per-input `oninput` SAJA tanpa fungsi sync terpisah), fix ini mungkin tidak relevan — cek dulu apakah bug-nya benar-benar bisa terjadi di sana sebelum menempel pola ini secara membabi buta.
+
+---
+
+
 Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditanyakan:
 
 | # | Yang perlu dipastikan | Kalau tidak ada di prompt user |
@@ -1641,6 +1849,6 @@ Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditany
 
 ## ⚠️ Potensi Konflik Global
 Karena semua fitur di atas dan fungsi bawaan `shared.js` sama-sama pakai **global function declaration** (bukan modul/namespace), nama-nama berikut **rawan bentrok** kalau file tujuan sudah punya fungsi dengan nama sama tapi perilaku beda:
-`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `applySquarePreset`, `fitCropBoxToFullImage`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`.
+`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `applySquarePreset`, `fitCropBoxToFullImage`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`, `drawCheckboxBs`.
 
 **Sebelum menempel kode dari dokumen ini, selalu `grep` dulu nama-nama fungsi di atas pada file tujuan.** Kalau sudah ada dan isinya beda, diskusikan dulu ke user mana yang mau dipakai / digabung, jangan main timpa.

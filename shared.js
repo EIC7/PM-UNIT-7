@@ -636,6 +636,7 @@ function normalizeModul(name) {
   var n = name.toUpperCase();
   if (n.indexOf('FEGT')>=0 || n.indexOf('LEAK')>=0) return 'FEGT';
   if (n.indexOf('SO2')>=0 || n.indexOf('SCRUBBER')>=0) return 'SO2';
+  if (n.indexOf('O2')>=0) return 'O2';
   if (n.indexOf('OPACITY')>=0) return 'OPACITY';
   if (n.indexOf('CEMS')>=0) return 'CEMS_CALIBRATION';
   if (n.indexOf('BELT')>=0 || n.indexOf('CONVEYOR')>=0) {

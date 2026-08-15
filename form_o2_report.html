@@ -93,6 +93,22 @@
 .o2-job-title-text{font-size:16px;font-weight:700;color:var(--steel);line-height:1.4}
 .o2-job-title-text span{font-weight:500;font-size:13px;color:var(--text2)}
 .o2-channel-card{background:var(--bg2,#dde3de);border:1px solid var(--border);border-radius:8px;padding:14px}
+.o2-readings-wrap{margin-bottom:18px}
+.o2-readings-title{font-size:13px;font-weight:700;color:var(--steel);margin-bottom:8px}
+.o2-readings-table,.o2-avg-table{width:100%;border-collapse:separate;border-spacing:0;font-size:clamp(10px,1.2vw,13px);background:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--panel-border)}
+.o2-readings-table th{background:#159957;color:#fff;font-weight:700;padding:9px 10px;text-align:center;white-space:nowrap}
+.o2-readings-table th:first-child,.o2-readings-table td:first-child{text-align:left}
+.o2-readings-table td{padding:7px 8px;border-top:1px solid rgba(180,200,220,0.35);text-align:center;color:var(--text)}
+.o2-readings-table tr:nth-child(even) td{background:#f4f7f6}
+.o2-readings-table td:first-child{font-weight:700;color:var(--steel)}
+.o2-readings-table input{width:100%;min-width:56px;box-sizing:border-box;border:1.5px solid var(--panel-border);border-radius:5px;padding:5px 6px;font-family:'Courier New',monospace;font-size:12px;text-align:center;color:var(--text)}
+.o2-readings-table input:focus{outline:none;border-color:#159957;background:#f0fbf5}
+.o2-avg-table th{background:#6366f1;color:#fff;font-weight:700;padding:9px 12px;text-align:center;white-space:nowrap}
+.o2-avg-table th:first-child,.o2-avg-table td:first-child{text-align:left}
+.o2-avg-table td{padding:9px 12px;border-top:1px solid rgba(180,200,220,0.35);text-align:center;color:var(--text)}
+.o2-avg-table tr:nth-child(even) td{background:#f4f5fe}
+.o2-avg-table td:first-child{font-weight:700;color:var(--steel)}
+.o2-avg-table td.o2-avg-val{font-family:'Courier New',monospace;font-weight:700}
 .o2-channel-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;flex-wrap:wrap}
 .o2-channel-head-num{font-size:14px;font-weight:700;color:var(--steel);white-space:nowrap}
 .o2-channel-tag-input{flex:1;min-width:140px;border:1px solid var(--panel-border);border-radius:6px;padding:6px 9px;font-size:12px;background:#fff;color:var(--text)}
@@ -165,6 +181,29 @@
     <div class="o2-session-tabs">
       <button type="button" class="o2-session-tab active" id="o2TabInlet" onclick="o2SwitchSession('inlet')">🔵 Inlet (8 Channel)</button>
       <button type="button" class="o2-session-tab" id="o2TabOutlet" onclick="o2SwitchSession('outlet')">🟢 Outlet (6 Channel)</button>
+    </div>
+    <div id="o2OutletReadingsWrap" style="display:none">
+      <div class="o2-readings-wrap">
+        <div class="o2-readings-title">📊 Channel Readings</div>
+        <div style="overflow-x:auto">
+          <table class="o2-readings-table" id="o2ReadingsTable">
+            <thead><tr>
+              <th>Channel</th><th>O2 (%)<br>Before</th><th>O2 (%)<br>After</th>
+              <th>Voltage (mV)</th><th>Temp (°C)</th><th>Lifetime (months)</th><th>Resistance (Ohm)</th>
+            </tr></thead>
+            <tbody><!-- built by JS: buildO2ReadingsTables() --></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="o2-readings-wrap">
+        <div class="o2-readings-title">📈 Average O2 Readings</div>
+        <div style="overflow-x:auto">
+          <table class="o2-avg-table" id="o2AvgTable">
+            <thead><tr><th>Channel Group</th><th>Average O2 (%)<br>Before</th><th>Average O2 (%)<br>After</th></tr></thead>
+            <tbody><!-- built by JS: buildO2ReadingsTables() --></tbody>
+          </table>
+        </div>
+      </div>
     </div>
     <div id="o2ChannelGrid" style="display:flex;flex-direction:column;gap:16px"></div>
     <div id="o2ChannelGridOutlet" style="display:none;flex-direction:column;gap:16px"></div>
@@ -1507,11 +1546,74 @@ var O2_OUTLET_CHANNELS = [
   {id:6, tag:'7BG-AI-571B - SECONDARY AIR HEATER 7B GAS OUT O2 ANALYZER 2'}
 ];
 
-// o2Images['ch1'] = {evidence:[], before:[], after:[]}  — tiap array isi {name,dataUrl,type,caption,offsetX?,widthCm?,heightCm?}
+// o2Readings['och'+id] = {before:'', after:'', voltage:'', temp:'', lifetime:'', resistance:''}
+// Hanya dipakai untuk sesi Outlet (2 tabel di atas dokumentasi per channel).
+var o2Readings = {};
+O2_OUTLET_CHANNELS.forEach(function(c){ o2Readings['och'+c.id] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''}; });
+
+// Pengelompokan untuk tabel "Average O2 Readings" — id merujuk ke O2_OUTLET_CHANNELS.id
+var O2_OUTLET_AVG_GROUPS = [
+  {label:'Secondary A (570A + 571A)', ids:[1,2]},
+  {label:'Primary (572 + 573)', ids:[3,4]},
+  {label:'Secondary B (570B + 571B)', ids:[5,6]}
+];
+
+function o2ReadingsChannelCode(tag) {
+  var raw = String(tag||'').trim();
+  var sep = raw.indexOf('—') >= 0 ? '—' : (raw.indexOf(' - ') >= 0 ? ' - ' : null);
+  return sep ? raw.substring(0, raw.indexOf(sep)).trim() : raw;
+}
+
+function buildO2ReadingsTables() {
+  var tbody = document.querySelector('#o2ReadingsTable tbody');
+  if (!tbody || tbody.children.length > 0) return;
+  tbody.innerHTML = O2_OUTLET_CHANNELS.map(function(c){
+    var ck = 'och'+c.id;
+    var code = o2ReadingsChannelCode(c.tag);
+    return '<tr>'+
+      '<td>'+code+'</td>'+
+      '<td><input type="number" step="0.01" id="o2rd_'+ck+'_before" oninput="o2UpdateReading(\''+ck+'\',\'before\',this.value)"></td>'+
+      '<td><input type="number" step="0.01" id="o2rd_'+ck+'_after" oninput="o2UpdateReading(\''+ck+'\',\'after\',this.value)"></td>'+
+      '<td><input type="number" step="0.1" id="o2rd_'+ck+'_voltage" oninput="o2UpdateReading(\''+ck+'\',\'voltage\',this.value)"></td>'+
+      '<td><input type="number" step="1" id="o2rd_'+ck+'_temp" oninput="o2UpdateReading(\''+ck+'\',\'temp\',this.value)"></td>'+
+      '<td><input type="number" step="1" id="o2rd_'+ck+'_lifetime" oninput="o2UpdateReading(\''+ck+'\',\'lifetime\',this.value)"></td>'+
+      '<td><input type="number" step="1" id="o2rd_'+ck+'_resistance" oninput="o2UpdateReading(\''+ck+'\',\'resistance\',this.value)"></td>'+
+    '</tr>';
+  }).join('');
+
+  var avgBody = document.querySelector('#o2AvgTable tbody');
+  if (avgBody && avgBody.children.length === 0) {
+    avgBody.innerHTML = O2_OUTLET_AVG_GROUPS.map(function(g,i){
+      return '<tr><td>'+g.label+'</td><td class="o2-avg-val" id="o2avg_'+i+'_before">—</td><td class="o2-avg-val" id="o2avg_'+i+'_after">—</td></tr>';
+    }).join('');
+  }
+}
+
+function o2UpdateReading(ck, field, val) {
+  if (!o2Readings[ck]) o2Readings[ck] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''};
+  o2Readings[ck][field] = val;
+  if (field === 'before' || field === 'after') o2RecalcAvg();
+}
+
+function o2RecalcAvg() {
+  O2_OUTLET_AVG_GROUPS.forEach(function(g, i){
+    ['before','after'].forEach(function(field){
+      var vals = g.ids.map(function(id){ var r = o2Readings['och'+id]; var v = r ? parseFloat(r[field]) : NaN; return v; }).filter(function(v){ return !isNaN(v); });
+      var el = document.getElementById('o2avg_'+i+'_'+field);
+      if (!el) return;
+      el.textContent = vals.length ? (vals.reduce(function(a,b){return a+b;},0) / g.ids.length).toFixed(2) : '—';
+    });
+  });
+}
+
+
 // Inlet pakai prefix 'ch', Outlet pakai prefix 'och' (supaya tidak bentrok)
 var o2Images = {};
 O2_CHANNELS.forEach(function(c){ o2Images['ch'+c.id] = {evidence:[], before:[], after:[]}; });
 O2_OUTLET_CHANNELS.forEach(function(c){ o2Images['och'+c.id] = {evidence:[], before:[], after:[]}; });
+
+// Status mode "Urutkan Foto" per galeri (key: chKey_phase) -> {active:bool, selectedIdx:number|null}
+var o2ReorderState = {};
 
 // Status centang tiap channel (buka/tutup section + menentukan ikut PDF & auto-isi Asset)
 var o2ChannelEnabled = {};
@@ -1550,13 +1652,16 @@ function o2SetSelectedFreq(list) {
 function o2SwitchSession(session) {
   var gridIn = document.getElementById('o2ChannelGrid');
   var gridOut = document.getElementById('o2ChannelGridOutlet');
+  var readingsWrap = document.getElementById('o2OutletReadingsWrap');
   var tabIn = document.getElementById('o2TabInlet');
   var tabOut = document.getElementById('o2TabOutlet');
   if (session === 'outlet') {
     gridIn.style.display = 'none'; gridOut.style.display = 'flex';
+    if (readingsWrap) readingsWrap.style.display = 'block';
     tabIn.classList.remove('active'); tabOut.classList.add('active');
   } else {
     gridOut.style.display = 'none'; gridIn.style.display = 'flex';
+    if (readingsWrap) readingsWrap.style.display = 'none';
     tabOut.classList.remove('active'); tabIn.classList.add('active');
   }
 }
@@ -1706,19 +1811,25 @@ function o2ReEdit(chKey, phase, idx) {
   imgOpenCropper(img.dataUrl, img.name, img.type, o2Images[chKey][phase], side, 'o2', idx);
 }
 
-function o2RenderPreviews(chKey, phase) {
+function o2RenderPreviews(chKey, phase, skipSync) {
   // dipanggil dari cropAndSave() dengan 1 argumen 'ch1_before' — dukung juga 2 argumen terpisah
   if (phase === undefined) {
     var lastUs = chKey.lastIndexOf('_');
     phase = chKey.slice(lastUs + 1);
     chKey = chKey.slice(0, lastUs);
   }
-  o2SyncCaptions(chKey, phase);
+  // skipSync: dipakai saat pemanggil (tukar posisi/hapus foto) SUDAH menyinkronkan
+  // caption dari DOM SEBELUM array-nya diubah urutan/isinya. Kalau tetap sync di sini
+  // (setelah array berubah), pembacaan input by-posisi jadi salah pasang ke foto yang
+  // sudah pindah/bergeser posisi — caption bisa ketuker/nempel ke foto yang salah.
+  if (!skipSync) o2SyncCaptions(chKey, phase);
   var uid = 'o2_'+chKey+'_'+phase;
   var container = document.getElementById(uid+'_preview');
   if (!container) return;
   container.innerHTML = '';
   var arr = o2Images[chKey][phase];
+  var stKey = chKey+'_'+phase;
+  var st = o2ReorderState[stKey] || (o2ReorderState[stKey] = {active:false, selectedIdx:null});
   if (!arr || arr.length === 0) return;
   arr.forEach(function(img, idx) {
     if (!img||!img.name) return;
@@ -1732,24 +1843,73 @@ function o2RenderPreviews(chKey, phase) {
     var thumb = isImg
       ? '<div style="'+thumbStyle+'"><img src="'+safe(img.dataUrl)+'" alt="" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="imgOpenCropper(o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].dataUrl,o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].name,o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].type,o2Images[\''+chKey+'\'][\''+phase+'\'],\''+side+'\',\'o2\','+idx+')" onerror="this.style.display=\'none\';this.parentNode.innerHTML=\''+fallback+'\'" title="Klik untuk crop ulang"></div>'
       : '<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
-    var cropBtn = isImg
+    var cropBtn = (isImg && !st.active)
       ? '<button onclick="imgOpenCropper(o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].dataUrl,o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].name,o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].type,o2Images[\''+chKey+'\'][\''+phase+'\'],\''+side+'\',\'o2\','+idx+')" style="position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
       : '';
-    var nudgeHtml = isImg ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
+    var nudgeHtml = (isImg && !st.active) ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
       '<button type="button" onclick="nudgeImageInArray(o2Images[\''+chKey+'\'][\''+phase+'\'],'+idx+',-0.5,function(){o2RenderPreviews(\''+chKey+'\',\''+phase+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>' +
       '<span>'+(img.offsetX||0)+'cm</span>' +
       '<button type="button" onclick="nudgeImageInArray(o2Images[\''+chKey+'\'][\''+phase+'\'],'+idx+',0.5,function(){o2RenderPreviews(\''+chKey+'\',\''+phase+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>' +
       '</div></div>') : '';
-    wrap.innerHTML = thumb + cropBtn
-      + '<button onclick="o2RemoveImg(\''+chKey+'\',\''+phase+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
+    var removeBtn = !st.active
+      ? '<button onclick="o2RemoveImg(\''+chKey+'\',\''+phase+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
+      : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#2563eb);display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="o2SelectForReorder(\''+chKey+'\',\''+phase+'\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
+    wrap.innerHTML = thumb + cropBtn + removeBtn
       + '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'
       + nudgeHtml
       + '<input id="o2_cap_'+chKey+'_'+phase+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="o2Images[\''+chKey+'\'][\''+phase+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
+
+  // Kontrol "Urutkan Foto" — diposisikan di sebelah kanan foto terakhir
+  if (arr.length > 1) {
+    var ctrl = document.createElement('div');
+    ctrl.style.cssText = 'display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px';
+    var toggleBtn = '<button type="button" onclick="o2ToggleReorder(\''+chKey+'\',\''+phase+'\')" style="background:'+(st.active?'var(--ok,#16a34a)':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap">'+(st.active?'&#10003; Selesai':'&#128256; Urutkan Foto')+'</button>';
+    var arrowsHtml = '';
+    if (st.active && st.selectedIdx !== null) {
+      var atStart = st.selectedIdx <= 0;
+      var atEnd = st.selectedIdx >= arr.length - 1;
+      arrowsHtml = '<div style="display:flex;gap:4px">' +
+        '<button type="button" '+(atStart?'disabled':'')+' onclick="o2MoveImg(\''+chKey+'\',\''+phase+'\',-1)" title="Geser ke kiri" style="flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atStart?'default':'pointer')+';opacity:'+(atStart?'0.4':'1')+'">&#9664; Kiri</button>' +
+        '<button type="button" '+(atEnd?'disabled':'')+' onclick="o2MoveImg(\''+chKey+'\',\''+phase+'\',1)" title="Geser ke kanan" style="flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atEnd?'default':'pointer')+';opacity:'+(atEnd?'0.4':'1')+'">Kanan &#9654;</button>' +
+        '</div>';
+    }
+    ctrl.innerHTML = toggleBtn + arrowsHtml;
+    container.appendChild(ctrl);
+  }
+
   var totalKb = arr.reduce(function(a,img){return a+(img.dataUrl?Math.round(img.dataUrl.length*0.75/1024):0);},0);
   var sizeEl = document.getElementById(uid+'_size');
   if (sizeEl) sizeEl.textContent = totalKb+' KB / 1024 KB';
+}
+
+function o2ToggleReorder(chKey, phase) {
+  var stKey = chKey+'_'+phase;
+  var st = o2ReorderState[stKey] || (o2ReorderState[stKey] = {active:false, selectedIdx:null});
+  st.active = !st.active;
+  st.selectedIdx = null;
+  o2RenderPreviews(chKey, phase);
+}
+
+function o2SelectForReorder(chKey, phase, idx, checked) {
+  var stKey = chKey+'_'+phase;
+  var st = o2ReorderState[stKey] || (o2ReorderState[stKey] = {active:false, selectedIdx:null});
+  st.selectedIdx = checked ? idx : null;
+  o2RenderPreviews(chKey, phase);
+}
+
+function o2MoveImg(chKey, phase, dir) {
+  var stKey = chKey+'_'+phase;
+  var st = o2ReorderState[stKey];
+  if (!st || st.selectedIdx === null) return;
+  var arr = o2Images[chKey][phase];
+  var i = st.selectedIdx, j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  o2SyncCaptions(chKey, phase); // commit caption dari DOM SEBELUM urutan array berubah
+  var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  st.selectedIdx = j;
+  o2RenderPreviews(chKey, phase, true); // skip sync — sudah dilakukan di atas, sebelum swap
 }
 
 function o2SyncCaptions(chKey, phase) {
@@ -1761,8 +1921,9 @@ function o2SyncCaptions(chKey, phase) {
 }
 
 function o2RemoveImg(chKey, phase, idx) {
+  o2SyncCaptions(chKey, phase); // commit caption dari DOM SEBELUM foto dihapus (geser indeks)
   o2Images[chKey][phase].splice(idx,1);
-  o2RenderPreviews(chKey+'_'+phase);
+  o2RenderPreviews(chKey, phase, true); // skip sync — sudah dilakukan di atas, sebelum splice
 }
 
 /* ─── BACKGROUND TEMPLATE PDF (sama seperti modul lain — DRAFT PM KOSONG.jpg) ─── */
@@ -1934,7 +2095,33 @@ function downloadPdf(){
           var befImgs = o2Images[ck].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
           var aftImgs = o2Images[ck].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
 
-          checkPage(14);
+          // Estimasi tinggi header + catatan (dihitung dulu, tanpa digambar) supaya
+          // bisa dipakai untuk cek "header + konten pertama tidak boleh terpisah halaman".
+          var catLinesPre = catatan ? doc.splitTextToSize('Catatan: '+safe(catatan), contentW-4) : null;
+          var headerBlockH = 10 + (catLinesPre ? (catLinesPre.length*4 + 5) : 0);
+
+          // Konten pertama yang menempel langsung di bawah header: BEFORE/AFTER
+          // (kalau ada) atau EVIDENCE (kalau before/after kosong tapi evidence ada).
+          var firstContentH = 0;
+          if (befImgs.length || aftImgs.length) {
+            var firstB0 = befImgs[0] ? iePhotoDrawSize(befImgs[0], bfColW, maxPhotoH) : null;
+            var firstA0 = aftImgs[0] ? iePhotoDrawSize(aftImgs[0], bfColW, maxPhotoH) : null;
+            firstContentH = 5 + Math.max(firstB0?firstB0.h:0, firstA0?firstA0.h:0, 20) + 9;
+          } else if (evImgs.length) {
+            var firstE10 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
+            var firstE20 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
+            firstContentH = 5 + Math.max(firstE10?firstE10.h:0, firstE20?firstE20.h:0, 20) + 9;
+          }
+
+          // Header (+catatan) + konten pertama harus 1 paket (tidak terpisah halaman).
+          // Kalau memang tidak muat walau di halaman baru sekalipun, biarkan alur
+          // normal (checkPage per-baris) yang menangani — jangan maksa loop tak berujung.
+          var firstBlockH = headerBlockH + firstContentH;
+          if (firstBlockH <= (ph - marginTop - marginBottom) && (y + firstBlockH > ph - marginBottom)) {
+            doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+          } else {
+            checkPage(14);
+          }
           doc.setFillColor(60, 90, 70);
           doc.rect(marginX, y, contentW, 7, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
@@ -1943,8 +2130,7 @@ function downloadPdf(){
 
           if (catatan) {
             doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(60,80,60);
-            var catLines = doc.splitTextToSize('Catatan: '+safe(catatan), contentW-4);
-            checkPage(catLines.length*4+4);
+            var catLines = catLinesPre;
             doc.text(catLines, marginX+2, y+3);
             y += catLines.length*4 + 5;
           }
@@ -1981,7 +2167,18 @@ function downloadPdf(){
 
           // EVIDENCE — 2 foto per baris
           if (evImgs.length) {
-            checkPage(7);
+            // Label EVIDENCE + baris foto pertama juga tidak boleh terpisah halaman
+            // (dicek terpisah dari header Channel, karena bisa saja mulai di halaman lain
+            // kalau BEFORE/AFTER sudah menghabiskan banyak tempat).
+            var firstE1 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
+            var firstE2 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
+            var firstEvRowH = Math.max(firstE1?firstE1.h:0, firstE2?firstE2.h:0, 20);
+            var firstEvBlockH = 5 + firstEvRowH + 9;
+            if (firstEvBlockH <= (ph - marginTop - marginBottom) && (y + firstEvBlockH > ph - marginBottom)) {
+              doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+            } else {
+              checkPage(7);
+            }
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(37,99,235);
             doc.text('EVIDENCE', marginX+3, y);
             y += 5;
@@ -2011,6 +2208,58 @@ function downloadPdf(){
       }
 
       printChannelGroup(O2_CHANNELS, 'ch', 'DOKUMENTASI PER CHANNEL — INLET (8 CHANNEL)');
+
+      // Tabel Channel Readings & Average O2 Readings (Outlet) — tampil sebelum
+      // dokumentasi per channel Outlet (evidence/before/after), sama urutannya
+      // seperti di layar form.
+      var anyOutletReading = O2_OUTLET_CHANNELS.some(function(c){
+        var r = o2Readings['och'+c.id];
+        return r && (r.before || r.after || r.voltage || r.temp || r.lifetime || r.resistance);
+      });
+      if (anyOutletReading) {
+        checkPage(16);
+        secHeader('CHANNEL READINGS — OUTLET');
+        doc.autoTable({
+          startY: y, theme: 'grid', styles: { fontSize: 8, cellPadding: 2, halign: 'center' },
+          margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
+          headStyles: { fillColor: [21, 153, 87], textColor: [255,255,255], fontStyle: 'bold' },
+          columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+          head: [['Channel','O2 (%)\nBefore','O2 (%)\nAfter','Voltage (mV)','Temp (°C)','Lifetime (months)','Resistance (Ohm)']],
+          body: O2_OUTLET_CHANNELS.map(function(c){
+            var r = o2Readings['och'+c.id] || {};
+            var dash = function(v){ return (v===undefined||v===null||v==='') ? '—' : safe(v); };
+            return [safe(o2ReadingsChannelCode(c.tag)), dash(r.before), dash(r.after), dash(r.voltage), dash(r.temp), dash(r.lifetime), dash(r.resistance)];
+          }),
+          willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+
+        checkPage(16);
+        secHeader('AVERAGE O2 READINGS — OUTLET');
+        doc.autoTable({
+          startY: y, theme: 'grid', styles: { fontSize: 8.5, cellPadding: 2.5, halign: 'center' },
+          margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
+          headStyles: { fillColor: [99, 102, 241], textColor: [255,255,255], fontStyle: 'bold' },
+          columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+          head: [['Channel Group','Average O2 (%) Before','Average O2 (%) After']],
+          body: O2_OUTLET_AVG_GROUPS.map(function(g,i){
+            var read = function(field){
+              var vals = g.ids.map(function(id){ var r=o2Readings['och'+id]; var v=r?parseFloat(r[field]):NaN; return v; }).filter(function(v){return !isNaN(v);});
+              return vals.length ? (vals.reduce(function(a,b){return a+b;},0)/g.ids.length).toFixed(2) : '—';
+            };
+            return [safe(g.label), read('before'), read('after')];
+          }),
+          willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
+
+      // Khusus report Outlet: "Dokumentasi Per Channel" (Before/After/Evidence per
+      // channel) selalu dimulai di halaman baru, terpisah dari header/info dan
+      // 2 tabel Channel Readings + Average O2 Readings di atasnya — bukan cuma
+      // pindah halaman kalau kepenuhan (checkPage), tapi dipaksa page break.
+      var anyOutletEnabled = O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelEnabled['och'+c.id]; });
+      if (anyOutletEnabled) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
       printChannelGroup(O2_OUTLET_CHANNELS, 'och', 'DOKUMENTASI PER CHANNEL — OUTLET (6 CHANNEL)');
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2079,13 +2328,19 @@ function dbCollectData(modul) {
   }
   collectChannelData(O2_CHANNELS, 'ch');
   collectChannelData(O2_OUTLET_CHANNELS, 'och');
+  var anyInletEnabled = O2_CHANNELS.some(function(c){ return o2ChannelEnabled['ch'+c.id]; });
+  var anyOutletEnabled = O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelEnabled['och'+c.id]; });
+  var modulName = 'O2';
+  if (anyInletEnabled && anyOutletEnabled) modulName = 'O2 Inlet & Outlet';
+  else if (anyInletEnabled) modulName = 'O2 Inlet';
+  else if (anyOutletEnabled) modulName = 'O2 Outlet';
   return {
-    modul: 'O2',
+    modul: modulName,
     tanggal: header.tanggal,
     pic: header.pic,
     work_order: (header.workorder && header.workorder !== '—') ? header.workorder : '',
     unit: 'Unit 7',
-    data: { header: header, channels: channels }
+    data: { header: header, channels: channels, outletReadings: o2Readings }
   };
 }
 
@@ -2146,6 +2401,20 @@ function applyRecordToForm(rec, editingId) {
     restoreChannelData(O2_OUTLET_CHANNELS, 'och');
     o2UpdateAssetFromChannels();
   }
+
+  if (data.outletReadings) {
+    O2_OUTLET_CHANNELS.forEach(function(c){
+      var ck = 'och'+c.id;
+      var r = data.outletReadings[ck];
+      if (!r) return;
+      o2Readings[ck] = {before:r.before||'',after:r.after||'',voltage:r.voltage||'',temp:r.temp||'',lifetime:r.lifetime||'',resistance:r.resistance||''};
+      ['before','after','voltage','temp','lifetime','resistance'].forEach(function(field){
+        var el = document.getElementById('o2rd_'+ck+'_'+field);
+        if (el) el.value = o2Readings[ck][field];
+      });
+    });
+    o2RecalcAvg();
+  }
 }
 
 // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
@@ -2183,6 +2452,14 @@ function resetAll() {
   }
   resetChannelList(O2_CHANNELS, 'ch');
   resetChannelList(O2_OUTLET_CHANNELS, 'och');
+  O2_OUTLET_CHANNELS.forEach(function(c){
+    var ck = 'och'+c.id;
+    o2Readings[ck] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''};
+    ['before','after','voltage','temp','lifetime','resistance'].forEach(function(field){
+      var el = document.getElementById('o2rd_'+ck+'_'+field); if (el) el.value = '';
+    });
+  });
+  o2RecalcAvg();
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
@@ -2201,6 +2478,7 @@ function resetAll() {
 /* ── INIT ── */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
 buildO2ChannelGrid();
+buildO2ReadingsTables();
 o2BuildFreqChips();
 initO2Background();
 renderPresetButtons();
