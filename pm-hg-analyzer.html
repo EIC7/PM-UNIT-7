@@ -2110,7 +2110,7 @@ function hgDownloadPdf() {
 
 function dbCollectData(modul) {
   if (modul !== HG_MODUL_NAME) return null;
-  var ki = function(img){return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};};
+  var ki = function(img){var o={name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;if(img.offsetX)o.offsetX=img.offsetX;return o;};
   var stepsOut = {};
   STEP_DATA.forEach(function(s){
     stepsOut[s.no] = {
@@ -2148,8 +2148,8 @@ function hgRestoreRecord(rec, opts) {
       stepState[no].sparepart = s.sparepart || '';
       stepState[no].done = !!s.done;
       hgEvidence[no] = {
-        before: (s.before||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};}),
-        after:  (s.after ||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};})
+        before: (s.before||[]).map(function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;if(img.offsetX)o.offsetX=img.offsetX;return o;}),
+        after:  (s.after ||[]).map(function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;if(img.offsetX)o.offsetX=img.offsetX;return o;})
       };
     });
   }

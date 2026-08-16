@@ -2216,7 +2216,7 @@ function dbCollectData(modul) {
   var dims = {};
   FM_DIMS.forEach(function(d){ dims[d.id]={}; FM_ASSETS.forEach(function(a){ dims[d.id][a.key]=gv('fmDim_'+d.id+'_'+a.key); }); });
   var notes = {}; var images = {};
-  var ki = function(img){ return {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||''}; };
+  var ki = function(img){ var o = {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||''}; if (img.widthCm) o.widthCm = img.widthCm; if (img.heightCm) o.heightCm = img.heightCm; if (img.offsetX) o.offsetX = img.offsetX; return o; };
   FM_ASSETS.forEach(function(a){ notes[a.key]=gv('fmNote'+a.key); images[a.key]=fmImages[a.key].map(ki); });
   var assets = {}; FM_ASSETS.forEach(function(a){ assets[a.key]=gv('fmAsset'+a.key); });
 
@@ -2261,7 +2261,13 @@ function applyRecordToForm(rec, editingId) {
   if (data.dims) FM_DIMS.forEach(function(d){ FM_ASSETS.forEach(function(a){ if (data.dims[d.id] && data.dims[d.id][a.key]!==undefined && data.dims[d.id][a.key]!=='') sv('fmDim_'+d.id+'_'+a.key, data.dims[d.id][a.key]); }); });
   if (data.images) {
     FM_ASSETS.forEach(function(a){
-      fmImages[a.key] = (data.images[a.key]||[]).map(function(img){ return {name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', caption:img.caption||''}; });
+      fmImages[a.key] = (data.images[a.key]||[]).map(function(img){
+        var o = {name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', caption:img.caption||''};
+        if (img.widthCm) o.widthCm = img.widthCm;
+        if (img.heightCm) o.heightCm = img.heightCm;
+        if (img.offsetX) o.offsetX = img.offsetX;
+        return o;
+      });
       fmRenderPreviews(a.key);
     });
   }
