@@ -2153,7 +2153,10 @@ function cf4kCollectData() {
       var key = group.key+'_'+asset.slug;
       var chk = document.getElementById('cf4kChk_'+key);
       var entry = { checked: !!(chk && chk.checked), steps: [], evidence: (cf4kEvidence[key]||[]).map(function(img){
-        return {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||'', offsetX:img.offsetX||0};
+        var o = {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||'', offsetX:img.offsetX||0};
+        if (img.widthCm) o.widthCm = img.widthCm;
+        if (img.heightCm) o.heightCm = img.heightCm;
+        return o;
       })};
       if (asset.steps && asset.steps.length) {
         asset.steps.forEach(function(step, i){
@@ -2224,6 +2227,8 @@ function cf4kApplyData(saved) {
         cf4kEvidence[key] = entry.evidence.map(function(img){
           var o = {name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', caption:img.caption||''};
           if (img.offsetX) o.offsetX = img.offsetX;
+          if (img.widthCm) o.widthCm = img.widthCm;
+          if (img.heightCm) o.heightCm = img.heightCm;
           return o;
         });
         cf4kRenderPreviews(key);
@@ -2419,7 +2424,7 @@ function dbCollectData(modul) {
   if (modul !== 'coal_feeder') return null;
   cfSyncCaptions();
   var gv = function(id){ var e=document.getElementById(id); return e?e.value:''; };
-  var ki = function(img){ return {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||''}; };
+  var ki = function(img){ var o = {name:img.name, dataUrl:img.dataUrl||'', type:img.type||'image/jpeg', caption:img.caption||''}; if (img.widthCm) o.widthCm = img.widthCm; if (img.heightCm) o.heightCm = img.heightCm; if (img.offsetX) o.offsetX = img.offsetX; return o; };
   var pcts = ['100','75','50','25','0'];
   var dfields = ['ai3','ao1','ao2','fr_act','sp','rpm','freq','load','volt','curr','blt'];
   var demandRows = {};
@@ -3102,7 +3107,13 @@ function applyRecordToForm(rec, editingId) {
     });
   }
   if (data.images) {
-    cfImages = data.images.map(function(img){ return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''}; });
+    cfImages = data.images.map(function(img){
+      var o = {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};
+      if (img.widthCm) o.widthCm = img.widthCm;
+      if (img.heightCm) o.heightCm = img.heightCm;
+      if (img.offsetX) o.offsetX = img.offsetX;
+      return o;
+    });
     cfRenderPreviews();
   }
   if (data.demand) {
