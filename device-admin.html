@@ -104,7 +104,18 @@ function daLoadDevices() {
 function daRenderList() {
   var listEl = document.getElementById('daList');
   var countEl = document.getElementById('daCount');
-  var rows = _daRows;
+  // _daRows sudah terurut last_seen.desc dari query awal, TAPI itu snapshot
+  // histori (dan sekarang di-throttle resync tiap 30 menit di shared.js),
+  // sedangkan status Online di sini adalah kondisi REAL-TIME (device beneran
+  // connect ke channel Realtime SEKARANG). Device yang online pasti lebih
+  // "baru aktif" daripada last_seen manapun, jadi ditampilkan duluan di atas
+  // -- baru sisanya (yang offline) diurutkan last_seen seperti biasa.
+  var rows = _daRows.slice().sort(function(a, b) {
+    var aOnline = !!_daOnlineIds[a.device_id];
+    var bOnline = !!_daOnlineIds[b.device_id];
+    if (aOnline !== bOnline) return aOnline ? -1 : 1;
+    return 0; // sama-sama online / sama-sama offline -> pertahankan urutan last_seen.desc dari _daRows
+  });
   var onlineCount = Object.keys(_daOnlineIds).length;
   countEl.textContent = rows.length + ' device pernah tercatat' + (onlineCount ? ' · 🟢 ' + onlineCount + ' online sekarang' : '');
   if (!rows.length) {
