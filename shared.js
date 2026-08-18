@@ -345,7 +345,9 @@ function pmSyncDeviceToSupabase(deviceId, name) {
       // Supabase — supaya kalau gagal (mis. tabel belum dibuat saat itu),
       // percobaan berikutnya (pmInitGate di kunjungan lain) otomatis coba
       // kirim ulang, bukan dianggap selesai padahal belum pernah nyampe.
-      pmLS('set', 'pm_device_synced', '1');
+      // Disimpan sebagai timestamp (bukan flag '1') supaya pmInitGate() bisa
+      // tahu kapan harus resync lagi biar last_seen gak beku selamanya.
+      pmLS('set', 'pm_device_synced', String(Date.now()));
     })
     .catch(function(err){ console.error('Gate sync error (akan dicoba lagi nanti):', err); });
 }
@@ -480,7 +482,17 @@ function pmInitGate() {
   var storedName = pmLS('get', 'pm_device_name') || '';
   var alreadyTrustedLocally = pmLS('get', 'pm_trusted_flag') === '1';
   var localPwHash = pmLS('get', 'pm_auth_pw_hash');
-  var alreadySynced = pmLS('get', 'pm_device_synced') === '1';
+  // pm_device_synced dulu cuma flag '1'/kosong -- sekali ke-sync, last_seen
+  // di Supabase jadi BEKU selamanya (gak pernah update lagi), padahal device
+  // masih rutin dipakai. Akibatnya urutan "paling baru mengakses" di
+  // device-admin.html sebenarnya cuma urutan "paling baru PERTAMA KALI
+  // daftar", bukan aktivitas terkini. Sekarang disimpan sebagai timestamp
+  // dan di-resync ulang tiap lewat PM_LAST_SEEN_THROTTLE_MS, supaya
+  // last_seen tetap mencerminkan kunjungan terakhir yang sebenarnya, tanpa
+  // nulis ke Supabase di SETIAP page load/navigasi (boros write).
+  var PM_LAST_SEEN_THROTTLE_MS = 15 * 60 * 1000; // 15 menit
+  var lastSyncedAt = parseInt(pmLS('get', 'pm_device_synced'), 10) || 0;
+  var needsResync = (Date.now() - lastSyncedAt) > PM_LAST_SEEN_THROTTLE_MS;
 
   // Selalu cek ulang ke Supabase di background (nangkep kasus baru
   // ditandai/dicabut Trusted, password diganti admin, atau device pindah
@@ -496,7 +508,7 @@ function pmInitGate() {
     // password baru. Ini trade-off wajar untuk sistem tanpa server auth.
     pmUnlockGate();
     pmTrackPresence(deviceId, storedName);
-    if (!alreadySynced) pmSyncDeviceToSupabase(deviceId, storedName);
+    if (needsResync) pmSyncDeviceToSupabase(deviceId, storedName);
     return;
   }
 
