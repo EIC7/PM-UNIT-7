@@ -86,6 +86,36 @@ var SUPA_URL   = 'https://ruvvximnnacpvvoogbzs.supabase.co';
 var SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
 var SUPA_TABLE = 'pm_records';
 
+/* ── SUPABASE REALTIME CLIENT (lazy-loaded) ──
+   Dipakai KHUSUS buat gate-check (lihat pmSubscribeGateChanges di bawah):
+   device subscribe SEKALI ke perubahan baris dirinya sendiri di
+   trusted_devices lewat WebSocket, jadi kalau admin revoke/hapus/ganti
+   password, device dapat notifikasi INSTAN dari server -- tanpa perlu
+   nanya (polling) berkali-kali ke REST API seperti sebelumnya. Jauh lebih
+   hemat request ke compute Postgres karena Realtime jalan lewat jalur
+   terpisah, dan koneksinya otomatis putus sendiri pas tab ditutup.
+   Library resmi @supabase/supabase-js dimuat on-demand (bukan selalu),
+   supaya halaman yang gak butuh gate-check gak ikut nambah beban load. */
+var _pmSupaClientPromise = null;
+function _pmGetSupaClient() {
+  if (_pmSupaClientPromise) return _pmSupaClientPromise;
+  _pmSupaClientPromise = new Promise(function(resolve, reject) {
+    if (window.supabase && window.supabase.createClient) {
+      resolve(window.supabase.createClient(SUPA_URL, SUPA_KEY));
+      return;
+    }
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+    script.onload = function() {
+      try { resolve(window.supabase.createClient(SUPA_URL, SUPA_KEY)); }
+      catch (e) { reject(e); }
+    };
+    script.onerror = function() { reject(new Error('Gagal memuat supabase-js dari CDN')); };
+    document.head.appendChild(script);
+  });
+  return _pmSupaClientPromise;
+}
+
 /* ── GOOGLE DRIVE PHOTO BACKUP CONFIG ──
    Upload otomatis (silent, non-blocking) setiap foto PM ke Google Drive
    lewat Apps Script Web App, sebagai backup terpisah dari Supabase.
@@ -244,7 +274,6 @@ function supaFetchProgress(method, path, body, onProgress, expectedTotal) {
    yang meng-update baris di tabel gate_config. ── */
 var PM_GATE_TABLE = 'trusted_devices';
 var PM_GATE_CONFIG_TABLE = 'gate_config';
-var PM_GATE_CHECK_INTERVAL = 10 * 60 * 1000; // 10 menit -- lihat pmCheckAccessRemote
 
 function pmSimpleHash(str) {
   // Hash sederhana (BUKAN cryptographic-grade) — cukup supaya password tidak
@@ -322,8 +351,8 @@ function pmSyncDeviceToSupabase(deviceId, name) {
 }
 
 function pmCheckAccessRemote(deviceId) {
-  // Cek status terbaru ke Supabase (background, tidak nge-block UI konten
-  // yang lagi dibuka, tapi menentukan status buat kunjungan berikutnya):
+  // Cek status SEKALI pas halaman dibuka (background, tidak nge-block UI
+  // konten yang lagi dibuka):
   // - trusted=true            -> lolos otomatis, cache lokal disimpan.
   // - row device dihapus admin-> dianggap "device di-reset total": cache
   //                              password & trusted lokal dihapus, jadi
@@ -335,43 +364,60 @@ function pmCheckAccessRemote(deviceId) {
   //                              device (yang belum Trusted) wajib password
   //                              baru di kunjungan berikutnya.
   //
-  // DIBATASI ke maksimal sekali per PM_GATE_CHECK_INTERVAL: dulu fungsi ini
-  // jalan di SETIAP page load (dan ada ±20 halaman di app ini), jadi kalau
-  // user pindah-pindah halaman atau refresh berkali-kali pas koneksi
-  // lagi bermasalah, request numpuk cepat dan makin membebani database
-  // yang lagi struggling. Sekarang cukup dicek ulang tiap beberapa menit.
-  var now = Date.now();
-  var lastCheck = parseInt(pmLS('get', 'pm_gate_last_check') || '0', 10);
-  if (now - lastCheck < PM_GATE_CHECK_INTERVAL) return;
-  pmLS('set', 'pm_gate_last_check', String(now));
-
+  // Setelah cek awal ini, pmSubscribeGateChanges() dipanggil buat pasang
+  // "telinga" Realtime -- jadi kalau admin revoke/hapus/ganti password
+  // SETELAH halaman ini terbuka, device dapat notifikasi INSTAN lewat
+  // WebSocket, tanpa perlu nanya (polling) berkali-kali ke REST API lagi.
   supaFetchRetry(PM_GATE_TABLE + '?device_id=eq.' + encodeURIComponent(deviceId) + '&select=trusted,access_revoked&limit=1')
-    .then(function(rows) {
-      if (!rows || !rows.length) {
-        pmLS('remove', 'pm_trusted_flag');
-        pmLS('remove', 'pm_auth_pw_hash');
-        pmLS('remove', 'pm_device_synced');
-        return;
-      }
-      var row = rows[0];
-      if (row.trusted === true) { pmLS('set', 'pm_trusted_flag', '1'); pmUnlockGate(); return; }
-      pmLS('remove', 'pm_trusted_flag');
-      if (row.access_revoked === true) { pmLS('remove', 'pm_auth_pw_hash'); return; }
-      // Bukan trusted & bukan revoked -> cek juga apakah password globalnya
-      // sudah diganti admin sejak device ini terakhir login.
-      pmFetchCurrentPwHash().then(function(currentHash) {
-        var localHash = pmLS('get', 'pm_auth_pw_hash');
-        if (currentHash && localHash && localHash !== currentHash) {
-          pmLS('remove', 'pm_auth_pw_hash');
-        }
-      });
-    })
-    .catch(function(){
-      // Gagal walau sudah di-retry -> jangan block UI, biarin cache lokal
-      // yang lama tetap berlaku. Reset lastCheck supaya kunjungan berikutnya
-      // (bukan cuma refresh detik ini juga) boleh coba lagi lebih cepat.
-      pmLS('set', 'pm_gate_last_check', '0');
-    });
+    .then(function(rows) { _pmApplyGateRow(rows && rows.length ? rows[0] : null); })
+    .catch(function(){ /* gagal walau sudah di-retry -> biarin cache lokal lama tetap berlaku */ });
+
+  pmSubscribeGateChanges(deviceId);
+}
+
+function _pmApplyGateRow(row) {
+  if (!row) {
+    pmLS('remove', 'pm_trusted_flag');
+    pmLS('remove', 'pm_auth_pw_hash');
+    pmLS('remove', 'pm_device_synced');
+    return;
+  }
+  if (row.trusted === true) { pmLS('set', 'pm_trusted_flag', '1'); pmUnlockGate(); return; }
+  pmLS('remove', 'pm_trusted_flag');
+  if (row.access_revoked === true) { pmLS('remove', 'pm_auth_pw_hash'); return; }
+  // Bukan trusted & bukan revoked -> cek juga apakah password globalnya
+  // sudah diganti admin sejak device ini terakhir login.
+  pmFetchCurrentPwHash().then(function(currentHash) {
+    var localHash = pmLS('get', 'pm_auth_pw_hash');
+    if (currentHash && localHash && localHash !== currentHash) {
+      pmLS('remove', 'pm_auth_pw_hash');
+    }
+  });
+}
+
+var _pmGateChannel = null;
+function pmSubscribeGateChanges(deviceId) {
+  if (_pmGateChannel) return; // sudah subscribe, jangan dobel
+  _pmGetSupaClient().then(function(client) {
+    if (_pmGateChannel) return; // race guard kalau kepanggil 2x pas loading
+    _pmGateChannel = client
+      .channel('pm-gate-' + deviceId)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: PM_GATE_TABLE,
+        filter: 'device_id=eq.' + deviceId
+      }, function(payload) {
+        // UPDATE/INSERT -> payload.new ada isinya. DELETE -> payload.new
+        // kosong, payload.old yang ada -> berarti device dihapus admin.
+        if (payload.eventType === 'DELETE') { _pmApplyGateRow(null); return; }
+        _pmApplyGateRow(payload.new);
+      })
+      .subscribe();
+  }).catch(function(err) {
+    // CDN gagal dimuat / Realtime gak available -> diamkan saja, app tetap
+    // jalan normal dengan hasil cek 1x di atas (cuma gak dapat notifikasi
+    // instan kalau ada perubahan setelah halaman dibuka).
+    console.error('Realtime gate subscribe gagal (fallback ke cek biasa):', err);
+  });
 }
 
 function pmInitGate() {
