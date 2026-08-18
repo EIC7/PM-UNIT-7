@@ -490,7 +490,7 @@ function pmInitGate() {
   // dan di-resync ulang tiap lewat PM_LAST_SEEN_THROTTLE_MS, supaya
   // last_seen tetap mencerminkan kunjungan terakhir yang sebenarnya, tanpa
   // nulis ke Supabase di SETIAP page load/navigasi (boros write).
-  var PM_LAST_SEEN_THROTTLE_MS = 15 * 60 * 1000; // 15 menit
+  var PM_LAST_SEEN_THROTTLE_MS = 30 * 60 * 1000; // 30 menit
   var lastSyncedAt = parseInt(pmLS('get', 'pm_device_synced'), 10) || 0;
   var needsResync = (Date.now() - lastSyncedAt) > PM_LAST_SEEN_THROTTLE_MS;
 
