@@ -1398,12 +1398,16 @@ function cropAndSave() {
     var slotIdx = (p.replaceIdx >= 0) ? p.replaceIdx : imgArr.length;
     if (p.replaceIdx >= 0) imgArr[p.replaceIdx] = entry; else imgArr.push(entry);
 
-    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
-    // entry di so2.html tidak punya field 'name', jadi digenerate dari groupKey + slot index
-    // (stabil per slot foto, BUKAN timestamp, supaya saat foto ini di-crop ulang nanti,
-    // file lama di Drive dengan nama sama ke-overwrite otomatis, bukan jadi file baru terus)
+    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF).
+    // Nama Drive-nya sendiri sudah di-generate unik oleh shared.js
+    // (uploadFotoKeGDrive/_pmGenUniqueDriveFileName) -- gdriveFileName di sini
+    // cuma dikirim sebagai metadata originalFileName, bukan dipakai sebagai key.
+    // Penghapusan file lama saat crop-ulang memakai entry.driveFileId (pasti),
+    // BUKAN cocokkan nama slot -- supaya tidak salah hapus foto grup lain yang
+    // kebetulan slot index-nya sama.
     var gdriveFileName = 'so2_' + p.groupKey + '_' + slotIdx + '.jpg';
-    uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, 'so2', p.groupKey || '');
+    uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, 'so2', p.groupKey || '', entry);
+    if (existing && existing.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(existing.driveFileId);
 
     closeCropModal();
     renderPhotoGallery(p.groupKey, 'gallery-'+p.groupKey);
@@ -1417,7 +1421,9 @@ function reEditCrop(groupKey, imgIdx) {
     openCropModal(img.dataUrl, preferredSize);
 }
 function deletePhoto(groupKey, imgIdx) {
-    getPhotoArr(groupKey).splice(imgIdx, 1);
+    var arr = getPhotoArr(groupKey);
+    if (typeof pmDeleteImgFromArr === 'function') pmDeleteImgFromArr(arr, imgIdx);
+    else arr.splice(imgIdx, 1);
     renderPhotoGallery(groupKey, 'gallery-'+groupKey);
 }
 function nudgeImage(groupKey, imgIdx, delta) {

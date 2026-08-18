@@ -1476,13 +1476,22 @@ function cropAndSave() {
     var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
     var caption = existing ? (existing.caption||'') : '';
     var offsetX = existing ? (existing.offsetX||0) : 0;
-    if (p.replaceIdx >= 0) imgArr.splice(p.replaceIdx, 1);
+    // CATATAN: sebelumnya di sini ada `imgArr.splice(p.replaceIdx, 1)` yang
+    // menghapus foto lama DARI AWAL, sebelum entry baru dibuat. Itu bug: baris
+    // di bawah (`imgArr.splice(p.replaceIdx, 1, entry)`) lalu menghapus SATU
+    // LAGI item di index yang sama -- padahal array sudah bergeser sejak
+    // penghapusan pertama, jadi yang kehapus itu foto LAIN yang tidak
+    // terkait (bukan foto yang sedang di-crop-ulang), lalu foto itu hilang
+    // permanen dari galeri tanpa disadari. Diperbaiki dengan TIDAK menghapus
+    // di awal -- budget ukuran (MAX_TOTAL) di bawah dihitung dengan
+    // mengecualikan index replaceIdx secara eksplisit lewat ternary, sama
+    // seperti pola di modul lain (opacity.html dkk).
 
     var MAX = 1*1024*1024;
     var dataUrl;
     for (var q=0.9; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);
-        var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
+        var currentTotal = imgArr.reduce(function(a,im,i){ return a+((existing && i===p.replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0)); }, 0);
         var newSize = dataUrl.length*0.75;
         if (currentTotal+newSize <= MAX) break;
         if (q<=0.25) {
@@ -1504,8 +1513,12 @@ function cropAndSave() {
     // keterangan yang mengikuti indexnya saat render) tidak berubah/tertukar.
     if (existing) imgArr.splice(p.replaceIdx, 1, entry);
     else imgArr.push(entry);
+    // Foto lama yang diganti (crop-ulang) dihapus dari Drive lewat fileId
+    // pasti, bukan lewat cocokkan nama -- supaya tidak salah hapus file foto
+    // lain yang kebetulan nama device-nya sama.
+    if (existing && existing.driveFileId) deleteFotoDariGDrive(existing.driveFileId);
 
-    if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'CEMS Calibration', p.side||'');
+    if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'CEMS Calibration', p.side||'', entry);
 
     closeCropModal();
     if (typeof renderEvidence === 'function' && p.side) renderEvidence(p.side);
@@ -2079,7 +2092,7 @@ function evidHandleFiles(files, group, phase){
         var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, type:'image/jpeg', caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
         imgArr.push(entry);
         renderEvidence(group);
-        if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'cems', side);
+        if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'cems', side, entry);
         finishOne();
       });
     };

@@ -211,14 +211,36 @@ function _pmRestoreBase64AfterLoad(obj) {
   return Promise.all(jobs);
 }
 
+/* Nama file yang dikirim ke Drive TIDAK BOLEH pakai nama asli dari device
+   (file.name / img.name) -- nama kamera/galeri gampang collide (counter HP
+   reset, hasil download WhatsApp, dsb), dan folder Drive di Apps Script itu
+   SATU folder dipakai bersama semua modul. Kalau Apps Script diberi logika
+   "hapus file lama dengan nama sama sebelum simpan yang baru" (lihat
+   deleteFotoDariGDrive/action=delete di bawah, atau pola serupa di doPost),
+   nama yang tidak unik bisa bikin file MILIK FOTO LAIN YANG TIDAK
+   BERHUBUNGAN ikut kehapus tanpa sengaja. Makanya nama Drive dibuat sendiri
+   di sini: modul + timestamp + random, dan TIDAK PERNAH dipakai ulang untuk
+   foto yang beda (setiap slot foto = nama Drive unik permanen, disimpan di
+   entry.driveFileId setelah upload sukses -- bukan di-generate ulang tiap
+   render). */
+function _pmGenUniqueDriveFileName(modul) {
+  var safeModul = (modul || 'foto').toString().replace(/[^a-zA-Z0-9_-]/g, '_');
+  return safeModul + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg';
+}
+
 function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
-  if (!GDRIVE_WEB_APP_URL || !dataUrlBase64 || !fileName) return Promise.resolve(null);
+  if (!GDRIVE_WEB_APP_URL || !dataUrlBase64) return Promise.resolve(null);
+  // fileName dari pemanggil (nama device) diabaikan sebagai KEY penyimpanan --
+  // dipakai Apps Script cuma buat keterangan/logging, bukan buat identifikasi
+  // file. Key aslinya selalu di-generate unik di sini.
+  var driveFileName = _pmGenUniqueDriveFileName(modul);
   var promise = fetch(GDRIVE_WEB_APP_URL, {
     method: 'POST',
     body: JSON.stringify({
       token: GDRIVE_SECRET_TOKEN,
       imageBase64: dataUrlBase64,
-      fileName: fileName,
+      fileName: driveFileName,
+      originalFileName: fileName || '',
       modul: modul || (window.CURRENT_MODUL || 'unknown'),
       keterangan: keterangan || ''
     })
@@ -231,6 +253,43 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
     .catch(function(err){ console.error('Upload GDrive error:', err); return null; });
   _pmPendingDriveUploads.push(promise);
   return promise;
+}
+
+/* Hapus 1 file di Drive berdasarkan fileId PASTI (bukan berdasarkan nama).
+   Dipanggil saat: (a) foto di-crop-ulang -- versi lama dihapus setelah versi
+   baru selesai diupload dengan nama Drive baru, dan (b) foto dihapus
+   permanen dari galeri lewat tombol X (lihat pmDeleteImgFromArr di bawah).
+   NON-BLOCKING dan tidak pernah reject -- kalau hapusnya gagal (mis. sudah
+   kehapus manual duluan, atau jaringan lagi bermasalah), itu cuma jadi file
+   nyangkut di Drive, TIDAK BOLEH bikin proses hapus-di-galeri/crop-ulang si
+   user ikut gagal. */
+function deleteFotoDariGDrive(fileId) {
+  if (!GDRIVE_WEB_APP_URL || !fileId) return Promise.resolve(null);
+  var promise = fetch(GDRIVE_WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      token: GDRIVE_SECRET_TOKEN,
+      action: 'delete',
+      fileId: fileId
+    })
+  }).then(function(res){ return res.json(); })
+    .catch(function(err){ console.error('Hapus GDrive error:', err); return null; });
+  _pmPendingDriveUploads.push(promise.catch(function(){}));
+  return promise;
+}
+
+/* Helper GENERIK dipakai oleh SEMUA fungsi RemoveImg/hapus-foto di semua
+   modul: hapus 1 entry foto dari array-nya (di posisi idx), dan kalau entry
+   itu sudah kebagian driveFileId (artinya sempat berhasil ke-upload ke
+   Drive), sekalian hapus file-nya di Drive juga -- supaya foto yang dihapus
+   permanen dari galeri TIDAK nyangkut selamanya di Drive. Ganti array.splice
+   langsung dengan pmDeleteImgFromArr(array, idx) di titik manapun user
+   menghapus 1 foto dari galeri. */
+function pmDeleteImgFromArr(imgArr, idx) {
+  if (!imgArr || idx < 0 || idx >= imgArr.length) return;
+  var item = imgArr[idx];
+  if (item && item.driveFileId) deleteFotoDariGDrive(item.driveFileId);
+  imgArr.splice(idx, 1);
 }
 
 function supaFetch(method, path, body) {
@@ -1314,12 +1373,20 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
     }
   }
   var entry = {name: name.replace(/\.[^.]+$/, '.jpg'), dataUrl: dataUrl, type: 'image/jpeg', caption: caption||''};
+  // Foto lama yang lagi di-replace (crop-ulang) -- kalau sudah sempat ke-upload
+  // ke Drive, fileId-nya disimpan dulu di sini SEBELUM entry lama diganti,
+  // supaya bisa dihapus eksplisit dari Drive setelah versi barunya terupload.
+  // Dihapus lewat fileId pasti (deleteFotoDariGDrive), BUKAN lewat cocokkan
+  // nama file di server -- supaya tidak mungkin salah hapus file foto lain
+  // yang kebetulan nama device-nya sama.
+  var oldDriveFileId = (replaceIdx >= 0 && imgArr[replaceIdx]) ? imgArr[replaceIdx].driveFileId : null;
   // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama,
   // bukan dihapus lalu ditambahkan di akhir array — supaya urutan galeri (dan
   // keterangan yang mengikuti indexnya saat render) tidak berubah/tertukar.
   if (replaceIdx >= 0 && imgArr[replaceIdx]) imgArr.splice(replaceIdx, 1, entry);
   else imgArr.push(entry);
-  uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption);
+  uploadFotoKeGDrive(dataUrl, name, modulePrefix, caption, entry);
+  if (oldDriveFileId) deleteFotoDariGDrive(oldDriveFileId);
   if (modulePrefix === 'op') { opRenderPreviews(side); updateSizeIndicator('op', side); }
   else if (modulePrefix === 'bs') { bsRenderPreviews(side); updateSizeIndicator('bs', side); }
   else if (modulePrefix === 'cf') { cfRenderPreviews(); updateSizeIndicator('cf', null); }

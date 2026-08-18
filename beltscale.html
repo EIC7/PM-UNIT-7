@@ -283,7 +283,7 @@ function bsRenderPreviews(side) {
     container.appendChild(wrap);
   });
 }
-function bsRemoveFile(side, idx) { bsImages[side].splice(idx,1); bsRenderPreviews(side); }
+function bsRemoveFile(side, idx) { pmDeleteImgFromArr(bsImages[side], idx); bsRenderPreviews(side); }
 
 function bsDownloadPdf() {
   try{

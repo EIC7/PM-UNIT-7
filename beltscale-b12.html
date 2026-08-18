@@ -1385,10 +1385,14 @@ function cropAndSave() {
     // bukan dihapus lalu ditambahkan di akhir array — supaya urutan galeri (dan
     // keterangan yang mengikuti indexnya saat render) tidak berubah/tertukar.
     if (existing) imgArr.splice(p.replaceIdx, 1, entry);
+    // Foto lama yang diganti (crop-ulang) dihapus dari Drive lewat fileId
+    // pasti, bukan lewat cocokkan nama -- supaya tidak salah hapus file foto
+    // lain yang kebetulan nama device-nya sama.
+    if (existing && existing.driveFileId) deleteFotoDariGDrive(existing.driveFileId);
     else imgArr.push(entry);
 
     // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
-    uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '');
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '', entry);
 
     closeCropModal();
     if (typeof bsRenderPreviews === 'function') bsRenderPreviews(p.side);
@@ -1491,7 +1495,7 @@ function puHandleMultiUpload(fileArr, imgArr, side, modulePrefix) {
                 var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, type:'image/jpeg', caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
                 imgArr.push(entry);
                 doRender();
-                if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, modulePrefix, side || '');
+                if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, modulePrefix, side || '', entry);
                 finishOne();
             });
         });
@@ -1919,7 +1923,7 @@ function bsReEdit(side, idx) {
   if (!img) return;
   imgOpenCropper(img.dataUrl, img.name, img.type, bsImages[side], side, 'bs', idx);
 }
-function bsRemoveFile(side, idx) { bsImages[side].splice(idx,1); bsRenderPreviews(side); }
+function bsRemoveFile(side, idx) { pmDeleteImgFromArr(bsImages[side], idx); bsRenderPreviews(side); }
 
 // ── BACKGROUND — sama persis dengan opacity ───────────────────────────────────
 var bsReportBgImg = null;

@@ -1534,8 +1534,12 @@ function cropAndSave() {
     // bukan dihapus lalu ditambahkan di akhir array — supaya urutan galeri (dan
     // keterangan yang mengikuti indexnya saat render) tidak berubah/tertukar.
     if (existing) imgArr.splice(p.replaceIdx, 1, entry);
+    // Foto lama yang diganti (crop-ulang) dihapus dari Drive lewat fileId
+    // pasti, bukan lewat cocokkan nama -- supaya tidak salah hapus file foto
+    // lain yang kebetulan nama device-nya sama.
+    if (existing && existing.driveFileId) deleteFotoDariGDrive(existing.driveFileId);
     else imgArr.push(entry);
-    uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '');
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '', entry);
 
     closeCropModal();
     // panggil render callback modul terkait (sama seperti imgCompressAndStore lama di shared.js)
@@ -1641,7 +1645,7 @@ function puHandleMultiUpload(fileArr, imgArr, side, modulePrefix) {
                 var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, type:'image/jpeg', caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
                 imgArr.push(entry);
                 doRender();
-                if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, modulePrefix, side || '');
+                if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, modulePrefix, side || '', entry);
                 finishOne();
             });
         });
@@ -2136,7 +2140,7 @@ function cf4kReEdit(key, idx) {
   imgOpenCropper(img.dataUrl, img.name, img.type, cf4kEvidence[key], key, 'cf4k', idx);
 }
 
-function cf4kRemoveImg(key, idx) { cf4kEvidence[key].splice(idx, 1); cf4kRenderPreviews(key); }
+function cf4kRemoveImg(key, idx) { pmDeleteImgFromArr(cf4kEvidence[key], idx); cf4kRenderPreviews(key); }
 
 function cf4kGetYN(rid) {
   var y = document.getElementById(rid+'_y'), n = document.getElementById(rid+'_n');
@@ -2399,7 +2403,7 @@ function cfReEdit(idx) {
   imgOpenCropper(img.dataUrl, img.name, img.type, cfImages, null, 'cf', idx);
 }
 
-function cfRemoveImg(idx) { cfImages.splice(idx, 1); cfRenderPreviews(); }
+function cfRemoveImg(idx) { pmDeleteImgFromArr(cfImages, idx); cfRenderPreviews(); }
 
 // ── RESET ─────────────────────────────────────────────────────────────────────
 function cfReset() {

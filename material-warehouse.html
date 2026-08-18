@@ -1908,6 +1908,12 @@ function onImageSelected(e) {
 
 function removeImage(e) {
   e.stopPropagation();
+  // Foto dihapus permanen dari form ini -- kalau sudah sempat ke-upload ke
+  // Drive, hapus juga file-nya di sana (lewat fileId pasti), supaya tidak
+  // nyangkut selamanya.
+  if (currentImageMeta && currentImageMeta.driveFileId && typeof deleteFotoDariGDrive === 'function') {
+    deleteFotoDariGDrive(currentImageMeta.driveFileId);
+  }
   currentImageDataUrl = null;
   currentImageOriginalUrl = null;
   currentImageMeta = { widthCm: null, heightCm: null, offsetX: 0 };
@@ -2832,9 +2838,14 @@ function cropAndSave() {
         currentImageMeta.widthCm = cropModalState._cropWcm;
         currentImageMeta.heightCm = cropModalState._cropHcm;
     }
+    // Foto lama (kalau ini crop-ulang atas foto yang sudah sempat ke-upload)
+    // dihapus dari Drive lewat fileId pasti setelah foto barunya ke-upload --
+    // bukan lewat cocokkan nama, supaya tidak salah hapus file item lain.
+    var oldDriveFileId = currentImageMeta ? currentImageMeta.driveFileId : null;
     setPreviewImage(dataUrl);
     var gdriveFileName = 'material_warehouse_' + (editingId || 'new') + '.jpg';
-    uploadFotoKeGDrive(dataUrl, gdriveFileName, window.CURRENT_MODUL, '');
+    uploadFotoKeGDrive(dataUrl, gdriveFileName, window.CURRENT_MODUL, '', currentImageMeta);
+    if (oldDriveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(oldDriveFileId);
     closeCropModal();
     showToast('✅ Gambar berhasil di-crop & disimpan');
 }

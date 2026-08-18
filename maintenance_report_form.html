@@ -1624,12 +1624,18 @@ function applyImageEdits(){
         }
 
         function deleteItem(type, idx) {
+            // Section ini dihapus permanen berikut semua fotonya -- hapus juga
+            // dari Drive (kalau sudah sempat ke-upload), supaya tidak nyangkut.
+            var removedImages = (sections[type][idx] && sections[type][idx].images) || [];
+            removedImages.forEach(function(img){
+                if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+            });
             sections[type].splice(idx, 1);
             renderSection(type, type+'Box');
         }
 
         function deleteImg(type, idx, imgIdx) {
-            sections[type][idx].images.splice(imgIdx, 1);
+            pmDeleteImgFromArr(sections[type][idx].images, imgIdx);
             renderSection(type, type+'Box');
         }
 
@@ -1746,7 +1752,7 @@ function applyImageEdits(){
                         renderSection(type, type + 'Box');
                         if (typeof uploadFotoKeGDrive === 'function') {
                             var gdriveFileName = 'maintenance_' + type + '_' + idx + '_' + slotIdx + '.jpg';
-                            uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, type || '');
+                            uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, type || '', entry);
                         }
                         finishOne();
                     });
@@ -2001,7 +2007,11 @@ function applyImageEdits(){
                 imgArr.push(entry);
             }
             var gdriveFileName = 'maintenance_' + p.type + '_' + p.idx + '_' + slotIdx + '.jpg';
-            if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, p.type || '');
+            if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, p.type || '', entry);
+            // Foto lama yang diganti (crop-ulang) dihapus dari Drive lewat fileId pasti,
+            // bukan lewat cocokkan nama -- supaya tidak salah hapus file foto lain yang
+            // kebetulan nama/slot-nya sama.
+            if (existing && existing.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(existing.driveFileId);
 
             closeCropModal();
             renderSection(p.type, p.type + 'Box');
