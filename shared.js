@@ -444,6 +444,50 @@ function pmLS(op, key, val) {
   return null;
 }
 
+/* ── SIGNATURE BLOCK: tanda tangan permanen di akhir laporan PDF ──
+   Dipanggil SEKALI di akhir pembuatan PDF tiap modul (setelah semua konten
+   selesai digambar, sebelum showPdfPreview/doc.save). Kalau ruang di
+   halaman terakhir gak cukup, otomatis nambah halaman baru (drawBgFn
+   dipanggil buat gambar background halaman itu, sama seperti checkPage()
+   lokal di tiap modul).
+   Nama & jabatan penandatangan SENGAJA di-hardcode di sini (bukan input
+   form) -- tanda tangan ini permanen untuk SEMUA laporan di SEMUA modul,
+   bukan per-laporan/per-user. Kalau nanti nama/jabatan berubah, cukup
+   diedit di SATU tempat ini, otomatis kepakai di semua modul yang manggil
+   fungsi ini.
+   Parameter: doc, pw/ph (ukuran halaman), marginX, marginTop, marginBottom
+   (angka margin yang sudah dipakai modul pemanggil), y (posisi konten
+   terakhir), drawBgFn (fungsi drawBg lokal modul, buat halaman baru kalau
+   perlu). Return: posisi y setelah blok tanda tangan. */
+function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgFn) {
+  var blockH = 32;
+  if (y + blockH > ph - marginBottom) {
+    doc.addPage();
+    if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph);
+    y = marginTop;
+  } else {
+    y += 6; // jarak dari konten sebelumnya
+  }
+  var contentW = pw - marginX * 2;
+  var colW = contentW / 2;
+  var pairs = [
+    { title: 'Checked By - Technician', name: 'Zaini Nur Hidayat', x: marginX },
+    { title: 'Reviewed By - Supervisor', name: 'Fajar Dwi Saksana', x: marginX + colW }
+  ];
+  pairs.forEach(function(p) {
+    var cx = p.x + colW / 2;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30, 64, 175);
+    doc.text(p.title, cx, y, { align: 'center' });
+    var lineY = y + 22;
+    var lineHalfW = 32;
+    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
+    doc.line(cx - lineHalfW, lineY, cx + lineHalfW, lineY);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 30, 25);
+    doc.text(p.name, cx, lineY + 5, { align: 'center' });
+  });
+  return y + blockH;
+}
+
 function pmGetDeviceId() {
   var id = pmLS('get', 'pm_device_id');
   if (!id) {
