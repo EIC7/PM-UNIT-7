@@ -2102,6 +2102,10 @@ function hgDownloadPdf() {
         columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:137},2:{cellWidth:20,halign:'center'}},
         willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
       });
+      y = doc.lastAutoTable.finalY + 6;
+
+      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
 
       var now = new Date();
       var dateStr = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');

@@ -1910,6 +1910,9 @@ function buildAndShowPdf() {
     });
   }
 
+  // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
+  y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+
   dbShowSavingOverlay(false);
   showPdfPreview(doc, 'Generator_Stator_Leak_Monitoring_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');
 }

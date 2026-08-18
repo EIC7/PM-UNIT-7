@@ -2336,6 +2336,9 @@ function bsDownloadPdf() {
       addSide('Note '+safe(BS_CFG.b.note)+' ('+safe(BS_CFG.b.code)+'):', n2, imgs2);
     }
 
+    // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
+    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, bsDrawBg);
+
     var suffix = hasDefect ? 'Defect' : (has3m ? '3Monthly' : 'Monthly');
     var dateStr = (gv('bsDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
     if (typeof hideImgLoading === 'function') hideImgLoading();

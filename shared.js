@@ -460,7 +460,7 @@ function pmLS(op, key, val) {
    terakhir), drawBgFn (fungsi drawBg lokal modul, buat halaman baru kalau
    perlu). Return: posisi y setelah blok tanda tangan. */
 function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgFn) {
-  var blockH = 32;
+  var blockH = 40; // 32 -> 40, ikut nambahnya jarak kolom ttd di bawah
   if (y + blockH > ph - marginBottom) {
     doc.addPage();
     if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph);
@@ -478,7 +478,7 @@ function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, dr
     var cx = p.x + colW / 2;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30, 64, 175);
     doc.text(p.title, cx, y, { align: 'center' });
-    var lineY = y + 22;
+    var lineY = y + 27.5; // 22 -> 27.5 (+seperempat), lebih lega buat area tanda tangan asli
     var lineHalfW = 32;
     doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
     doc.line(cx - lineHalfW, lineY, cx + lineHalfW, lineY);

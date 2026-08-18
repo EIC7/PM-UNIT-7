@@ -2302,6 +2302,9 @@ function downloadPdf(){
       if (anyOutletEnabled) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
       printChannelGroup(O2_OUTLET_CHANNELS, 'och', 'DOKUMENTASI PER CHANNEL — OUTLET (6 CHANNEL)');
 
+      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+
       if (typeof hideImgLoading === 'function') hideImgLoading();
 
       dbShowSavingOverlay(false);

@@ -2600,7 +2600,12 @@ function exportPdf(){
     var lastPageNum = doc.internal.getNumberOfPages();
     if (lastPageNum > 1 && y <= marginTop + 5) {
       doc.deletePage(lastPageNum);
+      y = doc.internal.pageSize.getHeight(); // paksa drawSignatureBlock di bawah nganggep halaman ini penuh->pindah ke halaman sebelumnya yg valid kalau perlu
+      doc.setPage(doc.internal.getNumberOfPages());
     }
+
+    // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
+    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgOnce);
 
     if (typeof hideImgLoading === 'function') hideImgLoading();
     var fn = (pdfNamePart(d.meta.workorder,30)||'NoWO')+'_'+(pdfNamePart(d.meta.asset,25)||'NoAsset')+'_'+(pdfNamePart(d.meta.descAsset,40)||'NoDesc')+'.pdf';

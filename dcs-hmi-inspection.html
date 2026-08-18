@@ -2504,6 +2504,10 @@ function dcsDownloadPdf() {
       doc.setFont('helvetica','normal'); doc.setTextColor(60,80,110);
       doc.text('- Entry PM Result into maximo work order.', marginX+3, y+9.5);
       doc.text('- Inform to immediate superior if any defect found.', marginX+3, y+13.5);
+      y += 18;
+
+      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, bgFooterH, y, drawBg);
 
       var dateStr = (gv('dcsDate')||'').replace(/-/g,'')||new Date().toISOString().slice(0,10).replace(/-/g,'');
       if (typeof hideImgLoading === 'function') hideImgLoading();

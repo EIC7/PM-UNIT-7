@@ -1744,6 +1744,9 @@ function downloadPdf(){
         });
       }
 
+      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+
       if (typeof hideImgLoading === 'function') hideImgLoading();
 
       dbShowSavingOverlay(false);
