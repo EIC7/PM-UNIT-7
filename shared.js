@@ -1015,6 +1015,25 @@ function skipCrop() {
 
 function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUrl, caption, replaceIdx) {
   var MAX_TOTAL = 1 * 1024 * 1024;
+  // Cap resolusi maksimal SEBELUM kompresi kualitas dimulai. Foto kamera HP modern
+  // biasanya 3000-4000px+ di sisi terpanjang, padahal di PDF foto ini paling besar
+  // dicetak ~18cm lebar (lihat iePhotoDrawSize / maxPhotoW di tiap modul) -- di
+  // 300dpi (kualitas cetak bagus) itu cuma butuh ~2126px. 1920px dipilih sebagai
+  // batas aman (masih di atas kebutuhan cetak manapun di sistem ini) supaya TIDAK
+  // ADA PENURUNAN KUALITAS YANG KELIHATAN, tapi total piksel (dan makanya ukuran
+  // file) bisa turun drastis dibanding resolusi asli kamera. Ini dilakukan DULU,
+  // baru sisa logika kompresi kualitas (0.85->0.25) jalan di atas kanvas yang
+  // sudah dikecilkan -- jadi jarang perlu turun kualitas jauh sama sekali, karena
+  // resolusi sudah masuk akal duluan.
+  var MAX_DIMENSION = 1920;
+  if (canvas && (canvas.width > MAX_DIMENSION || canvas.height > MAX_DIMENSION)) {
+    var capFactor = MAX_DIMENSION / Math.max(canvas.width, canvas.height);
+    var capped = document.createElement('canvas');
+    capped.width = Math.max(1, Math.round(canvas.width * capFactor));
+    capped.height = Math.max(1, Math.round(canvas.height * capFactor));
+    capped.getContext('2d').drawImage(canvas, 0, 0, capped.width, capped.height);
+    canvas = capped;
+  }
   var quality = 0.85, dataUrl;
   if (!canvas && rawDataUrl) { dataUrl = rawDataUrl; }
   else if (!canvas) { return; }
