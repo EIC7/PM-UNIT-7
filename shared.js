@@ -116,16 +116,50 @@ function _pmGetSupaClient() {
   return _pmSupaClientPromise;
 }
 
-/* ── GOOGLE DRIVE PHOTO BACKUP CONFIG ──
-   Upload otomatis (silent, non-blocking) setiap foto PM ke Google Drive
-   lewat Apps Script Web App, sebagai backup terpisah dari Supabase.
+/* ── GOOGLE DRIVE PHOTO STORAGE ──
+   Upload foto PM ke Google Drive lewat Apps Script Web App. Fungsi ini
+   PROMISE-BASED dan, kalau parameter `entry` (object foto) dikasih, otomatis
+   nempelin hasilnya ke entry itu sendiri:
+     entry.driveUrl    -> https://lh3.googleusercontent.com/d/FILE_ID (link
+                           gambar langsung, bisa dipasang di <img src> ATAU
+                           di-fetch buat diubah ke base64 pas generate PDF
+                           dari histori lama)
+     entry.driveFileId -> FILE_ID mentah, buat dihapus/direplace kalau foto
+                           di-crop-ulang atau dihapus user
+   `entry` TIDAK WAJIB diisi -- panggilan lama yang cuma kasih 4 argumen
+   (dataUrlBase64, fileName, modul, keterangan) tetap jalan seperti biasa,
+   cuma belum kebagian driveUrl-nya nempel otomatis.
+
+   Upload tetap NON-BLOCKING (tidak nge-freeze UI pas user crop foto), tapi
+   sekarang track-able: setiap panggilan didaftarkan ke _pmPendingDriveUploads
+   supaya kode "Simpan ke Supabase" bisa nunggu (lihat waitForPendingDriveUploads
+   di bawah) semua upload foto kelar dulu sebelum bikin payload -- jadi
+   driveUrl-nya sudah pasti ada duluan pas record dikirim ke Supabase, bukan
+   masih kosong karena kepotong buru-buru.
+
    Ganti GDRIVE_WEB_APP_URL kalau deployment Apps Script diganti/redeploy baru. */
 var GDRIVE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxyxAOQaIFkT9EZtTHfkjQeG3TlkLnEu2AKVyhUnguK7Td_zls1qL7IPB_hLsXTaLNBHA/exec';
 var GDRIVE_SECRET_TOKEN = 'pmeicunit7-mahfud';
 
-function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
-  if (!GDRIVE_WEB_APP_URL || !dataUrlBase64 || !fileName) return;
-  fetch(GDRIVE_WEB_APP_URL, {
+function gdriveFileIdToViewUrl(fileId) {
+  return 'https://lh3.googleusercontent.com/d/' + fileId;
+}
+
+var _pmPendingDriveUploads = [];
+/* Dipanggil sebelum dbCollectData/simpan-ke-Supabase, supaya nunggu semua
+   upload foto yang masih berjalan kelar (baik sukses atau gagal) dulu.
+   Tidak pernah reject -- upload yang gagal cuma bikin entry.driveUrl tetap
+   kosong (nanti fallback ke dataUrl base64 di payload Supabase), bukan
+   bikin proses Simpan ikut gagal total. */
+function waitForPendingDriveUploads() {
+  var pending = _pmPendingDriveUploads.slice();
+  _pmPendingDriveUploads.length = 0;
+  return Promise.all(pending.map(function(p){ return p.catch(function(){}); }));
+}
+
+function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
+  if (!GDRIVE_WEB_APP_URL || !dataUrlBase64 || !fileName) return Promise.resolve(null);
+  var promise = fetch(GDRIVE_WEB_APP_URL, {
     method: 'POST',
     body: JSON.stringify({
       token: GDRIVE_SECRET_TOKEN,
@@ -136,9 +170,13 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan) {
     })
   }).then(function(res){ return res.json(); })
     .then(function(result){
-      if (!result.success) console.error('Upload GDrive gagal:', result.error);
+      if (!result.success) { console.error('Upload GDrive gagal:', result.error); return null; }
+      if (entry) { entry.driveUrl = gdriveFileIdToViewUrl(result.fileId); entry.driveFileId = result.fileId; }
+      return result;
     })
-    .catch(function(err){ console.error('Upload GDrive error:', err); });
+    .catch(function(err){ console.error('Upload GDrive error:', err); return null; });
+  _pmPendingDriveUploads.push(promise);
+  return promise;
 }
 
 function supaFetch(method, path, body) {
