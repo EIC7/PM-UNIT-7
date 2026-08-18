@@ -458,8 +458,12 @@ function pmLS(op, key, val) {
    Parameter: doc, pw/ph (ukuran halaman), marginX, marginTop, marginBottom
    (angka margin yang sudah dipakai modul pemanggil), y (posisi konten
    terakhir), drawBgFn (fungsi drawBg lokal modul, buat halaman baru kalau
-   perlu). Return: posisi y setelah blok tanda tangan. */
-function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgFn) {
+   perlu), checkedByName (opsional -- nama utk "Checked By - Technician",
+   dipilih user dari dropdown di form kalau modulnya sudah punya field itu;
+   kalau kosong/tidak dikirim, fallback ke default 'Zaini Nur Hidayat' biar
+   modul yang belum punya dropdown pemilihan tetap jalan seperti biasa).
+   Return: posisi y setelah blok tanda tangan. */
+function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgFn, checkedByName) {
   var blockH = 40; // 32 -> 40, ikut nambahnya jarak kolom ttd di bawah
   if (y + blockH > ph - marginBottom) {
     doc.addPage();
@@ -471,7 +475,7 @@ function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, dr
   var contentW = pw - marginX * 2;
   var colW = contentW / 2;
   var pairs = [
-    { title: 'Checked By - Technician', name: 'Zaini Nur Hidayat', x: marginX },
+    { title: 'Checked By - Technician', name: checkedByName || 'Zaini Nur Hidayat', x: marginX },
     { title: 'Reviewed By - Supervisor', name: 'Fajar Dwi Saksana', x: marginX + colW }
   ];
   pairs.forEach(function(p) {
