@@ -429,12 +429,27 @@ function pmSubscribeGateChanges(deviceId) {
    koneksi putus, device otomatis hilang dari daftar "online" -- tidak perlu
    ditulis atau dihapus manual dari mana pun. */
 var _pmPresenceChannel = null;
+// Halaman device-admin.html butuh lihat SELURUH presence state (semua device
+// yang lagi hadir), bukan cuma nge-track dirinya sendiri. Dulu itu dibikin
+// dengan channel('pm-presence', ...) KEDUA secara terpisah -- dua kali join
+// ke topic Realtime yang sama dari client yang sama bikin konflik (presence
+// jadi gak sinkron dengan benar). Sekarang pakai pub-sub internal ini:
+// listener didaftarkan di sini, lalu dipanggil ulang tiap ada event 'sync'
+// dari SATU channel yang sama yang di-subscribe oleh pmTrackPresence().
+var _pmPresenceSyncListeners = [];
+function _pmFirePresenceSync() {
+  var state = _pmPresenceChannel ? _pmPresenceChannel.presenceState() : {};
+  _pmPresenceSyncListeners.forEach(function(fn) {
+    try { fn(state); } catch (e) { console.error('pmOnPresenceSync listener error:', e); }
+  });
+}
 function pmTrackPresence(deviceId, name) {
   if (_pmPresenceChannel) return; // sudah track, jangan dobel
   _pmGetSupaClient().then(function(client) {
-    if (_pmPresenceChannel) return; // race guard
+    if (_pmPresenceChannel) return; // race guard kalau kepanggil 2x pas loading
     _pmPresenceChannel = client
       .channel('pm-presence', { config: { presence: { key: deviceId } } })
+      .on('presence', { event: 'sync' }, _pmFirePresenceSync)
       .subscribe(function(status) {
         if (status !== 'SUBSCRIBED') return;
         _pmPresenceChannel.track({
@@ -442,10 +457,22 @@ function pmTrackPresence(deviceId, name) {
           page: (location.pathname.split('/').pop() || 'index'),
           since: new Date().toISOString()
         });
+        _pmFirePresenceSync(); // kasih snapshot awal ke listener yang sudah daftar duluan
       });
   }).catch(function(err) {
     console.error('Presence tracking gagal (bukan masalah kritis):', err);
   });
+}
+// Dipakai halaman yang cuma mau LIHAT presence semua device (device-admin.html)
+// tanpa perlu join channel baru -- numpang di channel yang sama yang sudah
+// (atau akan) di-subscribe oleh pmTrackPresence() lewat pmInitGate() di atas.
+// callback dipanggil dengan presenceState() setiap kali ada sync, termasuk
+// segera dengan state terkini (kalau channel-nya sudah connect duluan) supaya
+// listener yang daftar belakangan tidak perlu nunggu event sync berikutnya.
+function pmOnPresenceSync(callback) {
+  if (typeof callback !== 'function') return;
+  _pmPresenceSyncListeners.push(callback);
+  if (_pmPresenceChannel) callback(_pmPresenceChannel.presenceState());
 }
 
 function pmInitGate() {

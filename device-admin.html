@@ -141,23 +141,17 @@ function daRenderList() {
 }
 
 /* ── PRESENCE (Realtime, bukan query database) ──
-   Subscribe SEKALI ke channel 'pm-presence' yang sama dipakai halaman lain
-   (lihat pmTrackPresence di shared.js) sebagai "penonton" -- dapat daftar
-   device_id yang lagi hadir di channel secara live, tanpa query ke Postgres
-   sama sekali. Update badge Online cukup re-render dari _daRows yang sudah
-   ada di memori, TIDAK fetch ulang ke Supabase. */
-function daSubscribePresence() {
-  _pmGetSupaClient().then(function(client) {
-    var ch = client.channel('pm-presence', { config: { presence: { key: 'admin-viewer' } } });
-    ch.on('presence', { event: 'sync' }, function() {
-      _daOnlineIds = ch.presenceState();
-      daRenderList();
-    }).subscribe();
-  }).catch(function(err) {
-    console.error('Presence viewer gagal (badge online gak muncul, sisanya normal):', err);
-  });
-}
-daSubscribePresence();
+   Dulu di sini bikin channel('pm-presence', ...) SENDIRI sebagai "penonton"
+   -- padahal shared.js (lewat pmInitGate -> pmTrackPresence, jalan otomatis
+   di SETIAP halaman termasuk device-admin.html ini sendiri) SUDAH subscribe
+   ke channel 'pm-presence' yang sama duluan. Dua kali join ke topic Realtime
+   yang sama dari client yang sama bikin konflik di level koneksi, presence
+   jadi gak sinkron dengan benar. Sekarang numpang ke channel yang sama lewat
+   pmOnPresenceSync() -- tidak ada join/channel baru sama sekali. */
+pmOnPresenceSync(function(state) {
+  _daOnlineIds = state;
+  daRenderList();
+});
 
 function daToggleTrust(deviceId, trusted) {
   // access_revoked=true saat dicabut -> device itu dipaksa masukin password
