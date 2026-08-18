@@ -420,6 +420,34 @@ function pmSubscribeGateChanges(deviceId) {
   });
 }
 
+/* ── PRESENCE: "device mana yang lagi online sekarang" ──
+   Dipisah dari pmSubscribeGateChanges di atas (yang urusannya postgres_changes
+   ke tabel trusted_devices) karena Presence ini SAMA SEKALI TIDAK NULIS/BACA
+   ke Postgres -- cuma "hadir" di sebuah channel Realtime bareng device lain,
+   jadi device-admin.html bisa lihat siapa yang lagi buka halaman SEKARANG,
+   tanpa nambah beban query ke database sama sekali. Begitu tab ditutup /
+   koneksi putus, device otomatis hilang dari daftar "online" -- tidak perlu
+   ditulis atau dihapus manual dari mana pun. */
+var _pmPresenceChannel = null;
+function pmTrackPresence(deviceId, name) {
+  if (_pmPresenceChannel) return; // sudah track, jangan dobel
+  _pmGetSupaClient().then(function(client) {
+    if (_pmPresenceChannel) return; // race guard
+    _pmPresenceChannel = client
+      .channel('pm-presence', { config: { presence: { key: deviceId } } })
+      .subscribe(function(status) {
+        if (status !== 'SUBSCRIBED') return;
+        _pmPresenceChannel.track({
+          device_name: name || '(tanpa nama)',
+          page: (location.pathname.split('/').pop() || 'index'),
+          since: new Date().toISOString()
+        });
+      });
+  }).catch(function(err) {
+    console.error('Presence tracking gagal (bukan masalah kritis):', err);
+  });
+}
+
 function pmInitGate() {
   var deviceId = pmGetDeviceId();
   var storedName = pmLS('get', 'pm_device_name') || '';
@@ -440,6 +468,7 @@ function pmInitGate() {
     // di background, jadi baru kunjungan BERIKUTNYA yang bakal diminta
     // password baru. Ini trade-off wajar untuk sistem tanpa server auth.
     pmUnlockGate();
+    pmTrackPresence(deviceId, storedName);
     if (!alreadySynced) pmSyncDeviceToSupabase(deviceId, storedName);
     return;
   }
@@ -481,6 +510,7 @@ function pmInitGate() {
       pmLS('set', 'pm_auth_pw_hash', currentHash);
       pmSyncDeviceToSupabase(deviceId, name);
       pmUnlockGate();
+      pmTrackPresence(deviceId, name);
     }).catch(function() {
       setSubmitBusy(false);
       pmShowGateError('Gagal menghubungi server, coba lagi.');

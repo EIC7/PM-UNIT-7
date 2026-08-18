@@ -32,6 +32,7 @@
   .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
   .badge.trusted{background:#e6f7f1;color:var(--green)}
   .badge.pending{background:#fff3e0;color:var(--amber)}
+  .badge.online{background:#e8f5e9;color:#2e7d32}
   .actions{display:flex;gap:8px;flex-shrink:0}
   .btn{padding:8px 14px;border-radius:8px;border:none;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
   .btn.trust{background:var(--green);color:#fff}
@@ -82,47 +83,81 @@ function daParseUA(ua) {
   return browser + ' · ' + os;
 }
 
+var _daRows = [];
+var _daOnlineIds = {}; // diisi dari Presence (Realtime), BUKAN dari database -- lihat daSubscribePresence
+
 function daLoadDevices() {
   var listEl = document.getElementById('daList');
   var countEl = document.getElementById('daCount');
   listEl.innerHTML = '<div class="loading">Memuat daftar device...</div>';
   supaFetch('GET', 'trusted_devices?order=last_seen.desc')
     .then(function(rows) {
-      countEl.textContent = rows.length + ' device pernah tercatat';
-      if (!rows.length) {
-        listEl.innerHTML = '<div class="empty-state"><div class="ic">📭</div>Belum ada device yang tercatat.<br>Device baru akan muncul di sini setelah user memasukkan password pertama kali.</div>';
-        return;
-      }
-      listEl.innerHTML = rows.map(function(r) {
-        var name = r.device_name ? r.device_name : '<span class="empty">(tanpa nama)</span>';
-        var badge = r.trusted
-          ? '<span class="badge trusted">✓ Trusted</span>'
-          : '<span class="badge pending">⏳ Pending</span>';
-        var actionBtn = r.trusted
-          ? '<button class="btn revoke" onclick="daToggleTrust(\'' + r.device_id + '\', false)">Cabut Trusted</button>'
-          : '<button class="btn trust" onclick="daToggleTrust(\'' + r.device_id + '\', true)">✓ Jadikan Trusted</button>';
-        return '' +
-          '<div class="device-card">' +
-            '<div class="device-main">' +
-              '<div class="device-name">' + name + ' ' + badge + '</div>' +
-              '<div class="device-meta">' +
-                daParseUA(r.user_agent) + '<br>' +
-                'Pertama akses: ' + daFmtDate(r.first_seen) + ' &nbsp;·&nbsp; Terakhir: ' + daFmtDate(r.last_seen) + '<br>' +
-                '<code>' + r.device_id + '</code>' +
-              '</div>' +
-            '</div>' +
-            '<div class="actions">' +
-              actionBtn +
-              '<button class="btn del" onclick="daDeleteDevice(\'' + r.device_id + '\')">Hapus</button>' +
-            '</div>' +
-          '</div>';
-      }).join('');
+      _daRows = rows;
+      daRenderList();
     })
     .catch(function(err) {
       listEl.innerHTML = '<div class="empty-state"><div class="ic">⚠️</div>Gagal memuat data.<br>' + (err.message || err) + '<br><br>Pastikan tabel <code>trusted_devices</code> sudah dibuat di Supabase.</div>';
       countEl.textContent = '';
     });
 }
+
+function daRenderList() {
+  var listEl = document.getElementById('daList');
+  var countEl = document.getElementById('daCount');
+  var rows = _daRows;
+  var onlineCount = Object.keys(_daOnlineIds).length;
+  countEl.textContent = rows.length + ' device pernah tercatat' + (onlineCount ? ' · 🟢 ' + onlineCount + ' online sekarang' : '');
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="ic">📭</div>Belum ada device yang tercatat.<br>Device baru akan muncul di sini setelah user memasukkan password pertama kali.</div>';
+    return;
+  }
+  listEl.innerHTML = rows.map(function(r) {
+    var name = r.device_name ? r.device_name : '<span class="empty">(tanpa nama)</span>';
+    var badge = r.trusted
+      ? '<span class="badge trusted">✓ Trusted</span>'
+      : '<span class="badge pending">⏳ Pending</span>';
+    var onlineBadge = _daOnlineIds[r.device_id]
+      ? ' <span class="badge online">🟢 Online</span>'
+      : '';
+    var actionBtn = r.trusted
+      ? '<button class="btn revoke" onclick="daToggleTrust(\'' + r.device_id + '\', false)">Cabut Trusted</button>'
+      : '<button class="btn trust" onclick="daToggleTrust(\'' + r.device_id + '\', true)">✓ Jadikan Trusted</button>';
+    return '' +
+      '<div class="device-card">' +
+        '<div class="device-main">' +
+          '<div class="device-name">' + name + ' ' + badge + onlineBadge + '</div>' +
+          '<div class="device-meta">' +
+            daParseUA(r.user_agent) + '<br>' +
+            'Pertama akses: ' + daFmtDate(r.first_seen) + ' &nbsp;·&nbsp; Terakhir: ' + daFmtDate(r.last_seen) + '<br>' +
+            '<code>' + r.device_id + '</code>' +
+          '</div>' +
+        '</div>' +
+        '<div class="actions">' +
+          actionBtn +
+          '<button class="btn del" onclick="daDeleteDevice(\'' + r.device_id + '\')">Hapus</button>' +
+        '</div>' +
+      '</div>';
+  }).join('');
+}
+
+/* ── PRESENCE (Realtime, bukan query database) ──
+   Subscribe SEKALI ke channel 'pm-presence' yang sama dipakai halaman lain
+   (lihat pmTrackPresence di shared.js) sebagai "penonton" -- dapat daftar
+   device_id yang lagi hadir di channel secara live, tanpa query ke Postgres
+   sama sekali. Update badge Online cukup re-render dari _daRows yang sudah
+   ada di memori, TIDAK fetch ulang ke Supabase. */
+function daSubscribePresence() {
+  _pmGetSupaClient().then(function(client) {
+    var ch = client.channel('pm-presence', { config: { presence: { key: 'admin-viewer' } } });
+    ch.on('presence', { event: 'sync' }, function() {
+      _daOnlineIds = ch.presenceState();
+      daRenderList();
+    }).subscribe();
+  }).catch(function(err) {
+    console.error('Presence viewer gagal (badge online gak muncul, sisanya normal):', err);
+  });
+}
+daSubscribePresence();
 
 function daToggleTrust(deviceId, trusted) {
   // access_revoked=true saat dicabut -> device itu dipaksa masukin password
