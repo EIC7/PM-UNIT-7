@@ -1285,12 +1285,18 @@ function cropAndSave() {
     // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama,
     // bukan dihapus lalu ditambahkan di akhir array — supaya urutan galeri (dan
     // keterangan yang mengikuti indexnya saat render) tidak berubah/tertukar.
-    if (existing) imgArr.splice(p.replaceIdx, 1, entry);
+    if (existing) {
+      imgArr.splice(p.replaceIdx, 1, entry);
+    } else {
+      imgArr.push(entry);
+    }
     // Foto lama yang diganti (crop-ulang) dihapus dari Drive lewat fileId
     // pasti, bukan lewat cocokkan nama -- supaya tidak salah hapus file foto
-    // lain yang kebetulan nama device-nya sama.
+    // lain yang kebetulan nama device-nya sama. (Perbaikan dangling-else:
+    // dulu "else" di sini nempel ke kondisi driveFileId, bukan ke
+    // "existing", jadi foto yang di-crop-ulang tapi belum punya driveFileId
+    // ke-splice DAN ke-push sekaligus -> dobel di galeri.)
     if (existing && existing.driveFileId) deleteFotoDariGDrive(existing.driveFileId);
-    else imgArr.push(entry);
 
     // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
     uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '', entry);
