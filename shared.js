@@ -157,6 +157,60 @@ function waitForPendingDriveUploads() {
   return Promise.all(pending.map(function(p){ return p.catch(function(){}); }));
 }
 
+/* ── FOTO: swap dataUrl (base64) <-> driveUrl, generik buat SEMUA modul ──
+   Semua modul menyimpan foto sebagai object {name, dataUrl, type, caption,
+   offsetX, widthCm, heightCm, driveUrl, driveFileId, ...} di dalam array,
+   berapa pun level nesting-nya (sections[type][idx].images[], images[side][],
+   dst). Karena bentuknya selalu konsisten, cukup ditangani SEKALI di sini
+   (bukan per-modul) lewat dbSave/dbLoad -- kode render thumbnail & PDF
+   export tiap modul TIDAK PERLU DIUBAH SAMA SEKALI, karena mereka selalu
+   baca `dataUrl` seperti biasa dan tidak pernah tahu ada Drive di baliknya. */
+
+/* Dipanggil dbSave() SEBELUM kirim ke Supabase: foto yang SUDAH punya
+   driveUrl (artinya sudah aman tersimpan di Drive) -- dataUrl base64-nya
+   (paling berat di payload) dibuang, cukup simpan driveUrl (string pendek).
+   Foto yang upload Drive-nya gagal/belum kelar (driveUrl masih kosong)
+   TETAP kirim dataUrl-nya apa adanya -- supaya tidak ada foto yang hilang. */
+function _pmStripBase64ForSave(obj) {
+  if (Array.isArray(obj)) { obj.forEach(_pmStripBase64ForSave); return; }
+  if (!obj || typeof obj !== 'object') return;
+  if (typeof obj.dataUrl === 'string' && obj.dataUrl.indexOf('data:') === 0 && obj.driveUrl) {
+    obj.dataUrl = '';
+  }
+  Object.keys(obj).forEach(function(k){ _pmStripBase64ForSave(obj[k]); });
+}
+
+/* Dipanggil dbLoad() SETELAH ambil record dari Supabase: foto yang cuma
+   punya driveUrl (dataUrl-nya sudah dibuang saat disimpan) di-fetch balik
+   dari Drive lalu diubah ke base64, ditaruh lagi ke dataUrl. Return Promise
+   yang resolve setelah SEMUA foto selesai dipulihkan (atau di-skip kalau
+   fetch-nya gagal -- gagal ambil 1 foto tidak boleh bikin seluruh proses
+   buka data gagal total, biarin foto itu kosong daripada nge-block semuanya). */
+function _pmRestoreBase64AfterLoad(obj) {
+  var jobs = [];
+  (function walk(o) {
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    if (!o || typeof o !== 'object') return;
+    if (o.driveUrl && (!o.dataUrl || o.dataUrl.indexOf('data:') !== 0)) {
+      jobs.push(
+        fetch(o.driveUrl).then(function(res){ return res.blob(); })
+          .then(function(blob){
+            return new Promise(function(resolve){
+              var r = new FileReader();
+              r.onload = function(){ o.dataUrl = r.result; resolve(); };
+              r.onerror = function(){ resolve(); };
+              r.readAsDataURL(blob);
+            });
+          })
+          .catch(function(){})
+      );
+      return; // object foto -- gak perlu turun lebih dalam lagi
+    }
+    Object.keys(o).forEach(function(k){ walk(o[k]); });
+  })(obj);
+  return Promise.all(jobs);
+}
+
 function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
   if (!GDRIVE_WEB_APP_URL || !dataUrlBase64 || !fileName) return Promise.resolve(null);
   var promise = fetch(GDRIVE_WEB_APP_URL, {
@@ -639,7 +693,16 @@ function dbLoad(id, callback) {
       }, expectedSize);
     })
     .then(function(rows) {
-      if (rows && rows[0]) { dbShowSavingOverlay(false); callback(rows[0]); }
+      if (rows && rows[0]) {
+        // Foto lama yang cuma punya driveUrl (base64-nya sudah dibuang saat
+        // disimpan) dipulihkan ke dataUrl dulu sebelum callback dipanggil --
+        // supaya applyRecordToForm/render/PDF export tiap modul tetap nerima
+        // bentuk data yang sama seperti biasa (selalu ada dataUrl).
+        _pmRestoreBase64AfterLoad(rows[0].data).then(function(){
+          dbShowSavingOverlay(false);
+          callback(rows[0]);
+        });
+      }
       else dbShowSavingOverlayError('Data tidak ditemukan.', 'Kemungkinan data sudah dihapus atau ID tidak valid.');
     })
     .catch(function(err){ dbShowSavingOverlayError('Gagal memuat data.', err.message || String(err)); });
@@ -845,50 +908,58 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
     existingId = (typeof arg2 === 'string' && arg2.length > 10) ? arg2 : (window._editingId || null);
     callback = null;
   }
-  // Hitung ukuran byte ASLI (uncompressed) dari payload sebelum dikirim, dan
-  // simpan sebagai payload_size di record itu sendiri. Nanti dbLoad baca
-  // angka ini duluan supaya progress bar loading bisa dihitung dari ukuran
-  // data yang SEBENARNYA, bukan simulasi kira-kira.
-  rec.payload_size = _dbByteLength(JSON.stringify(rec));
   var btn = null;
   try { btn = event && event.target && event.target.tagName === 'BUTTON' ? event.target : null; } catch(e){}
   var origText = btn ? btn.innerHTML : '';
   window._dbSaving = true;
   if (btn) { btn.innerHTML = '⏳ Menyimpan...'; btn.disabled = true; }
   dbShowSavingOverlay(true, existingId ? 'Memperbarui data, mohon tunggu...' : 'Menyimpan data, mohon tunggu...', 'Mengupload banyak gambar membutuhkan waktu yang lama');
-  var path, method;
-  if (existingId) {
-    path  = SUPA_TABLE + '?id=eq.' + existingId;
-    method = 'PATCH';
-  } else {
-    path  = SUPA_TABLE;
-    method = 'POST';
-  }
-  supaFetchProgress(method, path, rec, function(percent, phase) {
-    if (phase === 'upload') dbReportRealProgress(percent);
-  })
-    .then(function(rows) {
-      window._dbSaving = false;
-      dbShowSavingOverlay(false);
-      if (btn) { btn.innerHTML = origText; btn.disabled = false; }
-      var savedId = (rows && rows[0] && rows[0].id) ? rows[0].id : existingId;
-      // PENTING: tetap "nempel" ke record yang sama (bukan di-null-kan) supaya
-      // klik Simpan berikutnya tetap UPDATE record ini, bukan bikin duplikat baru.
-      // _editingId hanya boleh direset ke null lewat tombol Reset/mulai entri baru.
-      window._editingId = savedId || null;
-      if (typeof autosaveClear === 'function') autosaveClear();
-      dbShowToast(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
-      if (callback) callback(savedId);
+  // Tunggu semua upload foto ke Google Drive yang masih berjalan (dipicu pas
+  // user crop foto) kelar dulu -- supaya driveUrl-nya sudah pasti ter-attach
+  // ke object foto sebelum kita putuskan foto mana yang base64-nya boleh
+  // dibuang dari payload. Foto yang upload Drive-nya gagal/timeout tetap
+  // kirim dataUrl base64-nya (tidak ada foto yang hilang).
+  waitForPendingDriveUploads().then(function() {
+    _pmStripBase64ForSave(rec.data);
+    // Hitung ukuran byte ASLI (uncompressed) dari payload SETELAH base64 yang
+    // sudah punya driveUrl dibuang, dan simpan sebagai payload_size di record
+    // itu sendiri. Nanti dbLoad baca angka ini duluan supaya progress bar
+    // loading bisa dihitung dari ukuran data yang SEBENARNYA.
+    rec.payload_size = _dbByteLength(JSON.stringify(rec));
+    var path, method;
+    if (existingId) {
+      path  = SUPA_TABLE + '?id=eq.' + existingId;
+      method = 'PATCH';
+    } else {
+      path  = SUPA_TABLE;
+      method = 'POST';
+    }
+    supaFetchProgress(method, path, rec, function(percent, phase) {
+      if (phase === 'upload') dbReportRealProgress(percent);
     })
-    .catch(function(err) {
-      window._dbSaving = false;
-      if (btn) { btn.innerHTML = origText; btn.disabled = false; }
-      // Sengaja TIDAK pakai dbShowToast di sini -- toast otomatis hilang
-      // dalam 3 detik, jadi kalau user lagi AFK/HP diletak pas errornya
-      // kejadian, notifikasinya kelewat dan data yang gagal simpan
-      // (kadang sudah termasuk banyak foto) jadi tidak ketahuan.
-      dbShowSavingOverlayError('Gagal menyimpan data.', err.message || String(err));
-    });
+      .then(function(rows) {
+        window._dbSaving = false;
+        dbShowSavingOverlay(false);
+        if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+        var savedId = (rows && rows[0] && rows[0].id) ? rows[0].id : existingId;
+        // PENTING: tetap "nempel" ke record yang sama (bukan di-null-kan) supaya
+        // klik Simpan berikutnya tetap UPDATE record ini, bukan bikin duplikat baru.
+        // _editingId hanya boleh direset ke null lewat tombol Reset/mulai entri baru.
+        window._editingId = savedId || null;
+        if (typeof autosaveClear === 'function') autosaveClear();
+        dbShowToast(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
+        if (callback) callback(savedId);
+      })
+      .catch(function(err) {
+        window._dbSaving = false;
+        if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+        // Sengaja TIDAK pakai dbShowToast di sini -- toast otomatis hilang
+        // dalam 3 detik, jadi kalau user lagi AFK/HP diletak pas errornya
+        // kejadian, notifikasinya kelewat dan data yang gagal simpan
+        // (kadang sudah termasuk banyak foto) jadi tidak ketahuan.
+        dbShowSavingOverlayError('Gagal menyimpan data.', err.message || String(err));
+      });
+  });
 }
 
 /* ── DB LIST (untuk history page) ── */
