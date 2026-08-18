@@ -129,6 +129,24 @@ function supaFetch(method, path, body) {
     });
 }
 
+/* ── SUPA FETCH DENGAN AUTO-RETRY (khusus GET) ──
+   Dipakai buat request yang aman diulang (idempotent, contoh: cek status
+   gate, ambil password hash) supaya gangguan sesaat (timeout/522 pas
+   Supabase lagi sibuk) tidak langsung gagal dan memaksa user refresh
+   manual berkali-kali -- yang justru menambah beban request baru ke
+   database yang lagi struggling. JANGAN dipakai untuk POST/PATCH/DELETE,
+   karena retry pada request yang mengubah data bisa bikin data duplikat
+   kalau request pertama sebenarnya sudah berhasil tapi responsnya hilang. */
+function supaFetchRetry(path, retries, delayMs) {
+  retries = (typeof retries === 'number') ? retries : 2;
+  delayMs = (typeof delayMs === 'number') ? delayMs : 1200;
+  return supaFetch('GET', path).catch(function(err) {
+    if (retries <= 0) throw err;
+    return new Promise(function(resolve) { setTimeout(resolve, delayMs); })
+      .then(function() { return supaFetchRetry(path, retries - 1, delayMs * 2); });
+  });
+}
+
 /* ── UKURAN BYTE (UTF-8) DARI STRING ──
    Dipakai buat ngukur ukuran payload JSON yang beneran mau dikirim, supaya
    nanti pas dbLoad progress-nya bisa dihitung dari ukuran ASLI (bukan
@@ -226,6 +244,7 @@ function supaFetchProgress(method, path, body, onProgress, expectedTotal) {
    yang meng-update baris di tabel gate_config. ── */
 var PM_GATE_TABLE = 'trusted_devices';
 var PM_GATE_CONFIG_TABLE = 'gate_config';
+var PM_GATE_CHECK_INTERVAL = 10 * 60 * 1000; // 10 menit -- lihat pmCheckAccessRemote
 
 function pmSimpleHash(str) {
   // Hash sederhana (BUKAN cryptographic-grade) — cukup supaya password tidak
@@ -271,7 +290,7 @@ function pmFetchCurrentPwHash() {
   // bukan dari cache) — dipakai saat validasi submit password di gate supaya
   // password baru yang baru diganti admin langsung berlaku, tanpa perlu
   // device lain sempat "sinkron" duluan.
-  return supaFetch('GET', PM_GATE_CONFIG_TABLE + '?id=eq.1&select=password_hash&limit=1')
+  return supaFetchRetry(PM_GATE_CONFIG_TABLE + '?id=eq.1&select=password_hash&limit=1')
     .then(function(rows) {
       return (rows && rows.length) ? rows[0].password_hash : null;
     });
@@ -315,7 +334,18 @@ function pmCheckAccessRemote(deviceId) {
   //                              cache password lokal yang lama dihapus,
   //                              device (yang belum Trusted) wajib password
   //                              baru di kunjungan berikutnya.
-  supaFetch('GET', PM_GATE_TABLE + '?device_id=eq.' + encodeURIComponent(deviceId) + '&select=trusted,access_revoked&limit=1')
+  //
+  // DIBATASI ke maksimal sekali per PM_GATE_CHECK_INTERVAL: dulu fungsi ini
+  // jalan di SETIAP page load (dan ada ±20 halaman di app ini), jadi kalau
+  // user pindah-pindah halaman atau refresh berkali-kali pas koneksi
+  // lagi bermasalah, request numpuk cepat dan makin membebani database
+  // yang lagi struggling. Sekarang cukup dicek ulang tiap beberapa menit.
+  var now = Date.now();
+  var lastCheck = parseInt(pmLS('get', 'pm_gate_last_check') || '0', 10);
+  if (now - lastCheck < PM_GATE_CHECK_INTERVAL) return;
+  pmLS('set', 'pm_gate_last_check', String(now));
+
+  supaFetchRetry(PM_GATE_TABLE + '?device_id=eq.' + encodeURIComponent(deviceId) + '&select=trusted,access_revoked&limit=1')
     .then(function(rows) {
       if (!rows || !rows.length) {
         pmLS('remove', 'pm_trusted_flag');
@@ -336,7 +366,12 @@ function pmCheckAccessRemote(deviceId) {
         }
       });
     })
-    .catch(function(){});
+    .catch(function(){
+      // Gagal walau sudah di-retry -> jangan block UI, biarin cache lokal
+      // yang lama tetap berlaku. Reset lastCheck supaya kunjungan berikutnya
+      // (bukan cuma refresh detik ini juga) boleh coba lagi lebih cepat.
+      pmLS('set', 'pm_gate_last_check', '0');
+    });
 }
 
 function pmInitGate() {

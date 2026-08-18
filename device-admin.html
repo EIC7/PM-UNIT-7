@@ -40,17 +40,6 @@
   .empty-state{text-align:center;padding:60px 20px;color:var(--text-light)}
   .empty-state .ic{font-size:36px;margin-bottom:10px}
   .loading{text-align:center;padding:40px;color:var(--text-light);font-size:13px}
-
-  .pw-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:20px;box-shadow:var(--shadow-sm)}
-  .pw-card h2{margin:0 0 4px;font-size:14.5px;font-weight:700}
-  .pw-card .pw-hint{font-size:12px;color:var(--text-light);margin-bottom:12px}
-  .pw-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
-  .pw-input{flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;font-family:inherit;color:var(--text-dark);background:var(--bg3);outline:none}
-  .pw-input:focus{border-color:var(--green);background:#fff}
-  .btn.pw-save{background:var(--green);color:#fff;padding:10px 18px}
-  .pw-msg{font-size:12px;margin-top:8px;min-height:16px}
-  .pw-msg.err{color:var(--red)}
-  .pw-msg.ok{color:var(--green)}
 </style>
 </head>
 <body>
@@ -61,17 +50,6 @@
 </header>
 
 <main>
-  <div class="pw-card">
-    <h2>🔐 Ganti Password Akses</h2>
-    <div class="pw-hint">Semua device yang BELUM Trusted akan diminta password baru ini di kunjungan berikutnya. Device yang sudah Trusted tetap lolos otomatis.</div>
-    <div class="pw-row">
-      <input type="password" id="pwNewInput" class="pw-input" placeholder="Password baru" autocomplete="off">
-      <input type="password" id="pwConfirmInput" class="pw-input" placeholder="Ulangi password baru" autocomplete="off">
-      <button class="btn pw-save" onclick="daChangePassword()">Simpan Password</button>
-    </div>
-    <div class="pw-msg" id="pwMsg"></div>
-  </div>
-
   <div class="toolbar">
     <div class="toolbar-info" id="daCount">Memuat data...</div>
     <button class="refresh" onclick="daLoadDevices()">↻ Refresh</button>
@@ -80,39 +58,6 @@
 </main>
 
 <script>
-function daShowPwMsg(msg, isErr) {
-  var el = document.getElementById('pwMsg');
-  el.textContent = msg;
-  el.className = 'pw-msg ' + (isErr ? 'err' : 'ok');
-}
-
-function daChangePassword() {
-  var pw1 = document.getElementById('pwNewInput').value.trim();
-  var pw2 = document.getElementById('pwConfirmInput').value.trim();
-  if (!pw1 || !pw2) { daShowPwMsg('Isi kedua kolom password dulu.', true); return; }
-  if (pw1.length < 4) { daShowPwMsg('Password minimal 4 karakter.', true); return; }
-  if (pw1 !== pw2) { daShowPwMsg('Password tidak sama, coba lagi.', true); return; }
-  if (!confirm('Ganti password akses? Semua device yang belum Trusted akan diminta password baru ini.')) return;
-
-  var hash = pmSimpleHash(pw1); // fungsi hash yang sama dipakai dari shared.js
-  var now = new Date().toISOString();
-  supaFetch('GET', 'gate_config?id=eq.1&limit=1')
-    .then(function(rows) {
-      if (rows && rows.length) {
-        return supaFetch('PATCH', 'gate_config?id=eq.1', { password_hash: hash, updated_at: now });
-      }
-      return supaFetch('POST', 'gate_config', { id: 1, password_hash: hash, updated_at: now });
-    })
-    .then(function() {
-      daShowPwMsg('Password berhasil diganti.', false);
-      document.getElementById('pwNewInput').value = '';
-      document.getElementById('pwConfirmInput').value = '';
-      dbShowToast('Password akses berhasil diganti');
-    })
-    .catch(function(err) {
-      daShowPwMsg('Gagal menyimpan: ' + (err.message || err), true);
-    });
-}
 
 function daFmtDate(iso) {
   if (!iso) return '—';
