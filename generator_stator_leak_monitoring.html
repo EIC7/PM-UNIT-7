@@ -198,14 +198,12 @@
       <textarea id="apFindings" placeholder="Temuan dan tindakan perbaikan..." style="width:100%;min-height:90px;padding:10px;border:1px solid var(--border);border-radius:6px;font:inherit;color:inherit;background:#fff;box-sizing:border-box"></textarea>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
-      <div class="meta-field"><label>Technician</label>
+      <div class="meta-field"><label>Checked By - Technician</label>
         <select id="apTechnician">
           <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
           <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
         </select>
       </div>
-      <div class="meta-field"><label>Supervisor</label><input type="text" id="apSupervisor" placeholder="Nama..."></div>
-      <div class="meta-field"><label>Operations</label><input type="text" id="apOperations" placeholder="Nama..."></div>
     </div>
   </div>
 
@@ -1656,8 +1654,6 @@ function resetAll() {
   evidenceItems = []; evNextId = 1;
   document.getElementById('apFindings').value = '';
   document.getElementById('apTechnician').value = '';
-  document.getElementById('apSupervisor').value = '';
-  document.getElementById('apOperations').value = '';
   buildChecklistTable(); buildMeasurementTable(); buildSparePartsTable(); renderEvidenceList();
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
@@ -1860,12 +1856,6 @@ function buildAndShowPdf() {
   checkPage(findingsLines.length*4 + 4);
   doc.text(findingsLines, marginX, y); y += findingsLines.length*4 + 6;
 
-  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:3, halign:'center'}, margin:{left:marginX,right:marginX},
-    head: [['Technician','Supervisor','Operations']],
-    body: [[document.getElementById('apTechnician').value||'-', document.getElementById('apSupervisor').value||'-', document.getElementById('apOperations').value||'-']],
-    willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
-  y = doc.lastAutoTable.finalY + 8;
-
   // EVIDENCE PHOTOS
   // Sebelumnya foto dipaksa ukuran grid tetap (picW/picH hardcoded), jadi
   // ukuran hasil crop (widthCm/heightCm) tidak pernah kepakai di PDF.
@@ -1915,6 +1905,9 @@ function buildAndShowPdf() {
     });
   }
 
+  // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
+  y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, document.getElementById('apTechnician').value);
+
   dbShowSavingOverlay(false);
   showPdfPreview(doc, 'Generator_Stator_Leak_Monitoring_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');
 }
@@ -1949,9 +1942,7 @@ function dbCollectData(modul) {
       spareParts: SPAREPARTS_DATA,
       approval: {
         findings: document.getElementById('apFindings').value,
-        technician: document.getElementById('apTechnician').value,
-        supervisor: document.getElementById('apSupervisor').value,
-        operations: document.getElementById('apOperations').value
+        technician: document.getElementById('apTechnician').value
       },
       evidence: evidenceItems
     }
@@ -1995,9 +1986,7 @@ function applyRecordToForm(rec, editingId) {
 
   var ap = d.approval || {};
   document.getElementById('apFindings').value = ap.findings || '';
-  document.getElementById('apTechnician').value = ap.technician || '';
-  document.getElementById('apSupervisor').value = ap.supervisor || '';
-  document.getElementById('apOperations').value = ap.operations || '';
+  if (ap.technician) document.getElementById('apTechnician').value = ap.technician;
 
   evidenceItems = Array.isArray(d.evidence) ? d.evidence : [];
   evNextId = evidenceItems.reduce(function(m,r){ return Math.max(m, (r.id||0)+1); }, 1);
