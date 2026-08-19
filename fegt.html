@@ -162,6 +162,12 @@
           <input type="text" id="manWorkorder" placeholder="No. Workorder...">
         </div>
         <div class="meta-field"><label>Nama Operator</label><input type="text" id="manOperator" placeholder="Nama operator..."></div>
+        <div class="meta-field"><label>Checked By - Technician</label>
+          <select id="manCheckedBy">
+            <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+            <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+          </select>
+        </div>
       </div>
       <div style="overflow-x:auto">
         <table class="manual-table">
@@ -1749,7 +1755,8 @@ function collectManualData() {
   metaInfo = {
     tanggal: tanggalStr,
     workorder: document.getElementById('manWorkorder').value || '—',
-    operator: document.getElementById('manOperator').value || '—'
+    operator: document.getElementById('manOperator').value || '—',
+    checkedBy: document.getElementById('manCheckedBy').value || ''
   };
   pathData = PATHS.map(function(p) {
     return Object.assign({}, p, {temp:parseFloat(document.getElementById('mtemp-'+p.id).value)||0, statusRaw:document.getElementById('mstatus-'+p.id).value||'ok'});
@@ -2458,7 +2465,7 @@ function downloadPdf(){
       // Footer area dibiarkan kosong — mengandalkan background template (sama seperti opacity)
 
       // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, metaInfo.checkedBy);
 
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
@@ -2995,7 +3002,8 @@ function dbCollectData(modul) {
   metaInfo = {
     tanggal: tanggalStr,
     workorder: document.getElementById('manWorkorder').value || '—',
-    operator: document.getElementById('manOperator').value || '—'
+    operator: document.getElementById('manOperator').value || '—',
+    checkedBy: document.getElementById('manCheckedBy').value || ''
   };
   // Gunakan pathData yang sudah ada (dari upload atau manual)
   if (activeTab === 'manual') collectManualData();
@@ -3066,6 +3074,8 @@ function applyRecordToForm(rec, editingId) {
   var woEl = document.getElementById('manWorkorder'); if (woEl && woVal && woVal !== '—') woEl.value = woVal;
   var opVal = rec.pic || (data.meta && data.meta.operator) || '';
   var opEl = document.getElementById('manOperator'); if (opEl && opVal && opVal !== '—') opEl.value = opVal;
+  var cbVal = data.meta && data.meta.checkedBy;
+  var cbEl = document.getElementById('manCheckedBy'); if (cbEl && cbVal) cbEl.value = cbVal;
   if (data.paths) {
     data.paths.forEach(function(p){
       var t=document.getElementById('mtemp-'+p.id);

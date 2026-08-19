@@ -199,6 +199,12 @@
       <div class="info-row"><label>PIC</label><input type="text" id="metaPic" placeholder="Nama PIC..."></div>
       <div class="info-row"><label>Tanggal</label><input type="date" id="metaTanggal"></div>
       <div class="info-row"><label>Frequency</label><input type="text" id="metaFrequency" placeholder="— pilih di Step 1 —" readonly></div>
+      <div class="info-row"><label>Checked By - Technician</label>
+        <select id="metaCheckedBy">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -2178,7 +2184,7 @@ function collectData(){
   return {
     meta: {
       workorder: val('metaWorkorder'), asset: val('metaAsset'), descAsset: val('metaDescAsset'),
-      pic: val('metaPic'), tanggal: val('metaTanggal'), frequency: val('metaFrequency')
+      pic: val('metaPic'), tanggal: val('metaTanggal'), frequency: val('metaFrequency'), checkedBy: val('metaCheckedBy')
     },
     gasReg: {
       zeroOutlet: val('gasZeroOutlet'), zeroCyl: val('gasZeroCyl'),
@@ -2199,7 +2205,7 @@ function collectData(){
 }
 function applyData(d){
   if (!d) return;
-  if (d.meta){ val_set('metaWorkorder',d.meta.workorder); val_set('metaAsset',d.meta.asset); val_set('metaDescAsset',d.meta.descAsset); val_set('metaPic',d.meta.pic); val_set('metaTanggal',d.meta.tanggal); }
+  if (d.meta){ val_set('metaWorkorder',d.meta.workorder); val_set('metaAsset',d.meta.asset); val_set('metaDescAsset',d.meta.descAsset); val_set('metaPic',d.meta.pic); val_set('metaTanggal',d.meta.tanggal); if (d.meta.checkedBy) val_set('metaCheckedBy', d.meta.checkedBy); }
   if (d.meta && d.meta.frequency){
     var r = document.querySelector('input[name="freq"][value="'+d.meta.frequency+'"]');
     if (r) { r.checked = true; onFreqChange(); }
@@ -2605,7 +2611,7 @@ function exportPdf(){
     }
 
     // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgOnce);
+    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgOnce, val('metaCheckedBy'));
 
     if (typeof hideImgLoading === 'function') hideImgLoading();
     var fn = (pdfNamePart(d.meta.workorder,30)||'NoWO')+'_'+(pdfNamePart(d.meta.asset,25)||'NoAsset')+'_'+(pdfNamePart(d.meta.descAsset,40)||'NoDesc')+'.pdf';

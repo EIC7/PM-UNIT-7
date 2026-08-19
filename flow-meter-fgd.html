@@ -129,6 +129,12 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       <div class="meta-field"><label>Date / Time</label><input type="date" id="fmDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="fmPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="fmWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Checked By - Technician</label>
+        <select id="fmCheckedBy">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
       <div class="meta-field"><label>Asset 7FC-FT-101 (FGD-A Quencher Spray Water Flow Transmitter)</label><input type="text" id="fmAsset101" value="7FC-FT-101"></div>
@@ -2193,7 +2199,7 @@ function fmDownloadPdf() {
       }
 
       // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, gv('fmCheckedBy'));
 
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
@@ -2235,7 +2241,7 @@ function dbCollectData(modul) {
 
   return {
     modul: FM_MODUL_NAME, tanggal: gv('fmDate'), pic: gv('fmPIC'), work_order: gv('fmWO'), unit: 'Unit 7',
-    data: { jenis_pekerjaan: gv('fmJenis'), assets: assets, checks: checks, reading: reading, params: params, dims: dims, notes: notes, images: images }
+    data: { jenis_pekerjaan: gv('fmJenis'), checkedBy: gv('fmCheckedBy'), assets: assets, checks: checks, reading: reading, params: params, dims: dims, notes: notes, images: images }
   };
 }
 
@@ -2265,6 +2271,7 @@ function applyRecordToForm(rec, editingId) {
   var sv = function(id2,val){ var e=document.getElementById(id2); if(e) e.value=val||''; };
   sv('fmDate', rec.tanggal); sv('fmPIC', rec.pic); sv('fmWO', rec.work_order);
   if (data.jenis_pekerjaan) sv('fmJenis', data.jenis_pekerjaan);
+  if (data.checkedBy) sv('fmCheckedBy', data.checkedBy);
   if (data.assets) FM_ASSETS.forEach(function(a){ if (data.assets[a.key]) sv('fmAsset'+a.key, data.assets[a.key]); });
   if (data.notes) FM_ASSETS.forEach(function(a){ sv('fmNote'+a.key, data.notes[a.key]||''); });
   if (data.reading) {

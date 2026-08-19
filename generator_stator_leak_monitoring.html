@@ -198,7 +198,12 @@
       <textarea id="apFindings" placeholder="Temuan dan tindakan perbaikan..." style="width:100%;min-height:90px;padding:10px;border:1px solid var(--border);border-radius:6px;font:inherit;color:inherit;background:#fff;box-sizing:border-box"></textarea>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
-      <div class="meta-field"><label>Technician</label><input type="text" id="apTechnician" placeholder="Nama..."></div>
+      <div class="meta-field"><label>Technician</label>
+        <select id="apTechnician">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
       <div class="meta-field"><label>Supervisor</label><input type="text" id="apSupervisor" placeholder="Nama..."></div>
       <div class="meta-field"><label>Operations</label><input type="text" id="apOperations" placeholder="Nama..."></div>
     </div>
@@ -1909,9 +1914,6 @@ function buildAndShowPdf() {
       y += rowMaxH + 8;
     });
   }
-
-  // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-  y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
 
   dbShowSavingOverlay(false);
   showPdfPreview(doc, 'Generator_Stator_Leak_Monitoring_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');

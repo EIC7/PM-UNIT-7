@@ -150,6 +150,12 @@ input[type="checkbox"]:checked::after {
       <div class="meta-field"><label>Tanggal</label><input type="date" id="hgTanggal"></div>
       <div class="meta-field"><label>Work Order</label><input type="text" id="hgWorkOrder" placeholder="Nomor Work Order..."></div>
       <div class="meta-field"><label>Nama Operator / PIC</label><input type="text" id="hgPIC" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Checked By - Technician</label>
+        <select id="hgCheckedBy">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
     </div>
 
     <div style="margin-top:18px;border:1px solid var(--panel-border);border-radius:8px;padding:10px 14px;background:#f8faf9">
@@ -2105,7 +2111,7 @@ function hgDownloadPdf() {
       y = doc.lastAutoTable.finalY + 6;
 
       // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, gv('hgCheckedBy'));
 
       var now = new Date();
       var dateStr = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
@@ -2143,7 +2149,7 @@ function dbCollectData(modul) {
     pic: document.getElementById('hgPIC').value || '',
     work_order: document.getElementById('hgWorkOrder').value || '',
     unit: 'Unit 7',
-    data: { frequency: activeFreq, steps: stepsOut, table54: t54Out }
+    data: { frequency: activeFreq, steps: stepsOut, table54: t54Out, checkedBy: document.getElementById('hgCheckedBy').value || '' }
   };
 }
 
@@ -2154,6 +2160,7 @@ function hgRestoreRecord(rec, opts) {
   document.getElementById('hgTanggal').value = rec.tanggal || '';
   document.getElementById('hgWorkOrder').value = rec.work_order || '';
   document.getElementById('hgPIC').value = rec.pic || '';
+  if (data.checkedBy) document.getElementById('hgCheckedBy').value = data.checkedBy;
   if (data.steps) {
     Object.keys(data.steps).forEach(function(no){
       var s = data.steps[no];

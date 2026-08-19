@@ -125,6 +125,12 @@
       <div class="meta-field"><label>Date / Time</label><input type="date" id="bsDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="bsPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="bsWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Checked By - Technician</label>
+        <select id="bsCheckedBy">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -1995,7 +2001,7 @@ function bsDownloadPdf() {
     }
 
     // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, bsDrawBg);
+    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, bsDrawBg, gv('bsCheckedBy'));
 
     var dateStr=(gv('bsDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
     if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2029,7 +2035,7 @@ function dbCollectData(modul) {
     '1': bsImages['1'].map(keepImage),
     '2': bsImages['2'].map(keepImage)
   };
-  return {modul:'BELT CONVEYOR E4-E5', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},images:images}};
+  return {modul:'BELT CONVEYOR E4-E5', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},checkedBy:gv4('bsCheckedBy'),images:images}};
 }
 
 /* ── AUTOSAVE DRAFT (pola shared.js) ── */
@@ -2041,6 +2047,7 @@ function applyRecordToForm(rec, editingId) {
   if (editingId) window._editingId = editingId;
   var gv = function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
   gv('bsDate',rec.tanggal); gv('bsPIC',rec.pic); gv('bsWO',rec.work_order);
+  if (data.checkedBy) gv('bsCheckedBy', data.checkedBy);
   if (data.notes) { gv('bsNote1',data.notes.note1||''); gv('bsNote2',data.notes.note2||''); }
   if (data.checks) {
     Object.keys(data.checks).forEach(function(i){

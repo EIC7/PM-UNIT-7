@@ -143,6 +143,12 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       <div class="meta-field"><label>Date</label><input type="date" id="phDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="phPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="phWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Checked By - Technician</label>
+        <select id="phCheckedBy">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -2004,7 +2010,7 @@ function dbCollectData(modul){
     pic:gv('phPIC'),
     work_order:gv('phWO'),
     unit:'CWT',
-    data:{activeUnits:Object.keys(phActiveUnits).filter(function(k){return phActiveUnits[k];}),steps:steps,images:images,notes:notes,docNo:gv('phDocNo')}
+    data:{activeUnits:Object.keys(phActiveUnits).filter(function(k){return phActiveUnits[k];}),steps:steps,images:images,notes:notes,docNo:gv('phDocNo'),checkedBy:gv('phCheckedBy')}
   };
 }
 
@@ -2311,7 +2317,7 @@ function phDownloadPdf(){
       doc.text('- Inform to immediate superior if any defect found.', marginX+2, y); y+=8;
 
       // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, gv('phCheckedBy'));
 
       var dateStr=(gv('phDate')||'').replace(/-/g,'')||yy+String(now.getMonth()+1).padStart(2,'0')+dd;
       if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2333,6 +2339,7 @@ function applyRecordToForm(rec, editingId) {
   var sv=function(eid,val){var e=document.getElementById(eid);if(e)e.value=val||'';};
   sv('phDate',rec.tanggal); sv('phPIC',rec.pic); sv('phWO',rec.work_order);
   if(data.docNo) sv('phDocNo',data.docNo);
+  if(data.checkedBy) sv('phCheckedBy',data.checkedBy);
 
   // Restore active units
   if(data.activeUnits&&data.activeUnits.length){

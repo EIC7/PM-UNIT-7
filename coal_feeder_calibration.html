@@ -204,6 +204,12 @@ function cfToggleSection(type) {
       <div class="meta-field"><label>Date</label><input type="date" id="cfDate"></div>
       <div class="meta-field"><label>Reported By</label><input type="text" id="cfPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order</label><input type="text" id="cfWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Checked By - Technician</label>
+        <select id="cfCheckedBy">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
       <div class="meta-field" style="grid-column:1/-1"><label>Asset</label><textarea id="cfAssetList" rows="4" placeholder="Terisi otomatis dari centang asset di bawah..." style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea></div>
       <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><textarea id="cfAssetDescList" rows="4" placeholder="Terisi otomatis dari centang asset di bawah..." style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit"></textarea></div>
     </div>
@@ -2480,6 +2486,7 @@ function dbCollectData(modul) {
     work_order: gv('cfWO'),
     unit: 'Unit 7',
     data: {
+      checked_by: gv('cfCheckedBy'),
       feeder_no: gv('cfFeederNo'),
       reference: gv('cfRef'),
       asset_list: gv('cfAssetList'),
@@ -3082,7 +3089,7 @@ function cfDownloadPdf() {
       } // end if(doPulv)
 
       // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, gv('cfCheckedBy'));
 
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
@@ -3137,6 +3144,7 @@ function applyRecordToForm(rec, editingId) {
   sv('cfPIC',      rec.pic        || data.pic        || '');
   sv('cfWO',       rec.work_order || data.work_order || '');
   sv('cfFeederNo', data.feeder_no||''); sv('cfRef', data.reference||''); sv('cfNote', data.note||'');
+  if (data.checked_by) sv('cfCheckedBy', data.checked_by);
   sv('cfAssetList', data.asset_list||''); sv('cfAssetDescList', data.asset_desc_list||'');
   if (data.cal1) {
     var map1 = {deviation:'cal1_dev', pulses_per_length:'cal1_ppl', belt_circuit_no:'cal1_bcn', basic_tare:'cal1_bt'};

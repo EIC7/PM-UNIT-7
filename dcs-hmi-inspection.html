@@ -405,6 +405,13 @@ body{
         <label>Program Maintenance</label>
         <input type="text" id="dcsProgram" value="JP-DROP" placeholder="JP-DROP...">
       </div>
+      <div class="meta-field">
+        <label>Checked By - Technician</label>
+        <select id="dcsCheckedBy">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -2507,7 +2514,7 @@ function dcsDownloadPdf() {
       y += 18;
 
       // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, bgFooterH, y, drawBg);
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, bgFooterH, y, drawBg, gv('dcsCheckedBy'));
 
       var dateStr = (gv('dcsDate')||'').replace(/-/g,'')||new Date().toISOString().slice(0,10).replace(/-/g,'');
       if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2559,6 +2566,7 @@ function dbCollectData(modul) {
     unit:       gv('dcsUnit'),
     data: {
       program:  gv('dcsProgram'),
+      checkedBy: gv('dcsCheckedBy'),
       activeDrops: DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; }).map(function(d){ return d.id; }),
       checks:   checks,
       notes:    { general: gv('dcsNoteGeneral'), defect: gv('dcsNoteDefect') },
@@ -2580,6 +2588,7 @@ function applyRecordToForm(rec, editingId) {
   sv('dcsWO',      rec.work_order || data.work_order || '');
   sv('dcsUnit',    rec.unit       || data.unit       || 'U7');
   sv('dcsProgram', data.program   || 'JP-DROP');
+  if (data.checkedBy) sv('dcsCheckedBy', data.checkedBy);
   if (data.notes){ sv('dcsNoteGeneral',data.notes.general||''); sv('dcsNoteDefect',data.notes.defect||''); }
   if (data.images){
     var mapImg = function(i){ return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||'',widthCm:i.widthCm,heightCm:i.heightCm,offsetX:i.offsetX||0}; };

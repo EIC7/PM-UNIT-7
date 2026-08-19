@@ -165,6 +165,12 @@
       <div class="meta-field"><label>Tanggal</label><input type="date" id="o2Tanggal"></div>
       <div class="meta-field"><label>Asset</label><input type="text" id="o2Asset" placeholder="Nama / kode asset..."></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="o2Pic" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Checked By - Technician</label>
+        <select id="o2CheckedBy">
+          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+        </select>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
       <div class="meta-field"><label>Asset Description</label><textarea id="o2AssetDesc" rows="2" placeholder="Deskripsi asset..."></textarea></div>
@@ -2303,7 +2309,7 @@ function downloadPdf(){
       printChannelGroup(O2_OUTLET_CHANNELS, 'och', 'DOKUMENTASI PER CHANNEL — OUTLET (6 CHANNEL)');
 
       // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg);
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, (document.getElementById('o2CheckedBy')||{}).value);
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
 
@@ -2343,7 +2349,8 @@ function dbCollectData(modul) {
     assetDesc: document.getElementById('o2AssetDesc').value || '—',
     workToBeDone: document.getElementById('o2WorkToBeDone').value || '—',
     frequency: o2SelectedFreq.slice(),
-    pic: document.getElementById('o2Pic').value || '—'
+    pic: document.getElementById('o2Pic').value || '—',
+    checkedBy: document.getElementById('o2CheckedBy').value || ''
   };
   o2SyncAllCaptions();
   var ki = function(img){
@@ -2415,6 +2422,7 @@ function applyRecordToForm(rec, editingId) {
   var wdEl = document.getElementById('o2WorkToBeDone'); if (wdEl && header.workToBeDone && header.workToBeDone !== '—') wdEl.value = header.workToBeDone;
   var pcEl = document.getElementById('o2Pic'); var picVal = rec.pic || header.pic || '';
   if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
+  var cbEl = document.getElementById('o2CheckedBy'); if (cbEl && header.checkedBy) cbEl.value = header.checkedBy;
 
   if (data.channels) {
     function restoreChannelData(channelList, prefix) {
