@@ -2856,21 +2856,21 @@ function sixmDownloadPdf() {
       // ═══ INFO BOX — Fitur L pattern ═══
       var padIn=3, labelColW=38, valueX=marginX+labelColW+padIn, valueW=contentW-labelColW-padIn*2;
       var freq = document.getElementById('sixmFrekuensi').value || '6 Monthly';
-      var checkedBy = document.getElementById('sixmCheckedBy').value || '';
       var rawDate = document.getElementById('sixmTanggal').value;
       var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-      var tanggalStr='—';
+      var tanggalStr='-';
       if (rawDate) { var parts=rawDate.split('-'); tanggalStr=parts[2]+' '+BULAN[parseInt(parts[1])-1]+' '+parts[0]; }
       var assetCodes = sixmAssets.map(function(a){ return a.code; }).join(', ');
-      var assetDescs = sixmAssets.map(function(a){ return a.code+' — '+a.desc; }).join('\n');
+      // Pemisah pakai '-' biasa (bukan em dash '—') -- em dash di luar rentang
+      // Latin-1 dan bikin fungsi safe() di bawah menggantinya jadi '?' di PDF.
+      var assetDescs = sixmAssets.map(function(a){ return a.code+' - '+a.desc; }).join('\n');
       var infoFields = [
-        ['PIC', safe(document.getElementById('sixmPic').value||'—')],
-        ['Workorder', safe(document.getElementById('sixmWorkorder').value||'—')],
+        ['PIC', safe(document.getElementById('sixmPic').value||'-')],
+        ['Workorder', safe(document.getElementById('sixmWorkorder').value||'-')],
         ['Tanggal', safe(tanggalStr)],
-        ['Asset', safe(assetCodes||'—')],
-        ['Asset Description', safe(assetDescs||'—')],
-        ['Frekuensi', safe(freq)],
-        ['Checked By - Technician', safe(checkedBy||'—')]
+        ['Asset', safe(assetCodes||'-')],
+        ['Asset Description', safe(assetDescs||'-')],
+        ['Frekuensi', safe(freq)]
       ];
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
       var infoRows = infoFields.map(function(f){
@@ -2948,6 +2948,11 @@ function sixmDownloadPdf() {
         doc.line(marginX, y, marginX+contentW, y);
         y += 6;
       });
+
+      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) — sama seperti
+      //     modul lain, BUKAN di info box "informasi pekerjaan" di atas ═══
+      var checkedByVal = document.getElementById('sixmCheckedBy').value;
+      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, checkedByVal);
 
       var now = new Date();
       var dd = String(now.getDate()).padStart(2,'0');
