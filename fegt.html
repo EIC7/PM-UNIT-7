@@ -305,7 +305,7 @@
   </div>
 
   <!-- SENSOR MAP (dipindah ke paling bawah) -->
-  <div class="panel">
+  <div class="panel" id="sensorMapPanel">
     <div class="section-label">Furnace Path Topology</div>
     <div class="sensor-map-wrap">
       <div class="furnace-outer">
@@ -1730,6 +1730,14 @@ function switchTab(tab) {
   document.getElementById('tabManual').classList.toggle('active', tab==='manual');
   document.getElementById('tabSixm').classList.toggle('active', tab==='sixm');
   document.getElementById('fegtMainBtnRow').style.display = (tab==='sixm') ? 'none' : 'flex';
+  // Panel Leak Detection / Cleaning Hole FEGT / Cleaning Hole LD / Port
+  // Reference itu bagian dari laporan diagnostic (Upload Excel/Input Manual),
+  // BUKAN bagian dari checksheet 6 Monthly -- disembunyikan total saat tab
+  // 6 Monthly aktif, dikembalikan lagi saat pindah ke tab lain.
+  ['leakPanel','cleaningPanel','ldCleaningPanel','notePanel','sensorMapPanel'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = (tab==='sixm') ? 'none' : '';
+  });
   if (tab === 'sixm') {
     document.getElementById('previewPanel').style.display='none';
     return;
@@ -2642,7 +2650,8 @@ var SIXM_STEPS = [
   {step:'Cleaning Panel Amplifier', remarkDefault:'Clean', placeholder:''}
 ];
 
-// sixmAssets[i] = {code, desc, checks:[{checked,remark}...], evidence:[{name,dataUrl,type,caption,driveFileId,...}]}
+// sixmAssets[i] = {code, desc, checks:[{checked,remark}...], evidenceByStep:[[...],[...],[...],[...]]}
+// evidenceByStep[si] = array foto untuk step ke-si (SIXM_STEPS[si]) — 1 galeri terpisah per step.
 var sixmAssets = [];
 
 function sixmToggleAddSelect() {
@@ -2672,7 +2681,7 @@ function sixmOnAddSelectChange(code) {
     code: master.code,
     desc: master.desc,
     checks: SIXM_STEPS.map(function(s){ return {checked:false, remark:s.remarkDefault||''}; }),
-    evidence: []
+    evidenceByStep: SIXM_STEPS.map(function(){ return []; })
   });
   document.getElementById('sixmAddSelect').style.display = 'none';
   sixmRenderAssets();
@@ -2682,9 +2691,11 @@ function sixmRemoveAsset(idx) {
   var a = sixmAssets[idx];
   if (!a) return;
   if (!confirm('Hapus asset "'+a.code+'" beserta checksheet dan semua fotonya?')) return;
-  // Hapus juga foto-foto evidence-nya di Drive (kalau sudah sempat ke-upload).
-  (a.evidence||[]).forEach(function(img){
-    if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+  // Hapus juga foto-foto evidence-nya di Drive (kalau sudah sempat ke-upload), untuk semua step.
+  (a.evidenceByStep||[]).forEach(function(arr){
+    (arr||[]).forEach(function(img){
+      if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+    });
   });
   sixmAssets.splice(idx, 1);
   sixmRenderAssets();
@@ -2711,16 +2722,19 @@ function sixmAssetHtml(a, idx) {
       '<td><input type="text" class="cf4k-remark-input" value="'+String(c.remark||'').replace(/"/g,'&quot;')+'" placeholder="'+(s.placeholder||'')+'" oninput="sixmRemarkChange('+idx+','+si+',this.value)"></td></tr>';
   });
   html += '</tbody></table></div>';
-  html += '<div class="cf4k-evid-title">📷 Evidence Photo</div>';
-  html += '<div id="sixmDrop_'+idx+'" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:14px;text-align:center;cursor:pointer;background:var(--bg2,#dceaf6)" onclick="toggleSourceChoices(\'sixmSource_'+idx+'\')" ondragover="event.preventDefault()" ondrop="sixmHandleDrop(event,'+idx+')">'+
-    '<input type="file" id="sixmInput_'+idx+'" accept="image/*,.heic,.heif" multiple style="display:none" onchange="sixmHandleFiles(this.files,'+idx+')">'+
-    '<div style="font-size:12px;color:var(--text3)">Klik atau drop foto di sini</div>'+
-    '<div id="sixmSource_'+idx+'" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">'+
-      '<button type="button" onclick="event.stopPropagation();openFileInputSource(\'sixmInput_'+idx+'\',\'storage\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block;margin-bottom:4px">Penyimpanan</button>'+
-      '<button type="button" onclick="event.stopPropagation();openFileInputSource(\'sixmInput_'+idx+'\',\'camera\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block">Kamera</button>'+
-    '</div>'+
-  '</div>';
-  html += '<div id="sixmPreview_'+idx+'" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>';
+  // 4 galeri evidence terpisah, 1 per step of work (bukan 1 galeri gabungan lagi).
+  SIXM_STEPS.forEach(function(s, si){
+    html += '<div class="cf4k-evid-title">📷 Evidence — '+(si+1)+'. '+s.step+'</div>';
+    html += '<div id="sixmDrop_'+idx+'_'+si+'" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:14px;text-align:center;cursor:pointer;background:var(--bg2,#dceaf6)" onclick="toggleSourceChoices(\'sixmSource_'+idx+'_'+si+'\')" ondragover="event.preventDefault()" ondrop="sixmHandleDrop(event,'+idx+','+si+')">'+
+      '<input type="file" id="sixmInput_'+idx+'_'+si+'" accept="image/*,.heic,.heif" multiple style="display:none" onchange="sixmHandleFiles(this.files,'+idx+','+si+')">'+
+      '<div style="font-size:12px;color:var(--text3)">Klik atau drop foto di sini</div>'+
+      '<div id="sixmSource_'+idx+'_'+si+'" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:8px;gap:6px;z-index:10">'+
+        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\'sixmInput_'+idx+'_'+si+'\',\'storage\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block;margin-bottom:4px">Penyimpanan</button>'+
+        '<button type="button" onclick="event.stopPropagation();openFileInputSource(\'sixmInput_'+idx+'_'+si+'\',\'camera\')" style="padding:7px 10px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:11px;cursor:pointer;min-width:88px;display:block">Kamera</button>'+
+      '</div>'+
+    '</div>';
+    html += '<div id="sixmPreview_'+idx+'_'+si+'" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 16px"></div>';
+  });
   html += '</div>'; // /cf4k-asset
   return html;
 }
@@ -2729,65 +2743,73 @@ function sixmRenderAssets() {
   var wrap = document.getElementById('sixmAssetsContainer');
   document.getElementById('sixmEmptyHint').style.display = sixmAssets.length ? 'none' : 'block';
   wrap.innerHTML = sixmAssets.map(function(a, idx){ return sixmAssetHtml(a, idx); }).join('');
-  sixmAssets.forEach(function(a, idx){ sixmRenderPreviews('sixm_'+idx); });
+  sixmAssets.forEach(function(a, idx){
+    SIXM_STEPS.forEach(function(s, si){ sixmRenderPreviews(idx+'_'+si); });
+  });
 }
 
-function sixmHandleDrop(e, idx) { e.preventDefault(); sixmHandleFiles(e.dataTransfer.files, idx); }
+function sixmHandleDrop(e, idx, si) { e.preventDefault(); sixmHandleFiles(e.dataTransfer.files, idx, si); }
 
-function sixmHandleFiles(files, idx) {
+function sixmHandleFiles(files, idx, si) {
   var a = sixmAssets[idx];
   if (!a) return;
+  var arr = a.evidenceByStep[si];
   var fileArr = Array.prototype.slice.call(files);
   document.querySelectorAll('[id^="sixmSource_"], [id^="cf4kSource_"], [id^="evidSource_"]').forEach(function(el){ el.style.display = 'none'; });
-  if (fileArr.length > 1) { puHandleMultiUpload(fileArr, a.evidence, 'sixm_'+idx, 'sixm'); return; }
+  if (fileArr.length > 1) { puHandleMultiUpload(fileArr, arr, idx+'_'+si, 'sixm'); return; }
   var file = fileArr[0];
   if (!file) return;
   if (!isImageFile(file)) {
     var r = new FileReader();
-    r.onload = function(ev) { a.evidence.push({name:file.name, dataUrl:ev.target.result, type:file.type||'', caption:''}); sixmRenderPreviews('sixm_'+idx); };
+    r.onload = function(ev) { arr.push({name:file.name, dataUrl:ev.target.result, type:file.type||'', caption:''}); sixmRenderPreviews(idx+'_'+si); };
     r.readAsDataURL(file);
     return;
   }
   fileToJpegDataUrl(file, function(dataUrl){
     if (!dataUrl) return;
-    imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', a.evidence, 'sixm_'+idx, 'sixm', -1);
+    imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', arr, idx+'_'+si, 'sixm', -1);
   });
 }
 
 // Dipanggil oleh cropAndSave()/puHandleMultiUpload lewat modulePrefix==='sixm'.
-// 'side' berformat 'sixm_<assetIdx>'.
+// 'side' berformat '<assetIdx>_<stepIdx>'.
 function sixmRenderPreviews(side) {
-  var idx = parseInt(String(side).replace('sixm_',''), 10);
+  var parts = String(side).split('_');
+  var idx = parseInt(parts[0], 10), si = parseInt(parts[1], 10);
   var a = sixmAssets[idx];
-  var box = document.getElementById('sixmPreview_'+idx);
+  var box = document.getElementById('sixmPreview_'+idx+'_'+si);
   if (!a || !box) return;
-  box.innerHTML = a.evidence.map(function(img, i){
+  var arr = a.evidenceByStep[si];
+  box.innerHTML = arr.map(function(img, i){
     var isImg = img.type && img.type.indexOf('image/')===0;
     var thumb = isImg
-      ? '<img src="'+img.dataUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer" onclick="sixmReEdit('+idx+','+i+')" title="Klik untuk crop ulang">'
+      ? '<img src="'+img.dataUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer" onclick="sixmReEdit('+idx+','+si+','+i+')" title="Klik untuk crop ulang">'
       : '';
     return '<div style="position:relative;text-align:center;width:110px;flex-shrink:0">'+
       '<div style="position:relative;width:110px;height:85px;border-radius:4px;overflow:hidden;background:#111">'+
         thumb+
-        '<button onclick="pmDeleteImgFromArr(sixmAssets['+idx+'].evidence,'+i+');sixmRenderPreviews(\'sixm_'+idx+'\')" style="position:absolute;top:2px;right:2px;background:rgba(180,0,0,0.85);color:#fff;border:none;border-radius:3px;font-size:12px;line-height:1;padding:3px 6px;cursor:pointer">&#10005;</button>'+
+        '<button onclick="pmDeleteImgFromArr(sixmAssets['+idx+'].evidenceByStep['+si+'],'+i+');sixmRenderPreviews(\''+idx+'_'+si+'\')" style="position:absolute;top:2px;right:2px;background:rgba(180,0,0,0.85);color:#fff;border:none;border-radius:3px;font-size:12px;line-height:1;padding:3px 6px;cursor:pointer">&#10005;</button>'+
       '</div>'+
-      '<input type="text" placeholder="Keterangan" value="'+String(img.caption||'').replace(/"/g,'&quot;')+'" oninput="sixmAssets['+idx+'].evidence['+i+'].caption=this.value" style="width:100%;margin-top:4px;padding:4px 5px;font-size:10px;border:1px solid var(--panel-border,#ccc);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
+      '<input type="text" placeholder="Keterangan" value="'+String(img.caption||'').replace(/"/g,'&quot;')+'" oninput="sixmAssets['+idx+'].evidenceByStep['+si+']['+i+'].caption=this.value" style="width:100%;margin-top:4px;padding:4px 5px;font-size:10px;border:1px solid var(--panel-border,#ccc);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
     '</div>';
   }).join('');
 }
 
-function sixmReEdit(idx, i) {
+function sixmReEdit(idx, si, i) {
   var a = sixmAssets[idx];
-  var img = a && a.evidence[i];
+  var arr = a && a.evidenceByStep[si];
+  var img = arr && arr[i];
   if (!img || !img.dataUrl) return;
-  imgOpenCropper(img.dataUrl, img.name, img.type, a.evidence, 'sixm_'+idx, 'sixm', i);
+  imgOpenCropper(img.dataUrl, img.name, img.type, arr, idx+'_'+si, 'sixm', i);
 }
 
 function sixmResetAll() {
   if (!confirm('Reset semua data 6 Monthly (checksheet, asset, foto)? Foto yang sudah ter-upload ke Drive akan ikut dihapus.')) return;
   sixmAssets.forEach(function(a){
-    (a.evidence||[]).forEach(function(img){
-      if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+    (a.evidenceByStep||[]).forEach(function(arr){
+      (arr||[]).forEach(function(img){
+        if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+      });
     });
   });
   sixmAssets = [];
@@ -2892,11 +2914,14 @@ function sixmDownloadPdf() {
         });
         y = doc.lastAutoTable.finalY + 6;
 
-        var photos = a.evidence.filter(function(f){ return f.dataUrl && f.type && f.type.indexOf('image/')===0; });
-        if (photos.length) {
+        // Evidence per step of work — 4 sub-bagian terpisah, masing-masing
+        // cuma berisi foto milik step itu sendiri.
+        SIXM_STEPS.forEach(function(s, si){
+          var photos = (a.evidenceByStep[si]||[]).filter(function(f){ return f.dataUrl && f.type && f.type.indexOf('image/')===0; });
+          if (!photos.length) return;
           checkPage(10);
           doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140);
-          doc.text('Evidence Photo', marginX, y);
+          doc.text('Evidence — '+(si+1)+'. '+s.step, marginX, y);
           y += 5;
           var gap=6, colW=(contentW-gap*2)/3, maxPhotoH=70;
           var colX=[marginX, marginX+colW+gap, marginX+2*(colW+gap)];
@@ -2916,7 +2941,7 @@ function sixmDownloadPdf() {
             col++;
             if (col>=3 || pi===photos.length-1) { y += rowMaxH + 6; col = 0; }
           });
-        }
+        });
         y += 4;
         checkPage(5);
         doc.setDrawColor(180,210,185); doc.setLineWidth(0.3);
@@ -2963,7 +2988,7 @@ function sixmCollectData() {
       frekuensi: document.getElementById('sixmFrekuensi').value,
       checkedBy: document.getElementById('sixmCheckedBy').value,
       assets: sixmAssets.map(function(a){
-        return {code:a.code, desc:a.desc, checks:a.checks, evidence:a.evidence.map(ki)};
+        return {code:a.code, desc:a.desc, checks:a.checks, evidenceByStep:a.evidenceByStep.map(function(arr){ return arr.map(ki); })};
       })
     }
   };
@@ -2979,7 +3004,16 @@ function sixmApplyRecordToForm(rec) {
   if (data.frekuensi) document.getElementById('sixmFrekuensi').value = data.frekuensi;
   if (data.checkedBy) document.getElementById('sixmCheckedBy').value = data.checkedBy;
   sixmAssets = (data.assets||[]).map(function(a){
-    return {code:a.code, desc:a.desc, checks:a.checks||[], evidence:(a.evidence||[]).map(function(e){ return Object.assign({}, e); })};
+    // Kompatibel dengan record lama (format 'evidence' flat, dari sebelum
+    // dipecah jadi per-step) -- kalau ketemu, semua foto lamanya ditaruh di
+    // step pertama supaya tidak hilang, baru bisa dipindah manual oleh user.
+    var evidenceByStep = a.evidenceByStep
+      ? a.evidenceByStep.map(function(arr){ return (arr||[]).map(function(e){ return Object.assign({}, e); }); })
+      : SIXM_STEPS.map(function(){ return []; });
+    if (!a.evidenceByStep && a.evidence && a.evidence.length) {
+      evidenceByStep[0] = a.evidence.map(function(e){ return Object.assign({}, e); });
+    }
+    return {code:a.code, desc:a.desc, checks:a.checks||[], evidenceByStep:evidenceByStep};
   });
   sixmRenderAssets();
 }
