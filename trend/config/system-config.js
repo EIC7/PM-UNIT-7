@@ -66,5 +66,14 @@ window.DCS_CONFIG = {
 
   DEFAULT_QUICK_RANGE: '90D', // data kalibrasi jarang, default rentang lebih panjang
 
-  UPDATE_INTERVAL_DEFAULT: 1000
+  UPDATE_INTERVAL_DEFAULT: 1000,
+
+  /* ------------------------------------------------------------------
+   * GAP BREAK (Chart Manager)
+   * Kalau jarak antar 2 titik historical berturutan > nilai ini (menit),
+   * garis di grafik DIPUTUS — supaya lompatan waktu besar antar kejadian
+   * kalibrasi tidak salah dibaca sebagai tren proses kontinu.
+   * Default 3 hari (4320 menit).
+   * ------------------------------------------------------------------ */
+  GAP_BREAK_MINUTES: 4320
 };

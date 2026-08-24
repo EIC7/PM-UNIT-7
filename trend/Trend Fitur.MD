@@ -10,19 +10,24 @@ Sumber data: **read-only** dari Supabase `pm_records` (project sama dengan repo 
 | Fitur | Status | Keterangan |
 |---|---|---|
 | Tag List panel (search, checkbox show/hide) | ✅ | 2 tag aktif: `SO2-7FC-AT-7A`, `SO2-7FC-AT-7B` |
-| Tag Details panel | ✅ | ID, name, unit, engineering range, source, modul |
+| **Overlay multi-tag dalam 1 grafik** | ✅ | Semua tag yang **dicentang** tampil bersama di 1 chart (bukan ganti-ganti per tag) — sesuai gaya trend recorder DCS/CEMS asli |
+| **Sumbu Y "PER CENT SPAN" (0–100%)** | ✅ | Tiap series dinormalisasi ke `%` dari `engineeringLow..engineeringHigh` tag-nya, supaya unit/range beda tetap bisa ditumpuk di 1 sumbu. Nilai asli tetap tampil penuh di tooltip & panel VALUES |
+| **Panel VALUES (kanan) — nilai hidup ikut cursor** | ✅ | Label berwarna + nilai + unit per series, otomatis update mengikuti posisi cursor di grafik; balik ke nilai TERKINI saat cursor keluar area chart |
+| **Gap-break pada garis trend** | ✅ | Kalau jarak antar 2 titik kalibrasi berturutan > `GAP_BREAK_MINUTES` (default 3 hari), garis DIPUTUS — supaya lompatan waktu besar antar kejadian kalibrasi tidak salah dibaca sebagai tren proses kontinu |
 | Historical Trend — Quick Range | ✅ | 5M/15M/30M/1H/4H/8H/12H/24H/7D/30D/90D + CUSTOM |
 | Historical Trend — Custom Range (start/end date+time) | ✅ | Validasi start < end |
 | LOAD DATA → fetch Supabase real-time | ✅ | `pm_records` difilter modul SO2 + rentang waktu (`updated_at`) |
 | Trend Graph (ECharts) | ✅ | Multi-series, zoom (scroll + slider), tooltip cursor, time-axis auto-format |
 | AUTO SCALE | ✅ | Reset zoom ke 100% |
-| EXPORT CSV / JSON / IMAGE | ✅ | Export tag yang sedang dipilih |
+| EXPORT CSV / JSON / IMAGE | ✅ | Export **semua tag yang dicentang sekaligus** (digabung 1 file) |
 | Status Bar | ✅ | Total tag, active trend, jumlah record ter-load |
 | Mode switch LIVE / HISTORICAL | ✅ (UI) | Tombol berfungsi; LIVE menampilkan notice jujur (lihat §3) |
 | `window.DCSTrend` internal API | ✅ | `registerTag`, `updateTag`, `getTag`, `getAllTags`, `deleteTag`, `setTagVisibility`, `getHistoricalData`, `exportData`, `broadcastTagUpdate` |
 | BroadcastChannel (`dcs_trend_channel`) | ✅ (siap) | Listener aktif, siap terima `TAG_UPDATE`/`TAG_REGISTER` dari halaman lain |
 
 **Tidak ada tombol dummy** — setiap tombol yang tampil di UI terhubung ke logic nyata. Fitur yang belum diimplementasikan (lihat §3) sengaja **tidak** ditaruh sebagai tombol di UI supaya tidak menyesatkan.
+
+> **Revisi sesi ini (setelah gap analysis §8):** scope disepakati **UX-only** — overlay multi-tag, panel nilai hidup, dan gap-break garis (lihat 3 baris ditandai di atas). Temuan 🔴 Tinggi (query multi-tabel server-side filtered, adapter generik, series deviasi DCS-vs-Local + threshold, audit lengkap 28 modul) **sengaja ditunda**, belum dikerjakan di sesi ini — lihat §9 untuk status prioritas terbaru.
 
 ---
 
@@ -134,3 +139,81 @@ Tidak perlu mengubah `chart-manager.js`, `ui-manager.js`, atau `app.js` — arsi
 | Phase 2 — Historical Trend, LocalStorage, Zoom, Export CSV | ✅ Aktif (pakai Supabase, bukan localStorage — karena sumber data real) |
 | Phase 3 — BroadcastChannel, Interconnection, Auto Tag Discovery | Kerangka siap (`communication-manager.js`), belum ada halaman pengirim aktif |
 | Phase 4 — WebSocket, REST API, DB Adapter | `SupabaseAdapter` sudah berperan sebagai DB Adapter nyata (bukan placeholder) |
+
+---
+
+## 8. Hasil Analisis Gap (dibanding trend tool DCS profesional, mis. PI ProcessBook)
+
+Analisis dilakukan dengan membandingkan langsung ke contoh tampilan **PI ProcessBook Trend Display** (referensi visual dari user) dan membaca detail seluruh isi `trend/js/*.js`. Tujuan: menambahkan hal-hal yang membuat sistem ini terasa selevel tool DCS engineer profesional, sebelum diperluas ke semua modul checksheet.
+
+### 8.1 Gap tampilan/UX
+
+| # | Temuan | Detail | File terdampak |
+|---|---|---|---|
+| 1 | Tidak bisa overlay 2+ tag dalam satu plot | `chart-manager.js` selalu `chart.setOption(option, true)` (replace total) tiap ganti tag; `ui-manager.js` cuma simpan `selectedTagId` tunggal. PI bisa tampilkan `7FC-AT-7A` & `7FC-AT-7B` bersamaan di satu grafik. | `chart-manager.js`, `tag-manager.js`, `ui-manager.js` |
+| 2 | Legend tidak menampilkan nilai live/dinamis | Legend ECharts bawaan cuma nama series (toggle show/hide), tidak ada angka seperti di PI (nama + nilai + satuan, ikut berubah sesuai posisi cursor). | `chart-manager.js` |
+| 3 | Tidak ada cursor readout box yang snap ke data point | PI punya kotak nilai presisi + garis vertikal solid yang tetap muncul saat cursor digeser/diklik. Punya kita cuma tooltip hover bawaan ECharts (`axisPointer: cross`) yang hilang saat mouse keluar area chart. | `chart-manager.js`, `ui-manager.js` |
+| 4 | Tidak ada navigasi geser tanggal (◄ ►) di toolbar | PI punya field tanggal + tombol maju/mundur untuk geser jendela waktu tanpa harus mengetik ulang. Sekarang cuma quick-range preset + custom range sekali input. | `historical-manager.js`, `index.html` |
+| 5 | ✅ **Selesai** — Line chart menyambung gap waktu besar sebagai garis lurus | Ditangani via `GAP_BREAK_MINUTES` (config, default 4320 = 3 hari) — jarak antar titik > threshold disisipi titik `null` (`connectNulls:false`) sehingga garis diputus, bukan disambung miring. | `chart-manager.js`, `config/system-config.js` |
+
+### 8.2 Gap arsitektur data — lebih serius dari sekadar tampilan
+
+| # | Temuan | Detail |
+|---|---|---|
+| 6 | Query historis tidak scalable, berpotensi kehilangan data diam-diam | `supabase-adapter.js` → `fetchRecords()` selalu ambil **500 record TERBARU dari SELURUH tabel** (semua modul digabung, `order=updated_at.desc&limit=500`), baru difilter modul+waktu **di client**. Tidak ada filter `WHERE modul=eq.X` di level query REST. Tidak ada indikator "data dibatasi 500 record" ke user. Prioritas **tinggi** untuk dibenahi sebelum modul lain masuk. |
+| 7 | Tidak ada perhitungan deviasi DCS vs Local (padahal itu tujuan inti alat ini) | `so2-adapter.js` cuma simpan `aDCS`/`aLocal` sebagai 2 series terpisah. Tidak ada series selisih (`aDCS - aLocal`), tidak ada ambang toleransi (mis. ±2% dari span), tidak ada penandaan otomatis titik yang menyimpang. Ini fitur paling bernilai untuk tujuan bisnis alat — mengubah dari "grafik dua garis" jadi alat bantu keputusan. |
+| 8 | `recordId` dan `pic` (teknisi) sudah disimpan tapi tidak dipakai | `so2-adapter.js` sudah menyertakan `recordId`/`pic` per titik data, tapi belum disambungkan ke tooltip/detail panel. Quick win — data sudah ada, tinggal ditampilkan. |
+| 9 | Tidak ada validasi/indikator kualitas data | Field kosong/null di satu record cuma di-skip diam-diam di adapter, tanpa pesan "N record dilewati karena data tidak lengkap". |
+| 10 | Tidak ada caching antar-load | Tiap ganti tag/range selalu fetch ulang 500 record dari awal — boros network, padahal bisa di-cache per sesi. |
+| 11 | State tidak persisten lintas reload | `storage-manager.js` sudah siap sebagai wrapper localStorage, tapi cuma dipakai untuk custom tag manual (fitur yang UI-nya belum dibuat). Tag & range terakhir tidak diingat — reload selalu balik ke tag pertama + range 90D default. |
+
+### 8.3 Temuan kritis — audit kesiapan SEMUA modul checksheet untuk trend
+
+Karena rencana ke depan trend ini dipakai untuk **semua HTML checksheet** di repo (bukan cuma SO2), dilakukan audit ke seluruh 28 file HTML modul. Hasilnya: **sumber data tidak seragam**, ini blocker paling mendasar sebelum ekspansi dilakukan.
+
+**Tabel Supabase yang ditemukan (bukan cuma `pm_records`):**
+
+| Tabel | Dipakai oleh | Catatan |
+|---|---|---|
+| `pm_records` | SO2, Opacity, CEMS, Coal Feeder, Belt Scale (semua varian: b12/e23/e45), FEGT, Flow Meter FGD, Form O2, Generator Stator Leak, Maintenance Report, Mark VIE Inspection, pH Analyzer, PM HG Analyzer, DCS HMI Inspection | Skema `data.{...}` **tidak seragam** antar modul — lihat di bawah |
+| `ts_checksheet` | `checksheet-temperature.html` | Skema terpisah total; ada komentar eksplisit di kode "kita tidak pakai dbSave dari shared" |
+| `outage_assets` | `checksheet-level-switch.html`, `outage-input.html` | Skema terpisah total |
+| `material_warehouse`, `material_jenis`, `material_pengambilan` | `material-warehouse.html` | Data inventaris gudang — bukan data pengukuran/kalibrasi |
+| *(tidak ada penyimpanan data pengukuran)* | `device-admin.html` | Murni admin/konfigurasi, tidak relevan untuk trend |
+
+**Bahkan di dalam `pm_records` sendiri, struktur field `data` tidak konsisten per modul:**
+- `opacity.html` → `data.checks` (array) + `data.notes`
+- `coal_feeder_calibration.html` → `data.{...}` field flat langsung
+- `mark_vie_inspection.html` → `data.header` + `data.items` (array inspeksi checklist, bukan angka kontinu)
+- `so2.html` → `data.analyzer` (flat) — pola yang sekarang jadi contoh satu-satunya adapter (`so2-adapter.js`)
+
+**Implikasi:**
+- `SupabaseAdapter` sekarang **hardcoded** cuma baca `pm_records` (`CFG.TABLE = 'pm_records'`). Modul `checksheet-temperature`, `checksheet-level-switch`, `material-warehouse` **tidak akan pernah muncul** di trend tanpa dukungan multi-tabel.
+- Pola "1 file `<nama>-adapter.js` custom per modul" (seperti `so2-adapter.js`) **tidak scalable** untuk 20+ modul — terlalu banyak kerja manual berulang dan rawan human error tiap kali struktur field berbeda.
+- Tidak semua modul cocok untuk trend numerik: `mark_vie_inspection.html` dan `dcs-hmi-inspection.html` isinya checklist pass/fail (butuh mode chart **step/discrete**, bukan line chart analog).
+- `material-warehouse.html`, `device-admin.html`, `maintenance_report_form.html` kemungkinan besar **di luar cakupan trend** (administratif/inventaris, bukan data pengukuran berkala) — perlu diputuskan eksplisit modul mana yang in-scope.
+
+---
+
+## 9. Rekomendasi & Roadmap Pengembangan Berikutnya
+
+Urutan prioritas berdasarkan dampak terhadap keandalan data dan nilai bisnis alat, bukan sekadar kemudahan implementasi:
+
+| Prioritas | # | Rekomendasi | Kategori |
+|---|---|---|---|
+| 🔴 Tinggi | 1 | Audit lengkap semua modul checksheet → peta: tabel tujuan, field, tipe data, in-scope/out-of-scope untuk trend | Fondasi |
+| 🔴 Tinggi | 2 | `SupabaseAdapter` dukung multi-tabel + query terfilter di server (`WHERE modul=eq.X`), bukan fetch-500-lalu-filter-client | Arsitektur |
+| 🔴 Tinggi | 3 | Ganti pola "1 adapter.js custom per modul" → adapter generik berbasis config declaratif (field-map: tabel, path field, tipe numeric/boolean, unit, range) | Arsitektur |
+| 🔴 Tinggi | 4 | Series deviasi DCS-vs-Local + ambang toleransi + penandaan otomatis titik menyimpang | Domain-value |
+| ✅ Selesai | 5 | Overlay multi-tag dalam satu plot | UX |
+| ✅ Selesai (sebagian) | 6 | Legend dengan nilai live + cursor snap. *Garis vertikal readout permanen (klik-untuk-pin, Cursor A/B ala PI)* belum — sekarang murni ikut hover, balik ke nilai terkini saat cursor keluar chart | UX |
+| 🟡 Sedang | 7 | Tag taksonomi berjenjang (grouping per modul/area) — perlu sebelum tag list membengkak jadi 100+ | UX/Skalabilitas |
+| 🟡 Sedang | 8 | Mode chart step/discrete untuk modul checklist (Mark VIE, DCS HMI Inspection) | Domain-value |
+| 🟡 Sedang | 9 | Tampilkan `recordId`/`pic` di tooltip (data sudah ada, quick win) | Quick win |
+| 🟢 Rendah | 10 | Navigasi geser tanggal ◄ ► di toolbar | UX |
+| 🟢 Rendah | 11 | Caching antar-load + state persisten (tag/range terakhir) via `storage-manager.js` | Performa |
+| 🟢 Rendah | 12 | Indikator kualitas data (record dilewati karena field tidak lengkap) | Robustness |
+| ⏸️ Ditunda | 13 | Multi-window trend (dibandingkan side-by-side) | Diputuskan **tidak diperlukan** — cukup ganti tab/judul untuk pindah tampilan |
+
+**Catatan:** Prioritas 1–4 sengaja didahulukan karena tanpa itu, ekspansi trend ke modul lain berisiko menghasilkan data yang salah/hilang diam-diam (bukan cuma "kurang fitur" tapi "berpotensi menyesatkan teknisi") — sejalan dengan prinsip "Tidak ada tombol dummy" di §1 dokumen ini.
+

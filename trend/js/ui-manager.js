@@ -4,19 +4,24 @@
  * ==========================================================================
  * Menghubungkan DOM (index.html) dengan modul-modul lain. Tidak ada logic
  * data di sini — murni render + event wiring.
+ *
+ * MODE OVERLAY: tag yang DICENTANG (checkbox, bukan "diklik") tampil
+ * bersama dalam 1 grafik combined (lihat chart-manager.js). Panel kanan
+ * ("VALUES") menampilkan nilai tiap series tag yang dicentang, dan nilainya
+ * ikut berubah mengikuti posisi cursor di grafik (seperti trend recorder
+ * DCS/CEMS asli) — kembali ke nilai TERKINI saat cursor keluar area chart.
  * ==========================================================================
  */
 (function () {
   'use strict';
 
-  var els = {}; // cache DOM elements
-  var selectedTagId = null;
+  var els = {};
 
   function cacheEls() {
     els.clock = document.getElementById('clockValue');
     els.tagListBody = document.getElementById('tagListBody');
     els.tagSearch = document.getElementById('tagSearch');
-    els.tagDetails = document.getElementById('tagDetailsBody');
+    els.valuesBody = document.getElementById('valuesPanelBody');
     els.chartContainer = document.getElementById('trendChart');
     els.quickRangeBar = document.getElementById('quickRangeBar');
     els.startDate = document.getElementById('startDate');
@@ -35,6 +40,7 @@
     els.exportJsonBtn = document.getElementById('exportJsonBtn');
     els.exportImgBtn = document.getElementById('exportImgBtn');
     els.loadingIndicator = document.getElementById('loadingIndicator');
+    els.cursorReadout = document.getElementById('cursorReadout');
   }
 
   /* ------------------------------------------------------------------ */
@@ -64,7 +70,7 @@
     }
     tags.forEach(function (tag) {
       var row = document.createElement('div');
-      row.className = 'tag-row' + (tag.id === selectedTagId ? ' tag-row-active' : '');
+      row.className = 'tag-row' + (tag.visible ? ' tag-row-active' : '');
       row.dataset.tagId = tag.id;
       row.innerHTML =
         '<div class="tag-row-top">' +
@@ -76,37 +82,86 @@
 
       row.querySelector('.tag-visible-cb').addEventListener('change', function (e) {
         e.stopPropagation();
-        window.DCSTrend.setTagVisibility(tag.id, e.target.checked);
+        onTagVisibilityToggle(tag.id, e.target.checked);
       });
-      row.addEventListener('click', function () { selectTag(tag.id); });
+      // Klik baris (di luar checkbox) = toggle juga, biar konsisten & gampang di tablet
+      row.addEventListener('click', function (e) {
+        if (e.target.classList.contains('tag-visible-cb')) return;
+        var cb = row.querySelector('.tag-visible-cb');
+        cb.checked = !cb.checked;
+        onTagVisibilityToggle(tag.id, cb.checked);
+      });
       els.tagListBody.appendChild(row);
     });
   }
 
-  function selectTag(tagId) {
-    selectedTagId = tagId;
+  function onTagVisibilityToggle(tagId, visible) {
+    window.DCSTrend.setTagVisibility(tagId, visible);
     renderTagList(els.tagSearch ? els.tagSearch.value : '');
-    renderTagDetails(tagId);
-    var tag = window.TagManager.getTag(tagId);
-    if (els.chartTitle) els.chartTitle.textContent = tag ? (tag.id + ' — ' + tag.name) : 'TREND GRAPH';
-    // Render ulang chart pakai data yang sudah pernah di-load (kalau ada)
-    var series = window.DCSTrend.getHistoricalData(tagId);
-    if (tag) window.ChartManager.renderHistoricalTag(tag, series || {});
+    renderCombinedChart();
+    updateStatusBar();
   }
 
-  function renderTagDetails(tagId) {
-    if (!els.tagDetails) return;
-    var tag = window.TagManager.getTag(tagId);
-    if (!tag) { els.tagDetails.innerHTML = '<div class="details-empty">Pilih tag di panel kiri.</div>'; return; }
-    els.tagDetails.innerHTML =
-      '<div class="detail-row"><span class="detail-label">TAG ID</span><span class="detail-value">' + tag.id + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">NAME</span><span class="detail-value">' + tag.name + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">UNIT</span><span class="detail-value">' + (tag.unit || '-') + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">ENG. LOW</span><span class="detail-value">' + tag.engineeringLow + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">ENG. HIGH</span><span class="detail-value">' + tag.engineeringHigh + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">SOURCE</span><span class="detail-value">' + tag.source + '</span></div>' +
-      '<div class="detail-row"><span class="detail-label">MODUL</span><span class="detail-value">' + (tag.sourceModul || '-') + '</span></div>' +
-      '<div class="detail-desc">' + (tag.description || '') + '</div>';
+  /* ------------------------------------------------------------------
+   * COMBINED CHART + VALUES PANEL
+   * ------------------------------------------------------------------ */
+  function getVisibleTags() {
+    return window.TagManager.getAllTags().filter(function (t) { return t.visible; });
+  }
+
+  function renderCombinedChart() {
+    var visibleTags = getVisibleTags();
+    var state = window.HistoricalManager.getState();
+    window.ChartManager.renderCombined(visibleTags, state.lastLoadedSeries || {});
+
+    if (els.chartTitle) {
+      els.chartTitle.textContent = visibleTags.length
+        ? 'TREND GRAPH — ' + visibleTags.length + ' TAG AKTIF'
+        : 'TREND GRAPH';
+    }
+
+    renderValuesPanel(window.ChartManager.getLatestValues(), false);
+  }
+
+  /**
+   * @param {Array} values - [{name,color,unit,tagId,value,pointTime}]
+   * @param {Boolean} isCursorMode - true kalau nilai ini hasil hover cursor (bukan nilai terkini)
+   */
+  function renderValuesPanel(values, isCursorMode) {
+    if (!els.valuesBody) return;
+    if (!values.length) {
+      els.valuesBody.innerHTML = '<div class="details-empty">Centang tag di panel kiri untuk menampilkan nilai.</div>';
+      return;
+    }
+    els.valuesBody.innerHTML = '';
+    values.forEach(function (v) {
+      var row = document.createElement('div');
+      row.className = 'value-row';
+      var displayVal = (v.value === null || v.value === undefined) ? '—' : formatNum(v.value);
+      row.innerHTML =
+        '<span class="value-label" style="color:' + v.color + '">' + v.name + '</span>' +
+        '<span class="value-num">' + displayVal + ' <span class="value-unit">' + (v.unit || '') + '</span></span>';
+      els.valuesBody.appendChild(row);
+    });
+
+    if (els.cursorReadout) {
+      els.cursorReadout.style.display = isCursorMode ? 'block' : 'none';
+      if (isCursorMode && values.length && values[0].pointTime) {
+        els.cursorReadout.textContent = 'CURSOR TIME: ' + formatDateTime(values[0].pointTime);
+      }
+    }
+  }
+
+  function formatNum(n) {
+    if (typeof n !== 'number') return n;
+    return (Math.round(n * 100) / 100).toString();
+  }
+
+  function formatDateTime(t) {
+    var d = new Date(t);
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
+      pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
   }
 
   /* ------------------------------------------------------------------ */
@@ -148,13 +203,10 @@
 
   function triggerLoad() {
     setLoading(true);
-    window.HistoricalManager.loadData(function (series) {
+    window.HistoricalManager.loadData(function () {
       setLoading(false);
       updateStatusBar();
-      if (selectedTagId) {
-        var tag = window.TagManager.getTag(selectedTagId);
-        window.ChartManager.renderHistoricalTag(tag, series[selectedTagId] || {});
-      }
+      renderCombinedChart();
     }, function (err) {
       setLoading(false);
       alert('Gagal memuat data historical: ' + err.message);
@@ -172,7 +224,7 @@
     var tags = window.TagManager.getAllTags();
     var activeTrends = tags.filter(function (t) { return t.visible; }).length;
     var state = window.HistoricalManager.getState();
-    var totalRecords = Object.keys(state.lastLoadedSeries).reduce(function (sum, tagId) {
+    var totalRecords = Object.keys(state.lastLoadedSeries || {}).reduce(function (sum, tagId) {
       var s = state.lastLoadedSeries[tagId];
       return sum + Object.keys(s).reduce(function (s2, k) { return s2 + s[k].length; }, 0);
     }, 0);
@@ -201,17 +253,30 @@
     }
   }
 
+  function exportVisible(format) {
+    var visibleTags = getVisibleTags();
+    if (!visibleTags.length) { alert('Centang minimal 1 tag dulu.'); return; }
+    window.ExportManager.exportTags(visibleTags.map(function (t) { return t.id; }), format);
+  }
+
   function bindEvents() {
     if (els.tagSearch) els.tagSearch.addEventListener('input', function (e) { renderTagList(e.target.value); });
     if (els.loadDataBtn) els.loadDataBtn.addEventListener('click', onLoadDataClick);
     if (els.modeLiveBtn) els.modeLiveBtn.addEventListener('click', function () { onModeClick('live'); });
     if (els.modeHistBtn) els.modeHistBtn.addEventListener('click', function () { onModeClick('historical'); });
     if (els.autoScaleBtn) els.autoScaleBtn.addEventListener('click', function () { window.ChartManager.autoScale(); });
-    if (els.exportCsvBtn) els.exportCsvBtn.addEventListener('click', function () { if (selectedTagId) window.DCSTrend.exportData(selectedTagId, 'csv'); });
-    if (els.exportJsonBtn) els.exportJsonBtn.addEventListener('click', function () { if (selectedTagId) window.DCSTrend.exportData(selectedTagId, 'json'); });
-    if (els.exportImgBtn) els.exportImgBtn.addEventListener('click', function () { if (selectedTagId) window.ChartManager.exportImage(selectedTagId); });
+    if (els.exportCsvBtn) els.exportCsvBtn.addEventListener('click', function () { exportVisible('csv'); });
+    if (els.exportJsonBtn) els.exportJsonBtn.addEventListener('click', function () { exportVisible('json'); });
+    if (els.exportImgBtn) els.exportImgBtn.addEventListener('click', function () { window.ChartManager.exportImage('dcs_trend'); });
 
-    window.addEventListener('dcsTagListChanged', function () { renderTagList(els.tagSearch ? els.tagSearch.value : ''); });
+    window.addEventListener('dcsTagListChanged', function () {
+      renderTagList(els.tagSearch ? els.tagSearch.value : '');
+      renderCombinedChart();
+    });
+
+    // Legend nilai hidup: ikut posisi cursor di grafik, balik ke nilai terkini saat cursor keluar
+    window.ChartManager.onCursorMove(function (time, values) { renderValuesPanel(values, true); });
+    window.ChartManager.onCursorLeave(function () { renderValuesPanel(window.ChartManager.getLatestValues(), false); });
   }
 
   function init() {
@@ -223,15 +288,14 @@
     renderTagList();
     updateStatusBar();
     onModeClick('historical'); // default mode sesuai arahan
-    // Pilih tag pertama secara default agar chart langsung terisi
-    var firstTag = window.TagManager.getAllTags()[0];
-    if (firstTag) selectTag(firstTag.id);
+    renderCombinedChart();
   }
 
   window.UIManager = {
     init: init,
     renderTagList: renderTagList,
     updateStatusBar: updateStatusBar,
-    triggerLoad: triggerLoad
+    triggerLoad: triggerLoad,
+    renderCombinedChart: renderCombinedChart
   };
 })();
