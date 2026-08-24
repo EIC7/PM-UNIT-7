@@ -1,0 +1,113 @@
+:root {
+  --bg-main: #0a1014;
+  --bg-panel: #0e161b;
+  --bg-panel-alt: #101a20;
+  --border-soft: #1c2830;
+  --border-strong: #2a3b44;
+  --text-primary: #c7d3dc;
+  --text-secondary: #8b9aa5;
+  --text-dim: #5a6b76;
+  --accent-cyan: #00d9ff;
+  --accent-green: #39ff88;
+  --accent-amber: #ffb400;
+  --accent-red: #ff5e7a;
+  --status-ok: #39ff88;
+  --status-warn: #ffb400;
+  --status-bad: #ff5e7a;
+}
+
+body { background: var(--bg-main); }
+
+.topbar {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.topbar-title { color: var(--accent-cyan); }
+
+.topbar-status .dot { background: var(--status-ok); box-shadow: 0 0 6px var(--status-ok); }
+.topbar-status.disconnected .dot { background: var(--status-bad); box-shadow: 0 0 6px var(--status-bad); }
+
+.topbar-clock { color: var(--text-secondary); }
+
+.modebar {
+  background: var(--bg-panel-alt);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.modebar-label { color: var(--text-dim); }
+
+.mode-btn {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+.mode-btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.mode-btn-active {
+  background: rgba(0,217,255,0.08);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.panel-tags, .panel-details {
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-soft);
+}
+.panel-details { border-right: none; border-left: 1px solid var(--border-soft); }
+
+.panel-header { color: var(--text-dim); border-bottom: 1px solid var(--border-soft); }
+
+.tag-search-wrap input {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-soft);
+  color: var(--text-primary);
+}
+.tag-search-wrap input:focus { outline: none; border-color: var(--accent-cyan); }
+
+.tag-row { border: 1px solid transparent; background: var(--bg-panel-alt); }
+.tag-row:hover { border-color: var(--border-strong); }
+.tag-row-active { border-color: var(--accent-cyan); background: rgba(0,217,255,0.06); }
+
+.tag-id { color: var(--accent-cyan); }
+.tag-name { color: var(--text-secondary); }
+.tag-meta { color: var(--text-dim); }
+.tag-empty, .details-empty { color: var(--text-dim); }
+
+.panel-center { background: var(--bg-main); }
+
+.chart-toolbar { border-bottom: 1px solid var(--border-soft); }
+.chart-title { color: var(--text-primary); }
+
+.icon-btn {
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+.icon-btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+.live-notice { color: var(--text-dim); border: 1px dashed var(--border-strong); margin: 20px; border-radius: 2px; }
+
+.historical-panel { background: var(--bg-panel-alt); border-top: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); }
+.range-bar-label { color: var(--text-dim); }
+
+.range-btn { background: var(--bg-panel); border: 1px solid var(--border-strong); color: var(--text-secondary); }
+.range-btn:hover { border-color: var(--accent-amber); color: var(--accent-amber); }
+.range-btn-active { background: rgba(255,180,0,0.1); border-color: var(--accent-amber); color: var(--accent-amber); }
+
+.custom-range-row input { background: var(--bg-panel); border: 1px solid var(--border-soft); color: var(--text-primary); }
+
+.load-btn { background: var(--accent-cyan); border: 1px solid var(--accent-cyan); color: #041014; }
+.load-btn:hover { filter: brightness(1.1); }
+.load-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.loading-indicator { color: var(--accent-amber); }
+
+.detail-label { color: var(--text-dim); }
+.detail-value { color: var(--text-primary); }
+.detail-desc { color: var(--text-secondary); }
+
+.status-bar { background: var(--bg-panel); border-top: 1px solid var(--border-strong); color: var(--text-dim); }
+.status-bar .status-conn { color: var(--text-secondary); }
+.dot-ok { background: var(--status-ok); box-shadow: 0 0 5px var(--status-ok); }
+.dot-warn { background: var(--status-warn); box-shadow: 0 0 5px var(--status-warn); }
+.dot-bad { background: var(--status-bad); box-shadow: 0 0 5px var(--status-bad); }
