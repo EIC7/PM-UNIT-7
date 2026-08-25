@@ -1087,7 +1087,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
 
 /* ── DB LIST (untuk history page) ── */
 function dbList(modul, callback) {
-  var path = SUPA_TABLE + '?select=id,modul,tanggal,pic,work_order,created_at,updated_at&order=updated_at.desc&limit=100';
+  var path = SUPA_TABLE + '?select=id,modul,tanggal,pic,work_order,created_at,updated_at,status&order=updated_at.desc&limit=100';
   supaFetch('GET', path)
     .then(function(rows) {
       if (!modul) { callback(rows || []); return; }
