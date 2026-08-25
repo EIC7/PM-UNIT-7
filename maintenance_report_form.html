@@ -153,6 +153,7 @@
             <div class="header-content">
                 <h1>📋 Maintenance Report Form</h1>
                 <p>PM · CM · EM · DR · Other</p>
+                <span id="raStatusBadge" style="display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.25);color:#fff">📝 DRAFT</span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
@@ -226,8 +227,50 @@
         <div class="form-group"><textarea id="conclusion"></textarea></div>
 
         <div class="no-print" style="margin-top:20px">
-            <button class="btn btn-green btn-full" onclick="dbSave('Maintenance Report')" style="padding:13px;font-size:1em">💾 Simpan ke Database</button>
+            <button class="btn btn-green btn-full" onclick="dbSave('Maintenance Report')" style="padding:13px;font-size:1em">💾 Simpan ke Database (Draft)</button>
             <button class="btn btn-green btn-full" onclick="exportPdf()" style="padding:13px;font-size:1em">⬇ Export ke PDF</button>
+        </div>
+
+        <!-- ═══ PANEL WORKFLOW: Submit (Lv.1) / Checker (Lv.2) / Reviewer (Lv.3) ═══ -->
+        <div class="no-print" id="raWorkflowPanel" style="margin-top:20px;border-top:2px dashed #ddd;padding-top:16px">
+
+            <!-- LEVEL 1: SUBMIT -->
+            <div id="raSubmitBox" style="background:#eef7ff;border:1px solid #cfe4fb;border-radius:8px;padding:14px;margin-bottom:12px">
+                <div style="font-weight:700;font-size:0.9em;color:#1f5a8a;margin-bottom:6px">🔒 Submit Laporan (perlu login)</div>
+                <div style="font-size:0.8em;color:#4b6a85;margin-bottom:10px">Simpan draft dulu di atas, baru submit. Setelah submit, laporan terkunci untuk Checker periksa.</div>
+                <button class="btn btn-blue btn-full" onclick="raSubmitReport()">🔒 Submit Laporan</button>
+            </div>
+
+            <!-- LEVEL 2: CHECKER -->
+            <div id="raCheckerBox" style="background:#fff9ec;border:1px solid #fbe6b8;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
+                <div style="font-weight:700;font-size:0.9em;color:#8a6d1f;margin-bottom:6px">🔍 Verifikasi Checker (Tingkat 2)</div>
+                <div style="font-size:0.8em;color:#8a7742;margin-bottom:10px">Periksa & edit data di atas kalau perlu, pilih nama Checker, lalu Verifikasi — tanda tangan terisi otomatis.</div>
+                <div class="form-group">
+                    <label>Checked By — Technician</label>
+                    <select id="raCheckedByName">
+                        <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
+                        <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+                    </select>
+                </div>
+                <button class="btn btn-full" style="background:#f59e0b;color:#fff" onclick="raVerifyChecker()">✅ Verifikasi & Tanda Tangan</button>
+                <button class="btn btn-full btn-gray" style="margin-top:6px" onclick="raReturnReport('checker')">↩ Kembalikan ke User (Perlu Revisi)</button>
+            </div>
+
+            <!-- LEVEL 3: REVIEWER / SPV -->
+            <div id="raReviewerBox" style="background:#eefcf3;border:1px solid #bdeecb;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
+                <div style="font-weight:700;font-size:0.9em;color:#1c7a45;margin-bottom:6px">🖊️ Approve Final — Supervisor (Tingkat 3)</div>
+                <div style="font-size:0.8em;color:#3f8a5c;margin-bottom:10px">Preview hasil laporan, kalau sudah benar klik Approve — tanda tangan SPV terisi otomatis dan laporan menjadi final.</div>
+                <button class="btn btn-full" style="background:#16a085;color:#fff" onclick="raApproveReviewer()">🖊️ Approve Final</button>
+                <button class="btn btn-full btn-gray" style="margin-top:6px" onclick="raReturnReport('reviewer')">↩ Kembalikan ke Checker (Perlu Revisi)</button>
+            </div>
+
+            <!-- TANDA TANGAN TERSIMPAN (preview) -->
+            <div id="raSignatureDisplay" style="display:none;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:14px">
+                <div style="font-weight:700;font-size:0.85em;color:#333;margin-bottom:8px">Tanda Tangan Laporan Ini</div>
+                <div id="raSignatureList" style="display:flex;gap:16px;flex-wrap:wrap"></div>
+            </div>
+
+            <div id="raWorkflowLoggedInAs" style="font-size:11px;color:#999;text-align:center;margin-top:10px"></div>
         </div>
     </div>
 
@@ -1111,6 +1154,7 @@ function applyImageEdits(){
             initCropDrag();
             initReportBackground();
             renderPresetButtons();
+            raSetCurrentRecord(null); // form baru = belum ada record = DRAFT kosong
         });
 
         // ── AUTO-SAVE DRAFT ──────────────────────────────────────────────────────────
@@ -1164,6 +1208,7 @@ function applyImageEdits(){
                 }
             });
             updateBadges();
+            raSetCurrentRecord(rec);
         }
 
         // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft
@@ -2534,6 +2579,181 @@ function applyImageEdits(){
                 pdfPreviewState.blobUrl = '';
             }
             pdfPreviewState.doc = null;
+        }
+
+        // ═══ WORKFLOW: SUBMIT (Lv.1) / CHECKER (Lv.2) / REVIEWER (Lv.3) ═══════════
+        // Terpisah dari dbSave/dbLoad (draft biasa, anon key) -- semua transisi
+        // status di bawah ini pakai raUpdateRecord (session login user, ditegakkan
+        // oleh RLS Supabase, lihat sql/001_report_auth_workflow.sql).
+        var raCurrentRecord = null; // record penuh (termasuk status, dst) hasil dbLoad terakhir
+
+        var RA_STATUS_LABEL = {
+            DRAFT: '📝 DRAFT',
+            SUBMITTED: '📤 SUBMITTED — menunggu Checker',
+            CHECKED: '🔍 CHECKED — menunggu Approval SPV',
+            FINAL_APPROVED: '✅ FINAL APPROVED',
+            RETURNED: '↩ DIKEMBALIKAN — perlu revisi'
+        };
+
+        function raSetCurrentRecord(rec) {
+            raCurrentRecord = rec || null;
+            raRenderWorkflowUI();
+        }
+
+        function raRenderWorkflowUI() {
+            var status = (raCurrentRecord && raCurrentRecord.status) || 'DRAFT';
+            var badge = document.getElementById('raStatusBadge');
+            if (badge) badge.textContent = RA_STATUS_LABEL[status] || status;
+
+            document.getElementById('raSubmitBox').style.display   = (status === 'DRAFT') ? 'block' : 'none';
+            document.getElementById('raCheckerBox').style.display  = (status === 'SUBMITTED') ? 'block' : 'none';
+            document.getElementById('raReviewerBox').style.display = (status === 'CHECKED') ? 'block' : 'none';
+
+            // Kalau checker sebelumnya sudah pilih nama, pertahankan pilihan itu
+            // sebagai default dropdown (bisa diubah lagi kalau perlu).
+            if (raCurrentRecord && raCurrentRecord.checked_by_name) {
+                var sel = document.getElementById('raCheckedByName');
+                if (sel) sel.value = raCurrentRecord.checked_by_name;
+            }
+
+            raRenderSignatures();
+
+            var whoEl = document.getElementById('raWorkflowLoggedInAs');
+            raGetCurrentProfile(function(profile) {
+                whoEl.textContent = profile
+                    ? ('Login sebagai: ' + profile.username + ' (' + profile.role + ')' + (profile.display_name ? ' — ' + profile.display_name : ''))
+                    : '';
+            });
+        }
+
+        function raRenderSignatures() {
+            var wrap = document.getElementById('raSignatureDisplay');
+            var list = document.getElementById('raSignatureList');
+            list.innerHTML = '';
+            if (!raCurrentRecord) { wrap.style.display = 'none'; return; }
+            function addSig(label, name) {
+                if (!name) return;
+                raGetSignatureUrl(name, function(err, url) {
+                    if (!err && url) {
+                        wrap.style.display = 'block';
+                        var box = document.createElement('div');
+                        box.style.cssText = 'text-align:center';
+                        box.innerHTML = '<img src="' + url + '" style="height:70px;object-fit:contain;display:block;margin:0 auto 4px">' +
+                            '<div style="font-size:11px;font-weight:600;color:#555">' + label + '<br>' + name + '</div>';
+                        list.appendChild(box);
+                    }
+                });
+            }
+            addSig('Checked By', raCurrentRecord.checked_by_name);
+            // Nama SPV tidak disimpan sebagai kolom teks terpisah (cuma reviewed_by_account
+            // = uuid akun) -- ambil display_name-nya dari pm_profiles kalau approved.
+            if (raCurrentRecord.reviewed_by_account && raCurrentRecord.final_approved_at) {
+                raGetClient().then(function(client){
+                    return client.from(RA_PROFILE_TABLE).select('display_name').eq('id', raCurrentRecord.reviewed_by_account).single();
+                }).then(function(res){
+                    if (res.data && res.data.display_name) addSig('Approved By (SPV)', res.data.display_name);
+                });
+            }
+            if (!raCurrentRecord.checked_by_name && !raCurrentRecord.reviewed_by_account) wrap.style.display = 'none';
+        }
+
+        // ── LEVEL 1: SUBMIT ──────────────────────────────────────────────────────
+        function raSubmitReport() {
+            if (!window._editingId) {
+                alert('Simpan dulu sebagai Draft (tombol "💾 Simpan ke Database") sebelum submit.');
+                return;
+            }
+            raRequireLogin(['user', 'admin'], '🔒 Login untuk Submit Laporan', function(profile) {
+                raUpdateRecord(window._editingId, {
+                    status: 'SUBMITTED',
+                    submitted_by: profile.id,
+                    submitted_at: new Date().toISOString()
+                }, function(err, updated) {
+                    if (err) { alert('Gagal submit: ' + err); return; }
+                    dbShowToast('✓ Laporan berhasil di-submit, menunggu Checker');
+                    raSetCurrentRecord(updated);
+                });
+            });
+        }
+
+        // ── LEVEL 2: CHECKER — edit data + verifikasi (tanda tangan otomatis) ───
+        function raVerifyChecker() {
+            if (!raCurrentRecord || raCurrentRecord.status !== 'SUBMITTED') {
+                alert('Laporan ini belum berstatus SUBMITTED.');
+                return;
+            }
+            var checkedByName = document.getElementById('raCheckedByName').value;
+            raRequireLogin(['checker', 'admin'], '🔍 Login sebagai Checker', function(profile) {
+                // Checker boleh EDIT ISI DATA sebelum verifikasi -- ambil data
+                // TERBARU dari form (bukan raCurrentRecord lama) via dbCollectData.
+                syncSectionsFromDom();
+                var latest = dbCollectData('Maintenance Report');
+                if (!latest) { alert('Gagal membaca data form.'); return; }
+                raGetSignatureUrl(checkedByName, function(sigErr) {
+                    if (sigErr) {
+                        if (!confirm('Tanda tangan "' + checkedByName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan verifikasi tanpa gambar tanda tangan?')) return;
+                    }
+                    raUpdateRecord(raCurrentRecord.id, {
+                        data: latest.data,
+                        tanggal: latest.tanggal,
+                        pic: latest.pic,
+                        work_order: latest.work_order,
+                        status: 'CHECKED',
+                        checked_by_account: profile.id,
+                        checked_by_name: checkedByName,
+                        checked_signature_url: RA_SIGNATURE_FILE_MAP[checkedByName] || null,
+                        checked_at: new Date().toISOString()
+                    }, function(err, updated) {
+                        if (err) { alert('Gagal verifikasi: ' + err); return; }
+                        dbShowToast('✓ Terverifikasi — menunggu approval SPV');
+                        raSetCurrentRecord(updated);
+                    });
+                });
+            });
+        }
+
+        // ── LEVEL 3: REVIEWER/SPV — approve final (tanda tangan otomatis) ───────
+        function raApproveReviewer() {
+            if (!raCurrentRecord || raCurrentRecord.status !== 'CHECKED') {
+                alert('Laporan ini belum berstatus CHECKED.');
+                return;
+            }
+            raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function(profile) {
+                var spvName = profile.display_name || profile.username;
+                raGetSignatureUrl(spvName, function(sigErr) {
+                    if (sigErr) {
+                        if (!confirm('Tanda tangan "' + spvName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan approve tanpa gambar tanda tangan?')) return;
+                    }
+                    raUpdateRecord(raCurrentRecord.id, {
+                        status: 'FINAL_APPROVED',
+                        reviewed_by_account: profile.id,
+                        review_signature_url: RA_SIGNATURE_FILE_MAP[spvName] || null,
+                        final_approved_at: new Date().toISOString()
+                    }, function(err, updated) {
+                        if (err) { alert('Gagal approve: ' + err); return; }
+                        dbShowToast('✓ Laporan FINAL APPROVED');
+                        raSetCurrentRecord(updated);
+                    });
+                });
+            });
+        }
+
+        // ── RETURN (dikembalikan ke tahap sebelumnya untuk revisi) ──────────────
+        function raReturnReport(fromLevel) {
+            if (!raCurrentRecord) return;
+            var reason = prompt('Alasan dikembalikan (opsional):') || '';
+            var roles = fromLevel === 'checker' ? ['checker', 'admin'] : ['reviewer', 'admin'];
+            var title = fromLevel === 'checker' ? '🔍 Login sebagai Checker' : '🖊️ Login sebagai Supervisor';
+            raRequireLogin(roles, title, function(profile) {
+                raUpdateRecord(raCurrentRecord.id, {
+                    status: 'RETURNED',
+                    return_reason: reason
+                }, function(err, updated) {
+                    if (err) { alert('Gagal mengembalikan: ' + err); return; }
+                    dbShowToast('↩ Laporan dikembalikan untuk revisi');
+                    raSetCurrentRecord(updated);
+                });
+            });
         }
     </script>
 </body>

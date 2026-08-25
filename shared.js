@@ -1615,3 +1615,174 @@ if (document.readyState === 'complete') {
 } else {
   window.addEventListener('load', function(){ setTimeout(autosaveCheckAndPrompt, 300); });
 }
+
+/* ═══════════════════════════════════════════════════════
+   REPORT AUTHENTICATION & WORKFLOW (ReportAuthManager, prefix "ra")
+   ═══════════════════════════════════════════════════════
+   INI TERPISAH TOTAL dari "GATE AKSES (Password + Trusted Device)" di
+   atas -- jangan digabung/ditukar:
+     - Gate akses (pmXxx)  = boleh MEMBUKA aplikasi sama sekali atau
+       tidak (per device, sekali masuk berlaku terus).
+     - ReportAuthManager (raXxx) = SIAPA (akun sungguhan: user1/checker1/
+       spv1/admin1) yang sedang bertindak atas SATU laporan tertentu
+       (submit/check/approve), dicatat sebagai audit trail di pm_records.
+
+   Login pakai Supabase Auth (email+password), tapi user cukup ketik
+   USERNAME -- dipetakan ke email internal @pmunit7.local di sini saja,
+   tidak pernah terlihat oleh user.
+
+   Reuse _pmGetSupaClient() yang sudah ada di atas (lazy-load supabase-js
+   sekali saja, dipakai bareng oleh gate akses & modul ini) -- supaya
+   tidak load library Supabase Realtime dua kali.
+
+   Skema database yang dibutuhkan modul ini (lihat sql/001_report_auth_workflow.sql):
+     table pm_profiles (id uuid pk -> auth.users, username, role, display_name)
+     kolom tambahan di pm_records: status, submitted_by, submitted_at,
+       checked_by_account, checked_by_name, checked_signature_url, checked_at,
+       reviewed_by_account, review_signature_url, final_approved_at, return_reason
+     storage bucket 'signatures' (private, diisi manual oleh admin)
+   ── */
+
+var RA_EMAIL_DOMAIN = '@pmunit7.local';
+var RA_PROFILE_TABLE = 'pm_profiles';
+var RA_SIGNATURE_BUCKET = 'signatures';
+
+/* Nama file tanda tangan di Supabase Storage bucket 'signatures',
+   di-mapping dari NAMA TAMPILAN (dropdown "Checked By" / nama SPV) --
+   BUKAN dari username akun login. File-nya diupload manual oleh admin
+   lewat Supabase Dashboard, nama file harus PERSIS sama dengan value
+   di sini. */
+var RA_SIGNATURE_FILE_MAP = {
+  'Zaini Nur Hidayat': 'zaini.png',
+  'Isyana Ray Sasongko': 'isyana.png',
+  'Fajar Dwi Saksana': 'fajar.png'
+};
+
+var _raProfileCache = null; // {id, username, role, display_name} | null kalau belum login
+
+function raGetClient() {
+  return _pmGetSupaClient();
+}
+
+/* Cek status login SEKARANG (dari session Supabase Auth yang sudah
+   persist otomatis di localStorage oleh supabase-js -- jadi tetap login
+   walau halaman direfresh, sampai logout eksplisit atau token expired). */
+function raGetCurrentProfile(callback) {
+  if (_raProfileCache) { callback(_raProfileCache); return; }
+  raGetClient().then(function(client) {
+    return client.auth.getSession().then(function(res) {
+      var session = res.data && res.data.session;
+      if (!session) { callback(null); return; }
+      return client.from(RA_PROFILE_TABLE).select('*').eq('id', session.user.id).single()
+        .then(function(res2) {
+          _raProfileCache = res2.data || null;
+          callback(_raProfileCache);
+        });
+    });
+  }).catch(function() { callback(null); });
+}
+
+function raLogin(username, password, callback) {
+  raGetClient().then(function(client) {
+    return client.auth.signInWithPassword({ email: username + RA_EMAIL_DOMAIN, password: password })
+      .then(function(res) {
+        if (res.error) { callback(res.error.message || 'Login gagal.', null); return; }
+        return client.from(RA_PROFILE_TABLE).select('*').eq('id', res.data.user.id).single()
+          .then(function(res2) {
+            if (res2.error || !res2.data) {
+              callback('Akun ditemukan tapi profil belum terdaftar di pm_profiles.', null);
+              return;
+            }
+            _raProfileCache = res2.data;
+            callback(null, _raProfileCache);
+          });
+      });
+  }).catch(function(err) { callback((err && err.message) || String(err), null); });
+}
+
+function raLogout(callback) {
+  raGetClient().then(function(client) { return client.auth.signOut(); })
+    .then(function() { _raProfileCache = null; if (callback) callback(); })
+    .catch(function() { _raProfileCache = null; if (callback) callback(); });
+}
+
+/* Modal login report-level (BEDA TAMPILAN dari modal gate akses supaya
+   user tidak bingung keduanya). requiredRoles = array role yang boleh
+   (mis. ['checker','admin']) atau null/undefined (siapa saja asal login). */
+function raShowLoginModal(requiredRoles, title, onSuccess) {
+  var old = document.getElementById('raLoginModal');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+  var wrap = document.createElement('div');
+  wrap.id = 'raLoginModal';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(15,20,18,0.6);z-index:2000000;display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+  wrap.innerHTML =
+    '<div style="background:#fff;border-radius:12px;padding:22px;width:min(94vw,340px);box-shadow:0 10px 40px rgba(0,0,0,0.35)">' +
+      '<div style="font-weight:800;font-size:15px;margin-bottom:4px;color:#1f2937">' + (title || 'Login diperlukan') + '</div>' +
+      '<div style="font-size:12px;color:#6b7280;margin-bottom:14px">Masukkan akun laporan Anda untuk melanjutkan aksi ini.</div>' +
+      '<input id="raLoginUser" type="text" placeholder="Username" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;margin-bottom:8px;font-size:14px">' +
+      '<input id="raLoginPass" type="password" placeholder="Password" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;margin-bottom:8px;font-size:14px">' +
+      '<div id="raLoginError" style="color:#e74c3c;font-size:12px;min-height:16px;margin-bottom:6px"></div>' +
+      '<button id="raLoginSubmit" style="width:100%;padding:11px;border:none;border-radius:8px;background:#16a085;color:#fff;font-weight:700;cursor:pointer;margin-bottom:8px;font-size:14px">Masuk</button>' +
+      '<button id="raLoginCancel" style="width:100%;padding:9px;border:none;border-radius:8px;background:#f3f4f6;color:#4b5563;font-weight:600;cursor:pointer;font-size:13px">Batal</button>' +
+    '</div>';
+  document.body.appendChild(wrap);
+  document.getElementById('raLoginCancel').onclick = function() {
+    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+  };
+  document.getElementById('raLoginSubmit').onclick = function() {
+    var u = document.getElementById('raLoginUser').value.trim();
+    var p = document.getElementById('raLoginPass').value;
+    var errEl = document.getElementById('raLoginError');
+    if (!u || !p) { errEl.textContent = 'Username & password wajib diisi.'; return; }
+    errEl.textContent = 'Memeriksa...';
+    raLogin(u, p, function(err, profile) {
+      if (err) { errEl.textContent = err; return; }
+      if (requiredRoles && requiredRoles.indexOf(profile.role) === -1) {
+        errEl.textContent = 'Akun ini (role: ' + profile.role + ') tidak punya akses untuk aksi ini.';
+        raLogout();
+        return;
+      }
+      if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+      onSuccess(profile);
+    });
+  };
+}
+
+/* Pastikan sudah login DENGAN ROLE YANG SESUAI sebelum menjalankan aksi.
+   Kalau sudah -> langsung onSuccess(profile). Kalau belum -> tampilkan modal. */
+function raRequireLogin(requiredRoles, title, onSuccess) {
+  raGetCurrentProfile(function(profile) {
+    if (profile && (!requiredRoles || requiredRoles.indexOf(profile.role) !== -1)) {
+      onSuccess(profile);
+      return;
+    }
+    raShowLoginModal(requiredRoles, title, onSuccess);
+  });
+}
+
+/* Update baris pm_records LEWAT SESSION USER YANG LOGIN (JWT-nya,
+   otomatis dilampirkan oleh supabase-js) -- BUKAN anon key seperti
+   dbSave/dbLoad biasa -- supaya RLS per-role di database benar-benar
+   berlaku (checker cuma bisa update saat SUBMITTED, dst). */
+function raUpdateRecord(recordId, patch, callback) {
+  raGetClient().then(function(client) {
+    return client.from(SUPA_TABLE).update(patch).eq('id', recordId).select().single();
+  }).then(function(res) {
+    if (res.error) { callback(res.error.message || 'Gagal update.', null); return; }
+    callback(null, res.data);
+  }).catch(function(err) { callback((err && err.message) || String(err), null); });
+}
+
+/* Ambil signed URL (berlaku 1 jam) untuk gambar tanda tangan sesuai nama
+   tampilan (dari dropdown Checked By / nama SPV) -- bucket private,
+   jadi harus lewat client yang sudah login (authenticated). */
+function raGetSignatureUrl(displayName, callback) {
+  var filename = RA_SIGNATURE_FILE_MAP[displayName];
+  if (!filename) { callback('Tanda tangan untuk "' + displayName + '" belum terdaftar di RA_SIGNATURE_FILE_MAP.', null); return; }
+  raGetClient().then(function(client) {
+    return client.storage.from(RA_SIGNATURE_BUCKET).createSignedUrl(filename, 3600);
+  }).then(function(res) {
+    if (res.error) { callback(res.error.message || 'Gagal ambil tanda tangan.', null); return; }
+    callback(null, res.data.signedUrl);
+  }).catch(function(err) { callback((err && err.message) || String(err), null); });
+}
