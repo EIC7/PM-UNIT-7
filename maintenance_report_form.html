@@ -264,6 +264,19 @@
                 <button class="btn btn-full btn-gray" style="margin-top:6px" onclick="raReturnReport('reviewer')">↩ Kembalikan ke Checker (Perlu Revisi)</button>
             </div>
 
+            <!-- STATUS: RETURNED (dikembalikan checker/reviewer, perlu direvisi) -->
+            <div id="raReturnedBox" style="background:#fdf2f2;border:1px solid #f5c6c6;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
+                <div style="font-weight:700;font-size:0.9em;color:#a33333;margin-bottom:6px">↩ Laporan Dikembalikan — Perlu Revisi</div>
+                <div id="raReturnReasonText" style="font-size:0.8em;color:#7a3a3a;margin-bottom:10px"></div>
+                <button class="btn btn-full" style="background:#dc3545;color:#fff" onclick="raReviseReturned()">📝 Revisi & Kirim Ulang (buka jadi Draft)</button>
+            </div>
+
+            <!-- STATUS: FINAL_APPROVED (selesai, tidak ada aksi lagi) -->
+            <div id="raFinalBox" style="background:#eefcf3;border:1px solid #bdeecb;border-radius:8px;padding:14px;margin-bottom:12px;display:none;text-align:center">
+                <div style="font-weight:700;font-size:0.95em;color:#1c7a45">✅ Laporan Sudah Final Approved</div>
+                <div style="font-size:0.8em;color:#3f8a5c;margin-top:4px">Sudah disetujui SPV, tidak ada aksi lagi yang diperlukan.</div>
+            </div>
+
             <!-- TANDA TANGAN TERSIMPAN (preview) -->
             <div id="raSignatureDisplay" style="display:none;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:14px">
                 <div style="font-weight:700;font-size:0.85em;color:#333;margin-bottom:8px">Tanda Tangan Laporan Ini</div>
@@ -2608,6 +2621,13 @@ function applyImageEdits(){
             document.getElementById('raSubmitBox').style.display   = (status === 'DRAFT') ? 'block' : 'none';
             document.getElementById('raCheckerBox').style.display  = (status === 'SUBMITTED') ? 'block' : 'none';
             document.getElementById('raReviewerBox').style.display = (status === 'CHECKED') ? 'block' : 'none';
+            document.getElementById('raReturnedBox').style.display = (status === 'RETURNED') ? 'block' : 'none';
+            document.getElementById('raFinalBox').style.display    = (status === 'FINAL_APPROVED') ? 'block' : 'none';
+            if (status === 'RETURNED') {
+                var reasonText = (raCurrentRecord && raCurrentRecord.return_reason) || '';
+                document.getElementById('raReturnReasonText').textContent =
+                    reasonText ? ('Alasan: ' + reasonText) : 'Tidak ada alasan spesifik yang dicatat.';
+            }
 
             // Kalau checker sebelumnya sudah pilih nama, pertahankan pilihan itu
             // sebagai default dropdown (bisa diubah lagi kalau perlu).
@@ -2751,6 +2771,16 @@ function applyImageEdits(){
                 }, function(err, updated) {
                     if (err) { alert('Gagal mengembalikan: ' + err); return; }
                     dbShowToast('↩ Laporan dikembalikan untuk revisi');
+                    raSetCurrentRecord(updated);
+                });
+            });
+        }
+        function raReviseReturned() {
+            if (!raCurrentRecord) return;
+            raRequireLogin(['user', 'admin'], '📝 Login untuk Revisi Laporan', function(profile) {
+                raUpdateRecord(raCurrentRecord.id, { status: 'DRAFT' }, function(err, updated) {
+                    if (err) { alert('Gagal membuka untuk revisi: ' + err); return; }
+                    dbShowToast('📝 Laporan dibuka kembali untuk revisi — edit lalu Simpan/Submit lagi');
                     raSetCurrentRecord(updated);
                 });
             });
