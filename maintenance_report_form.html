@@ -2614,7 +2614,17 @@ function applyImageEdits(){
         }
 
         function raRenderWorkflowUI() {
-            var status = (raCurrentRecord && raCurrentRecord.status) || 'DRAFT';
+            // Normalisasi ke UPPERCASE -- pernah ketemu kasus status kesimpan
+            // huruf kecil ('draft') di database (kemungkinan dari data lama
+            // sebelum constraint di sql/001 aktif, atau edit manual di Table
+            // Editor). Perbandingan status === 'DRAFT' di bawah itu
+            // case-sensitive -- kalau statusnya 'draft' (huruf kecil), TIDAK
+            // ADA satu pun kondisi yang cocok, jadi SEMUA kotak (Submit,
+            // Checker, Reviewer, Returned, Final) sembunyi total, kelihatan
+            // seperti area workflow kosong/rusak. Normalisasi di sini
+            // menutup itu untuk SEMUA kemungkinan penyebab, tanpa perlu tau
+            // persis kenapa data itu jadi huruf kecil.
+            var status = ((raCurrentRecord && raCurrentRecord.status) || 'DRAFT').toUpperCase();
             var badge = document.getElementById('raStatusBadge');
             if (badge) badge.textContent = RA_STATUS_LABEL[status] || status;
 
