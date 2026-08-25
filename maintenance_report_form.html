@@ -283,7 +283,10 @@
                 <div id="raSignatureList" style="display:flex;gap:16px;flex-wrap:wrap"></div>
             </div>
 
-            <div id="raWorkflowLoggedInAs" style="font-size:11px;color:#999;text-align:center;margin-top:10px"></div>
+            <div id="raWorkflowLoggedInAs" style="font-size:14px;font-weight:700;color:#333;text-align:center;margin-top:10px"></div>
+            <div id="raLogoutWrap" style="text-align:center;margin-top:4px;display:none">
+                <button onclick="raDoLogout()" style="background:none;border:none;color:#e74c3c;font-size:11px;text-decoration:underline;cursor:pointer;padding:4px">Logout</button>
+            </div>
         </div>
     </div>
 
@@ -2649,10 +2652,23 @@ function applyImageEdits(){
             raRenderSignatures();
 
             var whoEl = document.getElementById('raWorkflowLoggedInAs');
+            var logoutWrap = document.getElementById('raLogoutWrap');
             raGetCurrentProfile(function(profile) {
                 whoEl.textContent = profile
                     ? ('Login sebagai: ' + profile.username + ' (' + profile.role + ')' + (profile.display_name ? ' — ' + profile.display_name : ''))
                     : '';
+                logoutWrap.style.display = profile ? 'block' : 'none';
+            });
+        }
+
+        // Logout dari akun laporan (checker/reviewer/admin) yang lagi login --
+        // supaya bisa gonta-ganti akun tanpa perlu clear cookie/incognito
+        // manual (mis. abis login admin buat testing, mau balik login SPV asli).
+        function raDoLogout() {
+            if (!confirm('Logout dari akun laporan ini?')) return;
+            raLogout(function() {
+                dbShowToast('✓ Berhasil logout');
+                raRenderWorkflowUI();
             });
         }
 
