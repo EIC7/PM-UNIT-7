@@ -8,11 +8,22 @@
  * grafik dengan sumbu Y "PER CENT SPAN" 0-100%, + panel nilai di sisi lain
  * yang mengikuti posisi cursor).
  *
- * Kenapa dinormalisasi ke % SPAN: tiap tag punya unit & rentang teknis
- * berbeda (ppm, °C, Bar, dst). Supaya semua bisa ditumpuk di 1 sumbu Y
- * tanpa saling menenggelamkan skala, tiap titik dikonversi jadi persentase
- * dari engineeringLow..engineeringHigh tag-nya. Nilai ASLI (dengan unit)
- * tetap dipakai penuh di tooltip dan di panel VALUES (lewat onCursorMove).
+ * SUMBU Y — NILAI ASLI (bukan % span): selama semua tag yang tampil
+ * berbagi unit yang sama (kasus SO2 sekarang: semua ppm, rentang 0-500),
+ * sumbu Y langsung memakai nilai pengukuran asli — sesuai gaya tampilan
+ * trend recorder DCS/CEMS asli (contoh referensi: layar Trend Display,
+ * sumbu 0-500 ppm langsung, bukan dinormalisasi). Kalau nanti tag dengan
+ * unit berbeda ditumpuk bersamaan, rentang sumbu jadi gabungan min/max
+ * semua tag (lihat `renderCombined` — belum ada normalisasi ulang ke %,
+ * jadi skala antar-unit berbeda bisa saling menenggelamkan; ini
+ * trade-off yang disengaja demi keterbacaan angka asli untuk kasus
+ * single-unit yang jadi prioritas saat ini).
+ *
+ * PINNED READOUT: klik di area grafik "menempelkan" kotak nilai +
+ * garis vertikal ke titik data terdekat (persisten, tidak hilang saat
+ * mouse dipindah — beda dari tooltip hover bawaan ECharts). Maks
+ * `MAX_PINS` box sekaligus; klik ulang di waktu yang sama = lepas pin;
+ * tombol × di kotak atau "CLEAR PINS" di toolbar = hapus.
  *
  * GAP BREAK: data kalibrasi bersifat event-based (jarang, tidak reguler).
  * Kalau jarak antar 2 titik berturutan > DCS_CONFIG.GAP_BREAK_MINUTES,
@@ -27,6 +38,16 @@
   var lastSeriesMeta = []; // [{ name, color, unit, tagId, points:[{time,value}] (RAW, sudah gap-break-aware tapi tanpa null utk lookup) }]
   var cursorMoveCallback = null;
   var cursorLeaveCallback = null;
+  var GRID = { left: 65, right: 30, top: 50, bottom: 60 }; // dipakai bareng utk render pin graphics
+
+  // ------------------------------------------------------------------
+  // PINNED READOUT (klik di grafik utk "menempelkan" kotak nilai +
+  // garis vertikal ke titik waktu tertentu, gaya PI ProcessBook /
+  // contoh gambar user — persisten sampai ditutup, tidak hilang saat
+  // mouse dipindah, beda dari tooltip hover biasa).
+  // ------------------------------------------------------------------
+  var pinnedTimes = [];
+  var MAX_PINS = 4;
 
   function init(domEl) {
     if (typeof echarts === 'undefined') {
@@ -34,7 +55,7 @@
       return false;
     }
     chart = echarts.init(domEl, null, { renderer: 'canvas' });
-    window.addEventListener('resize', function () { if (chart) chart.resize(); });
+    window.addEventListener('resize', function () { if (chart) { chart.resize(); renderPinGraphics(); } });
 
     chart.on('updateAxisPointer', function (event) {
       var axisInfo = event.axesInfo && event.axesInfo[0];
@@ -45,20 +66,116 @@
       if (cursorLeaveCallback) cursorLeaveCallback();
     });
 
+    // Klik di area grafik = pin readout box di titik data terdekat.
+    chart.getZr().on('click', function (event) {
+      var pixelPoint = [event.offsetX, event.offsetY];
+      if (!chart.containPixel({ gridIndex: 0 }, pixelPoint)) return;
+      var dataPoint = chart.convertFromPixel({ xAxisIndex: 0 }, pixelPoint);
+      var clickTime = Array.isArray(dataPoint) ? dataPoint[0] : dataPoint;
+      var snapped = nearestGlobalTime(clickTime);
+      if (snapped != null) addPin(snapped);
+    });
+
+    // Reposisi kotak pin saat zoom/geser (posisi pixel berubah walau waktu tetap).
+    chart.on('dataZoom', function () { renderPinGraphics(); });
+
     return true;
+  }
+
+  function nearestGlobalTime(clickTime) {
+    var best = null, bestDist = Infinity;
+    lastSeriesMeta.forEach(function (s) {
+      s.points.forEach(function (p) {
+        var d = Math.abs(p.time - clickTime);
+        if (d < bestDist) { bestDist = d; best = p.time; }
+      });
+    });
+    return best;
+  }
+
+  function addPin(time) {
+    // Kalau sudah ada pin persis di waktu itu, lepas (toggle) alih-alih dobel.
+    var idx = pinnedTimes.indexOf(time);
+    if (idx >= 0) { pinnedTimes.splice(idx, 1); renderPinGraphics(); return; }
+    if (pinnedTimes.length >= MAX_PINS) pinnedTimes.shift(); // batasi biar tidak menumpuk penuh layar
+    pinnedTimes.push(time);
+    renderPinGraphics();
+  }
+
+  function removePin(time) {
+    var idx = pinnedTimes.indexOf(time);
+    if (idx >= 0) { pinnedTimes.splice(idx, 1); renderPinGraphics(); }
+  }
+
+  function clearPins() {
+    pinnedTimes = [];
+    renderPinGraphics();
+  }
+
+  function timeFormatterFull(value) {
+    var d = new Date(value);
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' +
+      pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function renderPinGraphics() {
+    if (!chart) return;
+    var elements = [];
+    var gridTop = GRID.top;
+    var gridBottomPx = chart.getHeight() - GRID.bottom;
+
+    pinnedTimes.slice().sort(function (a, b) { return a - b; }).forEach(function (time, pinIndex) {
+      var xPixel = chart.convertToPixel({ xAxisIndex: 0 }, time);
+      if (xPixel == null || isNaN(xPixel)) return;
+
+      // garis vertikal putus-putus dari atas ke bawah area grafik
+      elements.push({
+        type: 'line', silent: true, z: 50,
+        shape: { x1: xPixel, y1: gridTop, x2: xPixel, y2: gridBottomPx },
+        style: { stroke: '#ffb400', lineWidth: 1, lineDash: [4, 3] }
+      });
+
+      // kumpulkan nilai tiap series pada waktu ini (nearest, biasanya persis sama)
+      var rows = lastSeriesMeta.map(function (s) {
+        var nearest = findNearest(s.points, time);
+        return { name: s.name, color: s.color, unit: s.unit, value: nearest ? nearest.value : null };
+      }).filter(function (r) { return r.value !== null; });
+
+      var boxW = 168;
+      var boxH = 20 + rows.length * 16;
+      var boxX = xPixel + 8;
+      // kalau box bakal kepotong di kanan, taruh di kiri garis
+      var chartW = chart.getWidth();
+      if (boxX + boxW > chartW - 4) boxX = xPixel - boxW - 8;
+      var boxY = gridTop + 6 + pinIndex * (boxH + 6);
+
+      var children = [
+        { type: 'rect', shape: { x: 0, y: 0, width: boxW, height: boxH, r: 3 },
+          style: { fill: 'rgba(10,16,20,0.95)', stroke: '#ffb400', lineWidth: 1 } },
+        { type: 'text', style: { text: timeFormatterFull(time), x: 8, y: 6, fontSize: 10.5, fill: '#c7d3dc', fontFamily: "'Consolas','Courier New',monospace" } },
+        { type: 'text', style: { text: '\u00D7', x: boxW - 16, y: 4, fontSize: 13, fill: '#8b9aa5', fontFamily: 'sans-serif' },
+          cursor: 'pointer', onclick: (function (t) { return function () { removePin(t); }; })(time) }
+      ];
+      rows.forEach(function (r, i) {
+        var rowY = 22 + i * 16;
+        children.push({ type: 'circle', shape: { cx: 12, cy: rowY + 5, r: 4 }, style: { fill: r.color } });
+        children.push({ type: 'text', style: {
+          text: r.value.toFixed(2) + ' ' + (r.unit || ''), x: 22, y: rowY, fontSize: 11,
+          fill: '#e2ecf2', fontFamily: "'Consolas','Courier New',monospace"
+        } });
+      });
+
+      elements.push({ type: 'group', x: boxX, y: boxY, z: 51, children: children });
+    });
+
+    chart.setOption({ graphic: { elements: elements } }, { replaceMerge: ['graphic'] });
   }
 
   function timeFormatter(value) {
     var d = new Date(value);
     var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
     return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-  }
-
-  function toPercentSpan(value, tag) {
-    var lo = tag.engineeringLow != null ? tag.engineeringLow : 0;
-    var hi = tag.engineeringHigh != null ? tag.engineeringHigh : 100;
-    if (hi === lo) return 0;
-    return ((value - lo) / (hi - lo)) * 100;
   }
 
   /** Cari nilai terdekat (<=time, fallback nearest) dari sebuah array point yang sudah terurut waktu. */
@@ -114,12 +231,12 @@
     var out = [];
     for (var i = 0; i < points.length; i++) {
       var p = points[i];
-      out.push([p.time, toPercentSpan(p.value, tag), p.value, tag.unit || '']);
+      out.push([p.time, p.value, tag.unit || '']);
       if (i < points.length - 1) {
         var gap = points[i + 1].time - p.time;
         if (gap > gapMs) {
           // sisipkan titik null tepat setelah titik ini -> memutus garis
-          out.push([p.time + 1, null, null, tag.unit || '']);
+          out.push([p.time + 1, null, tag.unit || '']);
         }
       }
     }
@@ -134,9 +251,22 @@
   function renderCombined(tags, seriesDataAll) {
     if (!chart) { console.error('[ChartManager] Chart belum di-init.'); return; }
 
+    pinnedTimes = []; // data/tag berganti -> pin lama sudah tidak relevan
+
     var echartSeries = [];
     var legendSelected = {}; // name -> boolean, dari s.defaultVisible (default true kalau tidak diset)
     lastSeriesMeta = [];
+
+    // Sumbu Y: nilai ASLI (ppm), bukan % span — dipakai selama semua tag
+    // yang tampil berbagi unit & rentang yang sama (kasus SO2 sekarang).
+    // Kalau nanti tag dg unit beda ikut ditumpuk, fallback ke rentang gabungan.
+    var yUnit = (tags && tags[0] && tags[0].unit) || '';
+    var yMin = 0, yMax = 100;
+    if (tags && tags.length) {
+      yMin = Math.min.apply(null, tags.map(function (t) { return t.min != null ? t.min : 0; }));
+      yMax = Math.max.apply(null, tags.map(function (t) { return t.max != null ? t.max : 100; }));
+    }
+    var sameUnit = tags && tags.length && tags.every(function (t) { return (t.unit || '') === yUnit; });
 
     (tags || []).forEach(function (tag) {
       var tagSeriesData = (seriesDataAll && seriesDataAll[tag.id]) || {};
@@ -165,7 +295,7 @@
     var option = {
       backgroundColor: 'transparent',
       textStyle: { color: '#c7d3dc', fontFamily: "'Consolas','Courier New',monospace" },
-      grid: { left: 65, right: 30, top: 50, bottom: 60 },
+      grid: GRID,
       title: {
         text: !tags.length ? 'CENTANG MINIMAL 1 TAG DI PANEL KIRI' : (!hasData ? 'TIDAK ADA DATA PADA RENTANG WAKTU INI' : ''),
         left: 'center', top: 'middle',
@@ -188,7 +318,7 @@
           if (!visible.length) return '';
           var lines = ['<b>' + timeFormatter(visible[0].value[0]) + '</b>'];
           visible.forEach(function (p) {
-            lines.push(p.marker + p.seriesName + ': <b>' + p.value[2] + ' ' + p.value[3] + '</b> (' + p.value[1].toFixed(1) + '% span)');
+            lines.push(p.marker + p.seriesName + ': <b>' + p.value[1] + ' ' + p.value[2] + '</b>');
           });
           return lines.join('<br/>');
         }
@@ -201,12 +331,12 @@
       },
       yAxis: {
         type: 'value',
-        name: 'PER CENT SPAN',
+        name: sameUnit && yUnit ? yUnit.toUpperCase() : 'VALUE',
         nameLocation: 'middle',
         nameGap: 42,
         nameTextStyle: { color: '#8b9aa5' },
-        min: 0,
-        max: 100,
+        min: yMin,
+        max: yMax,
         axisLine: { lineStyle: { color: '#2a3b44' } },
         axisLabel: { color: '#8b9aa5', formatter: '{value}' },
         splitLine: { show: true, lineStyle: { color: '#1c2830' } }
@@ -215,10 +345,12 @@
         { type: 'inside', throttle: 50 },
         { type: 'slider', height: 18, bottom: 12, borderColor: '#2a3b44', fillerColor: 'rgba(0,217,255,0.1)', handleStyle: { color: '#00d9ff' }, textStyle: { color: '#8b9aa5' } }
       ],
+      graphic: { elements: [] },
       series: echartSeries
     };
 
     chart.setOption(option, true);
+    renderPinGraphics();
   }
 
   function autoScale() {
@@ -318,6 +450,7 @@
     exportImage: exportImage,
     onCursorMove: onCursorMove,
     onCursorLeave: onCursorLeave,
-    getLatestValues: getLatestValues
+    getLatestValues: getLatestValues,
+    clearPins: clearPins
   };
 })();

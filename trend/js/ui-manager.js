@@ -37,6 +37,7 @@
     els.statusBar = document.getElementById('statusBar');
     els.chartTitle = document.getElementById('chartTitle');
     els.autoScaleBtn = document.getElementById('autoScaleBtn');
+    els.clearPinsBtn = document.getElementById('clearPinsBtn');
     els.exportCsvBtn = document.getElementById('exportCsvBtn');
     els.exportJsonBtn = document.getElementById('exportJsonBtn');
     els.exportImgBtn = document.getElementById('exportImgBtn');
@@ -269,6 +270,7 @@
     if (els.modeLiveBtn) els.modeLiveBtn.addEventListener('click', function () { onModeClick('live'); });
     if (els.modeHistBtn) els.modeHistBtn.addEventListener('click', function () { onModeClick('historical'); });
     if (els.autoScaleBtn) els.autoScaleBtn.addEventListener('click', function () { window.ChartManager.autoScale(); });
+    if (els.clearPinsBtn) els.clearPinsBtn.addEventListener('click', function () { window.ChartManager.clearPins(); });
     if (els.exportCsvBtn) els.exportCsvBtn.addEventListener('click', function () { exportVisible('csv'); });
     if (els.exportJsonBtn) els.exportJsonBtn.addEventListener('click', function () { exportVisible('json'); });
     if (els.exportImgBtn) els.exportImgBtn.addEventListener('click', function () { window.ChartManager.exportImage('dcs_trend'); });
