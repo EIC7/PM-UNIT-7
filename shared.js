@@ -186,24 +186,40 @@ function _pmStripBase64ForSave(obj) {
    yang resolve setelah SEMUA foto selesai dipulihkan (atau di-skip kalau
    fetch-nya gagal -- gagal ambil 1 foto tidak boleh bikin seluruh proses
    buka data gagal total, biarin foto itu kosong daripada nge-block semuanya). */
+/* Ambil 1 file Drive sebagai base64 lewat Apps Script (action:'get') --
+   BUKAN fetch() langsung ke lh3.googleusercontent.com (itu kena CORS, lihat
+   catatan di _pmRestoreBase64AfterLoad). Tidak pernah reject -- gagal ambil
+   1 foto cukup bikin foto itu kosong, tidak boleh gagalkan proses lain. */
+function _pmFetchDriveFileAsBase64(fileId) {
+  return fetch(GDRIVE_WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify({ token: GDRIVE_SECRET_TOKEN, action: 'get', fileId: fileId })
+  }).then(function(res){ return res.json(); })
+    .then(function(result){ return (result && result.success && result.imageBase64) ? result.imageBase64 : null; })
+    .catch(function(){ return null; });
+}
+
 function _pmRestoreBase64AfterLoad(obj) {
   var jobs = [];
   (function walk(o) {
     if (Array.isArray(o)) { o.forEach(walk); return; }
     if (!o || typeof o !== 'object') return;
     if (o.driveUrl && (!o.dataUrl || o.dataUrl.indexOf('data:') !== 0)) {
-      jobs.push(
-        fetch(o.driveUrl).then(function(res){ return res.blob(); })
-          .then(function(blob){
-            return new Promise(function(resolve){
-              var r = new FileReader();
-              r.onload = function(){ o.dataUrl = r.result; resolve(); };
-              r.onerror = function(){ resolve(); };
-              r.readAsDataURL(blob);
-            });
-          })
-          .catch(function(){})
-      );
+      // Dulu di sini fetch() LANGSUNG ke o.driveUrl (lh3.googleusercontent.com)
+      // -- itu gagal kena CORS, karena domain CDN Google itu tidak kirim
+      // header Access-Control-Allow-Origin buat fetch() cross-origin dari
+      // mahfudjtf.github.io (beda dengan <img src> yang boleh-boleh aja).
+      // Sekarang dilewatkan Apps Script yang sama (action:'get') yang SUDAH
+      // terbukti CORS-nya lolos, sama seperti upload/delete foto.
+      if (o.driveFileId) {
+        jobs.push(_pmFetchDriveFileAsBase64(o.driveFileId).then(function(dataUrl){ if (dataUrl) o.dataUrl = dataUrl; }));
+      } else {
+        // Jaga-jaga: record lama yang cuma punya driveUrl tanpa driveFileId
+        // tersimpan terpisah -- ekstrak fileId dari URL-nya
+        // (https://lh3.googleusercontent.com/d/FILE_ID).
+        var m = /\/d\/([^/?]+)/.exec(o.driveUrl);
+        if (m) jobs.push(_pmFetchDriveFileAsBase64(m[1]).then(function(dataUrl){ if (dataUrl) o.dataUrl = dataUrl; }));
+      }
       return; // object foto -- gak perlu turun lebih dalam lagi
     }
     Object.keys(o).forEach(function(k){ walk(o[k]); });
