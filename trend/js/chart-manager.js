@@ -372,7 +372,10 @@
         splitLine: { show: true, lineStyle: { color: '#1c2830' } }
       },
       dataZoom: [
-        { type: 'inside', throttle: 50 },
+        // zoomOnMouseWheel:'ctrl' -> scroll biasa di atas chart TIDAK di-capture buat zoom
+        // (biar bisa scroll halaman ke bawah lihat KPI/deviasi/log table); Ctrl+scroll baru zoom.
+        // Slider di bawah chart & pinch-zoom trackpad/touch tetap jalan normal tanpa Ctrl.
+        { type: 'inside', throttle: 50, zoomOnMouseWheel: 'ctrl', moveOnMouseWheel: false },
         { type: 'slider', height: 14, bottom: 6, borderColor: '#2a3b44', fillerColor: 'rgba(0,217,255,0.1)', handleStyle: { color: '#00d9ff' }, textStyle: { color: '#8b9aa5' } }
       ],
       graphic: { elements: [] },

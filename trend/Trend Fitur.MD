@@ -286,3 +286,15 @@ User membandingkan ke contoh grafik Excel (2 garis dengan label tanggal M/D/YYYY
 3. **Batas atas sumbu Y diubah ke 700** (dari sebelumnya 500 = `tag.max`, rentang instrumen) supaya perubahan garis lebih jelas kelihatan, sesuai permintaan. Field baru `chartMax:700` ditambahkan ke config `SO2-7FC-AT-7A`/`SO2-7FC-AT-7B` di `config/default-tags.js`, dipakai terpisah dari `max` (rentang instrumen/engineering, tetap 500, masih dipakai di tempat lain kalau perlu) — `chart-manager.js` sekarang pakai `t.chartMax != null ? t.chartMax : t.max` saat menghitung batas sumbu.
 
 File terdampak: `js/chart-manager.js` (formatter tanggal, grid margin, adaptive gap-break, chartMax lookup), `config/default-tags.js` (+`chartMax:700` di 2 tag SO2).
+
+---
+
+## 13. Sesi ini — Fix: tidak bisa scroll ke bawah (KPI/deviasi/log table tidak kejangkau)
+
+**Gejala:** `.panel-center` sudah `overflow-y:auto` dan layout flex (`min-height:0`) sudah benar (lihat §10/§8.2 poin "chart kecil" yang sudah pernah dibenahi) — tapi user tetap tidak bisa scroll ke bawah untuk lihat KPI cards/panel deviasi/tabel log di bawah chart.
+
+**Root cause:** `dataZoom` tipe `inside` di ECharts (`js/chart-manager.js`) secara default meng-capture event scroll-wheel untuk **zoom grafik**, bukan cuma saat drag slider. Karena chart mengisi sebagian besar area `.panel-center` yang terlihat, hampir semua percobaan scroll-wheel di area itu ke-intercept jadi zoom-in/out chart, bukan scroll halaman turun ke konten di bawahnya.
+
+**Fix:** `dataZoom[0]` (`type:'inside'`) diberi `zoomOnMouseWheel:'ctrl'` (scroll-wheel biasa tidak lagi di-capture; harus tahan **Ctrl** dulu baru scroll = zoom chart) + `moveOnMouseWheel:false`. Scroll biasa di atas chart sekarang tembus ke scroll halaman seperti area lain. Zoom masih bisa lewat slider di bawah chart, drag-select, atau Ctrl+scroll.
+
+File terdampak: `js/chart-manager.js` (`dataZoom` config di `renderCombined`).
