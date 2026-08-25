@@ -8,7 +8,8 @@
  *
  * ADAPTERS: peta modulKey -> parser. Untuk mengaktifkan modul lain
  * (opacity, fegt, ph, dst) di masa depan, cukup tambah entry baru di sini
- * setelah adapter parser-nya dibuat (contoh: js/so2-adapter.js).
+ * setelah adapter parser-nya dibuat di js/adapters/<modul>-adapter.js
+ * (contoh: js/adapters/so2-adapter.js).
  * ==========================================================================
  */
 (function () {

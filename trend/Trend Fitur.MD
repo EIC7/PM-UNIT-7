@@ -217,3 +217,37 @@ Urutan prioritas berdasarkan dampak terhadap keandalan data dan nilai bisnis ala
 
 **Catatan:** Prioritas 1–4 sengaja didahulukan karena tanpa itu, ekspansi trend ke modul lain berisiko menghasilkan data yang salah/hilang diam-diam (bukan cuma "kurang fitur" tapi "berpotensi menyesatkan teknisi") — sejalan dengan prinsip "Tidak ada tombol dummy" di §1 dokumen ini.
 
+---
+
+## 10. Rekonstruksi Struktur Folder + Prioritas 3 & 4 (parsial)
+
+Menyusul sesi UX-only (§8/§9 di atas) yang sengaja menunda prioritas 🔴 Tinggi, sesi ini mengerjakan **§9 prioritas #3 (adapter generik) dan #4 (deviasi DCS-vs-Local)** — sebagian, khusus untuk SO2 sebagai contoh — sekaligus merekonstruksi struktur folder supaya tidak menumpuk 1 file besar per modul ke depannya. Perubahan:
+
+```
+trend/
+├── config/
+│   ├── system-config.js
+│   ├── default-tags.js
+│   └── modules/                    ← BARU
+│       └── so2.config.js           ← config deklaratif: deviationPairs, kpis, logTableColumns
+├── js/
+│   ├── adapters/                   ← BARU (dipindah dari js/)
+│   │   └── so2-adapter.js          ← sekarang juga menarik Zero/Span/Before/After (sebelumnya cuma DCS/Local)
+│   ├── module-view.js              ← BARU: mesin generik tab bar + KPI + deviasi + log table
+│   ├── chart-manager.js            ← ditambah renderDeviationChart() (mini chart panel deviasi)
+│   ├── ui-manager.js                ← ditambah filterTagsByIds/setModuleActiveTags/getVisibleTagIds + event dcsTagListChanged
+│   └── ... (sisanya tidak berubah, termasuk mode overlay & panel VALUES dari sesi sebelumnya)
+```
+
+**Yang sudah aktif untuk SO2:**
+- ✅ Tab bar per modul (baru 1 tab: "SO2 Scrubber Inlet" — cara ganti scope tag yang dicentang, bukan multi-window; kerja bersamaan dengan mode overlay §8.1 — pindah tab otomatis centang tag milik modul itu)
+- ✅ Series **Before** & **After** kalibrasi kini ikut ditarik adapter (sebelumnya tidak dipakai sama sekali — §8.2 poin 7 sebagian)
+- ✅ Panel deviasi otomatis: **DCS − Local** (dengan band toleransi ±2% span) dan **Before − After** (tren drift, tanpa batas pass/fail) — §9 prioritas #4, khusus SO2
+- ✅ Kartu KPI: DCS terakhir, Local terakhir, deviasi terakhir, hari sejak kalibrasi terakhir
+- ✅ Tabel log record (tanggal, teknisi, DCS, Local, Before, After, record ID) — `recordId`/`pic` yang sebelumnya tidak terpakai (§8.2 poin 8) sekarang tampil di sini
+- ⏳ **Belum**: §9 prioritas #1 (audit multi-tabel lengkap), #2 (query server-side filtered, masih fetch-500-lalu-filter), #3 secara penuh (adapter generik config-driven — pola `config/modules/*.config.js` baru mencakup deviasi/KPI/tabel, BELUM mencakup parsing field otomatis tanpa nulis adapter.js manual)
+
+**Pola untuk modul berikutnya (mis. FEGT):** buat 2 file baru saja —
+`js/adapters/fegt-adapter.js` (parsing) + `config/modules/fegt.config.js` (deviationPairs/kpis/logTableColumns) — lalu daftarkan di `historical-manager.js` (`ADAPTERS`), `default-tags.js` (`DCS_DEFAULT_TAGS`), dan tambah `<script>` tag di `index.html`. **Tidak perlu** menyentuh `module-view.js`, `chart-manager.js`, atau `ui-manager.js`.
+
+**Catatan kompatibilitas:** karena sesi sebelumnya mengubah arsitektur jadi mode overlay (banyak tag dicentang tampil bersama, panel kanan jadi "VALUES" bukan "TAG DETAILS"), `module-view.js` di sesi ini disesuaikan supaya tab modul bekerja DI ATAS mode overlay tsb — pindah tab = tag milik modul itu otomatis dicentang & tag modul lain tidak, tetap konsisten dengan satu grafik combined.

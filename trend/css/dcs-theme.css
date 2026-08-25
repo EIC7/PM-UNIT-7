@@ -116,3 +116,56 @@ body { background: var(--bg-main); }
 .dot-ok { background: var(--status-ok); box-shadow: 0 0 5px var(--status-ok); }
 .dot-warn { background: var(--status-warn); box-shadow: 0 0 5px var(--status-warn); }
 .dot-bad { background: var(--status-bad); box-shadow: 0 0 5px var(--status-bad); }
+
+/* ==========================================================================
+   MODULE VIEW — tab per modul, KPI cards, panel deviasi, tabel log
+   (lihat js/module-view.js + config/modules/*.config.js)
+   ========================================================================== */
+.module-tab-bar {
+  display: flex; gap: 2px; padding: 0 12px;
+  background: var(--bg-panel-alt); border-bottom: 1px solid var(--border-soft);
+}
+.module-tab {
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--text-secondary); padding: 8px 14px; font-family: inherit; font-size: 12px;
+  letter-spacing: .04em; cursor: pointer;
+}
+.module-tab:hover { color: var(--accent-cyan); }
+.module-tab-active { color: var(--accent-cyan); border-bottom-color: var(--accent-cyan); }
+
+.module-kpi-bar {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px 12px;
+  background: var(--bg-panel); border-bottom: 1px solid var(--border-soft);
+}
+.module-tag-group-label {
+  color: var(--accent-cyan); font-size: 10.5px; letter-spacing: .04em;
+  margin: 6px 0 4px; text-transform: uppercase;
+}
+.kpi-group-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.kpi-card {
+  background: var(--bg-panel-alt); border: 1px solid var(--border-soft);
+  border-radius: 4px; padding: 8px 14px; min-width: 120px;
+}
+.kpi-card-label { color: var(--text-dim); font-size: 10px; letter-spacing: .05em; margin-bottom: 4px; }
+.kpi-card-value { color: var(--text-primary); font-size: 16px; font-weight: 600; }
+.module-log-empty { color: var(--text-dim); font-size: 11px; padding: 4px 0 10px; }
+
+.module-deviation-area { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
+.deviation-panel {
+  background: var(--bg-panel-alt); border: 1px solid var(--border-soft); border-radius: 4px; padding: 8px 10px;
+}
+.deviation-panel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.deviation-panel-title { color: var(--text-secondary); font-size: 11px; letter-spacing: .04em; }
+.deviation-panel-last { color: var(--accent-green); font-size: 13px; font-weight: 600; }
+.deviation-panel-last.deviation-out { color: var(--accent-red); }
+.deviation-panel-desc { color: var(--text-dim); font-size: 10px; margin-bottom: 6px; }
+.deviation-panel-chart { height: 120px; width: 100%; }
+
+.module-log-wrap { padding: 10px 12px; overflow-x: auto; }
+.module-log-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.module-log-table th {
+  text-align: left; color: var(--text-dim); font-weight: 500; letter-spacing: .04em;
+  border-bottom: 1px solid var(--border-strong); padding: 6px 8px; position: sticky; top: 0; background: var(--bg-panel);
+}
+.module-log-table td { color: var(--text-primary); padding: 6px 8px; border-bottom: 1px solid var(--border-soft); }
+.module-log-table tr:hover td { background: rgba(0,217,255,0.04); }

@@ -17,8 +17,10 @@
  * Modul HTML lain di repo (opacity.html, fegt.html, ph-analyzer.html, dst)
  * BELUM diaktifkan sebagai tag — checklist/inspeksi (checksheet-*, dcs-hmi-
  * inspection, dll) sengaja dilewati sesuai arahan. Tinggal tambahkan entry
- * baru di array TAGS di bawah + adapter parser-nya masing-masing untuk
- * mengaktifkan modul lain (lihat js/so2-adapter.js sebagai contoh pola).
+ * baru di array TAGS di bawah + adapter parser-nya di js/adapters/<modul>-
+ * adapter.js + config deklaratif di config/modules/<modul>.config.js untuk
+ * mengaktifkan modul lain (lihat js/adapters/so2-adapter.js +
+ * config/modules/so2.config.js sebagai contoh pola).
  * ==========================================================================
  */
 window.DCS_DEFAULT_TAGS = [
@@ -42,8 +44,10 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'SO2 Scrubber Inlet',
     updateInterval: null, // event-based, bukan interval
     series: [
-      { key: 'aDCS',   label: 'DCS Reading',   color: '#00d9ff' },
-      { key: 'aLocal', label: 'Local Reading', color: '#ffb400' }
+      { key: 'DCS',    label: 'DCS Reading',   color: '#00d9ff' },
+      { key: 'Local',  label: 'Local Reading', color: '#ffb400' },
+      { key: 'Before', label: 'Before Kalibrasi', color: '#8a7bff', defaultVisible: false },
+      { key: 'After',  label: 'After Kalibrasi',  color: '#c9a8ff', defaultVisible: false }
     ]
   },
   {
@@ -65,8 +69,10 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'SO2 Scrubber Inlet',
     updateInterval: null,
     series: [
-      { key: 'cDCS',   label: 'DCS Reading',   color: '#39ff88' },
-      { key: 'cLocal', label: 'Local Reading', color: '#ff5e7a' }
+      { key: 'DCS',    label: 'DCS Reading',   color: '#39ff88' },
+      { key: 'Local',  label: 'Local Reading', color: '#ff5e7a' },
+      { key: 'Before', label: 'Before Kalibrasi', color: '#8a7bff', defaultVisible: false },
+      { key: 'After',  label: 'After Kalibrasi',  color: '#c9a8ff', defaultVisible: false }
     ]
   }
 ];

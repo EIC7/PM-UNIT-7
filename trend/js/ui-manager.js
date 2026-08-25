@@ -15,7 +15,8 @@
 (function () {
   'use strict';
 
-  var els = {};
+  var els = {}; // cache DOM elements
+  var tagIdFilter = null; // null = tampilkan semua tag; array = batasi tag list ke tag modul aktif
 
   function cacheEls() {
     els.clock = document.getElementById('clockValue');
@@ -57,6 +58,9 @@
   function renderTagList(filterText) {
     if (!els.tagListBody) return;
     var tags = window.TagManager.getAllTags();
+    if (tagIdFilter) {
+      tags = tags.filter(function (t) { return tagIdFilter.indexOf(t.id) >= 0; });
+    }
     if (filterText) {
       var f = filterText.toLowerCase();
       tags = tags.filter(function (t) {
@@ -296,6 +300,19 @@
     renderTagList: renderTagList,
     updateStatusBar: updateStatusBar,
     triggerLoad: triggerLoad,
-    renderCombinedChart: renderCombinedChart
+    renderCombinedChart: renderCombinedChart,
+    // --- API tambahan untuk ModuleView (js/module-view.js) ---
+    filterTagsByIds: function (ids) { tagIdFilter = ids || null; renderTagList(els.tagSearch ? els.tagSearch.value : ''); },
+    // Centang SEMUA tag di `ids` (tag modul aktif), lepas centang tag lain di luar itu.
+    setModuleActiveTags: function (ids) {
+      var idSet = ids || [];
+      window.TagManager.getAllTags().forEach(function (t) {
+        window.DCSTrend.setTagVisibility(t.id, idSet.indexOf(t.id) >= 0);
+      });
+      renderTagList(els.tagSearch ? els.tagSearch.value : '');
+      renderCombinedChart();
+      updateStatusBar();
+    },
+    getVisibleTagIds: function () { return getVisibleTags().map(function (t) { return t.id; }); }
   };
 })();

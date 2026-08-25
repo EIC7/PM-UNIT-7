@@ -135,6 +135,7 @@
     if (!chart) { console.error('[ChartManager] Chart belum di-init.'); return; }
 
     var echartSeries = [];
+    var legendSelected = {}; // name -> boolean, dari s.defaultVisible (default true kalau tidak diset)
     lastSeriesMeta = [];
 
     (tags || []).forEach(function (tag) {
@@ -142,6 +143,7 @@
       (tag.series || []).forEach(function (s) {
         var points = (tagSeriesData[s.key] || []).slice().sort(function (a, b) { return a.time - b.time; });
         var name = tag.id + ' · ' + s.label;
+        legendSelected[name] = s.defaultVisible !== false;
 
         lastSeriesMeta.push({ name: name, color: s.color, unit: tag.unit || '', tagId: tag.id, points: points });
 
@@ -171,7 +173,8 @@
       },
       legend: {
         top: 8, textStyle: { color: '#c7d3dc', fontSize: 10.5 }, type: 'scroll',
-        data: echartSeries.map(function (s) { return s.name; })
+        data: echartSeries.map(function (s) { return s.name; }),
+        selected: legendSelected
       },
       tooltip: {
         trigger: 'axis',
@@ -234,9 +237,82 @@
     a.click();
   }
 
+  /* ------------------------------------------------------------------ */
+  // Chart mini untuk panel deviasi (dipakai module-view.js). Tiap panel
+  // punya instance ECharts sendiri, disimpan di sini supaya bisa di-resize
+  // ulang tanpa dibuat baru terus-menerus tiap render.
+  var deviationCharts = {};
+
+  function renderDeviationChart(domId, points, pairCfg) {
+    if (typeof echarts === 'undefined') return;
+    var domEl = document.getElementById(domId);
+    if (!domEl) return;
+
+    var inst = deviationCharts[domId];
+    if (!inst) {
+      inst = echarts.init(domEl, null, { renderer: 'canvas' });
+      deviationCharts[domId] = inst;
+      window.addEventListener('resize', function () { inst.resize(); });
+    }
+
+    var tol = pairCfg.toleranceValue;
+    var markArea = tol != null ? {
+      silent: true,
+      itemStyle: { color: 'rgba(57,255,136,0.08)' },
+      data: [[{ yAxis: -tol }, { yAxis: tol }]]
+    } : undefined;
+
+    var data = points.map(function (p) {
+      var out = { value: [p.time, p.value] };
+      if (tol != null && Math.abs(p.value) > tol) {
+        out.itemStyle = { color: '#ff5e7a' }; // tandai titik yang keluar toleransi
+      }
+      return out;
+    });
+
+    inst.setOption({
+      backgroundColor: 'transparent',
+      textStyle: { color: '#c7d3dc', fontFamily: "'Consolas','Courier New',monospace" },
+      grid: { left: 50, right: 20, top: 16, bottom: 30 },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(10,16,20,0.95)',
+        borderColor: '#2a3b44',
+        textStyle: { color: '#e2ecf2', fontSize: 11 },
+        formatter: function (params) {
+          if (!params.length) return '';
+          var p = params[0];
+          return timeFormatter(p.value[0]) + '<br/>' + pairCfg.label + ': <b>' + p.value[1].toFixed(2) + ' ' + (pairCfg.unit || '') + '</b>';
+        }
+      },
+      xAxis: {
+        type: 'time',
+        axisLine: { lineStyle: { color: '#2a3b44' } },
+        axisLabel: { color: '#8b9aa5', fontSize: 10, formatter: timeFormatter },
+        splitLine: { show: false }
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { lineStyle: { color: '#2a3b44' } },
+        axisLabel: { color: '#8b9aa5', fontSize: 10 },
+        splitLine: { show: true, lineStyle: { color: '#1c2830' } }
+      },
+      series: [{
+        type: 'line',
+        showSymbol: true,
+        symbolSize: 5,
+        color: '#00d9ff',
+        markArea: markArea,
+        markLine: { silent: true, symbol: 'none', lineStyle: { color: '#5a6b76', type: 'dashed' }, data: [{ yAxis: 0 }] },
+        data: data
+      }]
+    }, true);
+  }
+
   window.ChartManager = {
     init: init,
     renderCombined: renderCombined,
+    renderDeviationChart: renderDeviationChart,
     autoScale: autoScale,
     resetZoom: resetZoom,
     exportImage: exportImage,

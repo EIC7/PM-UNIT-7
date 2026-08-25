@@ -12,6 +12,7 @@
       window.CommunicationManager.init();
       window.ChartManager.init(document.getElementById('trendChart'));
       window.UIManager.init();
+      window.ModuleView.init(); // tab per modul (§9 Trend Fitur.MD) — dibaca dari config/modules/*.config.js
       window.LiveTrendEngine.start(); // no-op selama LIVE_TREND_ENABLED=false
 
       // Muat data historical pertama kali secara otomatis (default range)
