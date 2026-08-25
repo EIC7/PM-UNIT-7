@@ -38,7 +38,7 @@
   var lastSeriesMeta = []; // [{ name, color, unit, tagId, points:[{time,value}] (RAW, sudah gap-break-aware tapi tanpa null utk lookup) }]
   var cursorMoveCallback = null;
   var cursorLeaveCallback = null;
-  var GRID = { left: 65, right: 30, top: 50, bottom: 60 }; // dipakai bareng utk render pin graphics
+  var GRID = { left: 65, right: 30, top: 50, bottom: 85 }; // bottom diperbesar utk muat label tanggal dirotasi
 
   // ------------------------------------------------------------------
   // PINNED READOUT (klik di grafik utk "menempelkan" kotak nilai +
@@ -178,6 +178,12 @@
     return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
+  /** Label sumbu X: tanggal saja (tanpa jam), format M/D/YYYY — cocok utk data event-based (1 titik/hari). */
+  function dateAxisFormatter(value) {
+    var d = new Date(value);
+    return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
+  }
+
   /** Cari nilai terdekat (<=time, fallback nearest) dari sebuah array point yang sudah terurut waktu. */
   function findNearest(points, time) {
     if (!points || !points.length) return null;
@@ -224,10 +230,31 @@
 
   /**
    * Sisipkan titik null di antara 2 titik berturutan yang jaraknya melebihi
-   * GAP_BREAK_MINUTES, supaya ECharts memutus garis (connectNulls:false).
+   * ambang gap-break, supaya ECharts memutus garis (connectNulls:false).
+   *
+   * Ambang ADAPTIF (bukan angka tetap 3 hari): data kalibrasi event-based
+   * ini punya cadence yang beda-beda per instrumen (mingguan, 2-mingguan,
+   * dst) — angka tetap kecil (3 hari) membuat SEMUA titik terputus kalau
+   * cadence asli > 3 hari (bug yang dilaporkan: "sambungan garis antar
+   * titik tidak ada"). Sekarang threshold = 3× median jarak antar-titik
+   * pada series itu sendiri (minimal tetap sebesar `GAP_BREAK_MINUTES`
+   * config sebagai lantai) — jadi cadence normal (mis. mingguan) tetap
+   * tersambung, tapi jeda yang jauh di luar kebiasaan (mis. 2 bulan tanpa
+   * kalibrasi di tengah data mingguan) tetap diputus, tidak salah dibaca
+   * sebagai tren kontinu.
    */
+  function computeGapThresholdMs(points) {
+    var configuredMs = (window.DCS_CONFIG.GAP_BREAK_MINUTES || 4320) * 60 * 1000;
+    if (!points || points.length < 3) return configuredMs; // data terlalu sedikit utk hitung median yang berarti
+    var gaps = [];
+    for (var i = 0; i < points.length - 1; i++) gaps.push(points[i + 1].time - points[i].time);
+    gaps.sort(function (a, b) { return a - b; });
+    var median = gaps[Math.floor(gaps.length / 2)];
+    return Math.max(configuredMs, median * 3);
+  }
+
   function buildGapAwareData(points, tag) {
-    var gapMs = (window.DCS_CONFIG.GAP_BREAK_MINUTES || 4320) * 60 * 1000;
+    var gapMs = computeGapThresholdMs(points);
     var out = [];
     for (var i = 0; i < points.length; i++) {
       var p = points[i];
@@ -264,7 +291,10 @@
     var yMin = 0, yMax = 100;
     if (tags && tags.length) {
       yMin = Math.min.apply(null, tags.map(function (t) { return t.min != null ? t.min : 0; }));
-      yMax = Math.max.apply(null, tags.map(function (t) { return t.max != null ? t.max : 100; }));
+      // chartMax = batas atas VISUAL sumbu (beda dari `max` = batas rentang instrumen/engineering).
+      // Dibuat terpisah karena batas visual yang enak dibaca (mis. 700) belum tentu sama dengan
+      // rentang instrumen (mis. span analyzer 500) — biar perubahan garis tetap kelihatan jelas.
+      yMax = Math.max.apply(null, tags.map(function (t) { return t.chartMax != null ? t.chartMax : (t.max != null ? t.max : 100); }));
     }
     var sameUnit = tags && tags.length && tags.every(function (t) { return (t.unit || '') === yUnit; });
 
@@ -326,7 +356,7 @@
       xAxis: {
         type: 'time',
         axisLine: { lineStyle: { color: '#2a3b44' } },
-        axisLabel: { color: '#8b9aa5', formatter: timeFormatter },
+        axisLabel: { color: '#8b9aa5', formatter: dateAxisFormatter, rotate: 35, hideOverlap: true, margin: 12, fontSize: 10.5 },
         splitLine: { show: true, lineStyle: { color: '#1c2830' } }
       },
       yAxis: {
@@ -343,7 +373,7 @@
       },
       dataZoom: [
         { type: 'inside', throttle: 50 },
-        { type: 'slider', height: 18, bottom: 12, borderColor: '#2a3b44', fillerColor: 'rgba(0,217,255,0.1)', handleStyle: { color: '#00d9ff' }, textStyle: { color: '#8b9aa5' } }
+        { type: 'slider', height: 14, bottom: 6, borderColor: '#2a3b44', fillerColor: 'rgba(0,217,255,0.1)', handleStyle: { color: '#00d9ff' }, textStyle: { color: '#8b9aa5' } }
       ],
       graphic: { elements: [] },
       series: echartSeries
