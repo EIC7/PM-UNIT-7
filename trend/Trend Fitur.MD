@@ -298,3 +298,14 @@ File terdampak: `js/chart-manager.js` (formatter tanggal, grid margin, adaptive 
 **Fix:** `dataZoom[0]` (`type:'inside'`) diberi `zoomOnMouseWheel:'ctrl'` (scroll-wheel biasa tidak lagi di-capture; harus tahan **Ctrl** dulu baru scroll = zoom chart) + `moveOnMouseWheel:false`. Scroll biasa di atas chart sekarang tembus ke scroll halaman seperti area lain. Zoom masih bisa lewat slider di bawah chart, drag-select, atau Ctrl+scroll.
 
 File terdampak: `js/chart-manager.js` (`dataZoom` config di `renderCombined`).
+
+---
+
+## 14. Sesi ini — Panel deviasi: teks keterangan terlalu gelap + area kosong terlalu besar
+
+User membandingkan tampilan panel "Deviasi DCS − Local" / "Koreksi Kalibrasi (Before − After)" (`module-view.js` + `dcs-theme.css`) dan komplain 2 hal:
+
+1. **Teks keterangan (`.deviation-panel-desc`) terlalu gelap, susah dibaca** — sebelumnya pakai `var(--text-dim)` (`#5a6b76`, warna paling redup di palet, dimaksudkan utk label sekunder seperti timestamp status bar), kurang cocok dipakai untuk kalimat penjelasan yang harus dibaca jelas. **Fix:** diganti ke `var(--text-secondary)` (`#8b9aa5`, sama dengan warna title panel), kontras lebih baik terhadap `--bg-panel-alt`.
+2. **Banyak area kosong di tiap kartu panel** — `.deviation-panel-chart` (mini chart ECharts per pair deviasi) tingginya 120px, padahal garis deviasi yang ditampilkan seringkali flat/tipis (nilai deviasi kecil, mis. `+0.00 ppm`), jadi visualnya didominasi ruang kosong. **Fix:** tinggi dikecilkan ke 80px, gap antar-panel di `.module-deviation-area` dikecilkan 8px→6px, margin bawah `.deviation-panel-desc` 6px→4px — kartu jadi lebih ringkas, lebih banyak panel kelihatan tanpa scroll berlebihan. Override khusus mobile (`style.css`, breakpoint ≤900px) yang membesarkan chart ke 150px **tidak diubah** — itu sengaja dibuat lebih besar untuk kenyamanan baca di layar sentuh.
+
+File terdampak: `css/dcs-theme.css` (`.deviation-panel-desc`, `.deviation-panel-chart`, `.module-deviation-area`).
