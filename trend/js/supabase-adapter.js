@@ -61,22 +61,54 @@
   }
 
   /**
-   * Ambil record yang sudah difilter berdasarkan modul (mis. 'SO2'),
-   * dan dalam rentang waktu [startTime, endTime] berdasarkan field
-   * `updated_at` (fallback ke `tanggal` kalau updated_at kosong).
+   * Ambil record `pm_records` untuk 1 modul spesifik + rentang waktu,
+   * DIFILTER DI QUERY (server-side), bukan fetch-semua-lalu-filter-client.
+   *
+   * Kenapa ini penting (§8.2 Trend Fitur.MD, temuan #6, prioritas 🔴 Tinggi):
+   * pm_records dipakai bersama oleh ~15 modul lain (Opacity, CEMS, Coal
+   * Feeder, Belt Scale, FEGT, dst). Kalau query cuma "500 record TERBARU
+   * dari SELURUH tabel lalu filter client", modul yang jarang diisi (SO2)
+   * gampang terlempar keluar dari 500-record window itu oleh modul lain
+   * yang lebih sering menyimpan — hasilnya "TIDAK ADA DATA" padahal data
+   * SO2 sebenarnya ADA di database, cuma tidak pernah ikut ter-fetch.
+   *
+   * Field `modul` di DB berisi teks bebas per form (mis. so2.html menyimpan
+   * 'SO2 Scrubber Inlet', bukan cuma 'SO2') — makanya di sini pakai
+   * `ilike.*<modulKey>*` (substring match, case-insensitive) via PostgREST,
+   * bukan `eq` (exact match).
    */
   function fetchByModulAndRange(modulKey, startTime, endTime) {
-    return fetchRecords().then(function (rows) {
-      rows = rows || [];
-      return rows.filter(function (r) {
-        if (normalizeModul(r.modul) !== modulKey) return false;
-        var t = recordTimestamp(r);
-        if (t === null) return false;
-        if (startTime && t < startTime) return false;
-        if (endTime && t > endTime) return false;
-        return true;
+    var url = CFG.URL + '/rest/v1/' + CFG.TABLE +
+      '?select=' + encodeURIComponent(CFG.SELECT_COLUMNS) +
+      '&modul=ilike.*' + encodeURIComponent(modulKey) + '*' +
+      '&order=updated_at.desc&limit=' + CFG.FETCH_LIMIT;
+
+    return fetch(url, { method: 'GET', headers: buildHeaders() })
+      .then(function (res) {
+        if (!res.ok) {
+          return res.text().then(function (t) {
+            throw new Error('Supabase GET gagal (' + res.status + '): ' + t);
+          });
+        }
+        return res.json();
+      })
+      .then(function (rows) {
+        rows = rows || [];
+        // Filter rentang waktu tetap di client (updated_at bisa null utk
+        // sebagian record lama -> fallback created_at/tanggal di recordTimestamp,
+        // yang tidak bisa direpresentasikan sebagai 1 kondisi query PostgREST).
+        return rows.filter(function (r) {
+          var t = recordTimestamp(r);
+          if (t === null) return false;
+          if (startTime && t < startTime) return false;
+          if (endTime && t > endTime) return false;
+          return true;
+        });
+      })
+      .catch(function (err) {
+        console.error('[SupabaseAdapter] fetchByModulAndRange error:', err);
+        throw err;
       });
-    });
   }
 
   function recordTimestamp(r) {

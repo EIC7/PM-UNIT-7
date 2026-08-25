@@ -85,6 +85,8 @@ html, body {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  overflow-y: auto; /* chart TIDAK boleh diperas oleh konten modul di bawahnya
+                        (KPI/deviasi/log table) -- itu yang discroll, bukan chart */
 }
 
 .panel-details {
@@ -148,8 +150,14 @@ html, body {
 }
 
 .chart-wrap {
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
+  /* Chart WAJIB besar & jelas (referensi: PI ProcessBook trend display) --
+     tidak boleh ikut diperas walau konten di bawahnya (historical panel,
+     KPI/deviasi/log table per-tag) makin banyak. Tinggi mengikuti viewport
+     supaya tetap proporsional di layar besar maupun kecil, dengan batas
+     bawah/atas yang wajar. */
+  height: clamp(420px, 58vh, 640px);
+  min-height: 420px;
   position: relative;
   padding: 4px 12px 12px;
 }
