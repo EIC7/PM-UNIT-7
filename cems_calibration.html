@@ -2638,16 +2638,18 @@ setInterval(function(){ var el=document.getElementById('clock'); if(el) el.textC
 // sudah otomatis ditangani shared.js (autosaveCheckAndPrompt / dbLoad) selama
 // dbCollectData(), applyRecordToForm(), dan restoreDraftData() di atas ada.
 
-/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
+/* ── LOAD FROM HISTORY (URL ?id=xxx&print=1) ── */
 (function(){
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
+  var doPrint = params.get('print') === '1';
   if (!id || typeof dbLoad !== 'function') return;
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec);
       window._editingId = id;
       if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
+      if (doPrint && typeof exportPdf === 'function') setTimeout(exportPdf, 300);
     }, 300);
   });
 })();

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submit Report — Unit 7</title>
+<script src="shared.js"></script>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .rp-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  .rp-tab {
+    padding:8px 16px; border-radius:6px; border:1.5px solid var(--panel-border);
+    background:transparent; color:var(--text2); font-size:12.5px; font-weight:600;
+    cursor:pointer; white-space:nowrap;
+  }
+  .rp-tab.active { background:var(--steel); border-color:var(--steel); color:#fff; }
+  .rp-tab .cnt { opacity:0.75; font-weight:400; margin-left:3px; }
+
+  .rp-card {
+    background:#fff; border:1px solid var(--panel-border); border-radius:10px;
+    padding:14px 16px; margin-bottom:10px; display:flex; align-items:flex-start;
+    gap:14px; flex-wrap:wrap;
+  }
+  .rp-main { flex:1; min-width:230px; }
+  .rp-modul { font-size:14px; font-weight:700; color:var(--text); }
+  .rp-meta { font-size:11.5px; color:var(--text3); margin-top:4px; line-height:1.7; }
+  .rp-meta b { color:var(--text2); }
+  .rp-reason { font-size:11.5px; color:#b91c1c; background:#fdecea; border-radius:6px; padding:6px 10px; margin-top:6px; display:inline-block; }
+
+  .rp-status { display:inline-block; padding:3px 11px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .rp-status.SUBMITTED { background:#fff3e0; color:#8a6d1f; }
+  .rp-status.CHECKED { background:#e0f2fe; color:#0369a1; }
+  .rp-status.FINAL_APPROVED { background:#e8f5e9; color:#2e7d32; }
+  .rp-status.RETURNED { background:#fdecea; color:#b91c1c; }
+
+  .rp-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .rp-btn { padding:8px 14px; border-radius:8px; border:none; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .rp-btn.preview { background:#3498db; color:#fff; }
+  .rp-btn.edit { background:#f3f4f6; color:#4b5563; border:1px solid var(--panel-border); }
+  .rp-btn.verify { background:#2563eb; color:#fff; }
+  .rp-btn.approve { background:#16a085; color:#fff; }
+  .rp-btn.return { background:#fdecea; color:#b91c1c; }
+  .rp-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  .rp-verify-panel {
+    width:100%; margin-top:10px; padding:12px; background:#f8fafb;
+    border:1px dashed var(--panel-border); border-radius:8px; display:flex;
+    gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  .rp-verify-panel select { padding:8px 10px; border:1px solid var(--panel-border); border-radius:6px; font-size:12.5px; }
+
+  .rp-empty { text-align:center; padding:50px 20px; color:var(--text3); }
+  .rp-empty .ic { font-size:34px; margin-bottom:10px; }
+  .rp-loading { text-align:center; padding:40px; color:var(--text3); font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
+  <div class="topbar-sep"></div>
+  <div class="topbar-logo">SUBMIT REPORT</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-sub">Status laporan semua modul — submit, verifikasi, approval</div>
+  <div class="topbar-right"><div class="live-dot"></div></div>
+</div>
+
+<div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Workflow Terpusat</div>
+      <div class="page-header-title">Submit <span>Report</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="rp-tabs" id="rpTabs"></div>
+    <div id="rpList"><div class="rp-loading">Memuat daftar laporan...</div></div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   MAPPING MODUL -> FILE HALAMAN & LABEL TAMPILAN
+   modulToUrl/modulToPrintUrl SAMA PERSIS dengan history.html (sudah
+   teruji, direuse apa adanya supaya tidak ada 2 sumber kebenaran yang
+   bisa nyimpang). normalizeModul() ada di shared.js.
+   ═══════════════════════════════════════════════════════════════════ */
+var MODUL_LABEL = {
+  FEGT: 'FEGT 6 Monthly', SO2: 'SO2 Scrubber Inlet', O2: 'O2 Report',
+  OPACITY: 'Opacity Monitor', CEMS_CALIBRATION: 'CEMS Calibration',
+  BELT_E45: 'Belt Conveyor E4-E5', BELT_E23: 'Belt Conveyor E2-E3', BELT_B12: 'Belt Conveyor B1-B2',
+  MAINTENANCE_REPORT: 'Maintenance Report', COAL_SILO_LEVEL: 'Coal Silo Level Transmitter',
+  COAL_FEEDER: 'Coal Feeder Calibration', DCS_HMI: 'DCS HMI/OIS Inspection',
+  FLOWMETER_FGD: 'Flow Meter FGD', 'PH-ANALYZER': 'Analyzer Indicator Transmitter (pH)',
+  PM_HG_ANALYZER: 'PM HG Analyzer', GENERATOR_STATOR_LEAK: 'Generator Stator Leak Monitoring',
+  MARK_VIE: 'Mark VIe Alarm & Module Inspection'
+};
+
+function modulToUrl(modul, id) {
+  var norm = normalizeModul(modul);
+  if (norm === 'FEGT')               return 'fegt.html?id=' + id;
+  if (norm === 'CEMS_CALIBRATION')   return 'cems_calibration.html?id=' + id;
+  if (norm === 'SO2')                return 'so2.html?id=' + id;
+  if (norm === 'OPACITY')            return 'opacity.html?id=' + id;
+  if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id;
+  if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id;
+  if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id;
+  if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id;
+  if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id;
+  if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id;
+  if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id;
+  if (norm === 'COAL_SILO_LEVEL')    return 'coal-silo-level.html?id=' + id;
+  if (norm === 'FLOWMETER_FGD')      return 'flow-meter-fgd.html?id=' + id;
+  if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id;
+  if (norm === 'O2')                 return 'form_o2_report.html?id=' + id;
+  if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
+  if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
+  return null;
+}
+function modulToPrintUrl(modul, id) {
+  var u = modulToUrl(modul, id);
+  return u ? (u + '&print=1') : null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATE & FETCH
+   ═══════════════════════════════════════════════════════════════════ */
+var RP_TABS = [
+  { key: 'ALL', label: 'Semua', statuses: ['SUBMITTED','CHECKED','FINAL_APPROVED','RETURNED'] },
+  { key: 'SUBMITTED', label: 'Submitted', statuses: ['SUBMITTED'] },
+  { key: 'CHECKED', label: 'Reviewed', statuses: ['CHECKED'] },
+  { key: 'FINAL_APPROVED', label: 'Approved', statuses: ['FINAL_APPROVED'] },
+  { key: 'RETURNED', label: 'Dikembalikan', statuses: ['RETURNED'] }
+];
+var rpActiveTab = 'ALL';
+var rpRows = [];
+var rpProfileNames = {}; // account uuid -> display_name/username, buat resolve "Reviewed by"
+var rpCurrentProfile = null;
+
+function rpRenderTabs() {
+  var wrap = document.getElementById('rpTabs');
+  wrap.innerHTML = RP_TABS.map(function(t) {
+    var count = t.key === 'ALL' ? rpRows.length : rpRows.filter(function(r){ return r.status === t.key; }).length;
+    return '<button class="rp-tab' + (rpActiveTab === t.key ? ' active' : '') + '" onclick="rpSetTab(\'' + t.key + '\')">' +
+      t.label + '<span class="cnt">(' + count + ')</span></button>';
+  }).join('');
+}
+function rpSetTab(key) { rpActiveTab = key; rpRenderTabs(); rpRenderList(); }
+
+function rpLoadAll() {
+  var listEl = document.getElementById('rpList');
+  listEl.innerHTML = '<div class="rp-loading">Memuat daftar laporan...</div>';
+  supaFetch('GET', SUPA_TABLE +
+    '?select=id,modul,tanggal,pic,work_order,status,submitted_at,checked_by_name,checked_at,reviewed_by_account,final_approved_at,return_reason' +
+    '&status=in.(SUBMITTED,CHECKED,FINAL_APPROVED,RETURNED)&order=updated_at.desc&limit=300'
+  ).then(function(rows) {
+    rpRows = rows || [];
+    // Kumpulkan account id (reviewed_by_account) yang butuh di-resolve
+    // jadi nama tampilan -- 1 query batch, bukan 1 query per baris.
+    var ids = [];
+    rpRows.forEach(function(r){ if (r.reviewed_by_account && ids.indexOf(r.reviewed_by_account) === -1) ids.push(r.reviewed_by_account); });
+    if (!ids.length) { rpRenderTabs(); rpRenderList(); return; }
+    raGetClient().then(function(client) {
+      return client.from(RA_PROFILE_TABLE).select('id,username,display_name').in('id', ids);
+    }).then(function(res) {
+      (res.data || []).forEach(function(p){ rpProfileNames[p.id] = p.display_name || p.username; });
+      rpRenderTabs(); rpRenderList();
+    }).catch(function(){ rpRenderTabs(); rpRenderList(); });
+  }).catch(function(err) {
+    listEl.innerHTML = '<div class="rp-empty"><div class="ic">⚠️</div>Gagal memuat data.<br>' + (err.message || err) + '</div>';
+  });
+}
+
+function rpFmtDate(iso) {
+  if (!iso) return '-';
+  try { return new Date(iso).toLocaleString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return iso; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RENDER LIST
+   ═══════════════════════════════════════════════════════════════════ */
+function rpRenderList() {
+  var listEl = document.getElementById('rpList');
+  var tab = RP_TABS.filter(function(t){ return t.key === rpActiveTab; })[0];
+  var rows = rpRows.filter(function(r){ return tab.statuses.indexOf(r.status) !== -1; });
+
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="rp-empty"><div class="ic">📭</div>Belum ada laporan di kategori ini.</div>';
+    return;
+  }
+
+  var role = rpCurrentProfile ? rpCurrentProfile.role : null;
+  var canChecker = role === 'checker' || role === 'admin';
+  var canReviewer = role === 'reviewer' || role === 'admin';
+
+  listEl.innerHTML = rows.map(function(r) {
+    var label = MODUL_LABEL[normalizeModul(r.modul)] || r.modul;
+    var previewUrl = modulToPrintUrl(r.modul, r.id);
+    var editUrl = modulToUrl(r.modul, r.id);
+    var routeMissing = !editUrl;
+
+    var metaLines = ['<b>' + (r.tanggal || '-') + '</b> · PIC: ' + (r.pic || '-') + (r.work_order ? ' · WO: ' + r.work_order : '')];
+    if (r.status === 'SUBMITTED') metaLines.push('Disubmit: ' + rpFmtDate(r.submitted_at));
+    if (r.status === 'CHECKED') metaLines.push('Dicek oleh <b>' + (r.checked_by_name || '-') + '</b> · ' + rpFmtDate(r.checked_at));
+    if (r.status === 'FINAL_APPROVED') {
+      var reviewerName = r.reviewed_by_account ? (rpProfileNames[r.reviewed_by_account] || '-') : '-';
+      metaLines.push('Checker: <b>' + (r.checked_by_name || '-') + '</b> · Approved oleh <b>' + reviewerName + '</b> · ' + rpFmtDate(r.final_approved_at));
+    }
+    if (r.status === 'RETURNED') metaLines.push('Terakhir update: ' + rpFmtDate(r.checked_at || r.submitted_at));
+
+    var actionsHtml = '';
+    if (routeMissing) {
+      actionsHtml += '<span style="font-size:11px;color:var(--fail)">⚠️ Modul tidak dikenali, tidak bisa dibuka</span>';
+    } else {
+      actionsHtml += '<button class="rp-btn preview" onclick="window.open(\'' + previewUrl + '\',\'_blank\')">👁 Preview</button>';
+      actionsHtml += '<button class="rp-btn edit" onclick="window.open(\'' + editUrl + '\',\'_blank\')">✎ Edit</button>';
+      if (r.status === 'SUBMITTED' && canChecker) {
+        actionsHtml += '<button class="rp-btn verify" onclick="rpToggleVerifyPanel(\'' + r.id + '\')">🔍 Verifikasi</button>';
+        actionsHtml += '<button class="rp-btn return" onclick="rpReturn(\'' + r.id + '\',\'checker\')">↩ Kembalikan</button>';
+      }
+      if (r.status === 'CHECKED' && canReviewer) {
+        actionsHtml += '<button class="rp-btn approve" onclick="rpApprove(\'' + r.id + '\')">✓ Approve Final</button>';
+        actionsHtml += '<button class="rp-btn return" onclick="rpReturn(\'' + r.id + '\',\'reviewer\')">↩ Kembalikan</button>';
+      }
+    }
+
+    var reasonHtml = (r.status === 'RETURNED' && r.return_reason) ? '<div class="rp-reason">Alasan dikembalikan: ' + r.return_reason + '</div>' : '';
+
+    return '' +
+      '<div class="rp-card" id="rpCard-' + r.id + '">' +
+        '<div class="rp-main">' +
+          '<div class="rp-modul">' + label + ' <span class="rp-status ' + r.status + '">' + r.status + '</span></div>' +
+          '<div class="rp-meta">' + metaLines.join('<br>') + '</div>' +
+          reasonHtml +
+        '</div>' +
+        '<div class="rp-actions">' + actionsHtml + '</div>' +
+        '<div id="rpVerifyPanel-' + r.id + '"></div>' +
+      '</div>';
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   AKSI: VERIFIKASI (Checker), APPROVE (Reviewer/SPV), KEMBALIKAN
+   Cuma UPDATE kolom status/tanda-tangan/timestamp -- TIDAK menyentuh
+   `data`/`tanggal`/`pic`/`work_order` sama sekali (isi laporan dibetulkan
+   terpisah lewat tombol Edit, lihat raResaveInPlace di shared.js).
+   ═══════════════════════════════════════════════════════════════════ */
+function rpToggleVerifyPanel(id) {
+  var panel = document.getElementById('rpVerifyPanel-' + id);
+  if (panel.innerHTML) { panel.innerHTML = ''; return; }
+  var names = Object.keys(RA_SIGNATURE_FILE_MAP);
+  var defaultName = (rpCurrentProfile && names.indexOf(rpCurrentProfile.display_name) !== -1) ? rpCurrentProfile.display_name : names[0];
+  panel.innerHTML =
+    '<div class="rp-verify-panel">' +
+      '<label style="font-size:11.5px;color:var(--text3)">Diverifikasi oleh:</label>' +
+      '<select id="rpCheckerName-' + id + '">' +
+        names.map(function(n){ return '<option value="' + n + '"' + (n === defaultName ? ' selected' : '') + '>' + n + '</option>'; }).join('') +
+      '</select>' +
+      '<button class="rp-btn verify" onclick="rpVerify(\'' + id + '\')">✓ Konfirmasi Verifikasi</button>' +
+    '</div>';
+}
+
+function rpVerify(id) {
+  var select = document.getElementById('rpCheckerName-' + id);
+  var checkedByName = select ? select.value : null;
+  if (!checkedByName) return;
+  raRequireLogin(['checker', 'admin'], '🔍 Login sebagai Checker', function(profile) {
+    raGetSignatureUrl(checkedByName, function(sigErr) {
+      if (sigErr) {
+        if (!confirm('Tanda tangan "' + checkedByName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan verifikasi tanpa gambar tanda tangan?')) return;
+      }
+      raUpdateRecord(id, {
+        status: 'CHECKED',
+        checked_by_account: profile.id,
+        checked_by_name: checkedByName,
+        checked_signature_url: RA_SIGNATURE_FILE_MAP[checkedByName] || null,
+        checked_at: new Date().toISOString()
+      }, function(err) {
+        if (err) { alert('Gagal verifikasi: ' + err); return; }
+        dbShowToast('✓ Terverifikasi — menunggu approval SPV');
+        rpLoadAll();
+      });
+    });
+  });
+}
+
+function rpApprove(id) {
+  raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function(profile) {
+    var spvName = profile.display_name || profile.username;
+    raGetSignatureUrl(spvName, function(sigErr) {
+      if (sigErr) {
+        if (!confirm('Tanda tangan "' + spvName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan approve tanpa gambar tanda tangan?')) return;
+      }
+      raUpdateRecord(id, {
+        status: 'FINAL_APPROVED',
+        reviewed_by_account: profile.id,
+        review_signature_url: RA_SIGNATURE_FILE_MAP[spvName] || null,
+        final_approved_at: new Date().toISOString()
+      }, function(err) {
+        if (err) { alert('Gagal approve: ' + err); return; }
+        dbShowToast('✓ Laporan FINAL APPROVED');
+        rpLoadAll();
+      });
+    });
+  });
+}
+
+function rpReturn(id, fromLevel) {
+  var reason = prompt('Alasan dikembalikan (opsional):') || '';
+  var roles = fromLevel === 'checker' ? ['checker', 'admin'] : ['reviewer', 'admin'];
+  var title = fromLevel === 'checker' ? '🔍 Login sebagai Checker' : '🖊️ Login sebagai Supervisor';
+  raRequireLogin(roles, title, function() {
+    raUpdateRecord(id, { status: 'RETURNED', return_reason: reason }, function(err) {
+      if (err) { alert('Gagal mengembalikan: ' + err); return; }
+      dbShowToast('↩ Laporan dikembalikan untuk revisi');
+      rpLoadAll();
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════════ */
+raGetCurrentProfile(function(profile) {
+  rpCurrentProfile = profile; // dipakai buat nentuin tombol Verifikasi/Approve mana yang muncul
+  rpLoadAll();
+});
+</script>
+</body>
+</html>

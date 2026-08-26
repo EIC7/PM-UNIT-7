@@ -46,19 +46,162 @@
 <body>
 
 <header>
-  <h1>🔑 Device Admin</h1>
-  <p>Kelola device yang boleh akses tanpa password (Trusted Device) — Unit 7 PLTU Paiton</p>
+  <h1>🔑 Device &amp; Akun Admin</h1>
+  <p>Kelola akun login laporan &amp; riwayat device — Unit 7 PLTU Paiton</p>
 </header>
 
 <main>
-  <div class="toolbar">
-    <div class="toolbar-info" id="daCount">Memuat data...</div>
-    <button class="refresh" onclick="daLoadDevices()">↻ Refresh</button>
-  </div>
-  <div id="daList"><div class="loading">Memuat daftar device...</div></div>
+
+  <!-- ═══ KELOLA AKUN LAPORAN (ReportAuthManager — user/checker/reviewer/admin) ═══ -->
+  <section style="margin-bottom:36px">
+    <div class="toolbar">
+      <div class="toolbar-info">👤 Akun Login Laporan (submit / checker / SPV)</div>
+      <button class="refresh" onclick="acLoadAccounts()">↻ Refresh</button>
+    </div>
+    <div id="acAdminOnlyNotice" style="display:none;background:#fff3e0;border:1px solid #fbe6b8;border-radius:10px;padding:14px 16px;color:#8a6d1f;font-size:13px;margin-bottom:14px">
+      ⚠️ Bagian ini cuma bisa dipakai oleh akun dengan role <b>admin</b>. Anda login sebagai role lain — cuma bisa lihat daftar, tidak bisa tambah akun baru.
+    </div>
+    <div id="acList"><div class="loading">Memuat daftar akun...</div></div>
+
+    <div id="acNewAccountCard" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:14px;box-shadow:var(--shadow-sm)">
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:10px">+ Tambah Akun Baru</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px">Username</label>
+          <input id="acNewUsername" type="text" placeholder="mis. checker3" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px">Password</label>
+          <input id="acNewPassword" type="text" placeholder="minimal 6 karakter" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px">Role</label>
+          <select id="acNewRole" style="width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff">
+            <option value="user">user — isi &amp; submit laporan</option>
+            <option value="checker">checker — verifikasi (Tingkat 2)</option>
+            <option value="reviewer">reviewer — approve final / SPV (Tingkat 3)</option>
+            <option value="admin">admin — akses penuh</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-light);display:block;margin-bottom:4px">Nama Tampilan (opsional)</label>
+          <input id="acNewDisplayName" type="text" placeholder="mis. Budi Santoso" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        </div>
+      </div>
+      <div id="acNewError" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:6px"></div>
+      <button id="acNewSubmit" class="btn trust" style="padding:10px 18px" onclick="acCreateAccount()">+ Buat Akun</button>
+    </div>
+  </section>
+
+  <!-- ═══ TRUSTED DEVICE (LEGACY — gerbang device-password sudah dipensiunkan,
+       digantikan login akun di atas. Bagian ini dibiarkan aktif cuma untuk
+       lihat riwayat device, TIDAK MENGUNCI apa pun lagi.) ═══ -->
+  <section>
+    <div class="toolbar">
+      <div class="toolbar-info" id="daCount">Memuat data...</div>
+      <button class="refresh" onclick="daLoadDevices()">↻ Refresh</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-light);margin:-6px 0 12px">📋 Riwayat device (legacy) — gerbang akses sekarang pakai akun login di atas, daftar ini cuma catatan historis.</div>
+    <div id="daList"><div class="loading">Memuat daftar device...</div></div>
+  </section>
+
 </main>
 
 <script>
+
+/* ══════════════════════════════════════════════════════════════
+   KELOLA AKUN LAPORAN (ReportAuthManager -- pm_profiles)
+   Pakai raGetClient()/raGetCurrentProfile() dari shared.js (client
+   Supabase yang SUDAH login lewat gerbang situs), BUKAN supaFetch
+   (anon key) -- supaya RLS pm_profiles & RPC pm_admin_create_account
+   (lihat sql/002_admin_create_account.sql) berlaku dengan benar.
+   ══════════════════════════════════════════════════════════════ */
+var ROLE_LABEL = { user: 'User', checker: 'Checker', reviewer: 'Reviewer/SPV', admin: 'Admin' };
+var ROLE_BADGE_COLOR = { user: '#e0f2fe;color:#0369a1', checker: '#fff3e0;color:#8a6d1f', reviewer: '#e8f5e9;color:#2e7d32', admin: '#fdecea;color:#b91c1c' };
+
+function acLoadAccounts() {
+  var listEl = document.getElementById('acList');
+  listEl.innerHTML = '<div class="loading">Memuat daftar akun...</div>';
+  raGetClient().then(function(client) {
+    return client.from('pm_profiles').select('*').order('created_at', { ascending: true });
+  }).then(function(res) {
+    if (res.error) throw res.error;
+    acRenderAccounts(res.data || []);
+  }).catch(function(err) {
+    listEl.innerHTML = '<div class="empty-state"><div class="ic">⚠️</div>Gagal memuat akun.<br>' + (err.message || err) + '</div>';
+  });
+}
+
+function acRenderAccounts(rows) {
+  var listEl = document.getElementById('acList');
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="ic">📭</div>Belum ada akun terdaftar.</div>';
+    return;
+  }
+  listEl.innerHTML = rows.map(function(r) {
+    var badgeStyle = ROLE_BADGE_COLOR[r.role] || '#f3f4f6;color:#4b5563';
+    return '' +
+      '<div class="device-card">' +
+        '<div class="device-main">' +
+          '<div class="device-name">' + r.username + (r.display_name ? ' <span style="font-weight:400;color:var(--text-mid)">— ' + r.display_name + '</span>' : '') + '</div>' +
+          '<div class="device-meta"><span class="badge" style="background:' + badgeStyle + '">' + (ROLE_LABEL[r.role] || r.role) + '</span></div>' +
+        '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function acCreateAccount() {
+  var errEl = document.getElementById('acNewError');
+  var btn = document.getElementById('acNewSubmit');
+  var username = document.getElementById('acNewUsername').value.trim();
+  var password = document.getElementById('acNewPassword').value;
+  var role = document.getElementById('acNewRole').value;
+  var displayName = document.getElementById('acNewDisplayName').value.trim();
+
+  errEl.textContent = '';
+  if (!username || !password) { errEl.textContent = 'Username & password wajib diisi.'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password minimal 6 karakter.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Membuat akun...';
+
+  raGetClient().then(function(client) {
+    return client.rpc('pm_admin_create_account', {
+      p_username: username, p_password: password, p_role: role, p_display_name: displayName || null
+    });
+  }).then(function(res) {
+    btn.disabled = false;
+    btn.textContent = '+ Buat Akun';
+    if (res.error) {
+      // Pesan dari RAISE EXCEPTION di Postgres (mis. "Akses ditolak...")
+      // nyampe di res.error.message apa adanya.
+      errEl.textContent = res.error.message || 'Gagal membuat akun.';
+      return;
+    }
+    dbShowToast('✓ Akun "' + username + '" berhasil dibuat');
+    document.getElementById('acNewUsername').value = '';
+    document.getElementById('acNewPassword').value = '';
+    document.getElementById('acNewDisplayName').value = '';
+    acLoadAccounts();
+  }).catch(function(err) {
+    btn.disabled = false;
+    btn.textContent = '+ Buat Akun';
+    errEl.textContent = (err && err.message) || String(err);
+  });
+}
+
+// Sembunyikan notice "khusus admin" & form tambah akun kalau yang login
+// BUKAN admin (RPC-nya sendiri juga menolak di server -- ini cuma supaya
+// UI tidak menyesatkan, bukan satu-satunya lapis proteksi).
+raGetCurrentProfile(function(profile) {
+  var isAdmin = profile && profile.role === 'admin';
+  if (!isAdmin) {
+    document.getElementById('acAdminOnlyNotice').style.display = 'block';
+    document.getElementById('acNewAccountCard').style.display = 'none';
+  }
+});
+
+acLoadAccounts();
 
 function daFmtDate(iso) {
   if (!iso) return '—';

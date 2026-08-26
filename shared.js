@@ -2,26 +2,39 @@
    SHARED.JS — Common utilities untuk semua modul PM Unit 7
    ═══════════════════════════════════════════════════════ */
 
-/* ── GATE AKSES (Password + Trusted Device) ──
+/* ── GATE AKSES (Login Akun — ReportAuthManager) ──
    HARUS paling atas file supaya halaman ke-block sebelum konten sempat
-   kelihatan (mencegah "flash" isi halaman sebelum password diverifikasi).
+   kelihatan (mencegah "flash" isi halaman sebelum login diverifikasi).
    document.write() di sini AMAN karena shared.js dipanggil lewat tag script
    dengan atribut src biasa (bukan async/defer) di <head> semua file modul,
-   jadi masih di tengah proses parsing dokumen. ── */
+   jadi masih di tengah proses parsing dokumen.
+
+   Ini MENGGANTIKAN gerbang lama "Trusted Device" (1 password dipakai
+   bersama semua orang, per-device). Sekarang tiap orang login pakai akun
+   sendiri (user1/checker1/spv1/admin1, dst -- lihat pm_profiles) lewat
+   Supabase Auth, session-nya persist otomatis di localStorage oleh
+   supabase-js -- jadi sekali login di halaman manapun, semua halaman lain
+   (origin sama) langsung "lihat" sudah login juga, sampai logout eksplisit.
+   Login logic sesungguhnya ada di raInitSiteGate() (bagian REPORT
+   AUTHENTICATION & WORKFLOW di bawah), dipanggil di akhir file ini.
+
+   Kode gerbang device-password LAMA (pmInitGate & fungsi pendukungnya)
+   sengaja TIDAK dihapus -- cuma tidak dipanggil lagi -- supaya gampang
+   rollback kalau perlu. Tabel trusted_devices/gate_config juga tetap ada
+   di database, cuma tidak dipakai buat mengunci apa pun lagi. ── */
 (function(){
   document.write(
     '<style id="pmGateHideStyle">html,body{margin:0}body>*:not(#pmAuthGate){display:none !important}</style>' +
     '<div id="pmAuthGate" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:linear-gradient(135deg,#0f2b22,#132e2a);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">' +
       '<div style="width:100%;max-width:340px;background:#16211c;border:1px solid #23362c;border-radius:14px;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">' +
-        '<div style="text-align:center;font-size:34px;margin-bottom:6px">&#128274;</div>' +
-        '<div style="text-align:center;color:#e6f2ec;font-size:16px;font-weight:700;margin-bottom:4px">Akses Terbatas</div>' +
-        '<div style="text-align:center;color:#8fae9d;font-size:12.5px;margin-bottom:18px">Masukkan password untuk membuka halaman ini</div>' +
-        '<div id="pmGateNameWrap" style="margin-bottom:10px;display:none">' +
-          '<div style="color:#8fae9d;font-size:11px;margin-bottom:6px">Masukkan nama hanya untuk dikenali admin</div>' +
-          '<input id="pmGateName" type="text" placeholder="Nama kamu (sekali isi saja)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
+        '<div style="text-align:center;font-size:34px;margin-bottom:6px">&#128100;</div>' +
+        '<div style="text-align:center;color:#e6f2ec;font-size:16px;font-weight:700;margin-bottom:4px">Login Diperlukan</div>' +
+        '<div style="text-align:center;color:#8fae9d;font-size:12.5px;margin-bottom:18px">Masukkan username &amp; password akun Anda</div>' +
+        '<div style="margin-bottom:10px">' +
+          '<input id="pmGateUser" type="text" placeholder="Username" autocomplete="username" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
         '</div>' +
         '<div style="margin-bottom:10px">' +
-          '<input id="pmGatePw" type="password" placeholder="Password" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
+          '<input id="pmGatePw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
         '</div>' +
         '<div id="pmGateError" style="color:#ff8686;font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>' +
         '<button id="pmGateSubmit" type="button" style="width:100%;padding:11px;border:none;border-radius:8px;background:#16a085;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Masuk</button>' +
@@ -778,10 +791,11 @@ function pmInitGate() {
   else if (pwInput) pwInput.focus();
 }
 
-// Elemen gate sudah pasti ada di DOM di titik ini (ditulis via document.write
-// sinkron di atas, dalam satu eksekusi <script> yang sama), jadi aman
-// dipanggil langsung tanpa nunggu DOMContentLoaded.
-pmInitGate();
+// pmInitGate() (gerbang device-password LAMA) SENGAJA TIDAK dipanggil lagi
+// di sini -- diganti raInitSiteGate() (gerbang login akun BARU), dipanggil
+// di paling akhir file ini (setelah semua fungsi raXxx & widget sesi
+// didefinisikan). Fungsi pmInitGate & pendukungnya tetap ada di atas,
+// dormant, untuk rollback kalau perlu.
 
 /* ── TOAST NOTIFICATION ── */
 function dbShowToast(msg) {
@@ -1085,6 +1099,45 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   });
 }
 
+/* ── EDIT DI TEMPAT (Checker/Reviewer betulkan isi laporan TANPA ikut
+   pindah status) — dipakai halaman modul saat dibuka lewat tombol "Edit"
+   di Submit Report.html untuk record yang sudah SUBMITTED/CHECKED.
+   BEDA dari dbSave(): lewat client yang SUDAH LOGIN (raGetClient, bukan
+   anon key) supaya RLS "pm_records_checker_edit_in_place" /
+   "pm_records_reviewer_edit_in_place" (lihat sql/003_edit_in_place.sql)
+   berlaku -- dan TIDAK MENGIRIM field status sama sekali (biar tetap
+   di status semula, cuma isi datanya yang berubah). Struktur payload
+   (rec) sama persis seperti dbSave: dari dbCollectData(modul), foto
+   di-strip base64-nya kalau sudah punya driveUrl. */
+function raResaveInPlace(modul, callback) {
+  if (window._dbSaving) return;
+  if (typeof dbCollectData !== 'function') { alert('dbCollectData tidak ditemukan'); return; }
+  var rec = dbCollectData(modul);
+  if (!rec) return;
+  var existingId = window._editingId || null;
+  if (!existingId) { alert('Tidak ada record yang sedang dibuka untuk diedit.'); return; }
+
+  window._dbSaving = true;
+  dbShowSavingOverlay(true, 'Menyimpan perubahan, mohon tunggu...', 'Mengupload banyak gambar membutuhkan waktu yang lama');
+  waitForPendingDriveUploads().then(function() {
+    _pmStripBase64ForSave(rec.data);
+    var patch = {
+      data: rec.data, tanggal: rec.tanggal, pic: rec.pic, work_order: rec.work_order,
+      updated_at: new Date().toISOString()
+    };
+    raUpdateRecord(existingId, patch, function(err, updated) {
+      window._dbSaving = false;
+      dbShowSavingOverlay(false);
+      if (err) {
+        dbShowSavingOverlayError('Gagal menyimpan perubahan.', err);
+        return;
+      }
+      dbShowToast('✓ Perubahan tersimpan (status tidak berubah)');
+      if (callback) callback(updated);
+    });
+  });
+}
+
 /* ── DB LIST (untuk history page) ── */
 function dbList(modul, callback) {
   var path = SUPA_TABLE + '?select=id,modul,tanggal,pic,work_order,created_at,updated_at&order=updated_at.desc&limit=100';
@@ -1104,8 +1157,20 @@ function dbList(modul, callback) {
 function normalizeModul(name) {
   if (!name) return '';
   var n = name.toUpperCase();
+  // HARUS sebelum cek FEGT/LEAK di bawah -- 'GENERATOR_STATOR_LEAK' (nilai
+  // modul asli generator_stator_leak_monitoring.html) juga mengandung
+  // substring 'LEAK', jadi kalau urutannya dibalik bakal ke-normalize
+  // salah jadi 'FEGT' (bug lama: record ini kebuka lewat fegt.html dari
+  // history.html -- file salah, struktur data-nya beda sama sekali).
+  if (n.indexOf('GENERATOR')>=0 && n.indexOf('STATOR')>=0) return 'GENERATOR_STATOR_LEAK';
   if (n.indexOf('FEGT')>=0 || n.indexOf('LEAK')>=0) return 'FEGT';
   if (n.indexOf('SO2')>=0 || n.indexOf('SCRUBBER')>=0) return 'SO2';
+  // HARUS sebelum cek O2 di bawah -- bukan cuma soal urutan proteksi
+  // seperti SO2 (nilai 'Mark VIe...' tidak mengandung 'O2'), tapi
+  // sebelumnya mark_vie_inspection.html sama sekali tidak ke-mapping
+  // (jatuh ke fallback `return n` di paling bawah) -- history.html
+  // jadinya gak tahu mesti buka file mana buat modul ini.
+  if (n.indexOf('MARK VI')>=0) return 'MARK_VIE';
   if (n.indexOf('O2')>=0) return 'O2';
   if (n.indexOf('OPACITY')>=0) return 'OPACITY';
   if (n.indexOf('CEMS')>=0) return 'CEMS_CALIBRATION';
@@ -1802,3 +1867,88 @@ function raGetSignatureUrl(displayName, callback) {
     callback(null, res.data.signedUrl);
   }).catch(function(err) { callback((err && err.message) || String(err), null); });
 }
+
+/* ── GERBANG SITUS (raInitSiteGate) — MENGGANTIKAN pmInitGate lama ──
+   Dipanggil sekali di akhir file ini. Elemen gate (#pmAuthGate, dst) sudah
+   pasti ada di DOM di titik ini (ditulis via document.write sinkron di
+   paling atas file, dalam satu eksekusi <script> yang sama).
+
+   Alur:
+     1. Cek session Supabase Auth yang sedang aktif (raGetCurrentProfile --
+        otomatis persist di localStorage, jadi kalau sudah pernah login di
+        halaman lain, di sini langsung "lolos" tanpa perlu login ulang).
+     2. Kalau belum ada session -> gerbang tetap tampil, tunggu submit
+        username+password (raLogin).
+     3. Begitu berhasil (baik dari session lama atau login baru) -> buka
+        gerbang, render widget kecil "login sebagai ... · Logout" di
+        pojok halaman, dan tetap track presence (dipakai device-admin.html
+        untuk lihat siapa yang online sekarang -- reuse mekanisme lama,
+        cuma nama yang ditampilkan sekarang username akun, bukan nama
+        device manual). ── */
+function raInitSiteGate() {
+  raGetCurrentProfile(function(profile) {
+    if (profile) {
+      pmUnlockGate();
+      raRenderSessionWidget(profile);
+      pmTrackPresence(pmGetDeviceId(), profile.display_name || profile.username);
+      return;
+    }
+
+    var userInput = document.getElementById('pmGateUser');
+    var pwInput = document.getElementById('pmGatePw');
+    var submitBtn = document.getElementById('pmGateSubmit');
+
+    function setSubmitBusy(busy) {
+      if (!submitBtn) return;
+      submitBtn.disabled = busy;
+      submitBtn.textContent = busy ? 'Memeriksa...' : 'Masuk';
+    }
+
+    function submit() {
+      var u = ((userInput && userInput.value) || '').trim();
+      var p = (pwInput && pwInput.value) || '';
+      if (!u || !p) { pmShowGateError('Username & password wajib diisi.'); return; }
+      pmShowGateError('');
+      setSubmitBusy(true);
+      raLogin(u, p, function(err, loggedInProfile) {
+        setSubmitBusy(false);
+        if (err) {
+          pmShowGateError(err);
+          if (pwInput) { pwInput.value = ''; pwInput.focus(); }
+          return;
+        }
+        pmUnlockGate();
+        raRenderSessionWidget(loggedInProfile);
+        pmTrackPresence(pmGetDeviceId(), loggedInProfile.display_name || loggedInProfile.username);
+      });
+    }
+
+    if (submitBtn) submitBtn.addEventListener('click', submit);
+    if (pwInput) pwInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submit(); });
+    if (userInput) userInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submit(); });
+    if (userInput) userInput.focus();
+  });
+}
+
+/* Widget kecil mengambang (pojok kanan bawah, tidak ganggu layout halaman
+   manapun) nampilin siapa yang lagi login + tombol Logout -- muncul di
+   SEMUA halaman yang load shared.js, begitu gerbang terbuka. */
+function raRenderSessionWidget(profile) {
+  var old = document.getElementById('raSessionWidget');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+  var el = document.createElement('div');
+  el.id = 'raSessionWidget';
+  el.className = 'no-print';
+  el.style.cssText = 'position:fixed;bottom:10px;right:10px;z-index:999998;background:rgba(15,25,20,0.92);color:#e6f2ec;font-size:11px;padding:6px 8px 6px 12px;border-radius:20px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;display:flex;align-items:center;gap:8px;box-shadow:0 2px 10px rgba(0,0,0,0.3)';
+  var who = profile.display_name || profile.username;
+  el.innerHTML =
+    '<span style="opacity:0.92;white-space:nowrap">&#128100; ' + who + ' <span style="opacity:0.6">(' + profile.role + ')</span></span>' +
+    '<button id="raSessionLogoutBtn" type="button" style="background:#ef4444;color:#fff;border:none;border-radius:12px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap">Logout</button>';
+  document.body.appendChild(el);
+  document.getElementById('raSessionLogoutBtn').onclick = function() {
+    if (!confirm('Logout dari akun ini? Anda perlu login lagi untuk membuka halaman manapun.')) return;
+    raLogout(function() { location.reload(); });
+  };
+}
+
+raInitSiteGate();
