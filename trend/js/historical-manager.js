@@ -6,18 +6,22 @@
  * Historical Trend TIDAK mengikuti live data secara otomatis — hanya
  * menampilkan data ketika user menekan [LOAD DATA] atau memilih quick range.
  *
- * ADAPTERS: peta modulKey -> parser, dibangun OTOMATIS dari
- * window.DCS_ADAPTERS (tiap file js/adapters/<modul>-adapter.js
- * mendaftarkan dirinya sendiri ke situ). File ini TIDAK PERNAH perlu
- * diedit untuk menambah modul baru — cukup buat adapter + config baru.
+ * ADAPTERS: peta modulKey -> parser. Untuk mengaktifkan modul lain
+ * (opacity, fegt, ph, dst) di masa depan, cukup tambah entry baru di sini
+ * setelah adapter parser-nya dibuat di js/adapters/<modul>-adapter.js
+ * (contoh: js/adapters/so2-adapter.js).
  * ==========================================================================
  */
 (function () {
   'use strict';
 
-  function getAdapters() {
-    return window.DCS_ADAPTERS || {};
-  }
+  var ADAPTERS = {
+    'SO2':          window.SO2Adapter,
+    'CEMS-WEEKLY-1': window.CEMSAdapter['CEMS-WEEKLY-1'],
+    'CEMS-WEEKLY-2': window.CEMSAdapter['CEMS-WEEKLY-2'],
+    'CEMS-MONTHLY':  window.CEMSAdapter['CEMS-MONTHLY'],
+    'CEMS-YEARLY':   window.CEMSAdapter['CEMS-YEARLY']
+  };
 
   var state = {
     startTime: null,
@@ -35,9 +39,19 @@
     return { start: start, end: end };
   }
 
+  /* Peta dari adapterKey ke nama modul di Supabase (pm_records.modul) */
+  var ADAPTER_MODUL_MAP = {
+    'SO2':           'SO2 Scrubber Inlet',
+    'CEMS-WEEKLY-1': 'CEMS Calibration',
+    'CEMS-WEEKLY-2': 'CEMS Calibration',
+    'CEMS-MONTHLY':  'CEMS Calibration',
+    'CEMS-YEARLY':   'CEMS Calibration'
+  };
+
   /**
    * Load data historical untuk SEMUA tag yang punya sourceModul terdaftar
    * di ADAPTERS, dibatasi oleh rentang waktu aktif.
+   * Modul Supabase yang sama (mis. semua CEMS-*) hanya di-fetch SEKALI.
    */
   function loadData(onDone, onError) {
     if (state.loading) { console.warn('[HistoricalManager] Sedang loading, request diabaikan.'); return; }
@@ -56,41 +70,43 @@
       return;
     }
 
-    var ADAPTERS = getAdapters();
+    /* Deduplikasi: kumpulkan unique Supabase modul names */
     var modulKeys = Object.keys(ADAPTERS);
-    var promises = modulKeys.map(function (modulKey) {
-      var adapter = ADAPTERS[modulKey];
-      return window.SupabaseAdapter.fetchByModulAndRange(modulKey, range.start, range.end, adapter && adapter.selectColumns)
-        .then(function (rows) {
-          return { modulKey: modulKey, rows: rows };
-        })
+    var uniqueSupabaseModuls = {};
+    modulKeys.forEach(function (k) {
+      var sm = ADAPTER_MODUL_MAP[k] || k;
+      if (!uniqueSupabaseModuls[sm]) uniqueSupabaseModuls[sm] = [];
+      uniqueSupabaseModuls[sm].push(k);
+    });
+
+    var fetchPromises = Object.keys(uniqueSupabaseModuls).map(function (supabaseModul) {
+      return window.SupabaseAdapter.fetchByModulAndRange(supabaseModul, range.start, range.end)
+        .then(function (rows) { return { supabaseModul: supabaseModul, rows: rows }; })
         .catch(function (err) {
-          console.error('[HistoricalManager] Gagal fetch modul ' + modulKey + ':', err);
-          return { modulKey: modulKey, rows: [], error: err };
+          console.error('[HistoricalManager] Gagal fetch modul ' + supabaseModul + ':', err);
+          return { supabaseModul: supabaseModul, rows: [], error: err };
         });
     });
 
-    Promise.all(promises).then(function (results) {
+    Promise.all(fetchPromises).then(function (results) {
+      /* Buat map supabaseModul -> rows */
+      var rowsMap = {};
+      results.forEach(function (res) { rowsMap[res.supabaseModul] = res.rows; });
+
+      /* Jalankan setiap adapter dengan rows yang sesuai */
       var merged = {};
-      var diag = []; // buat panel diagnostik di UI -- lihat trend_fegt.html
-      results.forEach(function (res) {
-        var adapter = ADAPTERS[res.modulKey];
-        var distinctModul = {};
-        (res.rows || []).forEach(function (r) { distinctModul[r.modul] = (distinctModul[r.modul] || 0) + 1; });
-        diag.push({
-          modulKey: res.modulKey,
-          rowCount: (res.rows || []).length,
-          distinctModul: distinctModul,
-          error: res.error ? String(res.error.message || res.error) : null
-        });
+      modulKeys.forEach(function (adapterKey) {
+        var adapter = ADAPTERS[adapterKey];
         if (!adapter) return;
-        var parsed = adapter.parseRecords(res.rows);
+        var sm = ADAPTER_MODUL_MAP[adapterKey] || adapterKey;
+        var rows = rowsMap[sm] || [];
+        var parsed = adapter.parseRecords(rows);
         Object.assign(merged, parsed);
       });
+
       state.lastLoadedSeries = merged;
-      state.lastLoadDiagnostics = diag;
       state.loading = false;
-      window.dispatchEvent(new CustomEvent('dcsHistoricalLoadEnd', { detail: { series: merged, range: range, diagnostics: diag } }));
+      window.dispatchEvent(new CustomEvent('dcsHistoricalLoadEnd', { detail: { series: merged, range: range } }));
       if (onDone) onDone(merged, range);
     }).catch(function (err) {
       state.loading = false;
@@ -123,6 +139,6 @@
     setQuickRange: setQuickRange,
     setCustomRange: setCustomRange,
     getState: getState,
-    getAdapters: getAdapters
+    ADAPTERS: ADAPTERS
   };
 })();

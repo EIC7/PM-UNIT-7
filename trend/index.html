@@ -6,97 +6,122 @@
 <title>DCS TREND MONITORING SYSTEM</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/dcs-theme.css">
-<style>
-  /* Halaman hub tidak butuh app-shell (itu punya trend_*.html) — layout sendiri, ringan */
-  body { min-height: 100vh; }
-  .hub-shell { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
-  .hub-header { margin-bottom: 28px; }
-  .hub-title { font-size: 18px; font-weight: 700; letter-spacing: 1.5px; color: var(--accent-cyan); }
-  .hub-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.6; }
-  .hub-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-  }
-  .hub-card {
-    display: block;
-    text-decoration: none;
-    background: var(--bg-panel);
-    border: 1px solid var(--border-soft);
-    border-radius: 6px;
-    padding: 18px;
-    transition: border-color .15s, transform .15s;
-  }
-  .hub-card:hover { border-color: var(--accent-cyan); transform: translateY(-2px); }
-  .hub-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .hub-card-title { font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--text-primary); }
-  .hub-card-badge {
-    font-size: 9.5px; letter-spacing: .05em; padding: 2px 8px; border-radius: 10px;
-    border: 1px solid var(--border-strong); color: var(--text-dim);
-  }
-  .hub-card-badge.badge-active { color: var(--accent-green); border-color: var(--accent-green); }
-  .hub-card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
-  .hub-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .hub-card-tag {
-    font-size: 9.5px; padding: 2px 7px; border-radius: 3px;
-    background: var(--bg-panel-alt); color: var(--text-dim); border: 1px solid var(--border-soft);
-  }
-  .hub-card-arrow { color: var(--text-dim); font-size: 14px; }
-  .hub-card:hover .hub-card-arrow { color: var(--accent-cyan); }
-  .hub-footer { margin-top: 32px; font-size: 10.5px; color: var(--text-dim); line-height: 1.6; }
-</style>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 </head>
 <body>
 
-<div class="hub-shell">
-  <div class="hub-header">
-    <div class="hub-title">DCS TREND MONITORING SYSTEM</div>
-    <div class="hub-subtitle">
-      Pilih modul di bawah untuk membuka trend historical-nya. Tiap modul adalah halaman
-      terpisah (data & grafiknya independen), supaya tidak saling bertumpuk.
+<div class="app-shell">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title">DCS TREND MONITORING SYSTEM</div>
+    <div class="topbar-status"><span class="dot"></span>HISTORICAL</div>
+    <div class="topbar-clock" id="clockValue">--</div>
+  </div>
+
+  <!-- MODE BAR -->
+  <div class="modebar">
+    <span class="modebar-label">MODE:</span>
+    <button class="mode-btn" id="modeLiveBtn">LIVE TREND</button>
+    <button class="mode-btn" id="modeHistBtn">HISTORICAL TREND</button>
+  </div>
+
+  <!-- MODULE TAB BAR (1 tab per modul checksheet, lihat js/module-view.js) -->
+  <div class="module-tab-bar" id="moduleTabBar"></div>
+
+  <!-- MODULE KPI CARDS -->
+  <div class="module-kpi-bar" id="moduleKpiBar"></div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- TAG LIST PANEL -->
+    <div class="panel-tags">
+      <div class="panel-header">TAG LIST</div>
+      <div class="tag-search-wrap"><input type="text" id="tagSearch" placeholder="Search tag..."></div>
+      <div class="tag-list-body" id="tagListBody"></div>
     </div>
+
+    <!-- CENTER: CHART + HISTORICAL CONTROLS -->
+    <div class="panel-center">
+
+      <div class="chart-toolbar">
+        <div class="chart-title" id="chartTitle">TREND GRAPH</div>
+        <div class="chart-toolbar-spacer"></div>
+        <span class="loading-indicator" id="loadingIndicator">MEMUAT DATA...</span>
+        <button class="icon-btn" id="autoScaleBtn">AUTO SCALE</button>
+        <button class="icon-btn" id="clearPinsBtn" title="Hapus semua readout box yang di-pin">CLEAR PINS</button>
+        <button class="icon-btn" id="exportCsvBtn">EXPORT CSV</button>
+        <button class="icon-btn" id="exportJsonBtn">EXPORT JSON</button>
+        <button class="icon-btn" id="exportImgBtn">EXPORT IMAGE</button>
+      </div>
+
+      <div class="live-notice" id="liveModeNotice">
+        LIVE TREND belum aktif pada phase ini.<br>
+        Prioritas saat ini: HISTORICAL TREND dengan data nyata dari Supabase (pm_records).<br>
+        Arsitektur Live Trend Engine + Simulator sudah disiapkan di js/live-trend-engine.js dan js/simulator.js.
+      </div>
+
+      <div class="chart-wrap">
+        <div id="trendChart"></div>
+      </div>
+
+      <div class="historical-panel" id="historicalPanel">
+        <div class="range-bar" id="quickRangeBar"></div>
+        <div class="custom-range-row">
+          <span>Start:</span>
+          <input type="date" id="startDate"><input type="time" id="startTime" value="00:00">
+          <span>End:</span>
+          <input type="date" id="endDate"><input type="time" id="endTime" value="23:59">
+        </div>
+        <div>
+          <button class="load-btn" id="loadDataBtn">LOAD DATA</button>
+        </div>
+      </div>
+
+      <!-- PANEL DEVIASI (otomatis dari config/modules/<modul>.config.js) -->
+      <div class="module-deviation-area" id="moduleDeviationArea"></div>
+
+      <!-- TABEL LOG RECORD (otomatis dari config/modules/<modul>.config.js) -->
+      <div class="module-log-wrap" id="moduleLogTable"></div>
+
+    </div>
+
+    <!-- VALUES PANEL: nilai tiap series dari tag yang dicentang, ikut cursor di grafik -->
+    <div class="panel-details">
+      <div class="panel-header">VALUES</div>
+      <div class="cursor-readout" id="cursorReadout"></div>
+      <div id="valuesPanelBody"></div>
+    </div>
+
   </div>
 
-  <div class="hub-grid">
+  <!-- STATUS BAR -->
+  <div class="status-bar" id="statusBar"></div>
 
-    <a class="hub-card" href="trend_so2.html">
-      <div class="hub-card-top">
-        <span class="hub-card-title">SO2 SCRUBBER INLET</span>
-        <span class="hub-card-badge badge-active">AKTIF</span>
-      </div>
-      <div class="hub-card-desc">
-        Perbandingan pembacaan DCS vs Local pada analyzer SO2 Scrubber A &amp; B Inlet,
-        per kejadian kalibrasi. Termasuk panel deviasi &amp; koreksi kalibrasi (Before/After).
-      </div>
-      <div class="hub-card-tags">
-        <span class="hub-card-tag">2 tag</span>
-        <span class="hub-card-tag">so2.html</span>
-      </div>
-    </a>
-
-    <a class="hub-card" href="trend_fegt.html">
-      <div class="hub-card-top">
-        <span class="hub-card-title">FEGT &amp; LEAK DETECTION</span>
-        <span class="hub-card-badge badge-active">AKTIF</span>
-      </div>
-      <div class="hub-card-desc">
-        Trend suhu 21 titik acoustic pyrometry (FEGT) dan 10 titik leak detection (LD),
-        masing-masing sebagai grafik/tab terpisah — dari 1 form pengukuran yang sama.
-      </div>
-      <div class="hub-card-tags">
-        <span class="hub-card-tag">21 + 10 tag</span>
-        <span class="hub-card-tag">fegt.html</span>
-      </div>
-    </a>
-
-  </div>
-
-  <div class="hub-footer">
-    Data historical bersumber read-only dari Supabase <code>pm_records</code> (project sama dengan
-    checksheet PM di repo ini). Lihat <a href="Trend%20Fitur.MD" style="color:var(--accent-cyan)">Trend Fitur.MD</a>
-    untuk dokumentasi arsitektur & cara menambah modul baru.
-  </div>
 </div>
+
+<!-- ===================== CONFIG ===================== -->
+<script src="config/system-config.js"></script>
+<script src="config/default-tags.js"></script>
+<script src="config/modules/so2.config.js"></script>
+<script src="config/modules/cems.config.js"></script>
+
+<!-- ===================== CORE MODULES ================ -->
+<script src="js/storage-manager.js"></script>
+<script src="js/supabase-adapter.js"></script>
+<script src="js/adapters/so2-adapter.js"></script>
+<script src="js/adapters/cems-adapter.js"></script>
+<script src="js/tag-manager.js"></script>
+<script src="js/historical-manager.js"></script>
+<script src="js/chart-manager.js"></script>
+<script src="js/communication-manager.js"></script>
+<script src="js/export-manager.js"></script>
+<script src="js/live-trend-engine.js"></script>
+<script src="js/simulator.js"></script>
+<script src="js/ui-manager.js"></script>
+<script src="js/module-view.js"></script>
+<script src="js/app.js"></script>
 
 </body>
 </html>

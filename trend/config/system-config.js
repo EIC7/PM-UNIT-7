@@ -61,6 +61,9 @@ window.DCS_CONFIG = {
     { key: '7D',  label: '7D',  minutes: 10080 },
     { key: '30D', label: '30D', minutes: 43200 },
     { key: '90D', label: '90D', minutes: 129600 },
+    { key: '1Y',  label: '1Y',  minutes: 525600 },
+    { key: '2Y',  label: '2Y',  minutes: 1051200 },
+    { key: '3Y',  label: '3Y',  minutes: 1576800 },
     { key: 'CUSTOM', label: 'CUSTOM', minutes: null }
   ],
 
