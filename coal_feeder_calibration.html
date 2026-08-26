@@ -166,6 +166,14 @@ function cfToggleSection(type) {
     lbl.style.borderColor = on ? '#1d74c7' : '';
   }
 }
+function cfUpdateToggleLabel(type, on) {
+  var lblMap = {feeder:'lbl-feeder', demand:'lbl-demand', '4000hr':'lbl-4000hr'};
+  var lbl = document.getElementById(lblMap[type]);
+  if (!lbl) return;
+  lbl.style.background  = on ? '#1d74c7' : '#fff';
+  lbl.style.color       = on ? '#fff'    : '';
+  lbl.style.borderColor = on ? '#1d74c7' : '';
+}
 </script>
 </head>
 <body>
@@ -1808,6 +1816,16 @@ function cfToggleSection(type) {
     lbl.style.borderColor  = on ? '#1d74c7' : 'var(--border)';
   }
 }
+/* Helper: update tampilan label toggle sesuai state on/off,
+   tanpa flip checked (dipakai saat restore dari riwayat/draft). */
+function cfUpdateToggleLabel(type, on) {
+  var lblMap = {feeder:'lbl-feeder', demand:'lbl-demand', '4000hr':'lbl-4000hr'};
+  var lbl = document.getElementById(lblMap[type]);
+  if (!lbl) return;
+  lbl.style.background  = on ? '#1d74c7' : '#fff';
+  lbl.style.color       = on ? '#fff'    : 'var(--steel)';
+  lbl.style.borderColor = on ? '#1d74c7' : 'var(--border)';
+}
 function toggleSections() {}     // stub (tidak dipakai lagi)
 function updatePrintLabels() {}  // stub
 
@@ -3177,16 +3195,21 @@ function applyRecordToForm(rec, editingId) {
     });
   }
   if (data.print_feeder !== undefined) {
-    var fc = document.getElementById('chk-feeder'); if(fc) fc.checked = data.print_feeder;
+    var fc = document.getElementById('chk-feeder'); if(fc) fc.checked = !!data.print_feeder;
+    var fsec = document.getElementById('section-feeder'); if(fsec) fsec.style.display = data.print_feeder ? '' : 'none';
+    cfUpdateToggleLabel('feeder', !!data.print_feeder);
   }
   if (data.print_demand !== undefined) {
-    var dc = document.getElementById('chk-demand'); if(dc) dc.checked = data.print_demand;
+    var dc = document.getElementById('chk-demand'); if(dc) dc.checked = !!data.print_demand;
+    var dsec = document.getElementById('section-demand'); if(dsec) dsec.style.display = data.print_demand ? '' : 'none';
+    cfUpdateToggleLabel('demand', !!data.print_demand);
   }
   if (data.print_4000hr !== undefined) {
-    var hc = document.getElementById('chk-4000hr'); if(hc) hc.checked = data.print_4000hr;
+    var hc = document.getElementById('chk-4000hr'); if(hc) hc.checked = !!data.print_4000hr;
+    var hsec = document.getElementById('section-4000hr'); if(hsec) hsec.style.display = data.print_4000hr ? '' : 'none';
+    cfUpdateToggleLabel('4000hr', !!data.print_4000hr);
   }
   if (data.cf4k) { if (typeof render4kAssets === 'function') render4kAssets(); cf4kApplyData(data.cf4k); }
-  if (typeof toggleSections === 'function') toggleSections();
 }
 
 (function(){
