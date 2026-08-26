@@ -38,7 +38,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#00d9ff' }
+      { key: 'Temp', label: 'Temp', color: '#a51d1d' }
     ]
   },
   {
@@ -58,7 +58,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#ffb400' }
+      { key: 'Temp', label: 'Temp', color: '#a5441d' }
     ]
   },
   {
@@ -78,7 +78,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#39ff88' }
+      { key: 'Temp', label: 'Temp', color: '#97621b' }
     ]
   },
   {
@@ -98,7 +98,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#ff5e7a' }
+      { key: 'Temp', label: 'Temp', color: '#887818' }
     ]
   },
   {
@@ -118,7 +118,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#8a7bff' }
+      { key: 'Temp', label: 'Temp', color: '#6a7815' }
     ]
   },
   {
@@ -138,7 +138,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#ff9f40' }
+      { key: 'Temp', label: 'Temp', color: '#436812' }
     ]
   },
   {
@@ -158,7 +158,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#4dd0e1' }
+      { key: 'Temp', label: 'Temp', color: '#265d10' }
     ]
   },
   {
@@ -178,7 +178,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#c9a8ff' }
+      { key: 'Temp', label: 'Temp', color: '#136d13' }
     ]
   },
   {
@@ -198,7 +198,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#a3e635' }
+      { key: 'Temp', label: 'Temp', color: '#167d33' }
     ]
   },
   {
@@ -218,7 +218,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#f472b6' }
+      { key: 'Temp', label: 'Temp', color: '#198d5b' }
     ]
   },
   {
@@ -238,7 +238,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#38bdf8' }
+      { key: 'Temp', label: 'Temp', color: '#1c9d8a' }
     ]
   },
   {
@@ -258,7 +258,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#facc15' }
+      { key: 'Temp', label: 'Temp', color: '#1d91a5' }
     ]
   },
   {
@@ -278,7 +278,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#34d399' }
+      { key: 'Temp', label: 'Temp', color: '#1d6ba5' }
     ]
   },
   {
@@ -298,7 +298,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#fb7185' }
+      { key: 'Temp', label: 'Temp', color: '#1d44a5' }
     ]
   },
   {
@@ -318,7 +318,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#a78bfa' }
+      { key: 'Temp', label: 'Temp', color: '#1d1da5' }
     ]
   },
   {
@@ -338,7 +338,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#fdba74' }
+      { key: 'Temp', label: 'Temp', color: '#441da5' }
     ]
   },
   {
@@ -358,7 +358,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#22d3ee' }
+      { key: 'Temp', label: 'Temp', color: '#6b1da5' }
     ]
   },
   {
@@ -378,7 +378,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#e879f9' }
+      { key: 'Temp', label: 'Temp', color: '#911da5' }
     ]
   },
   {
@@ -398,7 +398,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#84cc16' }
+      { key: 'Temp', label: 'Temp', color: '#a51d91' }
     ]
   },
   {
@@ -418,7 +418,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#f87171' }
+      { key: 'Temp', label: 'Temp', color: '#a51d6b' }
     ]
   },
   {
@@ -438,7 +438,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#60a5fa' }
+      { key: 'Temp', label: 'Temp', color: '#a51d44' }
     ]
   },
   {
@@ -458,7 +458,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#a3e635' }
+      { key: 'Temp', label: 'Temp', color: '#923f1c' }
     ]
   },
   {
@@ -478,7 +478,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#f472b6' }
+      { key: 'Temp', label: 'Temp', color: '#766c16' }
     ]
   },
   {
@@ -498,7 +498,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#38bdf8' }
+      { key: 'Temp', label: 'Temp', color: '#355811' }
     ]
   },
   {
@@ -518,7 +518,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#facc15' }
+      { key: 'Temp', label: 'Temp', color: '#13651c' }
     ]
   },
   {
@@ -538,7 +538,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#34d399' }
+      { key: 'Temp', label: 'Temp', color: '#198363' }
     ]
   },
   {
@@ -558,7 +558,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#fb7185' }
+      { key: 'Temp', label: 'Temp', color: '#1c6e92' }
     ]
   },
   {
@@ -578,7 +578,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#a78bfa' }
+      { key: 'Temp', label: 'Temp', color: '#1c2892' }
     ]
   },
   {
@@ -598,7 +598,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#fdba74' }
+      { key: 'Temp', label: 'Temp', color: '#571c92' }
     ]
   },
   {
@@ -618,7 +618,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#22d3ee' }
+      { key: 'Temp', label: 'Temp', color: '#921c86' }
     ]
   },
   {
@@ -638,7 +638,7 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'FEGT & Leak Detection',
     updateInterval: null,
     series: [
-      { key: 'Temp', label: 'Temp', color: '#e879f9' }
+      { key: 'Temp', label: 'Temp', color: '#921c3f' }
     ]
   },
 ];

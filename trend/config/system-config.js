@@ -25,7 +25,10 @@ window.DCS_CONFIG = {
     // Kolom yang diminta saat fetch daftar record historical. "data" WAJIB
     // di-select karena nilai kalibrasi (aDCS/aLocal/dst) ada di dalamnya.
     SELECT_COLUMNS: 'id,modul,tanggal,pic,work_order,unit,data,created_at,updated_at',
-    FETCH_LIMIT: 500
+    // Dinaikkan dari 500 -> 3000: sekarang rentang waktu bisa sampai 3 Tahun
+    // (lihat QUICK_RANGES), jadi butuh headroom lebih supaya modul dengan
+    // banyak record tidak diam-diam kepotong di limit lama.
+    FETCH_LIMIT: 3000
   },
 
   /* ------------------------------------------------------------------
@@ -61,6 +64,9 @@ window.DCS_CONFIG = {
     { key: '7D',  label: '7D',  minutes: 10080 },
     { key: '30D', label: '30D', minutes: 43200 },
     { key: '90D', label: '90D', minutes: 129600 },
+    { key: '1Y',  label: '1 TAHUN', minutes: 525600 },
+    { key: '2Y',  label: '2 TAHUN', minutes: 1051200 },
+    { key: '3Y',  label: '3 TAHUN', minutes: 1576800 },
     { key: 'CUSTOM', label: 'CUSTOM', minutes: null }
   ],
 

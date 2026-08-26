@@ -363,3 +363,30 @@ Sebelumnya `ADAPTERS` di `historical-manager.js` di-hardcode isinya (`{'SO2': wi
 2. **Pindah tab FEGT→LD mematikan default LD secara permanen** — konsekuensi dari fix #1 yang kurang lengkap: logic "matikan tag di luar modul aktif" ternyata juga mematikan default LD SEBELUM user sempat lihat tab LD (karena FEGT dibuka duluan sebagai tab pertama). **Fix:** `module-view.js` sekarang **mengingat pilihan tag terakhir per-modul** (`moduleVisibleMemory`, in-memory) — tiap keluar dari tab, state tag modul itu disimpan; tiap masuk tab, dipulihkan dari memori itu (atau dari `tag._defaultVisible` kalau modul belum pernah dikunjungi). `tag._defaultVisible` sendiri baru ditambahkan di `tag-manager.js` (snapshot visibility asli dari config, terpisah dari `visible` yang berubah-ubah). Sudah diuji lewat 5 skenario (headless browser): default awal per-tab benar, pindah tab bolak-balik tidak saling menimpa, dan pilihan manual user tetap diingat setelah pindah-pindah tab.
 
 File terdampak: `js/tag-manager.js`, `js/module-view.js`, `js/ui-manager.js` (`setModuleActiveTags` dihapus — logicnya pindah ke `module-view.js` yang butuh akses ke memori per-modul), `js/historical-manager.js`, `js/adapters/so2-adapter.js` (tambah self-registrasi), `js/adapters/fegt-adapter.js` (baru), `config/default-tags-fegt.js` (baru), `config/modules/fegt.config.js` + `ld.config.js` (baru), `index.html` (jadi hub), `trend_so2.html` + `trend_fegt.html` (baru).
+
+---
+
+## 16. Sesi ini — Tema terang (putih), palet warna garis, rentang 1/2/3 Tahun
+
+### Tema putih di semua halaman
+
+Ganti total dari dark-room SCADA ke tema terang. Karena **seluruh** `css/dcs-theme.css` sudah dibangun di atas CSS variable (`--bg-main`, `--text-primary`, `--accent-cyan`, dst — tidak ada warna hardcode di file itu), cukup ganti nilai variable di `:root` untuk membalik 3 halaman (`index.html`, `trend_so2.html`, `trend_fegt.html`) sekaligus tanpa menyentuh komponen satu-satu.
+
+**Yang TIDAK ikut otomatis (dan harus diedit manual):** ECharts (`chart-manager.js`) menggambar ke `<canvas>`, jadi warnanya di-hardcode di JS, bukan baca CSS variable. Semua warna chart (axis, grid, tooltip, pin box, dataZoom slider, background export PNG) diganti manual ke padanan versi terang — daftar lengkap pemetaan warna ada di commit ini. Tooltip & pin-box juga ditambah `box-shadow` supaya tetap kelihatan menonjol di atas background putih (sebelumnya cukup mengandalkan warna gelap vs terang).
+
+### Palet warna garis tag (per-series `color`)
+
+Warna neon lama (`#00d9ff`, `#39ff88`, dst — dipilih buat kontras di background GELAP) nyaris tidak kelihatan di background putih. Diganti:
+- **SO2** (2 tag × 4 series): warna dipilih manual, cukup sedikit.
+- **FEGT (21 tag) + LD (10 tag)**: digenerate via HSL dengan **koreksi lightness per-hue** (pita kuning-hijau butuh lightness lebih rendah dari biru/merah/ungu supaya kontrasnya setara — mata manusia lebih sensitif ke hijau/kuning). Diverifikasi tiap warna via **kalkulasi WCAG contrast ratio** terhadap putih (`(L+0.05)/(0.05)` formula standar) — semua di atas rasio 3.3:1.
+
+### Rentang waktu 1/2/3 Tahun
+
+Ditambahkan ke `QUICK_RANGES` (`system-config.js`): `1Y` (525600 menit), `2Y` (1051200 menit), `3Y` (1576800 menit). `FETCH_LIMIT` Supabase dinaikkan dari 500 → 3000 baris sebagai headroom (query per-modul sudah server-side filtered sejak §8.2, jadi 3000 baris itu per-modul, bukan gabungan seluruh tabel — cukup luas untuk beberapa tahun data kalibrasi event-based).
+
+### Perbaikan kecil lain
+
+- Panel diagnostik LOAD DATA (`trend_fegt.html`, ditambahkan sesi sebelumnya buat debug "data tidak muncul") warnanya masih hardcode gelap (`#1a1a2e`) — ketinggalan saat migrasi tema. Disamakan ke tema terang.
+- Halaman hub (`index.html`) dirombak visual: pola grid halus ala kertas gambar teknik di background, kartu dengan aksen warna kiri per-modul (kode-warna cepat, akan konsisten dengan warna garis chart modul itu), dan 1 slot kartu "belum aktif" (dashed border) buat modul berikutnya — supaya hub ini terasa sebagai daftar yang akan terus tumbuh, bukan cuma 2 kartu tetap selamanya.
+
+File terdampak: `css/dcs-theme.css` (rewrite total, tetap struktur variable sama), `js/chart-manager.js` (13 pemetaan warna hardcode), `config/default-tags-so2.js`, `config/default-tags-fegt.js` (regenerasi palet), `config/system-config.js` (QUICK_RANGES + FETCH_LIMIT), `index.html` (redesign), `trend_fegt.html` (fix warna panel diagnostik).

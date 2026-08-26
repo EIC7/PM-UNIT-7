@@ -8,61 +8,124 @@
 <link rel="stylesheet" href="css/dcs-theme.css">
 <style>
   /* Halaman hub tidak butuh app-shell (itu punya trend_*.html) — layout sendiri, ringan */
-  body { min-height: 100vh; }
-  .hub-shell { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
-  .hub-header { margin-bottom: 28px; }
-  .hub-title { font-size: 18px; font-weight: 700; letter-spacing: 1.5px; color: var(--accent-cyan); }
-  .hub-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.6; }
+  html, body { min-height: 100vh; }
+  body {
+    /* Pola grid halus ala kertas gambar teknik — nuansa "engineering", bukan dekorasi kosong */
+    background-image:
+      linear-gradient(var(--border-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border-soft) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: -1px -1px;
+  }
+
+  .hub-shell { max-width: 1080px; margin: 0 auto; padding: 48px 20px 60px; }
+
+  .hub-eyebrow {
+    font-size: 10.5px; letter-spacing: .18em; color: var(--text-dim);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .hub-header { margin-bottom: 36px; }
+  .hub-title-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .hub-title { font-size: 22px; font-weight: 700; letter-spacing: .5px; color: var(--text-primary); }
+  .hub-title-accent { color: var(--accent-cyan); }
+  .hub-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 10px; line-height: 1.7; max-width: 640px; }
+
+  .hub-section-label {
+    font-size: 10.5px; letter-spacing: .15em; color: var(--text-dim); text-transform: uppercase;
+    margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-soft);
+  }
+
   .hub-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
+    margin-bottom: 40px;
   }
+
   .hub-card {
     display: block;
+    position: relative;
     text-decoration: none;
-    background: var(--bg-panel);
+    background: var(--bg-main);
     border: 1px solid var(--border-soft);
-    border-radius: 6px;
-    padding: 18px;
-    transition: border-color .15s, transform .15s;
+    border-radius: 3px;
+    padding: 18px 18px 18px 22px;
+    box-shadow: var(--shadow-card);
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+    overflow: hidden;
   }
-  .hub-card:hover { border-color: var(--accent-cyan); transform: translateY(-2px); }
-  .hub-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .hub-card-title { font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--text-primary); }
+  /* Aksen warna kiri per modul — bukan hiasan, tapi kode-warna cepat: tiap
+     modul akan selalu pakai warna yang sama di sini & di garis chart-nya. */
+  .hub-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--card-accent, var(--accent-cyan));
+  }
+  .hub-card:hover {
+    border-color: var(--card-accent, var(--accent-cyan));
+    box-shadow: 0 4px 16px rgba(22,33,43,0.09);
+    transform: translateY(-2px);
+  }
+
+  .hub-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .hub-card-title { font-size: 13.5px; font-weight: 700; letter-spacing: .03em; color: var(--text-primary); line-height: 1.4; }
   .hub-card-badge {
-    font-size: 9.5px; letter-spacing: .05em; padding: 2px 8px; border-radius: 10px;
-    border: 1px solid var(--border-strong); color: var(--text-dim);
+    flex-shrink: 0;
+    font-size: 9px; letter-spacing: .06em; padding: 3px 8px; border-radius: 10px;
+    border: 1px solid var(--accent-green); color: var(--accent-green); font-weight: 600;
+    white-space: nowrap;
   }
-  .hub-card-badge.badge-active { color: var(--accent-green); border-color: var(--accent-green); }
-  .hub-card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+  .hub-card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 14px; }
   .hub-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
   .hub-card-tag {
     font-size: 9.5px; padding: 2px 7px; border-radius: 3px;
     background: var(--bg-panel-alt); color: var(--text-dim); border: 1px solid var(--border-soft);
   }
-  .hub-card-arrow { color: var(--text-dim); font-size: 14px; }
-  .hub-card:hover .hub-card-arrow { color: var(--accent-cyan); }
-  .hub-footer { margin-top: 32px; font-size: 10.5px; color: var(--text-dim); line-height: 1.6; }
+
+  /* Kartu "belum aktif" — slot kosong buat modul berikutnya, biar hub ini
+     kelihatan sebagai daftar yang akan terus tumbuh, bukan cuma 2 kartu tetap. */
+  .hub-card-empty {
+    display: flex; align-items: center; justify-content: center;
+    border: 1px dashed var(--border-strong); border-radius: 3px;
+    padding: 18px; min-height: 120px;
+    color: var(--text-dim); font-size: 11px; text-align: center; line-height: 1.6;
+  }
+
+  .hub-footer {
+    font-size: 10.5px; color: var(--text-dim); line-height: 1.7;
+    padding-top: 20px; border-top: 1px solid var(--border-soft);
+  }
+  .hub-footer a { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dotted var(--accent-cyan); }
+  .hub-footer a:hover { border-bottom-style: solid; }
+
+  @media (max-width: 480px) {
+    .hub-shell { padding: 32px 16px 40px; }
+    .hub-title { font-size: 18px; }
+  }
 </style>
 </head>
 <body>
 
 <div class="hub-shell">
+
   <div class="hub-header">
-    <div class="hub-title">DCS TREND MONITORING SYSTEM</div>
+    <div class="hub-eyebrow">PM-UNIT-7 · POWER PLANT UNIT 7</div>
+    <div class="hub-title-row">
+      <span class="hub-title">DCS <span class="hub-title-accent">TREND</span> MONITORING SYSTEM</span>
+    </div>
     <div class="hub-subtitle">
       Pilih modul di bawah untuk membuka trend historical-nya. Tiap modul adalah halaman
-      terpisah (data & grafiknya independen), supaya tidak saling bertumpuk.
+      terpisah dengan data &amp; grafik sendiri-sendiri, supaya tidak saling bertumpuk saat
+      daftar modul terus bertambah.
     </div>
   </div>
 
+  <div class="hub-section-label">Modul Tersedia</div>
   <div class="hub-grid">
 
-    <a class="hub-card" href="trend_so2.html">
+    <a class="hub-card" href="trend_so2.html" style="--card-accent:#1f6fb2">
       <div class="hub-card-top">
         <span class="hub-card-title">SO2 SCRUBBER INLET</span>
-        <span class="hub-card-badge badge-active">AKTIF</span>
+        <span class="hub-card-badge">AKTIF</span>
       </div>
       <div class="hub-card-desc">
         Perbandingan pembacaan DCS vs Local pada analyzer SO2 Scrubber A &amp; B Inlet,
@@ -74,10 +137,10 @@
       </div>
     </a>
 
-    <a class="hub-card" href="trend_fegt.html">
+    <a class="hub-card" href="trend_fegt.html" style="--card-accent:#c8342f">
       <div class="hub-card-top">
         <span class="hub-card-title">FEGT &amp; LEAK DETECTION</span>
-        <span class="hub-card-badge badge-active">AKTIF</span>
+        <span class="hub-card-badge">AKTIF</span>
       </div>
       <div class="hub-card-desc">
         Trend suhu 21 titik acoustic pyrometry (FEGT) dan 10 titik leak detection (LD),
@@ -89,12 +152,16 @@
       </div>
     </a>
 
+    <div class="hub-card-empty">
+      Modul berikutnya menyusul di sini —<br>tinggal tambah 1 kartu tiap modul baru aktif.
+    </div>
+
   </div>
 
   <div class="hub-footer">
     Data historical bersumber read-only dari Supabase <code>pm_records</code> (project sama dengan
-    checksheet PM di repo ini). Lihat <a href="Trend%20Fitur.MD" style="color:var(--accent-cyan)">Trend Fitur.MD</a>
-    untuk dokumentasi arsitektur & cara menambah modul baru.
+    checksheet PM di repo ini). Lihat <a href="Trend%20Fitur.MD">Trend Fitur.MD</a>
+    untuk dokumentasi arsitektur &amp; cara menambah modul baru.
   </div>
 </div>
 

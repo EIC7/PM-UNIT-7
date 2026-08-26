@@ -133,7 +133,7 @@
       elements.push({
         type: 'line', silent: true, z: 50,
         shape: { x1: xPixel, y1: gridTop, x2: xPixel, y2: gridBottomPx },
-        style: { stroke: '#ffb400', lineWidth: 1, lineDash: [4, 3] }
+        style: { stroke: '#b5690a', lineWidth: 1, lineDash: [4, 3] }
       });
 
       // kumpulkan nilai tiap series pada waktu ini (nearest, biasanya persis sama)
@@ -152,9 +152,9 @@
 
       var children = [
         { type: 'rect', shape: { x: 0, y: 0, width: boxW, height: boxH, r: 3 },
-          style: { fill: 'rgba(10,16,20,0.95)', stroke: '#ffb400', lineWidth: 1 } },
-        { type: 'text', style: { text: timeFormatterFull(time), x: 8, y: 6, fontSize: 10.5, fill: '#c7d3dc', fontFamily: "'Consolas','Courier New',monospace" } },
-        { type: 'text', style: { text: '\u00D7', x: boxW - 16, y: 4, fontSize: 13, fill: '#8b9aa5', fontFamily: 'sans-serif' },
+          style: { fill: 'rgba(255,255,255,0.97)', stroke: '#b5690a', lineWidth: 1, shadowColor: 'rgba(22,33,43,0.18)', shadowBlur: 8, shadowOffsetY: 2 } },
+        { type: 'text', style: { text: timeFormatterFull(time), x: 8, y: 6, fontSize: 10.5, fill: '#16212b', fontFamily: "'Consolas','Courier New',monospace" } },
+        { type: 'text', style: { text: '\u00D7', x: boxW - 16, y: 4, fontSize: 13, fill: '#56646f', fontFamily: 'sans-serif' },
           cursor: 'pointer', onclick: (function (t) { return function () { removePin(t); }; })(time) }
       ];
       rows.forEach(function (r, i) {
@@ -162,7 +162,7 @@
         children.push({ type: 'circle', shape: { cx: 12, cy: rowY + 5, r: 4 }, style: { fill: r.color } });
         children.push({ type: 'text', style: {
           text: r.value.toFixed(2) + ' ' + (r.unit || ''), x: 22, y: rowY, fontSize: 11,
-          fill: '#e2ecf2', fontFamily: "'Consolas','Courier New',monospace"
+          fill: '#16212b', fontFamily: "'Consolas','Courier New',monospace"
         } });
       });
 
@@ -324,24 +324,25 @@
 
     var option = {
       backgroundColor: 'transparent',
-      textStyle: { color: '#c7d3dc', fontFamily: "'Consolas','Courier New',monospace" },
+      textStyle: { color: '#16212b', fontFamily: "'Consolas','Courier New',monospace" },
       grid: GRID,
       title: {
         text: !tags.length ? 'CENTANG MINIMAL 1 TAG DI PANEL KIRI' : (!hasData ? 'TIDAK ADA DATA PADA RENTANG WAKTU INI' : ''),
         left: 'center', top: 'middle',
-        textStyle: { color: '#5a6b76', fontSize: 13 }
+        textStyle: { color: '#8a97a1', fontSize: 13 }
       },
       legend: {
-        top: 8, textStyle: { color: '#c7d3dc', fontSize: 10.5 }, type: 'scroll',
+        top: 8, textStyle: { color: '#16212b', fontSize: 10.5 }, type: 'scroll',
         data: echartSeries.map(function (s) { return s.name; }),
         selected: legendSelected
       },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(10,16,20,0.95)',
-        borderColor: '#2a3b44',
-        textStyle: { color: '#e2ecf2', fontSize: 11 },
-        axisPointer: { type: 'cross', label: { backgroundColor: '#1c2830' }, snap: true },
+        backgroundColor: 'rgba(255,255,255,0.97)',
+        borderColor: '#c7d0d9',
+        textStyle: { color: '#16212b', fontSize: 11 },
+        extraCssText: 'box-shadow: 0 2px 10px rgba(22,33,43,0.12);',
+        axisPointer: { type: 'cross', label: { backgroundColor: '#e2e7ec' }, snap: true },
         formatter: function (params) {
           if (!params.length) return '';
           var visible = params.filter(function (p) { return p.value && p.value[1] !== null; });
@@ -355,28 +356,28 @@
       },
       xAxis: {
         type: 'time',
-        axisLine: { lineStyle: { color: '#2a3b44' } },
-        axisLabel: { color: '#8b9aa5', formatter: dateAxisFormatter, rotate: 35, hideOverlap: true, margin: 12, fontSize: 10.5 },
-        splitLine: { show: true, lineStyle: { color: '#1c2830' } }
+        axisLine: { lineStyle: { color: '#c7d0d9' } },
+        axisLabel: { color: '#56646f', formatter: dateAxisFormatter, rotate: 35, hideOverlap: true, margin: 12, fontSize: 10.5 },
+        splitLine: { show: true, lineStyle: { color: '#e2e7ec' } }
       },
       yAxis: {
         type: 'value',
         name: sameUnit && yUnit ? yUnit.toUpperCase() : 'VALUE',
         nameLocation: 'middle',
         nameGap: 42,
-        nameTextStyle: { color: '#8b9aa5' },
+        nameTextStyle: { color: '#56646f' },
         min: yMin,
         max: yMax,
-        axisLine: { lineStyle: { color: '#2a3b44' } },
-        axisLabel: { color: '#8b9aa5', formatter: '{value}' },
-        splitLine: { show: true, lineStyle: { color: '#1c2830' } }
+        axisLine: { lineStyle: { color: '#c7d0d9' } },
+        axisLabel: { color: '#56646f', formatter: '{value}' },
+        splitLine: { show: true, lineStyle: { color: '#e2e7ec' } }
       },
       dataZoom: [
         // zoomOnMouseWheel:'ctrl' -> scroll biasa di atas chart TIDAK di-capture buat zoom
         // (biar bisa scroll halaman ke bawah lihat KPI/deviasi/log table); Ctrl+scroll baru zoom.
         // Slider di bawah chart & pinch-zoom trackpad/touch tetap jalan normal tanpa Ctrl.
         { type: 'inside', throttle: 50, zoomOnMouseWheel: 'ctrl', moveOnMouseWheel: false },
-        { type: 'slider', height: 14, bottom: 6, borderColor: '#2a3b44', fillerColor: 'rgba(0,217,255,0.1)', handleStyle: { color: '#00d9ff' }, textStyle: { color: '#8b9aa5' } }
+        { type: 'slider', height: 14, bottom: 6, borderColor: '#c7d0d9', fillerColor: 'rgba(8,118,163,0.12)', handleStyle: { color: '#0876a3' }, textStyle: { color: '#56646f' } }
       ],
       graphic: { elements: [] },
       series: echartSeries
@@ -395,7 +396,7 @@
 
   function exportImage(filename) {
     if (!chart) return;
-    var url = chart.getDataURL({ type: 'png', backgroundColor: '#0a1014' });
+    var url = chart.getDataURL({ type: 'png', backgroundColor: '#ffffff' });
     var a = document.createElement('a');
     a.href = url;
     a.download = (filename || 'trend') + '.png';
@@ -423,27 +424,28 @@
     var tol = pairCfg.toleranceValue;
     var markArea = tol != null ? {
       silent: true,
-      itemStyle: { color: 'rgba(57,255,136,0.08)' },
+      itemStyle: { color: 'rgba(23,135,74,0.10)' },
       data: [[{ yAxis: -tol }, { yAxis: tol }]]
     } : undefined;
 
     var data = points.map(function (p) {
       var out = { value: [p.time, p.value] };
       if (tol != null && Math.abs(p.value) > tol) {
-        out.itemStyle = { color: '#ff5e7a' }; // tandai titik yang keluar toleransi
+        out.itemStyle = { color: '#c62839' }; // tandai titik yang keluar toleransi
       }
       return out;
     });
 
     inst.setOption({
       backgroundColor: 'transparent',
-      textStyle: { color: '#c7d3dc', fontFamily: "'Consolas','Courier New',monospace" },
+      textStyle: { color: '#16212b', fontFamily: "'Consolas','Courier New',monospace" },
       grid: { left: 44, right: 14, top: 10, bottom: 22 },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(10,16,20,0.95)',
-        borderColor: '#2a3b44',
-        textStyle: { color: '#e2ecf2', fontSize: 11 },
+        backgroundColor: 'rgba(255,255,255,0.97)',
+        borderColor: '#c7d0d9',
+        textStyle: { color: '#16212b', fontSize: 11 },
+        extraCssText: 'box-shadow: 0 2px 10px rgba(22,33,43,0.12);',
         formatter: function (params) {
           if (!params.length) return '';
           var p = params[0];
@@ -452,8 +454,8 @@
       },
       xAxis: {
         type: 'time',
-        axisLine: { lineStyle: { color: '#2a3b44' } },
-        axisLabel: { color: '#8b9aa5', fontSize: 10, formatter: timeFormatter },
+        axisLine: { lineStyle: { color: '#c7d0d9' } },
+        axisLabel: { color: '#56646f', fontSize: 10, formatter: timeFormatter },
         splitLine: { show: false }
       },
       yAxis: {
@@ -461,17 +463,17 @@
         scale: true, // JANGAN paksa mulai dari 0 — supaya garis nyaris-datar tetap ada "napas" vertikal, tidak menempel ke tepi
         min: function (val) { return Math.min(val.min, tol != null ? -tol * 1.2 : val.min - 1); },
         max: function (val) { return Math.max(val.max, tol != null ? tol * 1.2 : val.max + 1); },
-        axisLine: { lineStyle: { color: '#2a3b44' } },
-        axisLabel: { color: '#8b9aa5', fontSize: 10 },
-        splitLine: { show: true, lineStyle: { color: '#1c2830' } }
+        axisLine: { lineStyle: { color: '#c7d0d9' } },
+        axisLabel: { color: '#56646f', fontSize: 10 },
+        splitLine: { show: true, lineStyle: { color: '#e2e7ec' } }
       },
       series: [{
         type: 'line',
         showSymbol: true,
         symbolSize: 5,
-        color: '#00d9ff',
+        color: '#0876a3',
         markArea: markArea,
-        markLine: { silent: true, symbol: 'none', lineStyle: { color: '#5a6b76', type: 'dashed' }, data: [{ yAxis: 0 }] },
+        markLine: { silent: true, symbol: 'none', lineStyle: { color: '#8a97a1', type: 'dashed' }, data: [{ yAxis: 0 }] },
         data: data
       }]
     }, true);

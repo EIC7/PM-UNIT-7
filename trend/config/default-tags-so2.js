@@ -45,10 +45,10 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'SO2 Scrubber Inlet',
     updateInterval: null, // event-based, bukan interval
     series: [
-      { key: 'DCS',    label: 'DCS Reading',   color: '#00d9ff' },
-      { key: 'Local',  label: 'Local Reading', color: '#ffb400' },
-      { key: 'Before', label: 'Before Kalibrasi', color: '#8a7bff', defaultVisible: false },
-      { key: 'After',  label: 'After Kalibrasi',  color: '#c9a8ff', defaultVisible: false }
+      { key: 'DCS',    label: 'DCS Reading',   color: '#1f6fb2' },
+      { key: 'Local',  label: 'Local Reading', color: '#e07b12' },
+      { key: 'Before', label: 'Before Kalibrasi', color: '#7a52a8', defaultVisible: false },
+      { key: 'After',  label: 'After Kalibrasi',  color: '#b083c9', defaultVisible: false }
     ]
   },
   {
@@ -71,10 +71,10 @@ window.DCS_DEFAULT_TAGS = [
     sourceModul: 'SO2 Scrubber Inlet',
     updateInterval: null,
     series: [
-      { key: 'DCS',    label: 'DCS Reading',   color: '#39ff88' },
-      { key: 'Local',  label: 'Local Reading', color: '#ff5e7a' },
-      { key: 'Before', label: 'Before Kalibrasi', color: '#8a7bff', defaultVisible: false },
-      { key: 'After',  label: 'After Kalibrasi',  color: '#c9a8ff', defaultVisible: false }
+      { key: 'DCS',    label: 'DCS Reading',   color: '#1c8a4c' },
+      { key: 'Local',  label: 'Local Reading', color: '#c8342f' },
+      { key: 'Before', label: 'Before Kalibrasi', color: '#8a5a3e', defaultVisible: false },
+      { key: 'After',  label: 'After Kalibrasi',  color: '#c96aa3', defaultVisible: false }
     ]
   }
 ];
