@@ -45,6 +45,16 @@
   /**
    * @param {Array} rows - hasil SupabaseAdapter.fetchByModulAndRange('FEGT', ...)
    * @returns {Object} map tagId -> { Temp: [{ time, value, recordId, pic, status }] }
+   *
+   * CATATAN: fegt.html menyimpan sampai 36 slot foto base64 (cleaning-hole
+   * FEGT 8 titik + LD 10 titik, before/after) di data.cleaning/data.cleaningLd
+   * -- kalau di-select penuh, 500 baris x 90 hari bisa ratusan MB dan
+   * fetch() gagal ("Failed to fetch") terutama di jaringan mobile. Makanya
+   * selectColumns di bawah PAKAI SINTAKS POSTGREST alias:kolom->key untuk
+   * HANYA ambil data.paths & data.leakPaths (angka suhu doang, kecil),
+   * skip field foto sama sekali. Efeknya: baris hasil query jadi punya
+   * r.paths / r.leakPaths LANGSUNG di top-level (BUKAN r.data.paths lagi),
+   * makanya parser di bawah baca r.paths, bukan (r.data||{}).paths.
    */
   function parseFegtLdRecords(rows) {
     var result = {};
@@ -52,11 +62,10 @@
     for (var j = 1; j <= LD_POINT_COUNT; j++) result['LD-' + j] = { Temp: [] };
 
     (rows || []).forEach(function (r) {
-      var d = r.data || {};
       var t = window.SupabaseAdapter.recordTimestamp(r);
       if (t === null) return;
 
-      (d.paths || []).forEach(function (p) {
+      (r.paths || []).forEach(function (p) {
         var val = toNumber(p.temp);
         var tagId = 'FEGT-P' + p.id;
         if (val !== null && val > 0 && result[tagId]) {
@@ -65,7 +74,7 @@
         }
       });
 
-      (d.leakPaths || []).forEach(function (p) {
+      (r.leakPaths || []).forEach(function (p) {
         var val = toNumber(p.temp);
         var tagId = 'LD-' + p.id;
         if (val !== null && val > 0 && result[tagId]) {
@@ -84,6 +93,7 @@
   window.FegtLdAdapter = {
     modulKey: 'FEGT',
     seriesKeys: ['Temp'],
+    selectColumns: 'id,modul,tanggal,pic,work_order,unit,created_at,updated_at,paths:data->paths,leakPaths:data->leakPaths',
     parseRecords: parseFegtLdRecords
   };
 

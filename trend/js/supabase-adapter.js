@@ -76,10 +76,22 @@
    * 'SO2 Scrubber Inlet', bukan cuma 'SO2') — makanya di sini pakai
    * `ilike.*<modulKey>*` (substring match, case-insensitive) via PostgREST,
    * bukan `eq` (exact match).
+   *
+   * @param {string} [selectColumnsOverride] - kalau modul sumbernya
+   *   menyimpan payload BESAR di kolom `data` (mis. fegt.html embed sampai
+   *   36 slot foto base64 untuk cleaning-hole di data.cleaning/data.cleaningLd),
+   *   fetch `select=...,data,...` penuh bisa jadi ratusan MB untuk 500 baris
+   *   x 90 hari -> gagal ("Failed to fetch") terutama di jaringan mobile.
+   *   Adapter modul itu bisa override select-nya untuk HANYA ambil sub-path
+   *   JSON yang benar-benar dipakai trend (mis. 'paths:data->paths,
+   *   leakPaths:data->leakPaths'), lewat sintaks PostgREST alias:col->key,
+   *   skip field foto sama sekali. Kalau tidak di-override, pakai
+   *   CFG.SELECT_COLUMNS default (select seluruh kolom `data`).
    */
-  function fetchByModulAndRange(modulKey, startTime, endTime) {
+  function fetchByModulAndRange(modulKey, startTime, endTime, selectColumnsOverride) {
+    var selectCols = selectColumnsOverride || CFG.SELECT_COLUMNS;
     var url = CFG.URL + '/rest/v1/' + CFG.TABLE +
-      '?select=' + encodeURIComponent(CFG.SELECT_COLUMNS) +
+      '?select=' + encodeURIComponent(selectCols) +
       '&modul=ilike.*' + encodeURIComponent(modulKey) + '*' +
       '&order=updated_at.desc&limit=' + CFG.FETCH_LIMIT;
 

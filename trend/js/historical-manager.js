@@ -59,7 +59,8 @@
     var ADAPTERS = getAdapters();
     var modulKeys = Object.keys(ADAPTERS);
     var promises = modulKeys.map(function (modulKey) {
-      return window.SupabaseAdapter.fetchByModulAndRange(modulKey, range.start, range.end)
+      var adapter = ADAPTERS[modulKey];
+      return window.SupabaseAdapter.fetchByModulAndRange(modulKey, range.start, range.end, adapter && adapter.selectColumns)
         .then(function (rows) {
           return { modulKey: modulKey, rows: rows };
         })
