@@ -134,11 +134,13 @@
               '</span>' : '<span class="deviation-panel-last">-</span>') +
           '</div>' +
           '<div class="deviation-panel-desc">' + (pairCfg.description || '') + '</div>' +
-          '<div class="deviation-panel-chart" id="' + domId + '"></div>';
+          (devPoints.length
+            ? '<div class="deviation-panel-chart" id="' + domId + '"></div>'
+            : '<div class="deviation-panel-empty">Belum ada pasangan record ' + pairCfg.seriesA + '/' + pairCfg.seriesB + ' yang cocok pada rentang waktu ini.</div>');
 
         els.deviationArea.appendChild(wrap);
 
-        if (window.ChartManager.renderDeviationChart) {
+        if (devPoints.length && window.ChartManager.renderDeviationChart) {
           window.ChartManager.renderDeviationChart(domId, devPoints, pairCfg);
         }
       });

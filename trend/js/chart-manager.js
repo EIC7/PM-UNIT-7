@@ -438,7 +438,7 @@
     inst.setOption({
       backgroundColor: 'transparent',
       textStyle: { color: '#c7d3dc', fontFamily: "'Consolas','Courier New',monospace" },
-      grid: { left: 50, right: 20, top: 16, bottom: 30 },
+      grid: { left: 44, right: 14, top: 10, bottom: 22 },
       tooltip: {
         trigger: 'axis',
         backgroundColor: 'rgba(10,16,20,0.95)',
@@ -458,6 +458,9 @@
       },
       yAxis: {
         type: 'value',
+        scale: true, // JANGAN paksa mulai dari 0 — supaya garis nyaris-datar tetap ada "napas" vertikal, tidak menempel ke tepi
+        min: function (val) { return Math.min(val.min, tol != null ? -tol * 1.2 : val.min - 1); },
+        max: function (val) { return Math.max(val.max, tol != null ? tol * 1.2 : val.max + 1); },
         axisLine: { lineStyle: { color: '#2a3b44' } },
         axisLabel: { color: '#8b9aa5', fontSize: 10 },
         splitLine: { show: true, lineStyle: { color: '#1c2830' } }

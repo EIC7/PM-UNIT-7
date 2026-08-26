@@ -3,6 +3,10 @@
 Status: **Phase awal — HISTORICAL TREND aktif, modul SO2 Scrubber Inlet**
 Sumber data: **read-only** dari Supabase `pm_records` (project sama dengan repo `Mahfudjtf/PM-UNIT-7`)
 
+> **Revisi terbaru (fix layout & scroll):**
+> - **Bug scroll halaman tidak bisa discroll di layar desktop full-screen** — diperbaiki. Akar masalah: layout lama pakai desain "1 layar penuh, tidak discroll" (`overflow:hidden` di `html/body`), dan HANYA `.panel-center` yang boleh discroll internal — sementara `.module-tab-bar`/`.module-kpi-bar` ada DI LUAR area itu (paling atas, tempat kursor biasanya berada). Scroll di situ tidak ngefek sama sekali, kelihatan seperti "halaman macet total". Sekarang **seluruh halaman discroll normal** (seperti browser pada umumnya) di semua ukuran layar — tidak ada lagi area "mati".
+> - **Kotak panel deviasi yang kosong di bawah keterangan** — diperbaiki 2 arah: (1) kalau memang belum ada data (pasangan record DCS/Local atau Before/After yang cocok belum ketemu di rentang waktu itu), sekarang tampil pesan jelas ("Belum ada pasangan record ... yang cocok") alih-alih kanvas kosong; (2) kalau datanya ADA, area plot mini-chart diperbesar (margin grid dikurangi, dari ~34px area plot efektif dari total 80px jadi jauh lebih lega) supaya garis deviasi nyaris-datar tetap kelihatan, bukan menempel tak terlihat di tepi.
+
 ---
 
 ## 1. Apa yang sudah berfungsi penuh (bukan dummy)

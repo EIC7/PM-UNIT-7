@@ -159,7 +159,11 @@ body { background: var(--bg-main); }
 .deviation-panel-last { color: var(--accent-green); font-size: 13px; font-weight: 600; }
 .deviation-panel-last.deviation-out { color: var(--accent-red); }
 .deviation-panel-desc { color: var(--text-secondary); font-size: 10px; margin-bottom: 4px; } /* dibuat lebih terang dari text-dim biar gampang dibaca */
-.deviation-panel-chart { height: 80px; width: 100%; } /* dikecilkan dari 120px -- kontennya (garis deviasi) tipis, chart tinggi cuma nyisa banyak area kosong */
+.deviation-panel-chart { height: 110px; width: 100%; }
+.deviation-panel-empty {
+  height: 40px; display: flex; align-items: center;
+  color: var(--text-dim); font-size: 10.5px; font-style: italic;
+}
 
 .module-log-wrap { padding: 10px 12px; overflow-x: auto; }
 .module-log-table { width: 100%; border-collapse: collapse; font-size: 11px; }
