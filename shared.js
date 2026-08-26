@@ -1802,3 +1802,222 @@ function raGetSignatureUrl(displayName, callback) {
     callback(null, res.data.signedUrl);
   }).catch(function(err) { callback((err && err.message) || String(err), null); });
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SIGNATURE PAD SYSTEM
+   - raSignPadShow(options)  : tampilkan modal pad TTD
+   - raSignPadSave()         : simpan TTD ke Supabase Storage bucket 'signatures'
+   - raSignPadCancel()       : tutup modal tanpa simpan
+   - raGetSignatureDataUrl(displayName, callback) : ambil TTD sebagai dataUrl
+     (fallback-safe: coba Storage signed URL dulu, kalau gagal cek tabel
+      pm_profiles kolom signature_dataurl)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var _raSignPadState = {
+  canvas: null, ctx: null, drawing: false, empty: true,
+  onSaved: null, displayName: null, role: null
+};
+
+/* Buka modal signature pad.
+   opts = { displayName, role, onSaved(dataUrl) }
+   displayName = nama tampilan (untuk label + filename di Storage)
+   onSaved     = callback setelah TTD berhasil tersimpan */
+function raSignPadShow(opts) {
+  opts = opts || {};
+  _raSignPadState.displayName = opts.displayName || '';
+  _raSignPadState.role        = opts.role || '';
+  _raSignPadState.onSaved     = opts.onSaved || null;
+  _raSignPadState.empty       = true;
+
+  var old = document.getElementById('raSignPadModal');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+
+  var wrap = document.createElement('div');
+  wrap.id = 'raSignPadModal';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(10,18,15,0.78);z-index:2100000;display:flex;align-items:center;justify-content:center;padding:16px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+  wrap.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:min(96vw,480px);overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.45)">' +
+      '<div style="background:linear-gradient(90deg,#1a6b3a,#16a085);padding:14px 18px;display:flex;justify-content:space-between;align-items:center">' +
+        '<div>' +
+          '<div style="font-weight:800;font-size:14px;color:#fff">✍️ Tanda Tangan Digital</div>' +
+          '<div style="font-size:11px;color:#a7f3d0;margin-top:2px">' + _raSignPadState.displayName + (_raSignPadState.role ? ' · ' + _raSignPadState.role : '') + '</div>' +
+        '</div>' +
+        '<button onclick="raSignPadCancel()" style="background:rgba(255,255,255,0.15);border:none;border-radius:6px;color:#fff;font-size:18px;width:30px;height:30px;cursor:pointer;line-height:30px;text-align:center;padding:0">✕</button>' +
+      '</div>' +
+      '<div style="padding:14px 16px 6px">' +
+        '<div style="font-size:11px;color:#6b7280;margin-bottom:6px">Gambar tanda tangan Anda di kotak di bawah ini:</div>' +
+        '<div style="position:relative;border:2px solid #d1d5db;border-radius:8px;background:#fafafa;overflow:hidden">' +
+          '<canvas id="raSignPadCanvas" style="display:block;width:100%;cursor:crosshair;touch-action:none" height="160"></canvas>' +
+          '<div id="raSignPadHint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:13px;color:#d1d5db;font-style:italic">Tanda tangan di sini</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:10px">' +
+          '<button onclick="raSignPadClear()" style="flex:1;padding:9px;border:1px solid #e5e7eb;border-radius:7px;background:#f9fafb;color:#374151;font-size:12px;font-weight:600;cursor:pointer">🗑 Hapus</button>' +
+          '<button onclick="raSignPadSave()" style="flex:2;padding:9px;border:none;border-radius:7px;background:#16a085;color:#fff;font-size:13px;font-weight:700;cursor:pointer">💾 Simpan Tanda Tangan</button>' +
+        '</div>' +
+        '<div id="raSignPadMsg" style="font-size:11px;color:#6b7280;text-align:center;margin-top:6px;min-height:16px"></div>' +
+      '</div>' +
+      '<div style="padding:6px 16px 14px">' +
+        '<div style="font-size:10px;color:#9ca3af;text-align:center">TTD tersimpan ke server dan akan otomatis muncul di laporan yang di-approve.</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(wrap);
+
+  // Init canvas
+  var canvas = document.getElementById('raSignPadCanvas');
+  _raSignPadState.canvas = canvas;
+  // Set pixel width setelah DOM ready
+  setTimeout(function() {
+    canvas.width = canvas.offsetWidth;
+    _raSignPadState.ctx = canvas.getContext('2d');
+    _raSignPadState.ctx.strokeStyle = '#111';
+    _raSignPadState.ctx.lineWidth = 2.5;
+    _raSignPadState.ctx.lineCap = 'round';
+    _raSignPadState.ctx.lineJoin = 'round';
+    _raSignPadInitDraw();
+  }, 30);
+}
+
+function _raSignPadInitDraw() {
+  var canvas = _raSignPadState.canvas;
+  if (!canvas) return;
+  var state = _raSignPadState;
+
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var t = e.touches ? e.touches[0] : e;
+    return { x: (t.clientX - r.left) * (canvas.width / r.width), y: (t.clientY - r.top) * (canvas.height / r.height) };
+  }
+
+  function onStart(e) {
+    e.preventDefault();
+    state.drawing = true;
+    state.empty = false;
+    var hint = document.getElementById('raSignPadHint');
+    if (hint) hint.style.display = 'none';
+    var p = getPos(e);
+    state.ctx.beginPath();
+    state.ctx.moveTo(p.x, p.y);
+  }
+  function onMove(e) {
+    if (!state.drawing) return;
+    e.preventDefault();
+    var p = getPos(e);
+    state.ctx.lineTo(p.x, p.y);
+    state.ctx.stroke();
+  }
+  function onEnd(e) { state.drawing = false; }
+
+  canvas.addEventListener('mousedown',  onStart, {passive:false});
+  canvas.addEventListener('mousemove',  onMove,  {passive:false});
+  canvas.addEventListener('mouseup',    onEnd);
+  canvas.addEventListener('mouseleave', onEnd);
+  canvas.addEventListener('touchstart', onStart, {passive:false});
+  canvas.addEventListener('touchmove',  onMove,  {passive:false});
+  canvas.addEventListener('touchend',   onEnd);
+}
+
+function raSignPadClear() {
+  var state = _raSignPadState;
+  if (!state.canvas || !state.ctx) return;
+  state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+  state.empty = true;
+  var hint = document.getElementById('raSignPadHint');
+  if (hint) hint.style.display = 'flex';
+}
+
+function raSignPadCancel() {
+  var el = document.getElementById('raSignPadModal');
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+/* Simpan TTD ke Supabase Storage bucket 'signatures' sebagai PNG,
+   dan update RA_SIGNATURE_FILE_MAP in-memory agar langsung bisa dipakai
+   di sesi ini tanpa reload. */
+function raSignPadSave() {
+  var state = _raSignPadState;
+  if (!state.canvas || state.empty) {
+    var msg = document.getElementById('raSignPadMsg');
+    if (msg) { msg.textContent = '⚠️ Tanda tangan belum digambar.'; msg.style.color='#e74c3c'; }
+    return;
+  }
+  var msg = document.getElementById('raSignPadMsg');
+  if (msg) { msg.textContent = '⏳ Menyimpan...'; msg.style.color='#6b7280'; }
+
+  // Konversi canvas ke PNG blob
+  state.canvas.toBlob(function(blob) {
+    if (!blob) {
+      if (msg) { msg.textContent = '❌ Gagal membuat gambar. Coba lagi.'; msg.style.color='#e74c3c'; }
+      return;
+    }
+    // Filename: gunakan display_name → slug (lowercase, spasi→underscore)
+    var slug = (state.displayName || 'ttd')
+      .toLowerCase().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,'_').trim() || 'ttd';
+    var filename = slug + '.png';
+
+    raGetClient().then(function(client) {
+      // Upload ke Storage (upsert = overwrite kalau sudah ada)
+      return client.storage.from(RA_SIGNATURE_BUCKET).upload(filename, blob, {
+        contentType: 'image/png', upsert: true
+      });
+    }).then(function(res) {
+      if (res.error) {
+        if (msg) { msg.textContent = '❌ ' + (res.error.message || 'Gagal upload'); msg.style.color='#e74c3c'; }
+        return;
+      }
+      // Update in-memory map agar sesi ini langsung bisa pakai TTD baru
+      RA_SIGNATURE_FILE_MAP[state.displayName] = filename;
+      if (msg) { msg.textContent = '✓ Tanda tangan berhasil disimpan!'; msg.style.color='#16a085'; }
+
+      // Kirim dataUrl ke callback onSaved (untuk preview langsung di halaman)
+      var dataUrl = state.canvas.toDataURL('image/png');
+      if (typeof state.onSaved === 'function') state.onSaved(dataUrl);
+
+      setTimeout(function() { raSignPadCancel(); }, 1200);
+    }).catch(function(err) {
+      if (msg) { msg.textContent = '❌ ' + ((err && err.message) || String(err)); msg.style.color='#e74c3c'; }
+    });
+  }, 'image/png');
+}
+
+/* Ambil TTD sebagai dataUrl — coba Storage signed URL dulu (butuh login),
+   fallback ke nothing. Jika gagal (belum login / file belum ada), err berisi pesan. */
+function raGetSignatureDataUrl(displayName, callback) {
+  raGetSignatureUrl(displayName, function(err, signedUrl) {
+    if (err || !signedUrl) { callback(err || 'Tidak ada URL', null); return; }
+    // Fetch gambar lalu konversi ke dataUrl (cross-origin safe via blob)
+    fetch(signedUrl)
+      .then(function(r) { return r.blob(); })
+      .then(function(blob) {
+        var reader = new FileReader();
+        reader.onload = function(e) { callback(null, e.target.result); };
+        reader.onerror = function() { callback('Gagal membaca gambar', null); };
+        reader.readAsDataURL(blob);
+      })
+      .catch(function(e) { callback((e && e.message) || String(e), null); });
+  });
+}
+
+/* Helper: tampilkan TTD di elemen <img> atau <canvas> berdasarkan nama.
+   Jika belum ada TTD dan showPadIfMissing=true (default), buka pad untuk menggambar. */
+function raRenderSignatureToElement(displayName, role, elementId, showPadIfMissing) {
+  if (showPadIfMissing === undefined) showPadIfMissing = false;
+  raGetSignatureDataUrl(displayName, function(err, dataUrl) {
+    if (!err && dataUrl) {
+      var el = document.getElementById(elementId);
+      if (!el) return;
+      if (el.tagName === 'IMG') { el.src = dataUrl; el.style.display = 'block'; }
+      else if (el.tagName === 'CANVAS') {
+        var img = new Image();
+        img.onload = function() {
+          el.width = img.naturalWidth; el.height = img.naturalHeight;
+          el.getContext('2d').drawImage(img, 0, 0);
+        };
+        img.src = dataUrl;
+      } else { el.style.backgroundImage = 'url(' + dataUrl + ')'; el.style.backgroundSize = 'contain'; el.style.backgroundRepeat = 'no-repeat'; }
+    } else if (showPadIfMissing) {
+      raSignPadShow({ displayName: displayName, role: role, onSaved: function(dUrl) {
+        raRenderSignatureToElement(displayName, role, elementId, false);
+      }});
+    }
+  });
+}

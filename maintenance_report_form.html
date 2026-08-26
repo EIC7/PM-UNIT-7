@@ -241,28 +241,7 @@
                 <button class="btn btn-blue btn-full" onclick="raSubmitReport()">🔒 Submit Laporan</button>
             </div>
 
-            <!-- LEVEL 2: CHECKER -->
-            <div id="raCheckerBox" style="background:#fff9ec;border:1px solid #fbe6b8;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
-                <div style="font-weight:700;font-size:0.9em;color:#8a6d1f;margin-bottom:6px">🔍 Verifikasi Checker (Tingkat 2)</div>
-                <div style="font-size:0.8em;color:#8a7742;margin-bottom:10px">Periksa & edit data di atas kalau perlu, pilih nama Checker, lalu Verifikasi — tanda tangan terisi otomatis.</div>
-                <div class="form-group">
-                    <label>Checked By — Technician</label>
-                    <select id="raCheckedByName">
-                        <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-                        <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-                    </select>
-                </div>
-                <button class="btn btn-full" style="background:#f59e0b;color:#fff" onclick="raVerifyChecker()">✅ Verifikasi & Tanda Tangan</button>
-                <button class="btn btn-full btn-gray" style="margin-top:6px" onclick="raReturnReport('checker')">↩ Kembalikan ke User (Perlu Revisi)</button>
-            </div>
-
-            <!-- LEVEL 3: REVIEWER / SPV -->
-            <div id="raReviewerBox" style="background:#eefcf3;border:1px solid #bdeecb;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
-                <div style="font-weight:700;font-size:0.9em;color:#1c7a45;margin-bottom:6px">🖊️ Approve Final — Supervisor (Tingkat 3)</div>
-                <div style="font-size:0.8em;color:#3f8a5c;margin-bottom:10px">Preview hasil laporan, kalau sudah benar klik Approve — tanda tangan SPV terisi otomatis dan laporan menjadi final.</div>
-                <button class="btn btn-full" style="background:#16a085;color:#fff" onclick="raApproveReviewer()">🖊️ Approve Final</button>
-                <button class="btn btn-full btn-gray" style="margin-top:6px" onclick="raReturnReport('reviewer')">↩ Kembalikan ke Checker (Perlu Revisi)</button>
-            </div>
+            <!-- LEVEL 2: CHECKER -->\n            <div id=\"raCheckerBox\" style=\"background:#fff9ec;border:1px solid #fbe6b8;border-radius:8px;padding:14px;margin-bottom:12px;display:none\">\n                <div style=\"font-weight:700;font-size:0.9em;color:#8a6d1f;margin-bottom:6px\">🔍 Verifikasi Checker (Tingkat 2)</div>\n                <div style=\"font-size:0.8em;color:#8a7742;margin-bottom:10px\">Periksa & edit data di atas kalau perlu, pilih nama Checker, lalu Verifikasi — tanda tangan terisi otomatis.</div>\n                <div class=\"form-group\">\n                    <label>Checked By — Technician</label>\n                    <select id=\"raCheckedByName\" onchange=\"raPreviewCheckerTtd()\">\n                        <option value=\"Zaini Nur Hidayat\">Zaini Nur Hidayat</option>\n                        <option value=\"Isyana Ray Sasongko\">Isyana Ray Sasongko</option>\n                    </select>\n                </div>\n                <!-- Preview TTD Checker -->\n                <div id=\"raCheckerTtdWrap\" style=\"background:#fffbf0;border:1px dashed #f59e0b;border-radius:8px;padding:10px;margin-bottom:10px;text-align:center\">\n                    <div style=\"font-size:11px;color:#92713a;font-weight:600;margin-bottom:6px\">Tanda Tangan Checker</div>\n                    <img id=\"raCheckerTtdImg\" src=\"\" alt=\"\" style=\"height:70px;max-width:100%;object-fit:contain;display:none\">\n                    <div id=\"raCheckerTtdEmpty\" style=\"font-size:11px;color:#b8974a;font-style:italic\">Belum ada TTD tersimpan</div>\n                    <button type=\"button\" onclick=\"raOpenSignPadChecker()\" style=\"margin-top:6px;padding:6px 14px;border:1px solid #f59e0b;border-radius:6px;background:#fffdf0;color:#8a6d1f;font-size:11px;font-weight:600;cursor:pointer\">✍️ Gambar / Update TTD</button>\n                </div>\n                <button class=\"btn btn-full\" style=\"background:#f59e0b;color:#fff\" onclick=\"raVerifyChecker()\">✅ Verifikasi & Tanda Tangan</button>\n                <button class=\"btn btn-full btn-gray\" style=\"margin-top:6px\" onclick=\"raReturnReport('checker')\">↩ Kembalikan ke User (Perlu Revisi)</button>\n            </div>\n\n            <!-- LEVEL 3: REVIEWER / SPV -->\n            <div id=\"raReviewerBox\" style=\"background:#eefcf3;border:1px solid #bdeecb;border-radius:8px;padding:14px;margin-bottom:12px;display:none\">\n                <div style=\"font-weight:700;font-size:0.9em;color:#1c7a45;margin-bottom:6px\">🖊️ Approve Final — Supervisor (Tingkat 3)</div>\n                <div style=\"font-size:0.8em;color:#3f8a5c;margin-bottom:10px\">Preview hasil laporan, kalau sudah benar klik Approve — tanda tangan SPV terisi otomatis dan laporan menjadi final.</div>\n                <!-- Preview TTD SPV -->\n                <div id=\"raSpvTtdWrap\" style=\"background:#f0fdf7;border:1px dashed #16a085;border-radius:8px;padding:10px;margin-bottom:10px;text-align:center\">\n                    <div style=\"font-size:11px;color:#1c7a45;font-weight:600;margin-bottom:6px\">Tanda Tangan Supervisor</div>\n                    <img id=\"raSpvTtdImg\" src=\"\" alt=\"\" style=\"height:70px;max-width:100%;object-fit:contain;display:none\">\n                    <div id=\"raSpvTtdEmpty\" style=\"font-size:11px;color:#3f8a5c;font-style:italic\">Belum ada TTD tersimpan</div>\n                    <button type=\"button\" onclick=\"raOpenSignPadSpv()\" style=\"margin-top:6px;padding:6px 14px;border:1px solid #16a085;border-radius:6px;background:#f0fdf7;color:#1c7a45;font-size:11px;font-weight:600;cursor:pointer\">✍️ Gambar / Update TTD</button>\n                </div>\n                <button class=\"btn btn-full\" style=\"background:#16a085;color:#fff\" onclick=\"raApproveReviewer()\">🖊️ Approve Final</button>\n                <button class=\"btn btn-full btn-gray\" style=\"margin-top:6px\" onclick=\"raReturnReport('reviewer')\">↩ Kembalikan ke Checker (Perlu Revisi)</button>\n            </div>
 
             <!-- STATUS: RETURNED (dikembalikan checker/reviewer, perlu direvisi) -->
             <div id="raReturnedBox" style="background:#fdf2f2;border:1px solid #f5c6c6;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
@@ -2811,6 +2790,97 @@ function applyImageEdits(){
                 });
             });
         }
+
+        /* ── TTD PREVIEW & SIGN PAD HELPERS ── */
+
+        /* Load preview TTD Checker setiap kali dropdown berubah */
+        function raPreviewCheckerTtd() {
+            var name = (document.getElementById('raCheckedByName') || {}).value;
+            if (!name) return;
+            var img = document.getElementById('raCheckerTtdImg');
+            var empty = document.getElementById('raCheckerTtdEmpty');
+            if (!img) return;
+            raGetSignatureDataUrl(name, function(err, dataUrl) {
+                if (!err && dataUrl) {
+                    img.src = dataUrl; img.style.display = 'block';
+                    if (empty) empty.style.display = 'none';
+                } else {
+                    img.style.display = 'none';
+                    if (empty) empty.style.display = 'block';
+                }
+            });
+        }
+
+        /* Load preview TTD SPV dari profile yang sedang login */
+        function raPreviewSpvTtd(displayName) {
+            var img = document.getElementById('raSpvTtdImg');
+            var empty = document.getElementById('raSpvTtdEmpty');
+            if (!img || !displayName) return;
+            raGetSignatureDataUrl(displayName, function(err, dataUrl) {
+                if (!err && dataUrl) {
+                    img.src = dataUrl; img.style.display = 'block';
+                    if (empty) empty.style.display = 'none';
+                } else {
+                    img.style.display = 'none';
+                    if (empty) empty.style.display = 'block';
+                }
+            });
+        }
+
+        /* Buka signature pad untuk Checker */
+        function raOpenSignPadChecker() {
+            var name = (document.getElementById('raCheckedByName') || {}).value;
+            if (!name) { alert('Pilih nama Checker dulu.'); return; }
+            raRequireLogin(['checker','admin'], '🔍 Login sebagai Checker untuk simpan TTD', function(profile) {
+                raSignPadShow({
+                    displayName: name,
+                    role: 'Checker / Technician',
+                    onSaved: function(dataUrl) {
+                        var img = document.getElementById('raCheckerTtdImg');
+                        var empty = document.getElementById('raCheckerTtdEmpty');
+                        if (img) { img.src = dataUrl; img.style.display = 'block'; }
+                        if (empty) empty.style.display = 'none';
+                        dbShowToast('✓ TTD Checker berhasil disimpan');
+                    }
+                });
+            });
+        }
+
+        /* Buka signature pad untuk SPV */
+        function raOpenSignPadSpv() {
+            raRequireLogin(['reviewer','admin'], '🖊️ Login sebagai Supervisor untuk simpan TTD', function(profile) {
+                var spvName = profile.display_name || profile.username;
+                raSignPadShow({
+                    displayName: spvName,
+                    role: 'Supervisor',
+                    onSaved: function(dataUrl) {
+                        var img = document.getElementById('raSpvTtdImg');
+                        var empty = document.getElementById('raSpvTtdEmpty');
+                        if (img) { img.src = dataUrl; img.style.display = 'block'; }
+                        if (empty) empty.style.display = 'none';
+                        dbShowToast('✓ TTD Supervisor berhasil disimpan');
+                    }
+                });
+            });
+        }
+
+        /* Panggil preview TTD saat panel Checker/SPV pertama kali muncul --
+           hook ke raRenderWorkflowUI yang sudah ada (override ringan) */
+        var _origRenderWorkflowUI = raRenderWorkflowUI;
+        raRenderWorkflowUI = function() {
+            _origRenderWorkflowUI();
+            var status = ((raCurrentRecord && raCurrentRecord.status) || 'DRAFT').toUpperCase();
+            if (status === 'SUBMITTED') {
+                // Checker box muncul: load TTD sesuai pilihan dropdown
+                setTimeout(raPreviewCheckerTtd, 200);
+            }
+            if (status === 'CHECKED') {
+                // SPV box muncul: load TTD SPV yang sedang login
+                raGetCurrentProfile(function(profile) {
+                    if (profile) raPreviewSpvTtd(profile.display_name || profile.username);
+                });
+            }
+        };
     </script>
 </body>
 </html>
