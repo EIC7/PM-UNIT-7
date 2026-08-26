@@ -75,4 +75,9 @@
     seriesKeys: SERIES_KEYS,
     parseRecords: parseSO2Records
   };
+
+  // Registrasi diri ke HistoricalManager — ini yang bikin historical-manager.js
+  // tidak perlu diedit tiap kali ada adapter baru.
+  window.DCS_ADAPTERS = window.DCS_ADAPTERS || {};
+  window.DCS_ADAPTERS['SO2'] = window.SO2Adapter;
 })();

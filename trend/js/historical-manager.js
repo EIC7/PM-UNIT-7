@@ -6,18 +6,18 @@
  * Historical Trend TIDAK mengikuti live data secara otomatis — hanya
  * menampilkan data ketika user menekan [LOAD DATA] atau memilih quick range.
  *
- * ADAPTERS: peta modulKey -> parser. Untuk mengaktifkan modul lain
- * (opacity, fegt, ph, dst) di masa depan, cukup tambah entry baru di sini
- * setelah adapter parser-nya dibuat di js/adapters/<modul>-adapter.js
- * (contoh: js/adapters/so2-adapter.js).
+ * ADAPTERS: peta modulKey -> parser, dibangun OTOMATIS dari
+ * window.DCS_ADAPTERS (tiap file js/adapters/<modul>-adapter.js
+ * mendaftarkan dirinya sendiri ke situ). File ini TIDAK PERNAH perlu
+ * diedit untuk menambah modul baru — cukup buat adapter + config baru.
  * ==========================================================================
  */
 (function () {
   'use strict';
 
-  var ADAPTERS = {
-    'SO2': window.SO2Adapter
-  };
+  function getAdapters() {
+    return window.DCS_ADAPTERS || {};
+  }
 
   var state = {
     startTime: null,
@@ -56,6 +56,7 @@
       return;
     }
 
+    var ADAPTERS = getAdapters();
     var modulKeys = Object.keys(ADAPTERS);
     var promises = modulKeys.map(function (modulKey) {
       return window.SupabaseAdapter.fetchByModulAndRange(modulKey, range.start, range.end)
@@ -111,6 +112,6 @@
     setQuickRange: setQuickRange,
     setCustomRange: setCustomRange,
     getState: getState,
-    ADAPTERS: ADAPTERS
+    getAdapters: getAdapters
   };
 })();

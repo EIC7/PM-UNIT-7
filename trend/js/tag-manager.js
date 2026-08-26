@@ -15,7 +15,15 @@
 
   function loadDefaults() {
     (window.DCS_DEFAULT_TAGS || []).forEach(function (t) {
-      tags[t.id] = Object.assign({}, t);
+      var tag = Object.assign({}, t);
+      // Snapshot visibility default ASLI dari config, terpisah dari `visible`
+      // yang nanti akan berubah-ubah tiap user centang/uncentang atau pindah
+      // tab modul. Dipakai ModuleView untuk tahu "kalau modul ini baru
+      // pertama kali dibuka, tag mana yang harusnya nyala" — tanpa ini,
+      // modul dengan banyak tag (mis. FEGT 21 titik) kehilangan default-nya
+      // begitu user sempat mampir ke tab modul lain lebih dulu.
+      tag._defaultVisible = !!tag.visible;
+      tags[t.id] = tag;
     });
   }
 

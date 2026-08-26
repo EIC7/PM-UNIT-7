@@ -24,6 +24,8 @@ body { background: var(--bg-main); }
 }
 
 .topbar-title { color: var(--accent-cyan); }
+.topbar-home-link { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dotted var(--accent-cyan); }
+.topbar-home-link:hover { color: #fff; border-bottom-style: solid; }
 
 .topbar-status .dot { background: var(--status-ok); box-shadow: 0 0 6px var(--status-ok); }
 .topbar-status.disconnected .dot { background: var(--status-bad); box-shadow: 0 0 6px var(--status-bad); }

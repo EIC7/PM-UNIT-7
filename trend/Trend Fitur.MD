@@ -313,3 +313,53 @@ User membandingkan tampilan panel "Deviasi DCS − Local" / "Koreksi Kalibrasi (
 2. **Banyak area kosong di tiap kartu panel** — `.deviation-panel-chart` (mini chart ECharts per pair deviasi) tingginya 120px, padahal garis deviasi yang ditampilkan seringkali flat/tipis (nilai deviasi kecil, mis. `+0.00 ppm`), jadi visualnya didominasi ruang kosong. **Fix:** tinggi dikecilkan ke 80px, gap antar-panel di `.module-deviation-area` dikecilkan 8px→6px, margin bawah `.deviation-panel-desc` 6px→4px — kartu jadi lebih ringkas, lebih banyak panel kelihatan tanpa scroll berlebihan. Override khusus mobile (`style.css`, breakpoint ≤900px) yang membesarkan chart ke 150px **tidak diubah** — itu sengaja dibuat lebih besar untuk kenyamanan baca di layar sentuh.
 
 File terdampak: `css/dcs-theme.css` (`.deviation-panel-desc`, `.deviation-panel-chart`, `.module-deviation-area`).
+
+---
+
+## 15. Sesi ini — Modul baru: FEGT & LD, restrukturisasi jadi multi-halaman
+
+### Restrukturisasi file
+
+Sebelumnya `trend/index.html` = 1 halaman untuk 1 modul (SO2). Supaya menambah modul baru tidak bikin semuanya bertumpuk di satu halaman, direstruktur jadi:
+
+```
+trend/
+├── index.html          ← HUB baru: kartu link ke tiap modul (statis, tanpa app JS)
+├── trend_so2.html       ← bekas index.html lama, khusus modul SO2
+├── trend_fegt.html      ← BARU: modul FEGT + LD
+├── config/
+│   ├── default-tags-so2.js   (rename dari default-tags.js)
+│   ├── default-tags-fegt.js  (BARU — 31 tag: FEGT-P1..21 + LD-1..10)
+│   └── modules/
+│       ├── so2.config.js
+│       ├── fegt.config.js    (BARU — tab "FEGT — Acoustic Pyrometry")
+│       └── ld.config.js      (BARU — tab "LD — Leak Detection")
+└── js/adapters/
+    ├── so2-adapter.js
+    └── fegt-adapter.js       (BARU)
+```
+
+Semua modul JS "generik" (`chart-manager.js`, `ui-manager.js`, `module-view.js`, `tag-manager.js`, dst) **tidak berubah fungsinya** — dipakai bersama oleh `trend_so2.html` dan `trend_fegt.html` tanpa modifikasi khusus per-modul, kecuali 1 perbaikan arsitektur (lihat bawah).
+
+### Data FEGT & LD
+
+Sumber: `fegt.html` (`dbCollectData`), modul Supabase `'FEGT & Leak Detection'`. SATU form/record berisi DUA kelompok data fisik berbeda:
+- `data.paths` (21 entri `{id,temp,status}`) = titik acoustic pyrometry FEGT (suhu gas keluar furnace, per lintasan sinyal TX→RX)
+- `data.leakPaths` (10 entri `{id,temp,status}`) = titik leak detection LD (suhu lokal di superheater/reheater/economizer/bottom slope)
+
+Sesuai arahan: **grafik FEGT dan LD dipisah** — diimplementasikan sebagai 2 tab modul (`fegt.config.js` + `ld.config.js`) di halaman `trend_fegt.html` yang sama, bukan 2 file terpisah, karena datanya memang 1 fetch Supabase yang sama (`js/adapters/fegt-adapter.js` — 1 adapter, parsing kedua kelompok sekaligus, didaftarkan sebagai `DCS_ADAPTERS['FEGT']` dan dipakai oleh KEDUA module config lewat `adapterKey:'FEGT'`).
+
+Field temp yang `<= 0` (status "data fail" di form asal) **tidak ikut diplot** — bukan bacaan proses valid.
+
+**Catatan asumsi:** `fegt.html` tidak mendefinisikan batas alarm/rentang instrumen eksplisit (status cuma dari `temp>0`). Angka `min/max/chartMax` di `default-tags-fegt.js` (FEGT: 0–1300°C, LD: 0–600°C) adalah **asumsi rentang tipikal**, bukan dari spesifikasi instrumen aktual — sesuaikan kalau ada angka pastinya.
+
+### Perbaikan arsitektur: `historical-manager.js` sekarang benar-benar generik
+
+Sebelumnya `ADAPTERS` di `historical-manager.js` di-hardcode isinya (`{'SO2': window.SO2Adapter}`) — jadi tiap tambah modul baru, file ini tetap harus diedit (bertentangan dengan tujuan modularitasnya sendiri). **Fix:** tiap adapter sekarang **mendaftar diri sendiri** ke `window.DCS_ADAPTERS` (lihat akhir `so2-adapter.js`/`fegt-adapter.js`), dan `historical-manager.js` cukup baca `window.DCS_ADAPTERS` — file itu sekarang benar-benar tidak perlu disentuh lagi untuk modul apa pun ke depannya.
+
+### Bug yang ditemukan & diperbaiki saat build modul bertag-banyak
+
+1. **21 tag auto-nyala semua saat buka tab FEGT** — perilaku lama ("pindah tab = centang semua tag modul itu") masuk akal untuk SO2 (2 tag) tapi bikin chart FEGT langsung penuh 21 garis. **Fix:** tiap tag FEGT/LD punya `visible` default sendiri di `default-tags-fegt.js` (cuma 3 titik FEGT + 2 titik LD yang nyala dari awal) — tidak lagi dipaksa nyala semua.
+2. **Pindah tab FEGT→LD mematikan default LD secara permanen** — konsekuensi dari fix #1 yang kurang lengkap: logic "matikan tag di luar modul aktif" ternyata juga mematikan default LD SEBELUM user sempat lihat tab LD (karena FEGT dibuka duluan sebagai tab pertama). **Fix:** `module-view.js` sekarang **mengingat pilihan tag terakhir per-modul** (`moduleVisibleMemory`, in-memory) — tiap keluar dari tab, state tag modul itu disimpan; tiap masuk tab, dipulihkan dari memori itu (atau dari `tag._defaultVisible` kalau modul belum pernah dikunjungi). `tag._defaultVisible` sendiri baru ditambahkan di `tag-manager.js` (snapshot visibility asli dari config, terpisah dari `visible` yang berubah-ubah). Sudah diuji lewat 5 skenario (headless browser): default awal per-tab benar, pindah tab bolak-balik tidak saling menimpa, dan pilihan manual user tetap diingat setelah pindah-pindah tab.
+
+File terdampak: `js/tag-manager.js`, `js/module-view.js`, `js/ui-manager.js` (`setModuleActiveTags` dihapus — logicnya pindah ke `module-view.js` yang butuh akses ke memori per-modul), `js/historical-manager.js`, `js/adapters/so2-adapter.js` (tambah self-registrasi), `js/adapters/fegt-adapter.js` (baru), `config/default-tags-fegt.js` (baru), `config/modules/fegt.config.js` + `ld.config.js` (baru), `index.html` (jadi hub), `trend_so2.html` + `trend_fegt.html` (baru).

@@ -304,17 +304,11 @@
     triggerLoad: triggerLoad,
     renderCombinedChart: renderCombinedChart,
     // --- API tambahan untuk ModuleView (js/module-view.js) ---
+    // Batasi tag list panel kiri ke tag milik modul aktif saja (visual/UI list
+    // filter). TIDAK mengubah state `visible` tag mana pun — logic mana yang
+    // nyala/mati saat pindah tab modul ada di module-view.js (perlu "ingat"
+    // pilihan tiap modul, bukan cuma filter tampilan).
     filterTagsByIds: function (ids) { tagIdFilter = ids || null; renderTagList(els.tagSearch ? els.tagSearch.value : ''); },
-    // Centang SEMUA tag di `ids` (tag modul aktif), lepas centang tag lain di luar itu.
-    setModuleActiveTags: function (ids) {
-      var idSet = ids || [];
-      window.TagManager.getAllTags().forEach(function (t) {
-        window.DCSTrend.setTagVisibility(t.id, idSet.indexOf(t.id) >= 0);
-      });
-      renderTagList(els.tagSearch ? els.tagSearch.value : '');
-      renderCombinedChart();
-      updateStatusBar();
-    },
     getVisibleTagIds: function () { return getVisibleTags().map(function (t) { return t.id; }); }
   };
 })();
