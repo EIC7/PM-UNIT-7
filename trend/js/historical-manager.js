@@ -71,15 +71,25 @@
 
     Promise.all(promises).then(function (results) {
       var merged = {};
+      var diag = []; // buat panel diagnostik di UI -- lihat trend_fegt.html
       results.forEach(function (res) {
         var adapter = ADAPTERS[res.modulKey];
+        var distinctModul = {};
+        (res.rows || []).forEach(function (r) { distinctModul[r.modul] = (distinctModul[r.modul] || 0) + 1; });
+        diag.push({
+          modulKey: res.modulKey,
+          rowCount: (res.rows || []).length,
+          distinctModul: distinctModul,
+          error: res.error ? String(res.error.message || res.error) : null
+        });
         if (!adapter) return;
         var parsed = adapter.parseRecords(res.rows);
         Object.assign(merged, parsed);
       });
       state.lastLoadedSeries = merged;
+      state.lastLoadDiagnostics = diag;
       state.loading = false;
-      window.dispatchEvent(new CustomEvent('dcsHistoricalLoadEnd', { detail: { series: merged, range: range } }));
+      window.dispatchEvent(new CustomEvent('dcsHistoricalLoadEnd', { detail: { series: merged, range: range, diagnostics: diag } }));
       if (onDone) onDone(merged, range);
     }).catch(function (err) {
       state.loading = false;

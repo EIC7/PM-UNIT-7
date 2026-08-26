@@ -77,6 +77,13 @@
         <div>
           <button class="load-btn" id="loadDataBtn">LOAD DATA</button>
         </div>
+        <!-- PANEL DIAGNOSTIK: buat cek langsung dari HP tanpa DevTools --
+             tampil setelah LOAD DATA diklik, kasih tau berapa baris yang
+             ketemu di Supabase per modul + nilai kolom `modul` yang
+             sebenarnya ada di database (buat ketauan kalau ada mismatch
+             nama modul antara form asal vs filter yang dipakai di sini). -->
+        <div id="dcsDiagPanel" style="display:none;margin-top:10px;padding:10px;background:#1a1a2e;border:1px solid #333;border-radius:6px;font-size:11px;font-family:monospace;color:#9fe6a0;max-height:220px;overflow:auto"></div>
+
       </div>
 
       <!-- PANEL DEVIASI (otomatis dari config/modules/<modul>.config.js) -->
@@ -100,6 +107,39 @@
   <div class="status-bar" id="statusBar"></div>
 
 </div>
+
+<script>
+  // Diagnostik ringan -- tidak ganggu alur normal, cuma dengerin event yang
+  // sudah ada (dcsHistoricalLoadEnd) dan tulis ringkasannya ke panel di atas.
+  window.addEventListener('dcsHistoricalLoadEnd', function (ev) {
+    var panel = document.getElementById('dcsDiagPanel');
+    if (!panel) return;
+    var diag = (ev.detail && ev.detail.diagnostics) || [];
+    var lines = ['=== DIAGNOSTIK LOAD DATA ==='];
+    diag.forEach(function (d) {
+      lines.push('');
+      lines.push('Modul key: ' + d.modulKey);
+      lines.push('  Baris ditemukan di Supabase: ' + d.rowCount);
+      if (d.error) lines.push('  ERROR: ' + d.error);
+      var modulValues = Object.keys(d.distinctModul || {});
+      if (modulValues.length) {
+        lines.push('  Nilai kolom "modul" yang ketemu:');
+        modulValues.forEach(function (mv) {
+          lines.push('    - "' + mv + '" (' + d.distinctModul[mv] + 'x)');
+        });
+      } else {
+        lines.push('  (Tidak ada baris sama sekali dalam rentang tanggal ini)');
+      }
+    });
+    var totalTagsWithData = Object.keys(ev.detail.series || {}).filter(function (k) {
+      return Object.keys(ev.detail.series[k]).some(function (sk) { return ev.detail.series[k][sk].length > 0; });
+    }).length;
+    lines.push('');
+    lines.push('Total tag yang punya titik data setelah di-parse: ' + totalTagsWithData);
+    panel.textContent = lines.join('\n');
+    panel.style.display = 'block';
+  });
+</script>
 
 <!-- ===================== CONFIG ===================== -->
 <script src="config/system-config.js"></script>
