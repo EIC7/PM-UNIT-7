@@ -145,14 +145,24 @@ begin
   select id into v_uid from auth.users where email = v_email;
   if v_uid is null then
     v_uid := gen_random_uuid();
+    -- CATATAN PENTING: kolom-kolom token di bawah (confirmation_token,
+    -- recovery_token, dst) WAJIB diisi '' (string kosong), BUKAN dibiarkan
+    -- NULL/default. Kalau NULL, mesin auth Supabase (GoTrue) gagal scan
+    -- baris user ini pas proses LOGIN (bukan pas insert) -> error 500
+    -- "Database error querying schema" di /auth/v1/token. Ini gotcha umum
+    -- kalau bikin user manual lewat SQL, bukan lewat Auth API resmi.
     insert into auth.users (
       id, instance_id, email, encrypted_password, email_confirmed_at,
-      role, aud, created_at, updated_at, raw_app_meta_data, raw_user_meta_data
+      role, aud, created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+      confirmation_token, recovery_token, email_change,
+      email_change_token_new, email_change_token_current,
+      phone_change, phone_change_token, reauthentication_token
     ) values (
       v_uid, '00000000-0000-0000-0000-000000000000', v_email,
       crypt(p_password, gen_salt('bf')), now(),
       'authenticated', 'authenticated', now(), now(),
-      '{"provider":"email","providers":["email"]}', '{}'
+      '{"provider":"email","providers":["email"]}', '{}',
+      '', '', '', '', '', '', '', ''
     );
   else
     update auth.users set encrypted_password = crypt(p_password, gen_salt('bf')) where id = v_uid;

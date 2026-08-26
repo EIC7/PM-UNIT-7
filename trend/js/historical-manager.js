@@ -6,18 +6,18 @@
  * Historical Trend TIDAK mengikuti live data secara otomatis — hanya
  * menampilkan data ketika user menekan [LOAD DATA] atau memilih quick range.
  *
- * ADAPTERS: peta modulKey -> parser. Untuk mengaktifkan modul lain
- * (opacity, fegt, ph, dst) di masa depan, cukup tambah entry baru di sini
- * setelah adapter parser-nya dibuat di js/adapters/<modul>-adapter.js
- * (contoh: js/adapters/so2-adapter.js).
+ * ADAPTERS: peta modulKey -> parser, dibangun OTOMATIS dari
+ * window.DCS_ADAPTERS (tiap file js/adapters/<modul>-adapter.js
+ * mendaftarkan dirinya sendiri ke situ). File ini TIDAK PERNAH perlu
+ * diedit untuk menambah modul baru — cukup buat adapter + config baru.
  * ==========================================================================
  */
 (function () {
   'use strict';
 
-  var ADAPTERS = {
-    'SO2': window.SO2Adapter
-  };
+  function getAdapters() {
+    return window.DCS_ADAPTERS || {};
+  }
 
   var state = {
     startTime: null,
@@ -56,9 +56,11 @@
       return;
     }
 
+    var ADAPTERS = getAdapters();
     var modulKeys = Object.keys(ADAPTERS);
     var promises = modulKeys.map(function (modulKey) {
-      return window.SupabaseAdapter.fetchByModulAndRange(modulKey, range.start, range.end)
+      var adapter = ADAPTERS[modulKey];
+      return window.SupabaseAdapter.fetchByModulAndRange(modulKey, range.start, range.end, adapter && adapter.selectColumns)
         .then(function (rows) {
           return { modulKey: modulKey, rows: rows };
         })
@@ -70,15 +72,25 @@
 
     Promise.all(promises).then(function (results) {
       var merged = {};
+      var diag = []; // buat panel diagnostik di UI -- lihat trend_fegt.html
       results.forEach(function (res) {
         var adapter = ADAPTERS[res.modulKey];
+        var distinctModul = {};
+        (res.rows || []).forEach(function (r) { distinctModul[r.modul] = (distinctModul[r.modul] || 0) + 1; });
+        diag.push({
+          modulKey: res.modulKey,
+          rowCount: (res.rows || []).length,
+          distinctModul: distinctModul,
+          error: res.error ? String(res.error.message || res.error) : null
+        });
         if (!adapter) return;
         var parsed = adapter.parseRecords(res.rows);
         Object.assign(merged, parsed);
       });
       state.lastLoadedSeries = merged;
+      state.lastLoadDiagnostics = diag;
       state.loading = false;
-      window.dispatchEvent(new CustomEvent('dcsHistoricalLoadEnd', { detail: { series: merged, range: range } }));
+      window.dispatchEvent(new CustomEvent('dcsHistoricalLoadEnd', { detail: { series: merged, range: range, diagnostics: diag } }));
       if (onDone) onDone(merged, range);
     }).catch(function (err) {
       state.loading = false;
@@ -111,6 +123,6 @@
     setQuickRange: setQuickRange,
     setCustomRange: setCustomRange,
     getState: getState,
-    ADAPTERS: ADAPTERS
+    getAdapters: getAdapters
   };
 })();

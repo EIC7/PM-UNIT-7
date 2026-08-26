@@ -1,18 +1,31 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ==========================================================================
+   HALAMAN SELALU BISA DISCROLL NATURAL — di semua ukuran layar.
+   ==========================================================================
+   Versi sebelumnya memakai desain "1 layar penuh, tidak discroll" ala SCADA
+   (html,body {overflow:hidden; height:100vh}) dengan HANYA .panel-center
+   yang boleh discroll internal. Itu jadi bug begitu konten modul (tab,
+   KPI cards, panel deviasi, tabel log) bertambah tinggi: .module-tab-bar
+   dan .module-kpi-bar ada DI LUAR .panel-center, jadi kalau kursor mouse
+   scroll di area itu (atau di panel-tags/panel-details), TIDAK ADA efek
+   sama sekali karena ancestor-nya overflow:hidden — user mengira halaman
+   "tidak bisa discroll", padahal cuma satu kolom sempit di tengah yang bisa.
+   Fix: halaman (html/body) sendiri yang discroll, seperti browser pada
+   umumnya. Tidak ada lagi area "mati" yang scroll-nya tidak nyambung.
+   ========================================================================== */
 html, body {
-  height: 100%;
+  min-height: 100%;
   font-family: 'Consolas', 'Courier New', monospace;
   background: var(--bg-main);
   color: var(--text-primary);
   font-size: 13px;
-  overflow: hidden;
 }
 
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 /* ── TOP BAR ─────────────────────────────────────────────── */
@@ -20,9 +33,9 @@ html, body {
   display: flex;
   align-items: center;
   gap: 16px;
-  height: 44px;
-  padding: 0 16px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  padding: 10px 16px;
 }
 
 .topbar-title {
@@ -49,9 +62,9 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
-  padding: 0 16px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  row-gap: 6px;
+  padding: 8px 16px;
 }
 
 .modebar-label { font-size: 11px; letter-spacing: 1px; margin-right: 4px; }
@@ -64,11 +77,16 @@ html, body {
   cursor: pointer;
 }
 
+/* ── MODULE TAB / KPI BAR ────────────────────────────────── */
+.module-tab-bar {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
 /* ── MAIN GRID ───────────────────────────────────────────── */
 .main-grid {
   display: flex;
-  flex: 1;
-  min-height: 0;
+  align-items: flex-start; /* tiap kolom tinggi sesuai kontennya sendiri, bukan dipaksa sama tinggi */
 }
 
 .panel-tags {
@@ -76,7 +94,9 @@ html, body {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  max-height: 70vh; /* daftar tag panjang scroll sendiri di sini, bukan bikin sidebar raksasa */
+  position: sticky;
+  top: 0;
 }
 
 .panel-center {
@@ -84,16 +104,16 @@ html, body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
-  overflow-y: auto; /* chart TIDAK boleh diperas oleh konten modul di bawahnya
-                        (KPI/deviasi/log table) -- itu yang discroll, bukan chart */
 }
 
 .panel-details {
-  width: 220px;
+  width: 240px;
   flex-shrink: 0;
   padding: 12px;
+  max-height: 70vh;
   overflow-y: auto;
+  position: sticky;
+  top: 0;
 }
 
 .panel-header {
@@ -134,9 +154,10 @@ html, body {
 .chart-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 6px;
   gap: 8px;
   padding: 8px 12px;
-  flex-shrink: 0;
 }
 
 .chart-title { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
@@ -150,14 +171,10 @@ html, body {
 }
 
 .chart-wrap {
-  flex: 0 0 auto;
-  /* Chart WAJIB besar & jelas (referensi: PI ProcessBook trend display) --
-     tidak boleh ikut diperas walau konten di bawahnya (historical panel,
-     KPI/deviasi/log table per-tag) makin banyak. Tinggi mengikuti viewport
-     supaya tetap proporsional di layar besar maupun kecil, dengan batas
-     bawah/atas yang wajar. */
-  height: clamp(420px, 58vh, 640px);
-  min-height: 420px;
+  /* Chart tetap besar & jelas (referensi: PI ProcessBook trend display),
+     tinggi mengikuti viewport dengan batas wajar — TAPI sekarang halaman
+     boleh discroll, jadi ini tidak perlu memaksa sisa layar habis. */
+  height: clamp(380px, 55vh, 620px);
   position: relative;
   padding: 4px 12px 12px;
 }
@@ -176,7 +193,6 @@ html, body {
 .historical-panel {
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
   padding: 8px 12px;
   gap: 8px;
 }
@@ -251,12 +267,10 @@ html, body {
   display: flex;
   align-items: center;
   gap: 20px;
-  height: 26px;
-  padding: 0 14px;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  padding: 8px 14px;
   font-size: 10.5px;
-  flex-shrink: 0;
-  overflow-x: auto;
-  white-space: nowrap;
 }
 
 .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 3px; }
@@ -266,55 +280,20 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* ── RESPONSIVE / MOBILE ─────────────────────────────────────────────────
-   Desktop: 3 kolom tetap (tags 240px | chart flex | details 220px) di
-   dalam viewport 100vh dengan overflow:hidden. Di layar HP, lebar tetap
-   itu lebih besar dari viewport dan overflow:hidden bikin sisanya
-   terpotong tanpa bisa discroll. Breakpoint ini menumpuk panel jadi 1
-   kolom dan mengizinkan scroll vertikal.
+   Perbedaan mobile SEKARANG cuma soal SUSUNAN kolom (ditumpuk vertikal,
+   chart duluan karena paling penting) — bukan lagi soal scroll (itu sudah
+   berlaku sama di semua ukuran layar sejak aturan di atas).
    ────────────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  html, body {
-    height: auto;
-    min-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-
-  .app-shell {
-    height: auto;
-    min-height: 100vh;
-  }
-
-  .topbar {
-    height: auto;
-    flex-wrap: wrap;
-    row-gap: 4px;
-    padding: 8px 12px;
-  }
   .topbar-title { flex-basis: 100%; }
   .topbar-clock { margin-left: 0; }
-
-  .modebar {
-    height: auto;
-    flex-wrap: wrap;
-    row-gap: 6px;
-    padding: 8px 12px;
-  }
   .mode-btn { flex: 1 1 auto; }
 
-  .module-tab-bar { overflow-x: auto; flex-wrap: nowrap; }
   .module-kpi-bar { padding: 8px; }
   .kpi-group-row { row-gap: 8px; }
   .kpi-card { flex: 1 1 calc(50% - 10px); min-width: 130px; }
 
-  /* Stack the 3-column grid; chart first (most important), then tags,
-     then details, via flex order — DOM order stays tags/center/details
-     for markup clarity but visual order is reordered for mobile use. */
-  .main-grid {
-    flex-direction: column;
-    height: auto;
-    overflow: visible;
-  }
+  .main-grid { flex-direction: column; }
 
   .panel-center { order: 1; width: 100%; }
 
@@ -324,6 +303,7 @@ html, body {
     max-height: 260px;
     border-right: none;
     border-bottom: 1px solid var(--border-soft);
+    position: static;
   }
 
   .panel-details {
@@ -332,21 +312,11 @@ html, body {
     max-height: 300px;
     border-left: none;
     border-top: 1px solid var(--border-soft);
+    position: static;
   }
 
-  /* Chart needs a definite height on mobile: panel-center no longer has
-     a 100vh-derived height to base flex:1 on, so #trendChart (width/
-     height:100%) would otherwise collapse to 0. */
-  .chart-wrap {
-    flex: none;
-    height: 300px;
-    padding: 4px 8px 10px;
-  }
+  .chart-wrap { height: 300px; padding: 4px 8px 10px; }
 
-  .chart-toolbar {
-    flex-wrap: wrap;
-    row-gap: 6px;
-  }
   .chart-toolbar-spacer { flex-basis: 100%; height: 0; }
 
   .historical-panel { padding: 8px; }
@@ -358,18 +328,10 @@ html, body {
 
   .load-btn { width: 100%; padding: 10px 16px; }
 
-  .deviation-panel-chart { height: 150px; }
+  .deviation-panel-chart { height: 120px; }
 
   .module-log-wrap { max-height: 260px; overflow-y: auto; }
   .module-log-table { font-size: 10px; }
-
-  .status-bar {
-    height: auto;
-    flex-wrap: wrap;
-    row-gap: 4px;
-    white-space: normal;
-    padding: 6px 12px;
-  }
 }
 
 @media (max-width: 480px) {

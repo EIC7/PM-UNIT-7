@@ -37,6 +37,7 @@
     els.statusBar = document.getElementById('statusBar');
     els.chartTitle = document.getElementById('chartTitle');
     els.autoScaleBtn = document.getElementById('autoScaleBtn');
+    els.clearPinsBtn = document.getElementById('clearPinsBtn');
     els.exportCsvBtn = document.getElementById('exportCsvBtn');
     els.exportJsonBtn = document.getElementById('exportJsonBtn');
     els.exportImgBtn = document.getElementById('exportImgBtn');
@@ -269,6 +270,7 @@
     if (els.modeLiveBtn) els.modeLiveBtn.addEventListener('click', function () { onModeClick('live'); });
     if (els.modeHistBtn) els.modeHistBtn.addEventListener('click', function () { onModeClick('historical'); });
     if (els.autoScaleBtn) els.autoScaleBtn.addEventListener('click', function () { window.ChartManager.autoScale(); });
+    if (els.clearPinsBtn) els.clearPinsBtn.addEventListener('click', function () { window.ChartManager.clearPins(); });
     if (els.exportCsvBtn) els.exportCsvBtn.addEventListener('click', function () { exportVisible('csv'); });
     if (els.exportJsonBtn) els.exportJsonBtn.addEventListener('click', function () { exportVisible('json'); });
     if (els.exportImgBtn) els.exportImgBtn.addEventListener('click', function () { window.ChartManager.exportImage('dcs_trend'); });
@@ -302,17 +304,11 @@
     triggerLoad: triggerLoad,
     renderCombinedChart: renderCombinedChart,
     // --- API tambahan untuk ModuleView (js/module-view.js) ---
+    // Batasi tag list panel kiri ke tag milik modul aktif saja (visual/UI list
+    // filter). TIDAK mengubah state `visible` tag mana pun — logic mana yang
+    // nyala/mati saat pindah tab modul ada di module-view.js (perlu "ingat"
+    // pilihan tiap modul, bukan cuma filter tampilan).
     filterTagsByIds: function (ids) { tagIdFilter = ids || null; renderTagList(els.tagSearch ? els.tagSearch.value : ''); },
-    // Centang SEMUA tag di `ids` (tag modul aktif), lepas centang tag lain di luar itu.
-    setModuleActiveTags: function (ids) {
-      var idSet = ids || [];
-      window.TagManager.getAllTags().forEach(function (t) {
-        window.DCSTrend.setTagVisibility(t.id, idSet.indexOf(t.id) >= 0);
-      });
-      renderTagList(els.tagSearch ? els.tagSearch.value : '');
-      renderCombinedChart();
-      updateStatusBar();
-    },
     getVisibleTagIds: function () { return getVisibleTags().map(function (t) { return t.id; }); }
   };
 })();

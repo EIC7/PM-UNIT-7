@@ -24,6 +24,8 @@ body { background: var(--bg-main); }
 }
 
 .topbar-title { color: var(--accent-cyan); }
+.topbar-home-link { color: var(--accent-cyan); text-decoration: none; border-bottom: 1px dotted var(--accent-cyan); }
+.topbar-home-link:hover { color: #fff; border-bottom-style: solid; }
 
 .topbar-status .dot { background: var(--status-ok); box-shadow: 0 0 6px var(--status-ok); }
 .topbar-status.disconnected .dot { background: var(--status-bad); box-shadow: 0 0 6px var(--status-bad); }
@@ -150,7 +152,7 @@ body { background: var(--bg-main); }
 .kpi-card-value { color: var(--text-primary); font-size: 16px; font-weight: 600; }
 .module-log-empty { color: var(--text-dim); font-size: 11px; padding: 4px 0 10px; }
 
-.module-deviation-area { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
+.module-deviation-area { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
 .deviation-panel {
   background: var(--bg-panel-alt); border: 1px solid var(--border-soft); border-radius: 4px; padding: 8px 10px;
 }
@@ -158,8 +160,12 @@ body { background: var(--bg-main); }
 .deviation-panel-title { color: var(--text-secondary); font-size: 11px; letter-spacing: .04em; }
 .deviation-panel-last { color: var(--accent-green); font-size: 13px; font-weight: 600; }
 .deviation-panel-last.deviation-out { color: var(--accent-red); }
-.deviation-panel-desc { color: var(--text-dim); font-size: 10px; margin-bottom: 6px; }
-.deviation-panel-chart { height: 120px; width: 100%; }
+.deviation-panel-desc { color: var(--text-secondary); font-size: 10px; margin-bottom: 4px; } /* dibuat lebih terang dari text-dim biar gampang dibaca */
+.deviation-panel-chart { height: 110px; width: 100%; }
+.deviation-panel-empty {
+  height: 40px; display: flex; align-items: center;
+  color: var(--text-dim); font-size: 10.5px; font-style: italic;
+}
 
 .module-log-wrap { padding: 10px 12px; overflow-x: auto; }
 .module-log-table { width: 100%; border-collapse: collapse; font-size: 11px; }

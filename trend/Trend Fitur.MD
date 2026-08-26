@@ -3,6 +3,10 @@
 Status: **Phase awal — HISTORICAL TREND aktif, modul SO2 Scrubber Inlet**
 Sumber data: **read-only** dari Supabase `pm_records` (project sama dengan repo `Mahfudjtf/PM-UNIT-7`)
 
+> **Revisi terbaru (fix layout & scroll):**
+> - **Bug scroll halaman tidak bisa discroll di layar desktop full-screen** — diperbaiki. Akar masalah: layout lama pakai desain "1 layar penuh, tidak discroll" (`overflow:hidden` di `html/body`), dan HANYA `.panel-center` yang boleh discroll internal — sementara `.module-tab-bar`/`.module-kpi-bar` ada DI LUAR area itu (paling atas, tempat kursor biasanya berada). Scroll di situ tidak ngefek sama sekali, kelihatan seperti "halaman macet total". Sekarang **seluruh halaman discroll normal** (seperti browser pada umumnya) di semua ukuran layar — tidak ada lagi area "mati".
+> - **Kotak panel deviasi yang kosong di bawah keterangan** — diperbaiki 2 arah: (1) kalau memang belum ada data (pasangan record DCS/Local atau Before/After yang cocok belum ketemu di rentang waktu itu), sekarang tampil pesan jelas ("Belum ada pasangan record ... yang cocok") alih-alih kanvas kosong; (2) kalau datanya ADA, area plot mini-chart diperbesar (margin grid dikurangi, dari ~34px area plot efektif dari total 80px jadi jauh lebih lega) supaya garis deviasi nyaris-datar tetap kelihatan, bukan menempel tak terlihat di tepi.
+
 ---
 
 ## 1. Apa yang sudah berfungsi penuh (bukan dummy)
@@ -261,3 +265,101 @@ trend/
 **Sesi berikutnya (chart kecil + data tidak muncul):**
 - **Chart kecil (desktop):** setelah `module-kpi-bar`/`module-deviation-area`/`module-log-wrap` jadi per-tag (2× lebih tinggi — Scrubber A & B masing-masing punya baris sendiri), total konten di `.panel-center` melebihi tinggi 1 viewport. Karena `.chart-wrap` sebelumnya `flex:1` (ikut menyusut menyesuaikan sisa ruang) sementara `app-shell` dipaku `height:100vh` + `overflow:hidden`, chart jadi diperas sampai sangat kecil supaya semua elemen lain tetap muat. **Fix:** `.panel-center` sekarang `overflow-y:auto` (yang discroll konten di bawah chart, bukan chart-nya), dan `.chart-wrap` diberi tinggi tetap `clamp(420px, 58vh, 640px)` (`flex:0 0 auto`) — chart selalu besar & jelas, tidak pernah ikut diperas lagi.
 - **Data tidak muncul ("TIDAK ADA DATA"):** `SupabaseAdapter.fetchByModulAndRange()` sebelumnya fetch 500 record TERBARU dari **seluruh** `pm_records` (gabungan ±15 modul lain), baru filter modul SO2 di client — **ini persis temuan §8.2 poin 6 (prioritas 🔴 Tinggi) yang sebelumnya sengaja ditunda**. Kalau modul lain lebih sering menyimpan record daripada SO2, record SO2 gampang terlempar keluar dari window 500-terbaru itu — data SO2 ADA di database tapi tidak pernah ikut ter-fetch sama sekali. **Fix:** filter modul sekarang dilakukan di query REST itu sendiri (`modul=ilike.*SO2*`, PostgREST substring match — field `modul` di DB berisi teks bebas per form, mis. `so2.html` menyimpan `'SO2 Scrubber Inlet'` bukan cuma `'SO2'`), bukan fetch-semua-lalu-filter-client. Ini menuntaskan §9 prioritas #2 (query server-side filtered) sekaligus, khusus untuk SO2.
+
+---
+
+## 11. Sesi ini — Gaya Tampilan Sesuai Referensi "Trend Display" (screenshot user)
+
+User membandingkan langsung ke screenshot layar **Trend Display** (line chart dengan sumbu ppm asli 0-500, titik data bertanggal, kotak nilai yang menempel di titik cursor). Konfirmasi & perubahan:
+
+- **Konfirmasi cakupan data:** sudah benar cuma SO2 (`SO2-7FC-AT-7A`, `SO2-7FC-AT-7B`) yang ditarik — tidak ada modul lain aktif. Tidak ada perubahan di sisi ini, sudah sesuai sejak §2.
+- **Sumbu Y — ppm asli, bukan % span:** `chart-manager.js` sebelumnya menormalisasi tiap titik ke persentase `engineeringLow..engineeringHigh` supaya multi-unit bisa ditumpuk (lihat §1/§8.1 lama). Sesuai keputusan user, ini **diganti** ke nilai ppm asli langsung di sumbu Y (rentang diambil dari `min`/`max` tag — untuk SO2 itu `0..500`, cocok dengan referensi). Catatan desain: kalau nanti tag dengan unit berbeda ditumpuk bersamaan dalam 1 grafik, rentang sumbu jadi gabungan min/max semua tag tanpa normalisasi ulang — trade-off yang disengaja demi keterbacaan angka asli, karena prioritas saat ini masih single-unit (SO2 saja).
+- **Series default:** tetap semua 4 (DCS, Local, Before, After per tag) — tidak diubah, sesuai keputusan user.
+- **Pinned readout box (BARU):** klik di area grafik sekarang "menempelkan" kotak nilai (tanggal/jam + nilai tiap series berwarna, mirip contoh gambar) plus garis vertikal putus-putus, ke titik data terdekat. Beda dari tooltip hover bawaan ECharts — box ini **persisten**, tidak hilang saat mouse dipindah. Maks 4 box sekaligus (klik lagi di waktu yang sama = lepas pin tertua otomatis digeser). Tutup via tombol × di kotak, atau tombol toolbar baru **CLEAR PINS** untuk hapus semua sekaligus. Diimplementasikan pakai ECharts `graphic` elements (bukan komponen bawaan), reposisi otomatis saat zoom/resize (`chart.on('dataZoom', ...)` + resize listener), di-reset tiap kali data/tag berganti (`renderCombined()`).
+- File terdampak: `js/chart-manager.js` (mayoritas perubahan), `index.html` (+tombol CLEAR PINS), `js/ui-manager.js` (wiring tombol).
+- **Belum dikerjakan:** Dual Cursor A/B dengan ΔT/ΔValue/Rate-of-Change (§8.1 poin 3, §9) — pin sekarang murni per-titik independen, belum ada perhitungan selisih otomatis antar 2 pin.
+
+---
+
+## 12. Sesi ini — Fix Tampilan (label tanggal, garis putus, batas atas sumbu)
+
+User membandingkan ke contoh grafik Excel (2 garis dengan label tanggal M/D/YYYY dirotasi di sumbu X) dan melaporkan 3 masalah pada tampilan saat ini:
+
+1. **Tidak ada label tanggal yang kelihatan di sumbu X.** Sebelumnya `xAxis.axisLabel` pakai `timeFormatter` (format `DD/MM HH:mm`, tanpa rotasi) — untuk data event-based (1 titik per hari, bukan per-menit) ini kurang pas dan gampang bertumpuk/hilang karena echarts auto-hide label yang overlap. **Fix:** formatter baru `dateAxisFormatter` (`M/D/YYYY`, tanpa jam — sesuai gaya contoh Excel user), `axisLabel.rotate:35` + `hideOverlap:true`, dan `grid.bottom` diperbesar dari 60→85px (dataZoom slider height/posisi juga disesuaikan turun) supaya label yang dirotasi tidak kepotong.
+2. **Sambungan garis antar titik tidak ada, cuma titik-titik lepas.** Root cause: `GAP_BREAK_MINUTES` (config) di-set tetap 3 hari (4320 menit), sementara cadence kalibrasi SO2 di data nyata berjarak mingguan (~7 hari) — jadi SEMUA pasangan titik berturutan otomatis dianggap "gap besar" dan garis diputus di antara tiap titik, terlihat seperti tidak ada garis sama sekali. **Fix:** `computeGapThresholdMs()` baru di `chart-manager.js` — ambang gap-break sekarang **adaptif per series**: `3× median jarak antar-titik series itu sendiri`, dengan `GAP_BREAK_MINUTES` config sebagai lantai minimum (bukan lagi angka tetap). Cadence normal (mingguan/2-mingguan/apapun) otomatis tersambung, tapi jeda yang jauh di luar kebiasaan (mis. kekosongan data 2 bulan di tengah data mingguan) tetap diputus sesuai tujuan awal fitur ini.
+3. **Batas atas sumbu Y diubah ke 700** (dari sebelumnya 500 = `tag.max`, rentang instrumen) supaya perubahan garis lebih jelas kelihatan, sesuai permintaan. Field baru `chartMax:700` ditambahkan ke config `SO2-7FC-AT-7A`/`SO2-7FC-AT-7B` di `config/default-tags.js`, dipakai terpisah dari `max` (rentang instrumen/engineering, tetap 500, masih dipakai di tempat lain kalau perlu) — `chart-manager.js` sekarang pakai `t.chartMax != null ? t.chartMax : t.max` saat menghitung batas sumbu.
+
+File terdampak: `js/chart-manager.js` (formatter tanggal, grid margin, adaptive gap-break, chartMax lookup), `config/default-tags.js` (+`chartMax:700` di 2 tag SO2).
+
+---
+
+## 13. Sesi ini — Fix: tidak bisa scroll ke bawah (KPI/deviasi/log table tidak kejangkau)
+
+**Gejala:** `.panel-center` sudah `overflow-y:auto` dan layout flex (`min-height:0`) sudah benar (lihat §10/§8.2 poin "chart kecil" yang sudah pernah dibenahi) — tapi user tetap tidak bisa scroll ke bawah untuk lihat KPI cards/panel deviasi/tabel log di bawah chart.
+
+**Root cause:** `dataZoom` tipe `inside` di ECharts (`js/chart-manager.js`) secara default meng-capture event scroll-wheel untuk **zoom grafik**, bukan cuma saat drag slider. Karena chart mengisi sebagian besar area `.panel-center` yang terlihat, hampir semua percobaan scroll-wheel di area itu ke-intercept jadi zoom-in/out chart, bukan scroll halaman turun ke konten di bawahnya.
+
+**Fix:** `dataZoom[0]` (`type:'inside'`) diberi `zoomOnMouseWheel:'ctrl'` (scroll-wheel biasa tidak lagi di-capture; harus tahan **Ctrl** dulu baru scroll = zoom chart) + `moveOnMouseWheel:false`. Scroll biasa di atas chart sekarang tembus ke scroll halaman seperti area lain. Zoom masih bisa lewat slider di bawah chart, drag-select, atau Ctrl+scroll.
+
+File terdampak: `js/chart-manager.js` (`dataZoom` config di `renderCombined`).
+
+---
+
+## 14. Sesi ini — Panel deviasi: teks keterangan terlalu gelap + area kosong terlalu besar
+
+User membandingkan tampilan panel "Deviasi DCS − Local" / "Koreksi Kalibrasi (Before − After)" (`module-view.js` + `dcs-theme.css`) dan komplain 2 hal:
+
+1. **Teks keterangan (`.deviation-panel-desc`) terlalu gelap, susah dibaca** — sebelumnya pakai `var(--text-dim)` (`#5a6b76`, warna paling redup di palet, dimaksudkan utk label sekunder seperti timestamp status bar), kurang cocok dipakai untuk kalimat penjelasan yang harus dibaca jelas. **Fix:** diganti ke `var(--text-secondary)` (`#8b9aa5`, sama dengan warna title panel), kontras lebih baik terhadap `--bg-panel-alt`.
+2. **Banyak area kosong di tiap kartu panel** — `.deviation-panel-chart` (mini chart ECharts per pair deviasi) tingginya 120px, padahal garis deviasi yang ditampilkan seringkali flat/tipis (nilai deviasi kecil, mis. `+0.00 ppm`), jadi visualnya didominasi ruang kosong. **Fix:** tinggi dikecilkan ke 80px, gap antar-panel di `.module-deviation-area` dikecilkan 8px→6px, margin bawah `.deviation-panel-desc` 6px→4px — kartu jadi lebih ringkas, lebih banyak panel kelihatan tanpa scroll berlebihan. Override khusus mobile (`style.css`, breakpoint ≤900px) yang membesarkan chart ke 150px **tidak diubah** — itu sengaja dibuat lebih besar untuk kenyamanan baca di layar sentuh.
+
+File terdampak: `css/dcs-theme.css` (`.deviation-panel-desc`, `.deviation-panel-chart`, `.module-deviation-area`).
+
+---
+
+## 15. Sesi ini — Modul baru: FEGT & LD, restrukturisasi jadi multi-halaman
+
+### Restrukturisasi file
+
+Sebelumnya `trend/index.html` = 1 halaman untuk 1 modul (SO2). Supaya menambah modul baru tidak bikin semuanya bertumpuk di satu halaman, direstruktur jadi:
+
+```
+trend/
+├── index.html          ← HUB baru: kartu link ke tiap modul (statis, tanpa app JS)
+├── trend_so2.html       ← bekas index.html lama, khusus modul SO2
+├── trend_fegt.html      ← BARU: modul FEGT + LD
+├── config/
+│   ├── default-tags-so2.js   (rename dari default-tags.js)
+│   ├── default-tags-fegt.js  (BARU — 31 tag: FEGT-P1..21 + LD-1..10)
+│   └── modules/
+│       ├── so2.config.js
+│       ├── fegt.config.js    (BARU — tab "FEGT — Acoustic Pyrometry")
+│       └── ld.config.js      (BARU — tab "LD — Leak Detection")
+└── js/adapters/
+    ├── so2-adapter.js
+    └── fegt-adapter.js       (BARU)
+```
+
+Semua modul JS "generik" (`chart-manager.js`, `ui-manager.js`, `module-view.js`, `tag-manager.js`, dst) **tidak berubah fungsinya** — dipakai bersama oleh `trend_so2.html` dan `trend_fegt.html` tanpa modifikasi khusus per-modul, kecuali 1 perbaikan arsitektur (lihat bawah).
+
+### Data FEGT & LD
+
+Sumber: `fegt.html` (`dbCollectData`), modul Supabase `'FEGT & Leak Detection'`. SATU form/record berisi DUA kelompok data fisik berbeda:
+- `data.paths` (21 entri `{id,temp,status}`) = titik acoustic pyrometry FEGT (suhu gas keluar furnace, per lintasan sinyal TX→RX)
+- `data.leakPaths` (10 entri `{id,temp,status}`) = titik leak detection LD (suhu lokal di superheater/reheater/economizer/bottom slope)
+
+Sesuai arahan: **grafik FEGT dan LD dipisah** — diimplementasikan sebagai 2 tab modul (`fegt.config.js` + `ld.config.js`) di halaman `trend_fegt.html` yang sama, bukan 2 file terpisah, karena datanya memang 1 fetch Supabase yang sama (`js/adapters/fegt-adapter.js` — 1 adapter, parsing kedua kelompok sekaligus, didaftarkan sebagai `DCS_ADAPTERS['FEGT']` dan dipakai oleh KEDUA module config lewat `adapterKey:'FEGT'`).
+
+Field temp yang `<= 0` (status "data fail" di form asal) **tidak ikut diplot** — bukan bacaan proses valid.
+
+**Catatan asumsi:** `fegt.html` tidak mendefinisikan batas alarm/rentang instrumen eksplisit (status cuma dari `temp>0`). Angka `min/max/chartMax` di `default-tags-fegt.js` (FEGT: 0–1300°C, LD: 0–600°C) adalah **asumsi rentang tipikal**, bukan dari spesifikasi instrumen aktual — sesuaikan kalau ada angka pastinya.
+
+### Perbaikan arsitektur: `historical-manager.js` sekarang benar-benar generik
+
+Sebelumnya `ADAPTERS` di `historical-manager.js` di-hardcode isinya (`{'SO2': window.SO2Adapter}`) — jadi tiap tambah modul baru, file ini tetap harus diedit (bertentangan dengan tujuan modularitasnya sendiri). **Fix:** tiap adapter sekarang **mendaftar diri sendiri** ke `window.DCS_ADAPTERS` (lihat akhir `so2-adapter.js`/`fegt-adapter.js`), dan `historical-manager.js` cukup baca `window.DCS_ADAPTERS` — file itu sekarang benar-benar tidak perlu disentuh lagi untuk modul apa pun ke depannya.
+
+### Bug yang ditemukan & diperbaiki saat build modul bertag-banyak
+
+1. **21 tag auto-nyala semua saat buka tab FEGT** — perilaku lama ("pindah tab = centang semua tag modul itu") masuk akal untuk SO2 (2 tag) tapi bikin chart FEGT langsung penuh 21 garis. **Fix:** tiap tag FEGT/LD punya `visible` default sendiri di `default-tags-fegt.js` (cuma 3 titik FEGT + 2 titik LD yang nyala dari awal) — tidak lagi dipaksa nyala semua.
+2. **Pindah tab FEGT→LD mematikan default LD secara permanen** — konsekuensi dari fix #1 yang kurang lengkap: logic "matikan tag di luar modul aktif" ternyata juga mematikan default LD SEBELUM user sempat lihat tab LD (karena FEGT dibuka duluan sebagai tab pertama). **Fix:** `module-view.js` sekarang **mengingat pilihan tag terakhir per-modul** (`moduleVisibleMemory`, in-memory) — tiap keluar dari tab, state tag modul itu disimpan; tiap masuk tab, dipulihkan dari memori itu (atau dari `tag._defaultVisible` kalau modul belum pernah dikunjungi). `tag._defaultVisible` sendiri baru ditambahkan di `tag-manager.js` (snapshot visibility asli dari config, terpisah dari `visible` yang berubah-ubah). Sudah diuji lewat 5 skenario (headless browser): default awal per-tab benar, pindah tab bolak-balik tidak saling menimpa, dan pilihan manual user tetap diingat setelah pindah-pindah tab.
+
+File terdampak: `js/tag-manager.js`, `js/module-view.js`, `js/ui-manager.js` (`setModuleActiveTags` dihapus — logicnya pindah ke `module-view.js` yang butuh akses ke memori per-modul), `js/historical-manager.js`, `js/adapters/so2-adapter.js` (tambah self-registrasi), `js/adapters/fegt-adapter.js` (baru), `config/default-tags-fegt.js` (baru), `config/modules/fegt.config.js` + `ld.config.js` (baru), `index.html` (jadi hub), `trend_so2.html` + `trend_fegt.html` (baru).

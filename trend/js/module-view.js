@@ -23,6 +23,10 @@
 
   var els = {};
   var activeModuleKey = null;
+  // Ingat tag mana yang terakhir dicentang di TIAP modul, supaya pindah tab
+  // bolak-balik tidak saling menimpa pilihan (atau default) modul lain.
+  // Diisi saat MENINGGALKAN modul (bukan cuma sekali di awal).
+  var moduleVisibleMemory = {};
 
   function cacheEls() {
     els.tabBar = document.getElementById('moduleTabBar');
@@ -55,17 +59,51 @@
   }
 
   function selectModule(key) {
-    activeModuleKey = key;
-    renderTabBar();
     var mod = window.DCS_MODULES[key];
     if (!mod) return;
 
-    // Batasi tag list panel kiri ke tag milik modul ini saja, lalu centang
-    // SEMUA tag modul ini secara otomatis (mode overlay — supaya begitu pindah
-    // tab, seluruh tag modul langsung tampil bersama di grafik combined).
+    // Sebelum pindah, simpan dulu tag mana yang lagi nyala di modul yang
+    // SEDANG ditinggalkan — supaya kalau user balik lagi ke tab ini nanti,
+    // pilihannya masih seperti terakhir kali, bukan balik ke default awal.
+    if (activeModuleKey && activeModuleKey !== key) {
+      var prevMod = window.DCS_MODULES[activeModuleKey];
+      if (prevMod) {
+        moduleVisibleMemory[activeModuleKey] = (prevMod.tagIds || []).filter(function (id) {
+          var t = window.TagManager.getTag(id);
+          return t && t.visible;
+        });
+      }
+    }
+
+    activeModuleKey = key;
+    renderTabBar();
+
+    // Tentukan tag mana yang harus nyala di modul BARU ini: pakai memori
+    // kunjungan terakhir kalau ada, kalau belum pernah dikunjungi pakai
+    // default asli dari config/default-tags-*.js (t._defaultVisible).
+    var restoreSet = moduleVisibleMemory[key];
+    if (!restoreSet) {
+      restoreSet = (mod.tagIds || []).filter(function (id) {
+        var t = window.TagManager.getTag(id);
+        return t && t._defaultVisible;
+      });
+    }
+    var restoreSetIndex = {};
+    restoreSet.forEach(function (id) { restoreSetIndex[id] = true; });
+
+    // Batasi tag list panel kiri ke tag milik modul ini saja, lalu terapkan
+    // restoreSet (bukan "nyalakan semua tag modul", karena modul dg puluhan
+    // tag seperti FEGT bisa langsung penuh sesak kalau semua ikut nyala).
     if (window.UIManager) {
       if (window.UIManager.filterTagsByIds) window.UIManager.filterTagsByIds(mod.tagIds);
-      if (window.UIManager.setModuleActiveTags) window.UIManager.setModuleActiveTags(mod.tagIds);
+      window.TagManager.getAllTags().forEach(function (t) {
+        var inThisModule = (mod.tagIds || []).indexOf(t.id) >= 0;
+        var shouldBeVisible = inThisModule && !!restoreSetIndex[t.id];
+        if (t.visible !== shouldBeVisible) window.DCSTrend.setTagVisibility(t.id, shouldBeVisible);
+      });
+      if (window.UIManager.renderTagList) window.UIManager.renderTagList();
+      if (window.UIManager.renderCombinedChart) window.UIManager.renderCombinedChart();
+      if (window.UIManager.updateStatusBar) window.UIManager.updateStatusBar();
     }
     renderModulePanels();
   }
@@ -134,11 +172,13 @@
               '</span>' : '<span class="deviation-panel-last">-</span>') +
           '</div>' +
           '<div class="deviation-panel-desc">' + (pairCfg.description || '') + '</div>' +
-          '<div class="deviation-panel-chart" id="' + domId + '"></div>';
+          (devPoints.length
+            ? '<div class="deviation-panel-chart" id="' + domId + '"></div>'
+            : '<div class="deviation-panel-empty">Belum ada pasangan record ' + pairCfg.seriesA + '/' + pairCfg.seriesB + ' yang cocok pada rentang waktu ini.</div>');
 
         els.deviationArea.appendChild(wrap);
 
-        if (window.ChartManager.renderDeviationChart) {
+        if (devPoints.length && window.ChartManager.renderDeviationChart) {
           window.ChartManager.renderDeviationChart(domId, devPoints, pairCfg);
         }
       });

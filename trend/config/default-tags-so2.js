@@ -33,6 +33,7 @@ window.DCS_DEFAULT_TAGS = [
     engineeringHigh: 461,   // default Span value pada form so2.html
     min: 0,
     max: 500,
+    chartMax: 700, // batas atas VISUAL sumbu grafik (beda dari `max`=rentang instrumen) — biar perubahan garis lebih jelas kelihatan
     // Tidak ada alarm proses formal untuk data kalibrasi ini — dikosongkan.
     alarmLowLow: null,
     alarmLow: null,
@@ -59,6 +60,7 @@ window.DCS_DEFAULT_TAGS = [
     engineeringHigh: 461,
     min: 0,
     max: 500,
+    chartMax: 700,
     alarmLowLow: null,
     alarmLow: null,
     alarmHigh: null,

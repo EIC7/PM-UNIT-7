@@ -1,14 +1,14 @@
 -- ═══════════════════════════════════════════════════════════════════════
--- MIGRATION 003: Edit isi laporan di tempat, TANPA ikut mengubah status
+-- MIGRATION 005: Edit isi laporan di tempat, TANPA ikut mengubah status
 --
 -- CARA PAKAI: copy-paste SELURUH file ini ke Supabase Dashboard →
--- SQL Editor → Run (setelah 001 & 002).
+-- SQL Editor → Run (setelah 001, 002, 003, 004).
 --
 -- KENAPA MIGRATION INI DIBUTUHKAN:
--- Tombol "Edit" di Submit Report.html membuka halaman modul aslinya
+-- Tombol "Edit" di submit-report.html membuka halaman modul aslinya
 -- (mis. so2.html?id=xxx) supaya Checker/SPV bisa membetulkan isi laporan
 -- SEBELUM verifikasi/approve (verifikasi/approve sendiri sekarang
--- dilakukan terpusat di Submit Report.html, bukan lagi di halaman modul).
+-- dilakukan terpusat di submit-report.html, bukan lagi di halaman modul).
 -- Policy 001 cuma mengizinkan UPDATE kalau SEKALIGUS transisi status
 -- (SUBMITTED->CHECKED, CHECKED->FINAL_APPROVED, dst) -- edit isi data
 -- SAJA tanpa pindah status (mis. checker perbaiki angka lalu simpan,
