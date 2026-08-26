@@ -285,21 +285,17 @@
                 <button class="btn btn-full" style="background:#dc3545;color:#fff" onclick="raReviseReturned()">📝 Revisi & Kirim Ulang (buka jadi Draft)</button>
             </div>
 
-            <!-- STATUS: FINAL_APPROVED (selesai, tidak ada aksi lagi) -->
+            <!-- STATUS: FINAL_APPROVED (selesai, tapi SPV/admin masih bisa batalkan) -->
             <div id="raFinalBox" style="background:#eefcf3;border:1px solid #bdeecb;border-radius:8px;padding:14px;margin-bottom:12px;display:none;text-align:center">
                 <div style="font-weight:700;font-size:0.95em;color:#1c7a45">✅ Laporan Sudah Final Approved</div>
-                <div style="font-size:0.8em;color:#3f8a5c;margin-top:4px">Sudah disetujui SPV, tidak ada aksi lagi yang diperlukan.</div>
+                <div style="font-size:0.8em;color:#3f8a5c;margin-top:4px;margin-bottom:10px">Sudah disetujui SPV, tidak ada aksi lagi yang diperlukan.</div>
+                <button class="btn btn-full btn-gray" onclick="raCancelApprove()">↩ Batalkan Approve</button>
             </div>
 
             <!-- TANDA TANGAN TERSIMPAN (preview) -->
             <div id="raSignatureDisplay" style="display:none;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:14px">
                 <div style="font-weight:700;font-size:0.85em;color:#333;margin-bottom:8px">Tanda Tangan Laporan Ini</div>
                 <div id="raSignatureList" style="display:flex;gap:16px;flex-wrap:wrap"></div>
-            </div>
-
-            <div id="raWorkflowLoggedInAs" style="font-size:14px;font-weight:700;color:#333;text-align:center;margin-top:10px"></div>
-            <div id="raLogoutWrap" style="text-align:center;margin-top:4px;display:none">
-                <button onclick="raDoLogout()" style="background:#fdecea;border:1px solid #e74c3c;color:#e74c3c;font-size:14px;font-weight:700;border-radius:8px;cursor:pointer;padding:10px 20px;min-height:44px">↪ Logout</button>
             </div>
         </div>
     </div>
@@ -1576,7 +1572,12 @@ function applyImageEdits(){
                 window._editingId = id;
                 dbShowToast('Data dimuat dari riwayat ✓');
                 if (doPrint) {
-                    setTimeout(printReport, 250);
+                    // "Preview" dari submit-report.html: user cuma mau LIHAT hasil akhir
+                    // sebelum download, bukan langsung print/download. exportPdf() berakhir
+                    // di showPdfPreview() (modal), BUKAN auto-download -- persis yang
+                    // dibutuhkan. Sebelumnya manggil printReport() (window.print() browser
+                    // native) yang salah: itu langsung buka dialog print, bukan preview.
+                    setTimeout(exportPdf, 250);
                 }
             });
         }
@@ -2664,26 +2665,6 @@ function applyImageEdits(){
             }
 
             raRenderSignatures();
-
-            var whoEl = document.getElementById('raWorkflowLoggedInAs');
-            var logoutWrap = document.getElementById('raLogoutWrap');
-            raGetCurrentProfile(function(profile) {
-                whoEl.textContent = profile
-                    ? ('Login sebagai: ' + profile.username + ' (' + profile.role + ')' + (profile.display_name ? ' — ' + profile.display_name : ''))
-                    : '';
-                logoutWrap.style.display = profile ? 'block' : 'none';
-            });
-        }
-
-        // Logout dari akun laporan (checker/reviewer/admin) yang lagi login --
-        // supaya bisa gonta-ganti akun tanpa perlu clear cookie/incognito
-        // manual (mis. abis login admin buat testing, mau balik login SPV asli).
-        function raDoLogout() {
-            if (!confirm('Logout dari akun laporan ini?')) return;
-            raLogout(function() {
-                dbShowToast('✓ Berhasil logout');
-                raRenderWorkflowUI();
-            });
         }
 
         function raRenderSignatures() {
@@ -2743,7 +2724,11 @@ function applyImageEdits(){
                 return;
             }
             var checkedByName = document.getElementById('raCheckedByName').value;
-            raRequireLogin(['checker', 'admin'], '🔍 Login sebagai Checker', function(profile) {
+            // Diizinkan checker/reviewer/admin -- SPV (reviewer) boleh langsung
+            // proses review sendiri (skip nunggu Checker asli, misal lagi buru-buru
+            // atau Checker berhalangan), dengan konfirmasi eksplisit atas nama siapa.
+            if (!confirm('Yakin proses review laporan ini atas nama "' + checkedByName + '"?')) return;
+            raRequireLogin(['checker', 'reviewer', 'admin'], '🔍 Login untuk Review Laporan', function(profile) {
                 // Checker boleh EDIT ISI DATA sebelum verifikasi -- ambil data
                 // TERBARU dari form (bukan raCurrentRecord lama) via dbCollectData.
                 syncSectionsFromDom();
@@ -2794,6 +2779,26 @@ function applyImageEdits(){
                         dbShowToast('✓ Laporan FINAL APPROVED');
                         raSetCurrentRecord(updated);
                     });
+                });
+            });
+        }
+
+        // ── BATALKAN APPROVE (SPV/admin) — balik status FINAL_APPROVED ke CHECKED,
+        //    bersihin jejak approval lama biar gak nyisa data approval yang udah
+        //    gak berlaku begitu di-approve ulang nanti ──────────────────────────
+        function raCancelApprove() {
+            if (!raCurrentRecord || raCurrentRecord.status !== 'FINAL_APPROVED') return;
+            if (!confirm('Batalkan approval laporan ini? Status akan kembali ke CHECKED (menunggu approve ulang).')) return;
+            raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function() {
+                raUpdateRecord(raCurrentRecord.id, {
+                    status: 'CHECKED',
+                    reviewed_by_account: null,
+                    review_signature_url: null,
+                    final_approved_at: null
+                }, function(err, updated) {
+                    if (err) { alert('Gagal membatalkan approval: ' + err); return; }
+                    dbShowToast('↩ Approval dibatalkan — kembali ke status CHECKED');
+                    raSetCurrentRecord(updated);
                 });
             });
         }
