@@ -227,6 +227,15 @@ canvas.sig-canvas{border:1.5px dashed var(--bdr-2);border-radius:10px;background
       <div class="login-err" id="login-err"></div>
       <div class="login-info">Hubungi admin untuk akses role TechOp2 / Supervisor / Admin.</div>
       <div class="auth-switch">Teknisi baru? <a onclick="toggleAuthMode('register')">Daftar akun di sini</a></div>
+      <!-- Login akun ELECTRIC 7 POMI (Firebase) di atas butuh firebase-config.js/
+           db-helper.js/storage-helper.js/approval-helper.js yang belum ada di
+           deployment ini, jadi SIGN IN akan selalu gagal ("Gagal terhubung ke
+           database"). Link ini langsung ke tab "PM Unit 7" (data Supabase,
+           login sendiri lewat raRequireLogin saat Review/Approve) TANPA
+           menghapus/mengubah gerbang login Firebase di atas. -->
+      <div class="auth-switch" style="margin-top:8px">
+        <a onclick="pu7SkipLogin()">➡️ Langsung ke PM Unit 7 (tanpa login ELECTRIC 7)</a>
+      </div>
     </div>
 
     <div id="register-panel" style="display:none">
@@ -1455,6 +1464,18 @@ function pu7RenderList() {
    pu7ModalRecordId begitu modal dibuka. ── */
 var pu7ModalRecordId = null;
 var pu7ModalMode = null;
+
+// Bypass gerbang login Firebase ELECTRIC 7 POMI -- HANYA menyembunyikan
+// overlay-nya, TIDAK mengisi loggedInUser/loggedInRole dan TIDAK memanggil
+// loadAll()/showApp() (keduanya butuh `db`/`Approvals` dari firebase-config.js
+// dkk yang belum ada di deployment ini, jadi akan error kalau dipanggil).
+// switchTab('pu7') sendiri sudah 100% independen dari Firebase.
+function pu7SkipLogin() {
+  var overlay = document.getElementById('login-overlay');
+  overlay.classList.add('hide');
+  setTimeout(function(){ overlay.style.display = 'none'; }, 400);
+  switchTab('pu7');
+}
 
 function pu7OpenModal(id, mode) {
   var r = pu7Rows.filter(function(x){ return String(x.id) === String(id); })[0];
