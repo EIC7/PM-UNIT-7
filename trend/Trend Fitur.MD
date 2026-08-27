@@ -526,3 +526,27 @@ Panel mini "Deviasi Actual − Expected" (`js/module-view.js` → `ChartManager.
 Diverifikasi via Playwright: tag checkbox 10/10 (CEMS) dan 21/21+10 (FEGT) tercentang saat load; `xAxis.axisLabel` panel deviasi menunjukkan `rotate:35, hideOverlap:true` dan formatter menghasilkan `"6/22/2026"` (bukan lagi `"22/06 09:16"`).
 
 File terdampak: `config/default-tags-fegt.js`, `config/default-tags-cems.js`, `js/chart-manager.js`, `css/dcs-theme.css`, `css/style.css`.
+
+---
+
+## 24. Sesi ini — Fix panel deviasi CEMS kosong (blank) setelah semua tag tercentang default (§23)
+
+### Masalah
+
+Setelah §23 (semua tag tercentang default), user lapor: panel "Deviasi Actual − Expected" di halaman CEMS jadi banyak kolom (10, sesuai 10 tag) tapi AREA GRAFIKNYA KOSONG (cuma judul + deskripsi yang muncul, chart-nya blank putih) — padahal SO2 (2 tag) tetap normal. "harusnya tetap seperti so2, bukan malah jadi banyak kolom akhirnya datanya jadi hilang di cems."
+
+### Root cause
+
+`js/module-view.js` → `renderDeviationPanels()` selalu mengosongkan (`innerHTML=''`) lalu membangun ULANG seluruh DOM panel deviasi setiap kali data historical dimuat ulang (event `dcsHistoricalLoadEnd`) — dan event ini terpicu SETIAP KALI klik tombol quick-range (mis. "3 TAHUN") ATAU tombol "LOAD DATA", masing-masing independen. Jadi urutan klik "3 TAHUN" lalu "LOAD DATA" = 2x render ulang panel deviasi berturut-turut.
+
+`js/chart-manager.js` → `renderDeviationChart(domId, ...)` men-cache instance ECharts per `domId` di object `deviationCharts`. Karena `domId` (string) dipakai ulang sama persis di setiap render ulang, pass render KEDUA menemukan instance lama di cache dan langsung pakai `.setOption()` ke situ — padahal DOM element lama sudah di-detach (dihapus lewat `innerHTML=''`) dan diganti element BARU dengan id yang sama. Hasilnya: chart "berhasil" di-render tapi ke element yang sudah tidak ada di halaman, sementara container yang benar-benar terlihat di layar tidak pernah dapat instance ECharts sama sekali → tetap kosong.
+
+Kenapa CEMS lebih kena dibanding SO2: bukan soal jumlah tag (2 vs 10), tapi soal peluang — makin banyak panel & makin sering trigger render ulang (quick-range + LOAD DATA yang biasa diklik berurutan saat eksplorasi rentang waktu), makin gampang kena celah dobel-render ini. Bug ini sebenarnya laten di SEMUA modul (SO2/FEGT/CEMS), bukan spesifik CEMS — cuma kebetulan lebih sering kelihatan efeknya di CEMS.
+
+### Fix
+
+`renderDeviationChart()` sekarang cek apakah instance ECharts yang di-cache masih menempel ke DOM element yang sedang dipakai (`inst.getDom() !== domEl`). Kalau sudah tidak sama (element lama sudah diganti/di-detach), instance lama di-`dispose()` dulu baru dibuat instance baru via `echarts.init(domEl, ...)`. Fix ini di level `js/chart-manager.js` (dipakai bersama), jadi berlaku otomatis untuk SO2/FEGT/CEMS sekaligus, mencegah bug ini muncul di modul lain juga (walau baru kelihatan gejalanya di CEMS).
+
+Diverifikasi via Playwright dengan ECharts asli (bukan stub) — reproduksi persis urutan klik user (quick range "3 TAHUN" → "LOAD DATA" → "LOAD DATA" lagi buat stress-test reload berulang): sebelum fix, panel `CEMS-SO2-ZERO/SPAN1/SPAN2` kosong (`childCount:0`, tidak ada `<canvas>`); setelah fix, ke-10 panel CEMS punya `<canvas>` dan grafik garis deviasi tampil normal di setiap reload.
+
+File terdampak: `js/chart-manager.js`; cache-busting `?v=20260827e` untuk `chart-manager.js` di `trend_so2.html`/`trend_fegt.html`/`trend_cems.html`.
