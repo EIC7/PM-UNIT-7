@@ -104,17 +104,14 @@ function modulToPrintUrl(modul, id) {
   return 'index.html';
 }
 
-/* Badge status laporan -- HANYA maintenance_report_form.html yang benar-benar
-   menjalankan alur Submit->Checker->Reviewer (lihat sql/001). Modul lain
-   (FEGT, SO2, dst) tidak punya alur itu sama sekali, jadi status-nya akan
-   selalu 'DRAFT' (nilai default kolom) -- itu wajar, BUKAN berarti
-   laporannya "belum selesai" dalam artian modul itu. */
+/* Badge status laporan -- alur Checker/Reviewer/SPV sudah dihapus, jadi
+   status yang ada sekarang cuma DRAFT (belum submit) dan SUBMITTED (sudah
+   dikirim ke Review Approval Dashboard). Status lama (CHECKED/RETURNED/
+   FINAL_APPROVED) masih mungkin nempel di data lama sebelum revert ini --
+   fallback ke DRAFT lewat historyStatusBadge() kalau ketemu. */
 var HISTORY_STATUS_MAP = {
-  DRAFT:          { label: 'Draft',       bg: '#fef3c7', fg: '#92400e' }, // kuning
-  SUBMITTED:      { label: 'Submitted',   bg: '#dbeafe', fg: '#1e40af' }, // biru
-  CHECKED:        { label: 'Checked',     bg: '#dbeafe', fg: '#1e40af' }, // biru
-  RETURNED:       { label: 'Dikembalikan',bg: '#fef3c7', fg: '#92400e' }, // kuning (perlu aksi lagi, mirip draft)
-  FINAL_APPROVED: { label: 'Approved',    bg: '#d1fae5', fg: '#065f46' }  // hijau
+  DRAFT:     { label: 'Draft',     bg: '#fef3c7', fg: '#92400e' }, // kuning
+  SUBMITTED: { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' }  // biru
 };
 function historyStatusBadge(status) {
   var s = HISTORY_STATUS_MAP[(status || 'DRAFT').toUpperCase()] || HISTORY_STATUS_MAP.DRAFT;
