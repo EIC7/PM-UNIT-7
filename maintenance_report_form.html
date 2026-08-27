@@ -2699,23 +2699,8 @@ function applyImageEdits(){
         }
 
         // ── LEVEL 1: SUBMIT ──────────────────────────────────────────────────────
-        function raSubmitReport() {
-            if (!window._editingId) {
-                alert('Simpan dulu sebagai Draft (tombol "💾 Simpan ke Database") sebelum submit.');
-                return;
-            }
-            raRequireLogin(['user', 'admin'], '🔒 Login untuk Submit Laporan', function(profile) {
-                raUpdateRecord(window._editingId, {
-                    status: 'SUBMITTED',
-                    submitted_by: profile.id,
-                    submitted_at: new Date().toISOString()
-                }, function(err, updated) {
-                    if (err) { alert('Gagal submit: ' + err); return; }
-                    dbShowToast('✓ Laporan berhasil di-submit, menunggu Checker');
-                    raSetCurrentRecord(updated);
-                });
-            });
-        }
+        // raSubmitReport() sekarang generik di shared.js (dipakai fegt.html
+        // juga) -- definisi lokal di sini DIHAPUS supaya tidak dobel/nyimpang.
 
         // ── LEVEL 2: CHECKER — edit data + verifikasi (tanda tangan otomatis) ───
         function raVerifyChecker() {

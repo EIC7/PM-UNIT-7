@@ -487,12 +487,18 @@ function pmLS(op, key, val) {
    Parameter: doc, pw/ph (ukuran halaman), marginX, marginTop, marginBottom
    (angka margin yang sudah dipakai modul pemanggil), y (posisi konten
    terakhir), drawBgFn (fungsi drawBg lokal modul, buat halaman baru kalau
-   perlu), checkedByName (opsional -- nama utk "Checked By - Technician",
-   dipilih user dari dropdown di form kalau modulnya sudah punya field itu;
-   kalau kosong/tidak dikirim, fallback ke default 'Zaini Nur Hidayat' biar
-   modul yang belum punya dropdown pemilihan tetap jalan seperti biasa).
+   perlu), checkedByName (nama utk "Checked By - Technician", dari
+   record.checked_by_name kalau laporan sudah diverifikasi checker; kalau
+   kosong fallback ke default 'Zaini Nur Hidayat' biar modul yang belum
+   pakai workflow tetap jalan seperti biasa), reviewedByName (nama SPV yang
+   approve, di-resolve dari reviewed_by_account -> pm_profiles.display_name;
+   fallback 'Fajar Dwi Saksana' kalau kosong), checkedSigDataUrl/
+   reviewSigDataUrl (base64 data-URL gambar tanda tangan, HASIL
+   raResolveWorkflowSignatures() -- ditempel di ATAS garis kalau ada; kalau
+   null/gagal diambil, area itu dibiarkan kosong seperti sebelumnya, nama
+   di bawah garis tetap tercetak sebagai bukti).
    Return: posisi y setelah blok tanda tangan. */
-function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgFn, checkedByName) {
+function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgFn, checkedByName, reviewedByName, checkedSigDataUrl, reviewSigDataUrl) {
   var blockH = 40; // 32 -> 40, ikut nambahnya jarak kolom ttd di bawah
   if (y + blockH > ph - marginBottom) {
     doc.addPage();
@@ -504,8 +510,8 @@ function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, dr
   var contentW = pw - marginX * 2;
   var colW = contentW / 2;
   var pairs = [
-    { title: 'Checked By - Technician', name: checkedByName || 'Zaini Nur Hidayat', x: marginX },
-    { title: 'Reviewed By - Supervisor', name: 'Fajar Dwi Saksana', x: marginX + colW }
+    { title: 'Checked By - Technician', name: checkedByName || 'Zaini Nur Hidayat', x: marginX, sigDataUrl: checkedSigDataUrl },
+    { title: 'Reviewed By - Supervisor', name: reviewedByName || 'Fajar Dwi Saksana', x: marginX + colW, sigDataUrl: reviewSigDataUrl }
   ];
   pairs.forEach(function(p) {
     var cx = p.x + colW / 2;
@@ -513,6 +519,19 @@ function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, dr
     doc.text(p.title, cx, y, { align: 'center' });
     var lineY = y + 27.5; // 22 -> 27.5 (+seperempat), lebih lega buat area tanda tangan asli
     var lineHalfW = 32;
+    // Tanda tangan ASLI (gambar .png dari Supabase Storage) ditempel DI
+    // ATAS garis, di ruang yang sebelumnya cuma dibiarkan kosong -- CUMA
+    // digambar kalau checker/reviewer sudah benar-benar memproses laporan
+    // ini lewat submit-report.html (sigDataUrl dikirim dari
+    // raResolveWorkflowSignatures, null kalau belum/gagal ambil -- gagal
+    // ambil gambar TIDAK BOLEH menggagalkan seluruh PDF, jadi dibungkus
+    // try/catch, sama seperti pola addImage lain di file ini).
+    if (p.sigDataUrl) {
+      try {
+        var sigMaxW = lineHalfW * 2 - 6, sigMaxH = 16;
+        doc.addImage(p.sigDataUrl, 'PNG', cx - sigMaxW / 2, lineY - sigMaxH - 1, sigMaxW, sigMaxH);
+      } catch (e) { /* format gambar tak didukung / korup -- biarkan kosong, nama di bawah tetap tercetak */ }
+    }
     doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
     doc.line(cx - lineHalfW, lineY, cx + lineHalfW, lineY);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 30, 25);
@@ -1866,6 +1885,117 @@ function raGetSignatureUrl(displayName, callback) {
     if (res.error) { callback(res.error.message || 'Gagal ambil tanda tangan.', null); return; }
     callback(null, res.data.signedUrl);
   }).catch(function(err) { callback((err && err.message) || String(err), null); });
+}
+
+/* Download URL gambar (mis. signed URL tanda tangan) & convert jadi base64
+   data-URL -- dibutuhkan jsPDF doc.addImage() (tidak bisa langsung dikasih
+   URL eksternal, harus data-URL atau elemen <img> yang sudah termuat). */
+function raFetchImageAsDataUrl(url, callback) {
+  fetch(url).then(function(res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.blob();
+  }).then(function(blob) {
+    var reader = new FileReader();
+    reader.onload = function() { callback(null, reader.result); };
+    reader.onerror = function() { callback('Gagal membaca gambar tanda tangan.', null); };
+    reader.readAsDataURL(blob);
+  }).catch(function(err) { callback((err && err.message) || String(err), null); });
+}
+
+/* Gabungan raGetSignatureUrl + raFetchImageAsDataUrl -- langsung dapat
+   data-URL siap pakai buat doc.addImage(). */
+function raGetSignatureDataUrl(displayName, callback) {
+  raGetSignatureUrl(displayName, function(err, url) {
+    if (err) { callback(err, null); return; }
+    raFetchImageAsDataUrl(url, callback);
+  });
+}
+
+/* Dipanggil oleh tiap modul SEBELUM drawSignatureBlock() (lihat shared.js
+   bagian atas), buat nyiapin nama & gambar tanda tangan checker/reviewer
+   berdasarkan STATUS record yang lagi dibuka -- supaya PDF yang
+   di-export/preview otomatis nampilin tanda tangan ASLI (bukan cuma nama
+   teks) begitu laporan sudah diverifikasi/di-approve lewat
+   submit-report.html.
+     - record null / status DRAFT / SUBMITTED -> semua null (belum ada yang
+       tanda tangan, drawSignatureBlock jatuh ke default text-only seperti
+       biasa).
+     - status CHECKED / FINAL_APPROVED -> checkedByName dari
+       record.checked_by_name langsung (kolom teks, sudah ada), tanda
+       tangannya di-fetch dari Storage.
+     - status FINAL_APPROVED -> reviewedByName di-resolve dulu dari
+       record.reviewed_by_account (uuid) -> pm_profiles.display_name (TIDAK
+       disimpan sebagai kolom teks terpisah di pm_records), baru tanda
+       tangannya di-fetch.
+   Gagal ambil gambar (network/file belum diupload admin/dst) TIDAK PERNAH
+   menggagalkan PDF -- cuma warning di console, area itu dibiarkan kosong
+   (nama tetap tercetak sebagai bukti proses sudah terjadi). callback selalu
+   dipanggil, tidak pernah reject. */
+function raResolveWorkflowSignatures(record, callback) {
+  var result = { checkedByName: null, checkedSigDataUrl: null, reviewedByName: null, reviewSigDataUrl: null };
+  var status = record && record.status;
+  if (!record || (status !== 'CHECKED' && status !== 'FINAL_APPROVED')) { callback(result); return; }
+
+  result.checkedByName = record.checked_by_name || null;
+  var tasks = [];
+
+  if (result.checkedByName) {
+    tasks.push(new Promise(function(resolve) {
+      raGetSignatureDataUrl(result.checkedByName, function(err, dataUrl) {
+        if (err) console.warn('[raResolveWorkflowSignatures] TTD checker:', err);
+        else result.checkedSigDataUrl = dataUrl;
+        resolve();
+      });
+    }));
+  }
+
+  if (status === 'FINAL_APPROVED' && record.reviewed_by_account) {
+    tasks.push(
+      raGetClient().then(function(client) {
+        return client.from(RA_PROFILE_TABLE).select('display_name,username').eq('id', record.reviewed_by_account).single();
+      }).then(function(res) {
+        if (res.error || !res.data) return;
+        result.reviewedByName = res.data.display_name || res.data.username;
+        return new Promise(function(resolve) {
+          raGetSignatureDataUrl(result.reviewedByName, function(err, dataUrl) {
+            if (err) console.warn('[raResolveWorkflowSignatures] TTD reviewer:', err);
+            else result.reviewSigDataUrl = dataUrl;
+            resolve();
+          });
+        });
+      }).catch(function(err) { console.warn('[raResolveWorkflowSignatures] reviewer lookup:', err); })
+    );
+  }
+
+  if (!tasks.length) { callback(result); return; }
+  Promise.all(tasks).then(function(){ callback(result); }).catch(function(){ callback(result); });
+}
+
+/* ── SUBMIT LAPORAN (Level 1) — GENERIK, dipakai semua modul ──
+   Dulu didefinisikan per-file (maintenance_report_form.html), sekarang
+   dipindah ke sini karena isinya sudah 100% generik: cuma butuh
+   window._editingId (sudah standar di semua modul) + shared functions.
+   raSetCurrentRecord (kalau ada, dipanggil abis submit sukses) OPSIONAL --
+   cuma dipanggil kalau modul yang manggil punya panel workflow lokal (mis.
+   maintenance_report_form.html); modul lain (mis. fegt.html, yang cuma
+   punya tombol Submit tanpa panel checker/reviewer lokal -- itu sekarang
+   di submit-report.html) aman-aman saja tanpa fungsi itu. */
+function raSubmitReport() {
+  if (!window._editingId) {
+    alert('Simpan dulu sebagai Draft sebelum submit.');
+    return;
+  }
+  raRequireLogin(['user', 'admin'], '🔒 Login untuk Submit Laporan', function(profile) {
+    raUpdateRecord(window._editingId, {
+      status: 'SUBMITTED',
+      submitted_by: profile.id,
+      submitted_at: new Date().toISOString()
+    }, function(err, updated) {
+      if (err) { alert('Gagal submit: ' + err); return; }
+      dbShowToast('✓ Laporan berhasil di-submit, menunggu Checker');
+      if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
+    });
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
