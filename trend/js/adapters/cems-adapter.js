@@ -94,14 +94,19 @@
 
       entries.forEach(function (entry) {
         var r = entry.row, t = entry.time;
-        var cal = (r.data && r.data.calibration) || {};
+        // PENTING: zero/span1/span2 ada LANGSUNG di r.data (lihat collectData()
+        // di cems_calibration.html) — TIDAK dibungkus r.data.calibration.
+        // Field per parameter juga bernama exp/act (bukan expected/actual/dcs).
+        // Sempat salah ambil dari r.data.calibration (yang tidak pernah ada),
+        // jadi parser selalu return null untuk semua tag CEMS.
+        var cal = r.data || {};
 
         PARAMS.forEach(function (p) {
           var section = cal[p.section] || {};
           var row = section[p.key] || (p.fallbackKey ? section[p.fallbackKey] : null);
           if (!row) return;
 
-          var actual = toNum(row.actual !== undefined ? row.actual : row.dcs);
+          var actual = toNum(row.actual !== undefined ? row.actual : row.act);
           var exp = toNum(row.expected !== undefined ? row.expected : row.exp);
           var tagId = tab.prefix + '-' + p.suffix;
           var pt = { time: t, recordId: r.id, pic: r.pic };
