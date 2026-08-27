@@ -51,7 +51,22 @@
     font-size: 10px; letter-spacing: .08em; color: var(--text-dim);
   }
 
-  .hub-shell { max-width: 1120px; margin: 0 auto; padding: 48px 24px 64px; }
+  .hub-shell { max-width: 1120px; margin: 0 auto; padding: 48px 24px 64px; position: relative; }
+
+  /* Semburat lembut di belakang header — bukan dekorasi ramai (sengaja tidak
+     pakai pola garis lagi, lihat catatan body di atas), cuma kedalaman
+     tipis di sudut kanan atas biar halaman terasa "dashboard" bukan
+     dokumen datar. Blend 3 warna modul aktif (SO2/FEGT/CEMS). */
+  .hub-shell::before {
+    content: ''; position: absolute; top: -160px; right: -220px; width: 620px; height: 460px;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(31, 111, 178, 0.09), transparent 55%),
+      radial-gradient(circle at 68% 42%, rgba(122, 82, 168, 0.08), transparent 55%),
+      radial-gradient(circle at 50% 68%, rgba(200, 52, 47, 0.05), transparent 55%);
+    filter: blur(50px);
+    pointer-events: none; z-index: 0;
+  }
+  .hub-header, .hub-section-label, .hub-grid, .hub-footer { position: relative; z-index: 1; }
 
   .hub-eyebrow {
     font-size: 10.5px; letter-spacing: .2em; color: var(--text-dim);
@@ -69,11 +84,29 @@
   }
   .hub-subtitle { font-size: 12.5px; color: var(--text-secondary); margin-top: 12px; line-height: 1.75; max-width: 660px; }
 
-  /* Baris ringkasan angka — sekilas info tanpa harus buka tiap modul */
-  .hub-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  /* Baris ringkasan angka — sekilas info tanpa harus buka tiap modul.
+     Tiap stat dapat warna aksen sendiri (pola sama dengan .kpi-card di
+     trend_*.html: garis kiri berwarna + ikon bulat bertinta), biar tidak
+     jadi 3 kotak putih polos berjejer. */
+  .hub-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
   .hub-stat {
-    background: var(--bg-main); border: 1px solid var(--border-soft); border-radius: 8px;
-    padding: 10px 16px; min-width: 130px; box-shadow: var(--shadow-card);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-main); border: 1px solid var(--border-soft); border-radius: 10px;
+    padding: 12px 18px 12px 16px; min-width: 160px; box-shadow: var(--shadow-card);
+    transition: box-shadow .15s, transform .15s;
+  }
+  .hub-stat:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
+  .hub-stat::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--stat-accent, var(--accent-cyan));
+  }
+  .hub-stat-icon {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--stat-accent, var(--accent-cyan)) 20%, white),
+      color-mix(in srgb, var(--stat-accent, var(--accent-cyan)) 6%, white));
   }
   .hub-stat-value { font-size: 19px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
   .hub-stat-label { font-size: 9.5px; letter-spacing: .07em; color: var(--text-dim); text-transform: uppercase; margin-top: 2px; }
@@ -108,19 +141,29 @@
   .hub-card::before {
     content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
     background: var(--card-accent, var(--accent-cyan));
+    z-index: 1;
+  }
+  /* Semburat warna lembut saat hover (arah sama dengan .pm-card::after di
+     dashboard utama) — bukan cuma border yang berubah warna. */
+  .hub-card::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--card-accent, var(--accent-cyan)) 7%, transparent), transparent);
+    opacity: 0; transition: opacity .2s; pointer-events: none;
   }
   .hub-card:hover {
     border-color: var(--card-accent, var(--accent-cyan));
     box-shadow: var(--shadow-card-hover);
     transform: translateY(-3px);
   }
+  .hub-card:hover::after { opacity: 1; }
 
-  .hub-card-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+  .hub-card-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; position: relative; z-index: 1; }
   .hub-card-mono {
-    flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px;
+    flex-shrink: 0; width: 36px; height: 36px; border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; letter-spacing: .02em; color: #fff;
-    background: var(--card-accent, var(--accent-cyan));
+    font-size: 10.5px; font-weight: 700; letter-spacing: .02em; color: #fff;
+    background: linear-gradient(135deg, var(--card-accent, var(--accent-cyan)), color-mix(in srgb, var(--card-accent, var(--accent-cyan)) 65%, black));
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--card-accent, var(--accent-cyan)) 45%, transparent);
   }
   .hub-card-titlewrap { flex: 1; min-width: 0; }
   .hub-card-title { font-size: 13.5px; font-weight: 700; letter-spacing: .03em; color: var(--text-primary); line-height: 1.4; }
@@ -130,11 +173,13 @@
     border: 1px solid var(--accent-green); color: var(--accent-green); font-weight: 600;
     white-space: nowrap;
   }
-  .hub-card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 16px; }
-  .hub-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hub-card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 16px; position: relative; z-index: 1; }
+  .hub-card-tags { display: flex; flex-wrap: wrap; gap: 6px; position: relative; z-index: 1; }
   .hub-card-tag {
-    font-size: 9.5px; padding: 3px 8px; border-radius: 5px;
-    background: var(--bg-panel-alt); color: var(--text-dim); border: 1px solid var(--border-soft);
+    font-size: 9.5px; padding: 3px 8px; border-radius: 5px; font-weight: 600;
+    background: color-mix(in srgb, var(--card-accent, var(--accent-cyan)) 10%, white);
+    color: var(--card-accent, var(--accent-cyan));
+    border: 1px solid color-mix(in srgb, var(--card-accent, var(--accent-cyan)) 22%, white);
   }
 
   /* Kartu "belum aktif" — slot kosong buat modul berikutnya, biar hub ini
@@ -190,17 +235,26 @@
     </div>
 
     <div class="hub-stats">
-      <div class="hub-stat">
-        <div class="hub-stat-value">3</div>
-        <div class="hub-stat-label">Modul Aktif</div>
+      <div class="hub-stat" style="--stat-accent:#0876a3">
+        <div class="hub-stat-icon">📦</div>
+        <div>
+          <div class="hub-stat-value">3</div>
+          <div class="hub-stat-label">Modul Aktif</div>
+        </div>
       </div>
-      <div class="hub-stat">
-        <div class="hub-stat-value">73</div>
-        <div class="hub-stat-label">Total Tag</div>
+      <div class="hub-stat" style="--stat-accent:#7a52a8">
+        <div class="hub-stat-icon">🏷️</div>
+        <div>
+          <div class="hub-stat-value">73</div>
+          <div class="hub-stat-label">Total Tag</div>
+        </div>
       </div>
-      <div class="hub-stat">
-        <div class="hub-stat-value">Supabase</div>
-        <div class="hub-stat-label">Sumber Data (Read-only)</div>
+      <div class="hub-stat" style="--stat-accent:#17874a">
+        <div class="hub-stat-icon">🗄️</div>
+        <div>
+          <div class="hub-stat-value">Supabase</div>
+          <div class="hub-stat-label">Sumber Data (Read-only)</div>
+        </div>
       </div>
     </div>
   </div>
