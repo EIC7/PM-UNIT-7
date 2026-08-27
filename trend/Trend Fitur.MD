@@ -390,3 +390,35 @@ Ditambahkan ke `QUICK_RANGES` (`system-config.js`): `1Y` (525600 menit), `2Y` (1
 - Halaman hub (`index.html`) dirombak visual: pola grid halus ala kertas gambar teknik di background, kartu dengan aksen warna kiri per-modul (kode-warna cepat, akan konsisten dengan warna garis chart modul itu), dan 1 slot kartu "belum aktif" (dashed border) buat modul berikutnya — supaya hub ini terasa sebagai daftar yang akan terus tumbuh, bukan cuma 2 kartu tetap selamanya.
 
 File terdampak: `css/dcs-theme.css` (rewrite total, tetap struktur variable sama), `js/chart-manager.js` (13 pemetaan warna hardcode), `config/default-tags-so2.js`, `config/default-tags-fegt.js` (regenerasi palet), `config/system-config.js` (QUICK_RANGES + FETCH_LIMIT), `index.html` (redesign), `trend_fegt.html` (fix warna panel diagnostik).
+
+---
+
+## 17. Sesi ini — Reconcile modul CEMS Calibration (ditambahkan sesi lain, ditemukan bug arsitektur)
+
+### Konteks
+
+Saat mau push tema terang (§16), `git fetch` menemukan commit baru dari sesi Claude lain yang menambahkan modul CEMS Calibration. Setelah diperiksa, commit itu punya masalah nyata:
+
+1. **`trend/index.html` ditulis balik ke versi app-shell lama** (single-page, sebelum restrukturisasi §15) — bukan halaman hub. Sesi itu tampaknya bekerja dari checkout lokal yang stale (masih referensi `config/default-tags.js` yang sudah di-rename jadi `default-tags-so2.js` sejak §15, dan tidak tahu soal FEGT/LD sama sekali).
+2. **Tag definition CEMS tidak pernah dibuat** — `cems.config.js` mereferensikan tag ID seperti `CEMS-SO2-ZERO`, tapi tidak ada `default-tags-cems.js` atau entry manapun yang mendefinisikan tag itu (nama, unit, warna, dst). Kalau dipakai apa adanya, `TagManager.getTag()` akan selalu return `undefined` untuk semua tag CEMS — modul ini akan gagal total, bukan cuma kurang lengkap.
+3. **Tag ID dipakai ulang di 4 tab** (`CEMS-SO2-ZERO` dst sama persis di tab 2-Weekly #1, #2, Monthly, 2-Yearly) — karena `TagManager` cuma kenal 1 objek per ID, centang/uncentang di 1 tab akan ikut mengubah tag "yang sama" secara ID di tab lain. Bug ini sama persis kelasnya dengan yang sudah diperbaiki di §15 untuk FEGT/LD (moduleVisibleMemory), tapi CEMS commit itu tidak mengantisipasinya sama sekali.
+4. `historical-manager.js` di-refactor balik ke `ADAPTERS` yang di-hardcode (bukan `window.DCS_ADAPTERS` generik dari §15), plus menghilangkan SO2 dari FEGT (karena base branch-nya predates FEGT).
+
+### Yang dikerjakan
+
+- **`git merge origin/main`**: konflik di `system-config.js` (beda label quick-range, dipilih punya sendiri yang lebih deskriptif) dan `index.html` (dipertahankan versi hub, BUKAN app-shell lama).
+- **`historical-manager.js`**: dikembalikan ke versi generik (`window.DCS_ADAPTERS`) dari §15 — TIDAK dipakai `ADAPTER_MODUL_MAP` ala commit CEMS, karena ternyata tidak perlu: kalau 4 tab CEMS semuanya `adapterKey:'CEMS'` menunjuk ke SATU adapter yang sama-sama terdaftar di `window.DCS_ADAPTERS['CEMS']`, dedup fetch sudah otomatis terjadi (persis pola FEGT+LD di §15) — TANPA butuh mekanisme mapping tambahan.
+- **`js/adapters/cems-adapter.js`**: ditulis ulang. Tag ID sekarang UNIK per tab (prefix `CEMS-W1-*`, `CEMS-W2-*`, `CEMS-M-*`, `CEMS-Y-*`), 1 adapter memparse SEMUA 40 tag dari 1 fetch Supabase modul `'CEMS Calibration'`.
+- **`config/modules/cems.config.js`**: ditulis ulang, dibuat generik per-tag (persis pola `so2.config.js`: `deviationPairs`/`kpis` berlaku untuk tag APAPUN yang dicentang, bukan tag spesifik) — draft awal sempat pakai `forTagId` custom yang ternyata tidak dibutuhkan sama sekali karena mesin KPI/deviasi (`module-view.js`) memang sudah generik per-context.
+  - **Bug kedua ditemukan & diperbaiki saat testing**: field `key` tiap module config sempat di-set ke prefix tag pendek (`'CEMS-W1'`) alih-alih key registry (`'CEMS-WEEKLY-1'`) — akibatnya `selectModule()` gagal mencocokkan `window.DCS_MODULES[key]`, return diam-diam tanpa error, dan tag list tidak pernah ke-filter (semua 40 tag tampil sekaligus, tab tidak ada yang aktif). Ketahuan karena diuji end-to-end (headless browser, cek jumlah `.tag-row` per tab) — bukan cuma syntax check.
+- **`config/default-tags-cems.js`** (baru): 40 tag (10 parameter × 4 tab), 2 series per tag (`Actual`/`Expected`), warna HSL dgn koreksi kontras (pola sama dgn §16), unit & rentang **asumsi tipikal CEMS batubara** (SO2/NOx/CO dlm ppm, CO2/O2 dlm %) — sesuaikan kalau ada spesifikasi gas kalibrasi aktual.
+- **`trend_cems.html`** (baru): halaman modul CEMS, mengikuti pola persis `trend_so2.html`/`trend_fegt.html`.
+- **`index.html`**: kartu ke-3 ditambahkan untuk CEMS Calibration.
+
+### Verifikasi
+
+Diuji lewat headless browser: 4 tab CEMS masing-masing menampilkan 10 tag UNIK (tidak tabrakan), tab aktif ke-highlight dengan benar, tidak ada error JS di 4 halaman (`index.html`, `trend_so2.html`, `trend_fegt.html`, `trend_cems.html`).
+
+### Pelajaran untuk sesi berikutnya
+
+Kalau ada sesi Claude lain yang mengedit `trend/` secara paralel, **selalu `git fetch` + baca commit terbaru SEBELUM mulai kerja**, dan jangan asumsikan commit message merepresentasikan isi commit dengan akurat — commit CEMS ini message-nya terdengar lengkap ("BARU: ... DIUPDATE: ...") tapi isinya punya 2 bug yang bikin modul itu gagal total kalau tidak ditemukan lewat testing end-to-end.

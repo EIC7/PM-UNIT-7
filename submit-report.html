@@ -218,13 +218,21 @@ function rpRenderList() {
     } else {
       actionsHtml += '<button class="rp-btn preview" onclick="window.open(\'' + previewUrl + '\',\'_blank\')">👁 Preview</button>';
       actionsHtml += '<button class="rp-btn edit" onclick="window.open(\'' + editUrl + '\',\'_blank\')">✎ Edit</button>';
-      if (r.status === 'SUBMITTED' && canChecker) {
-        actionsHtml += '<button class="rp-btn verify" onclick="rpToggleVerifyPanel(\'' + r.id + '\')">🔍 Verifikasi</button>';
+      if (r.status === 'SUBMITTED' && (canChecker || canReviewer)) {
+        actionsHtml += '<button class="rp-btn verify" onclick="rpToggleVerifyPanel(\'' + r.id + '\')">🔍 Review</button>';
         actionsHtml += '<button class="rp-btn return" onclick="rpReturn(\'' + r.id + '\',\'checker\')">↩ Kembalikan</button>';
       }
       if (r.status === 'CHECKED' && canReviewer) {
         actionsHtml += '<button class="rp-btn approve" onclick="rpApprove(\'' + r.id + '\')">✓ Approve Final</button>';
         actionsHtml += '<button class="rp-btn return" onclick="rpReturn(\'' + r.id + '\',\'reviewer\')">↩ Kembalikan</button>';
+      }
+      if (r.status === 'FINAL_APPROVED' && canReviewer) {
+        // Batalkan Approve: balikin status ke CHECKED (bukan hapus record).
+        // Begitu status balik ke CHECKED, baris ini otomatis dirender ulang
+        // pakai kondisi "CHECKED && canReviewer" di atas -- tombol Kembalikan
+        // otomatis muncul lagi tanpa kode tambahan (sesuai spek: approved ->
+        // Kembalikan hilang, batalkan approve -> Kembalikan muncul lagi).
+        actionsHtml += '<button class="rp-btn return" onclick="rpCancelApprove(\'' + r.id + '\')">↩ Batalkan Approve</button>';
       }
     }
 
@@ -260,7 +268,7 @@ function rpToggleVerifyPanel(id) {
       '<select id="rpCheckerName-' + id + '">' +
         names.map(function(n){ return '<option value="' + n + '"' + (n === defaultName ? ' selected' : '') + '>' + n + '</option>'; }).join('') +
       '</select>' +
-      '<button class="rp-btn verify" onclick="rpVerify(\'' + id + '\')">✓ Konfirmasi Verifikasi</button>' +
+      '<button class="rp-btn verify" onclick="rpVerify(\'' + id + '\')">✓ Submit Reviewed</button>' +
     '</div>';
 }
 
@@ -268,7 +276,12 @@ function rpVerify(id) {
   var select = document.getElementById('rpCheckerName-' + id);
   var checkedByName = select ? select.value : null;
   if (!checkedByName) return;
-  raRequireLogin(['checker', 'admin'], '🔍 Login sebagai Checker', function(profile) {
+  // Diizinkan checker/reviewer/admin -- SPV (reviewer) boleh langsung proses
+  // review sendiri (skip nunggu Checker asli), misalnya lagi buru-buru atau
+  // Checker berhalangan. Konfirmasi eksplisit atas nama siapa laporan ini
+  // "direview", supaya gak kepencet gak sengaja / salah pilih nama.
+  if (!confirm('Yakin proses review laporan ini atas nama "' + checkedByName + '"?')) return;
+  raRequireLogin(['checker', 'reviewer', 'admin'], '🔍 Login untuk Review Laporan', function(profile) {
     raGetSignatureUrl(checkedByName, function(sigErr) {
       if (sigErr) {
         if (!confirm('Tanda tangan "' + checkedByName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan verifikasi tanpa gambar tanda tangan?')) return;
@@ -284,6 +297,26 @@ function rpVerify(id) {
         dbShowToast('✓ Terverifikasi — menunggu approval SPV');
         rpLoadAll();
       });
+    });
+  });
+}
+
+function rpCancelApprove(id) {
+  // Batalkan Approve Final -- balikin status FINAL_APPROVED ke CHECKED lagi
+  // (bukan hapus/RETURNED). Bersihin jejak approval-nya (siapa & kapan) biar
+  // gak nyisa data approval lama yang udah gak berlaku begitu di-approve
+  // ulang nanti.
+  if (!confirm('Batalkan approval laporan ini? Status akan kembali ke CHECKED (menunggu approve ulang).')) return;
+  raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function() {
+    raUpdateRecord(id, {
+      status: 'CHECKED',
+      reviewed_by_account: null,
+      review_signature_url: null,
+      final_approved_at: null
+    }, function(err) {
+      if (err) { alert('Gagal membatalkan approval: ' + err); return; }
+      dbShowToast('↩ Approval dibatalkan — kembali ke status CHECKED');
+      rpLoadAll();
     });
   });
 }
