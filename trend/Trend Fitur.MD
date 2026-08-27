@@ -446,3 +446,31 @@ Screenshot dari HP menunjukkan `trend_cems.html` tampil sebagai 3 kolom desktop 
 - **`index.html` (hub) dirombak signifikan**: ditambah slim brand bar di atas (konsisten dengan `.topbar` halaman modul, supaya hub & modul terasa satu aplikasi), judul diperbesar dengan aksen gradient teks, baris ringkasan angka (`hub-stats`: jumlah modul aktif, total tag, sumber data), kartu modul dapat monogram berwarna (SO2/FG/CE) sesuai `--card-accent`, border-radius & shadow kartu diperkaya, kartu slot kosong dapat ikon "+". Diverifikasi tampilan mobile (390px) sudah menyerupai desktop (cuma ditumpuk 1 kolom), sesuai permintaan.
 
 File terdampak: `css/style.css`, `css/dcs-theme.css`, `index.html`, `trend_so2.html`, `trend_fegt.html`, `trend_cems.html`.
+
+---
+
+## 19. Sesi ini — Perbaikan lanjutan mobile: toolbar/KPI 1 baris, urutan tag list, hub tanpa garis grid
+
+User memberi feedback via screenshot beranotasi pada tampilan mobile `trend_so2.html` (masih versi SEBELUM §18 live/ter-deploy): toolbar chart + kartu KPI wrap jadi banyak baris dan mendorong grafik jauh ke bawah, TAG LIST (pilihan tag) muncul sebelum kontrol rentang waktu padahal harusnya setelah, dan ada celah kosong di layout kolom (gejala bug "3 kolom desktop diperkecil" yang sama seperti §18, belum sempat dicoba user setelah fix).
+
+### Urutan mobile diperbarui
+
+Ditambah 1 grid-area baru: `.panel-historical` (berisi `#historicalPanel` — quick range s/d 90D, 1/2/3 TAHUN, custom, LOAD DATA), dipisah dari `.panel-extra` (kini cuma deviasi + log). Urutan sumber HTML (dipakai apa adanya di mobile lewat `display:block`) sekarang:
+
+1. **Chart** (`.panel-chart`)
+2. **Historical** (`.panel-historical`) — rentang waktu + LOAD DATA
+3. **Tags** (`.panel-tags`) — pilihan tag (sesuai permintaan: setelah rentang waktu, bukan sebelumnya)
+4. **Values** (`.panel-details`) — data tag yang dipilih
+5. **KPI + Extra** (`.module-kpi-bar`, `.panel-extra`) — sisanya
+
+Desktop menambah 1 baris di `grid-template-areas` untuk `historical` di kolom tengah (`tags chart/kpi/historical/extra values`), tidak mengubah urutan yang sudah ada.
+
+### Toolbar & KPI jadi 1 baris (scroll horizontal)
+
+`.chart-toolbar` dan `.kpi-group-row` di mobile diubah dari `flex-wrap:wrap` (yang bikin tombol EXPORT/kartu KPI wrap ke banyak baris) jadi `flex-wrap:nowrap; overflow-x:auto` — 1 baris yang bisa digeser horizontal, sama seperti pola toolbar aplikasi mobile pada umumnya. Ditemukan bug cascade saat implementasi: `.kpi-group-row{flex-wrap:wrap}` sempat didefinisikan TANPA media query di `dcs-theme.css` yang di-load SETELAH `style.css` — aturan itu menang atas override mobile di `style.css` meski spesifisitasnya sama (unconditional rule yang di-load belakangan mengalahkan aturan bersyarat media query yang di-load duluan, pada spesifisitas yang sama). Fix: pindahkan definisi layout (`display/gap/flex-wrap`) `.kpi-group-row` sepenuhnya ke `style.css` (base rule, sebelum media query) — `dcs-theme.css` seharusnya cuma untuk warna/tema, bukan layout.
+
+### Hub `index.html`: hapus pola garis grid + navigasi balik ke dashboard
+
+Background pola garis grid teknik (`linear-gradient` 28px×28px) di halaman hub dihapus — dinilai user kelihatan "berisik"/kurang premium. Diganti background polos. Brand bar hub ditambah link "← Dashboard Utama" (`../index.html`, dashboard PM Diagnostic System root — sebelumnya cuma bisa MASUK ke `trend/` dari sana, tidak ada jalan pulang) plus jam berjalan (format sama dengan `topbar-clock` di `trend_*.html`, lewat script kecil berdiri sendiri karena hub tidak pakai `ui-manager.js`).
+
+File terdampak: `css/style.css`, `css/dcs-theme.css`, `index.html`, `trend_so2.html`, `trend_fegt.html`, `trend_cems.html`.

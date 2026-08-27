@@ -95,7 +95,7 @@ body { background: var(--bg-main); }
 .tag-meta { color: var(--text-dim); }
 .tag-empty, .details-empty { color: var(--text-dim); }
 
-.panel-chart, .panel-extra { background: var(--bg-main); }
+.panel-chart, .panel-historical, .panel-extra { background: var(--bg-main); }
 
 .chart-toolbar { border-bottom: 1px solid var(--border-soft); }
 .chart-title { color: var(--text-primary); }
@@ -165,7 +165,6 @@ body { background: var(--bg-main); }
   color: var(--accent-cyan); font-size: 10.5px; letter-spacing: .04em;
   margin: 6px 0 4px; text-transform: uppercase;
 }
-.kpi-group-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .kpi-card {
   position: relative;
   background: var(--bg-main); border: 1px solid var(--border-soft);

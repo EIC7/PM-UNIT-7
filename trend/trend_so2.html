@@ -29,10 +29,13 @@
   <!-- MODULE TAB BAR (1 tab per modul checksheet, lihat js/module-view.js) -->
   <div class="module-tab-bar" id="moduleTabBar"></div>
 
-  <!-- MAIN GRID — urutan sumber sengaja mobile-first: chart (1. tampilan
-       trend) → tags (2. pilihan yang ditampilkan) → values (3. data trend
-       yang dipilih) → kpi & extra (4. sisanya). Desktop menata ulang jadi
-       3 kolom klasik lewat grid-template-areas (lihat css/style.css). -->
+  <!-- MAIN GRID — urutan sumber sengaja mobile-first: 1. chart (tampilan
+       trend) → 2. historical (rentang waktu sampai 90D/1-3 TAHUN + LOAD
+       DATA) → 3. tags (pilihan tag) → 4. values (data tag yang dipilih)
+       → 5. kpi & extra (sisanya: KPI cards + deviasi + log). Desktop
+       menata ulang jadi 3 kolom klasik lewat grid-template-areas (lihat
+       css/style.css) — urutan baris di kolom tengah desktop tidak perlu
+       sama dengan urutan sumber mobile ini. -->
   <div class="main-grid">
 
     <!-- 1. CHART: grafik trend + toolbar export -->
@@ -61,26 +64,8 @@
 
     </div>
 
-    <!-- 2. TAG LIST: pilihan tag yang ditampilkan di grafik -->
-    <div class="panel-tags">
-      <div class="panel-header">TAG LIST</div>
-      <div class="tag-search-wrap"><input type="text" id="tagSearch" placeholder="Search tag..."></div>
-      <div class="tag-list-body" id="tagListBody"></div>
-    </div>
-
-    <!-- 3. VALUES: nilai tiap series dari tag yang dicentang, ikut cursor di grafik -->
-    <div class="panel-details">
-      <div class="panel-header">VALUES</div>
-      <div class="cursor-readout" id="cursorReadout"></div>
-      <div id="valuesPanelBody"></div>
-    </div>
-
-    <!-- 4a. MODULE KPI CARDS (otomatis dari config/modules/<modul>.config.js) -->
-    <div class="module-kpi-bar" id="moduleKpiBar"></div>
-
-    <!-- 4b. EXTRA: kontrol historical + panel deviasi + tabel log record -->
-    <div class="panel-extra">
-
+    <!-- 2. HISTORICAL: rentang waktu (quick range s/d 90D, 1-3 TAHUN, custom) + LOAD DATA -->
+    <div class="panel-historical">
       <div class="historical-panel" id="historicalPanel">
         <div class="range-bar" id="quickRangeBar"></div>
         <div class="custom-range-row">
@@ -93,6 +78,27 @@
           <button class="load-btn" id="loadDataBtn">LOAD DATA</button>
         </div>
       </div>
+    </div>
+
+    <!-- 3. TAG LIST: pilihan tag yang ditampilkan di grafik -->
+    <div class="panel-tags">
+      <div class="panel-header">TAG LIST</div>
+      <div class="tag-search-wrap"><input type="text" id="tagSearch" placeholder="Search tag..."></div>
+      <div class="tag-list-body" id="tagListBody"></div>
+    </div>
+
+    <!-- 4. VALUES: nilai tiap series dari tag yang dicentang, ikut cursor di grafik -->
+    <div class="panel-details">
+      <div class="panel-header">VALUES</div>
+      <div class="cursor-readout" id="cursorReadout"></div>
+      <div id="valuesPanelBody"></div>
+    </div>
+
+    <!-- 5a. MODULE KPI CARDS (otomatis dari config/modules/<modul>.config.js) -->
+    <div class="module-kpi-bar" id="moduleKpiBar"></div>
+
+    <!-- 5b. EXTRA: panel deviasi + tabel log record -->
+    <div class="panel-extra">
 
       <div class="module-deviation-area" id="moduleDeviationArea"></div>
 

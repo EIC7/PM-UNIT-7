@@ -86,19 +86,21 @@ html, body {
 }
 
 /* ── MAIN GRID ───────────────────────────────────────────────────────────
-   Grid (bukan flex) supaya urutan SUMBER di HTML bisa mobile-first
-   (chart → tags → values → kpi → extra, sesuai alur pemakaian) sementara
-   desktop tetap tampil 3 kolom klasik lewat grid-template-areas.
-   Kolom tengah (chart/kpi/extra) satu grid-area menyatu per baris supaya
-   sidebar tags & values tetap membentang penuh di sampingnya.
+   Grid (bukan flex) supaya urutan SUMBER di HTML bisa mobile-first sesuai
+   alur pemakaian yang diminta: chart → historical (rentang waktu) → tags
+   (pilihan tag) → values (data yang dipilih) → kpi → extra (deviasi+log) —
+   sementara desktop tetap tampil 3 kolom klasik lewat grid-template-areas
+   (urutan baris di kolom tengah desktop TIDAK harus sama dengan urutan
+   sumber mobile, karena grid-area membaca posisi lewat nama, bukan DOM).
    ────────────────────────────────────────────────────────────────────── */
 .main-grid {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr) 240px;
   grid-template-areas:
-    "tags chart  values"
-    "tags kpi    values"
-    "tags extra  values";
+    "tags chart      values"
+    "tags kpi        values"
+    "tags historical values"
+    "tags extra      values";
   align-items: start;
 }
 
@@ -119,6 +121,14 @@ html, body {
 }
 
 .module-kpi-bar { grid-area: kpi; }
+.kpi-group-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.panel-historical {
+  grid-area: historical;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 
 .panel-extra {
   grid-area: extra;
@@ -316,22 +326,30 @@ html, body {
    menampilkan 3 kolom sempit berdampingan alih-alih ditumpuk).
    Sekarang di lebar ini .main-grid berhenti jadi grid 3-kolom dan kontennya
    mengalir sesuai URUTAN SUMBER di HTML — yang sengaja ditulis mobile-first:
-   chart (1. tampilan trend) → tags (2. pilihan yang ditampilkan) →
-   values (3. data trend yang dipilih) → kpi & extra (4. sisanya, historical/
-   deviasi/log, yang di desktop tampil sebagai dashboard strip + kolom
-   tengah). Tidak perlu `order` sama sekali — DOM sudah dalam urutan ini.
+   1. chart (tampilan trend) → 2. historical (rentang waktu sampai 90D/
+   1-3 TAHUN + LOAD DATA) → 3. tags (pilihan tag) → 4. values (data tag
+   yang dipilih) → 5. kpi & extra (sisanya: KPI cards + deviasi + log).
+   Tidak perlu `order` sama sekali — DOM sudah dalam urutan ini.
+   Toolbar chart & baris KPI sengaja dibuat SATU BARIS yang discroll
+   horizontal (bukan wrap ke banyak baris) — sebelumnya tombol export/KPI
+   card wrap jadi 3-4 baris dan mendorong grafik jauh ke bawah.
    ────────────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .topbar-title { flex-basis: 100%; }
   .topbar-clock { margin-left: 0; }
   .mode-btn { flex: 1 1 auto; }
 
-  .kpi-group-row { row-gap: 8px; }
-  .kpi-card { flex: 1 1 calc(50% - 10px); min-width: 130px; }
+  .kpi-group-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kpi-card { flex: 0 0 auto; min-width: 140px; }
 
   .main-grid { display: block; }
 
-  .panel-chart, .panel-extra, .module-kpi-bar { width: 100%; }
+  .panel-chart, .panel-historical, .panel-extra, .module-kpi-bar { width: 100%; }
 
   .panel-tags {
     width: 100%;
@@ -351,7 +369,13 @@ html, body {
 
   .chart-wrap { height: 300px; padding: 4px 8px 10px; }
 
-  .chart-toolbar-spacer { flex-basis: 100%; height: 0; }
+  /* Toolbar jadi 1 baris yang discroll horizontal, bukan wrap ke bawah
+     (dulu chart-toolbar-spacer dipaksa flex-basis:100% supaya tombol
+     turun ke baris baru — itu yang bikin area atas jadi tinggi sekali). */
+  .chart-toolbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart-title { flex-shrink: 0; }
+  .chart-toolbar-spacer { flex: 0 0 8px; }
+  .icon-btn, .loading-indicator { flex-shrink: 0; }
 
   .historical-panel { padding: 8px; }
   .range-btn { flex: 1 1 auto; }
@@ -370,7 +394,6 @@ html, body {
 
 @media (max-width: 480px) {
   html, body { font-size: 12px; }
-  .kpi-card { flex: 1 1 100%; }
   .panel-tags { max-height: 220px; }
   .panel-details { max-height: 260px; }
   .chart-wrap { height: 260px; }
