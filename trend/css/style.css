@@ -73,8 +73,10 @@ html, body {
   font-family: inherit;
   font-size: 11px;
   letter-spacing: 0.5px;
-  padding: 6px 14px;
+  padding: 7px 16px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: border-color .15s, color .15s, box-shadow .15s;
 }
 
 /* ── MODULE TAB / KPI BAR ────────────────────────────────── */
@@ -83,15 +85,27 @@ html, body {
   white-space: nowrap;
 }
 
-/* ── MAIN GRID ───────────────────────────────────────────── */
+/* ── MAIN GRID ───────────────────────────────────────────────────────────
+   Grid (bukan flex) supaya urutan SUMBER di HTML bisa mobile-first sesuai
+   alur pemakaian yang diminta: chart → historical (rentang waktu) → tags
+   (pilihan tag) → values (data yang dipilih) → kpi → extra (deviasi+log) —
+   sementara desktop tetap tampil 3 kolom klasik lewat grid-template-areas
+   (urutan baris di kolom tengah desktop TIDAK harus sama dengan urutan
+   sumber mobile, karena grid-area membaca posisi lewat nama, bukan DOM).
+   ────────────────────────────────────────────────────────────────────── */
 .main-grid {
-  display: flex;
-  align-items: flex-start; /* tiap kolom tinggi sesuai kontennya sendiri, bukan dipaksa sama tinggi */
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 240px;
+  grid-template-areas:
+    "tags chart      values"
+    "tags kpi        values"
+    "tags historical values"
+    "tags extra      values";
+  align-items: start;
 }
 
 .panel-tags {
-  width: 240px;
-  flex-shrink: 0;
+  grid-area: tags;
   display: flex;
   flex-direction: column;
   max-height: 70vh; /* daftar tag panjang scroll sendiri di sini, bukan bikin sidebar raksasa */
@@ -99,16 +113,34 @@ html, body {
   top: 0;
 }
 
-.panel-center {
-  flex: 1;
+.panel-chart {
+  grid-area: chart;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.module-kpi-bar { grid-area: kpi; }
+.kpi-group-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.panel-historical {
+  grid-area: historical;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.panel-extra {
+  grid-area: extra;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
 .panel-details {
-  width: 240px;
-  flex-shrink: 0;
+  grid-area: values;
+  display: flex;
+  flex-direction: column;
   padding: 12px;
   max-height: 70vh;
   overflow-y: auto;
@@ -141,7 +173,8 @@ html, body {
   padding: 8px;
   margin-bottom: 4px;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: 6px;
+  transition: border-color .15s, box-shadow .15s, background .15s;
 }
 
 .tag-row-top { display: flex; align-items: center; gap: 6px; }
@@ -166,8 +199,10 @@ html, body {
 .icon-btn {
   font-family: inherit;
   font-size: 10.5px;
-  padding: 5px 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: border-color .15s, color .15s, box-shadow .15s;
 }
 
 .chart-wrap {
@@ -203,9 +238,11 @@ html, body {
 .range-btn {
   font-family: inherit;
   font-size: 10.5px;
-  padding: 5px 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
   min-width: 38px;
+  transition: border-color .15s, color .15s, box-shadow .15s;
 }
 
 .custom-range-row {
@@ -228,10 +265,13 @@ html, body {
   font-family: inherit;
   font-size: 11px;
   letter-spacing: 0.5px;
-  padding: 6px 16px;
+  padding: 8px 18px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 700;
+  transition: filter .15s, box-shadow .15s, transform .15s;
 }
+.load-btn:active { transform: translateY(1px); }
 
 .loading-indicator { font-size: 10.5px; display: none; }
 
@@ -253,9 +293,10 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 10px;
-  margin-bottom: 3px;
-  border-radius: 2px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  transition: box-shadow .15s, border-color .15s;
 }
 
 .value-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; }
@@ -280,25 +321,37 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* ── RESPONSIVE / MOBILE ─────────────────────────────────────────────────
-   Perbedaan mobile SEKARANG cuma soal SUSUNAN kolom (ditumpuk vertikal,
-   chart duluan karena paling penting) — bukan lagi soal scroll (itu sudah
-   berlaku sama di semua ukuran layar sejak aturan di atas).
+   Mobile TIDAK LAGI sekadar "3 kolom desktop diperkecil" — itu bug lama
+   (sidebar tags/values ikut memaksa lebar minimum sehingga layar HP
+   menampilkan 3 kolom sempit berdampingan alih-alih ditumpuk).
+   Sekarang di lebar ini .main-grid berhenti jadi grid 3-kolom dan kontennya
+   mengalir sesuai URUTAN SUMBER di HTML — yang sengaja ditulis mobile-first:
+   1. chart (tampilan trend) → 2. historical (rentang waktu sampai 90D/
+   1-3 TAHUN + LOAD DATA) → 3. tags (pilihan tag) → 4. values (data tag
+   yang dipilih) → 5. kpi & extra (sisanya: KPI cards + deviasi + log).
+   Tidak perlu `order` sama sekali — DOM sudah dalam urutan ini.
+   Toolbar chart & baris KPI sengaja dibuat SATU BARIS yang discroll
+   horizontal (bukan wrap ke banyak baris) — sebelumnya tombol export/KPI
+   card wrap jadi 3-4 baris dan mendorong grafik jauh ke bawah.
    ────────────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .topbar-title { flex-basis: 100%; }
   .topbar-clock { margin-left: 0; }
   .mode-btn { flex: 1 1 auto; }
 
-  .module-kpi-bar { padding: 8px; }
-  .kpi-group-row { row-gap: 8px; }
-  .kpi-card { flex: 1 1 calc(50% - 10px); min-width: 130px; }
+  .kpi-group-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kpi-card { flex: 0 0 auto; min-width: 140px; }
 
-  .main-grid { flex-direction: column; }
+  .main-grid { display: block; }
 
-  .panel-center { order: 1; width: 100%; }
+  .panel-chart, .panel-historical, .panel-extra, .module-kpi-bar { width: 100%; }
 
   .panel-tags {
-    order: 2;
     width: 100%;
     max-height: 260px;
     border-right: none;
@@ -307,7 +360,6 @@ html, body {
   }
 
   .panel-details {
-    order: 3;
     width: 100%;
     max-height: 300px;
     border-left: none;
@@ -317,7 +369,13 @@ html, body {
 
   .chart-wrap { height: 300px; padding: 4px 8px 10px; }
 
-  .chart-toolbar-spacer { flex-basis: 100%; height: 0; }
+  /* Toolbar jadi 1 baris yang discroll horizontal, bukan wrap ke bawah
+     (dulu chart-toolbar-spacer dipaksa flex-basis:100% supaya tombol
+     turun ke baris baru — itu yang bikin area atas jadi tinggi sekali). */
+  .chart-toolbar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart-title { flex-shrink: 0; }
+  .chart-toolbar-spacer { flex: 0 0 8px; }
+  .icon-btn, .loading-indicator { flex-shrink: 0; }
 
   .historical-panel { padding: 8px; }
   .range-btn { flex: 1 1 auto; }
@@ -336,7 +394,6 @@ html, body {
 
 @media (max-width: 480px) {
   html, body { font-size: 12px; }
-  .kpi-card { flex: 1 1 100%; }
   .panel-tags { max-height: 220px; }
   .panel-details { max-height: 260px; }
   .chart-wrap { height: 260px; }

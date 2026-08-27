@@ -29,21 +29,17 @@
   <!-- MODULE TAB BAR (1 tab per modul checksheet, lihat js/module-view.js) -->
   <div class="module-tab-bar" id="moduleTabBar"></div>
 
-  <!-- MODULE KPI CARDS -->
-  <div class="module-kpi-bar" id="moduleKpiBar"></div>
-
-  <!-- MAIN GRID -->
+  <!-- MAIN GRID — urutan sumber sengaja mobile-first: 1. chart (tampilan
+       trend) → 2. historical (rentang waktu sampai 90D/1-3 TAHUN + LOAD
+       DATA) → 3. tags (pilihan tag) → 4. values (data tag yang dipilih)
+       → 5. kpi & extra (sisanya: KPI cards + deviasi + log). Desktop
+       menata ulang jadi 3 kolom klasik lewat grid-template-areas (lihat
+       css/style.css) — urutan baris di kolom tengah desktop tidak perlu
+       sama dengan urutan sumber mobile ini. -->
   <div class="main-grid">
 
-    <!-- TAG LIST PANEL -->
-    <div class="panel-tags">
-      <div class="panel-header">TAG LIST</div>
-      <div class="tag-search-wrap"><input type="text" id="tagSearch" placeholder="Search tag..."></div>
-      <div class="tag-list-body" id="tagListBody"></div>
-    </div>
-
-    <!-- CENTER: CHART + HISTORICAL CONTROLS -->
-    <div class="panel-center">
+    <!-- 1. CHART: grafik trend + toolbar export -->
+    <div class="panel-chart">
 
       <div class="chart-toolbar">
         <div class="chart-title" id="chartTitle">TREND GRAPH</div>
@@ -66,6 +62,10 @@
         <div id="trendChart"></div>
       </div>
 
+    </div>
+
+    <!-- 2. HISTORICAL: rentang waktu (quick range s/d 90D, 1-3 TAHUN, custom) + LOAD DATA -->
+    <div class="panel-historical">
       <div class="historical-panel" id="historicalPanel">
         <div class="range-bar" id="quickRangeBar"></div>
         <div class="custom-range-row">
@@ -85,20 +85,32 @@
         <div id="dcsDiagPanel" style="display:none;margin-top:10px;padding:10px;background:#f7f9fb;border:1px solid #c7d0d9;border-radius:4px;font-size:11px;font-family:'Consolas','Courier New',monospace;color:#16212b;max-height:220px;overflow:auto"></div>
 
       </div>
-
-      <!-- PANEL DEVIASI (otomatis dari config/modules/<modul>.config.js) -->
-      <div class="module-deviation-area" id="moduleDeviationArea"></div>
-
-      <!-- TABEL LOG RECORD (otomatis dari config/modules/<modul>.config.js) -->
-      <div class="module-log-wrap" id="moduleLogTable"></div>
-
     </div>
 
-    <!-- VALUES PANEL: nilai tiap series dari tag yang dicentang, ikut cursor di grafik -->
+    <!-- 3. TAG LIST: pilihan tag yang ditampilkan di grafik -->
+    <div class="panel-tags">
+      <div class="panel-header">TAG LIST</div>
+      <div class="tag-search-wrap"><input type="text" id="tagSearch" placeholder="Search tag..."></div>
+      <div class="tag-list-body" id="tagListBody"></div>
+    </div>
+
+    <!-- 4. VALUES: nilai tiap series dari tag yang dicentang, ikut cursor di grafik -->
     <div class="panel-details">
       <div class="panel-header">VALUES</div>
       <div class="cursor-readout" id="cursorReadout"></div>
       <div id="valuesPanelBody"></div>
+    </div>
+
+    <!-- 5a. MODULE KPI CARDS (otomatis dari config/modules/<modul>.config.js) -->
+    <div class="module-kpi-bar" id="moduleKpiBar"></div>
+
+    <!-- 5b. EXTRA: panel deviasi + tabel log record -->
+    <div class="panel-extra">
+
+      <div class="module-deviation-area" id="moduleDeviationArea"></div>
+
+      <div class="module-log-wrap" id="moduleLogTable"></div>
+
     </div>
 
   </div>
