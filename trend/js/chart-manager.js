@@ -414,7 +414,20 @@
     var domEl = document.getElementById(domId);
     if (!domEl) return;
 
+    // module-view.js merender ulang panel deviasi (innerHTML='' lalu rebuild)
+    // SETIAP kali data historical dimuat ulang (klik quick range ATAU tombol
+    // LOAD DATA -- keduanya trigger dcsHistoricalLoadEnd sendiri-sendiri).
+    // DOM element lama dengan id yang sama jadi ke-detach dari document,
+    // tapi instance ECharts di cache ini masih nunjuk ke element lama itu.
+    // Kalau langsung dipakai lagi (inst.setOption di element yang sudah
+    // detached), hasilnya render "berhasil" tapi ke element yang sudah tidak
+    // kelihatan -- container yang baru (terlihat di layar) jadi kosong. Jadi
+    // instance lama harus dibuang & dibuat ulang tiap kali domEl-nya beda.
     var inst = deviationCharts[domId];
+    if (inst && inst.getDom() !== domEl) {
+      inst.dispose();
+      inst = null;
+    }
     if (!inst) {
       inst = echarts.init(domEl, null, { renderer: 'canvas' });
       deviationCharts[domId] = inst;
