@@ -494,3 +494,19 @@ User menjelaskan: pemisahan CEMS jadi 4-5 tab per frequency (2-Weekly #1/#2, Mon
 Diverifikasi via Playwright (5 record mock lintas frequency 2-Weekly/Monthly/3-Monthly + 1 draft meta-only): tab bar cuma 1 ("CEMS Calibration"), TAG LIST 10 tag, dan `CEMS-SO2-ZERO` benar menggabungkan 4 titik dari 3 frequency berbeda jadi 1 trend (sebelumnya akan terpecah ke 3-4 tag berbeda).
 
 File terdampak: `config/default-tags-cems.js`, `config/modules/cems.config.js`, `js/adapters/cems-adapter.js`, `trend_cems.html`, `index.html`.
+
+---
+
+## 22. Sesi ini — Fix urutan waktu trend: pakai `tanggal` (tanggal kejadian), bukan `updated_at`
+
+### Masalah
+
+Setelah §21 (CEMS digabung jadi 1 trend), user masih lihat titik-titik menumpuk di 1-2 posisi waktu saja padahal panel diagnostik menunjukkan banyak record (tanggal kejadian berbeda-beda, April–Agustus). Root cause: `SupabaseAdapter.recordTimestamp()` — dipakai SEMUA adapter (SO2/FEGT/CEMS) untuk menentukan posisi sumbu-X di trend — mendahulukan `updated_at` (kapan record TERAKHIR disimpan ke Supabase) di atas `tanggal` (tanggal kejadian kalibrasi/inspeksi yang diisi manual teknisi). Beberapa draft CEMS lama sempat dibuka & disimpan ulang di hari yang sama (`updated_at` jadi hampir sama semua, ~2026-08-07), walau `tanggal` kejadian aslinya beda-beda berbulan-bulan — trend jadi numpuk di 1-2 titik waktu (waktu save-nya), bukan tersebar sesuai tanggal kalibrasi yang sebenarnya.
+
+### Fix
+
+`recordTimestamp()` dibalik urutannya: `r.tanggal || r.updated_at || r.created_at` — tanggal kejadian didahulukan, `updated_at`/`created_at` cuma fallback kalau `tanggal` kosong/tidak valid. Ini fix di level `js/supabase-adapter.js` (dipakai bersama), jadi berlaku otomatis untuk SO2/FEGT/CEMS sekaligus.
+
+Diverifikasi via Playwright: 8 record mock dengan `tanggal` tersebar April–Agustus tapi `updated_at` numpuk di 1-2 timestamp — sebelum fix akan collapse ke 1-2 titik; setelah fix, posisi tiap titik di trend benar mengikuti `tanggal` masing-masing record (dicek dengan filter rentang "3 TAHUN": 2 record `tanggal` 2026-04-16 & 2026-05-26 muncul benar di posisi masing-masing meski `updated_at` keduanya sama).
+
+File terdampak: `js/supabase-adapter.js`, cache-busting `trend_so2.html`/`trend_fegt.html`/`trend_cems.html` (`?v=20260827c` khusus `supabase-adapter.js`).

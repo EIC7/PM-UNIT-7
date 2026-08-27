@@ -123,8 +123,19 @@
       });
   }
 
+  /**
+   * `tanggal` didahulukan — itu tanggal KEJADIAN (kalibrasi/inspeksi) yang
+   * diisi manual oleh teknisi, sumber kebenaran untuk posisi waktu di trend.
+   * `updated_at`/`created_at` cuma metadata kapan record TERAKHIR disimpan
+   * ke Supabase — sempat dipakai duluan, ternyata salah: kalau beberapa
+   * draft lama dibuka & disave ulang di hari yang sama (mis. saat testing/
+   * migrasi bertahap), updated_at-nya jadi hampir sama semua walau tanggal
+   * kejadian aslinya beda-beda berbulan-bulan — trend jadi numpuk semua di
+   * 1 titik waktu itu alih-alih tersebar sesuai tanggal aslinya. Fallback
+   * ke updated_at/created_at cuma kalau `tanggal` kosong/tidak valid.
+   */
   function recordTimestamp(r) {
-    var raw = r.updated_at || r.created_at || r.tanggal;
+    var raw = r.tanggal || r.updated_at || r.created_at;
     if (!raw) return null;
     var t = new Date(raw).getTime();
     return isNaN(t) ? null : t;
