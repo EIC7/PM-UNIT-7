@@ -4,8 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DCS TREND MONITORING SYSTEM</title>
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/dcs-theme.css">
+<!-- ?v= cache-busting: browser (terutama Chrome mobile) suka nyimpen CSS
+     dari GitHub Pages cukup lama, jadi fix baru kadang belum kepakai walau
+     file di repo sudah ter-update. Naikkan angka ini tiap ada perubahan
+     berarti di css/*.css. -->
+<link rel="stylesheet" href="css/style.css?v=20260827a">
+<link rel="stylesheet" href="css/dcs-theme.css?v=20260827a">
 <style>
   /* Halaman hub tidak butuh app-shell (itu punya trend_*.html) — layout sendiri, ringan */
   html, body { min-height: 100vh; }
@@ -245,7 +249,7 @@
       <div class="hub-stat" style="--stat-accent:#7a52a8">
         <div class="hub-stat-icon">🏷️</div>
         <div>
-          <div class="hub-stat-value">73</div>
+          <div class="hub-stat-value">83</div>
           <div class="hub-stat-label">Total Tag</div>
         </div>
       </div>
@@ -307,11 +311,11 @@
         </div>
       </div>
       <div class="hub-card-desc">
-        Trend kalibrasi CEMS (SO2/NOx/CO/CO2/O2, Actual vs Expected), dipisah 4 tab
-        sesuai frekuensi: 2-Weekly #1, 2-Weekly #2, Monthly, dan 2-Yearly.
+        Trend kalibrasi CEMS (SO2/NOx/CO/CO2/O2, Actual vs Expected), dipisah 5 tab
+        sesuai frekuensi: 2-Weekly #1, 2-Weekly #2, Monthly, 3-Monthly, dan 2-Yearly.
       </div>
       <div class="hub-card-tags">
-        <span class="hub-card-tag">40 tag</span>
+        <span class="hub-card-tag">50 tag</span>
         <span class="hub-card-tag">cems_calibration.html</span>
       </div>
     </a>

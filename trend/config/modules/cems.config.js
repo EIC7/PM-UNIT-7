@@ -69,4 +69,9 @@ function _makeCemsModule(registryKey, prefix, tabLabel, tabOrder) {
 window.DCS_MODULES['CEMS-WEEKLY-1'] = _makeCemsModule('CEMS-WEEKLY-1', 'CEMS-W1', 'CEMS 2-Weekly #1', 3);
 window.DCS_MODULES['CEMS-WEEKLY-2'] = _makeCemsModule('CEMS-WEEKLY-2', 'CEMS-W2', 'CEMS 2-Weekly #2', 4);
 window.DCS_MODULES['CEMS-MONTHLY']  = _makeCemsModule('CEMS-MONTHLY',  'CEMS-M',  'CEMS Monthly', 5);
-window.DCS_MODULES['CEMS-YEARLY']   = _makeCemsModule('CEMS-YEARLY',   'CEMS-Y',  'CEMS 2-Yearly', 6);
+// "3-Monthly" adalah salah satu pilihan frequency di cems_calibration.html
+// (radio name="freq") yang sempat tidak punya tab sama sekali di sini —
+// record dengan frequency itu diam-diam ke-drop total oleh cems-adapter.js
+// (tidak error, cuma tidak pernah nongol di grafik manapun).
+window.DCS_MODULES['CEMS-3MONTHLY']  = _makeCemsModule('CEMS-3MONTHLY',  'CEMS-3M', 'CEMS 3-Monthly', 6);
+window.DCS_MODULES['CEMS-YEARLY']   = _makeCemsModule('CEMS-YEARLY',   'CEMS-Y',  'CEMS 2-Yearly', 7);

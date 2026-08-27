@@ -51,12 +51,18 @@
     { suffix: 'O2-ZERO',   section: 'zero',  key: 'O2Wet', fallbackKey: 'O2' }
   ];
 
-  /* 4 tab, masing-masing prefix tag ID + filter frequency + slot (buat 2-Weekly) */
+  /* 5 tab, masing-masing prefix tag ID + filter frequency + slot (buat 2-Weekly).
+     HARUS mencakup SEMUA pilihan frequency di cems_calibration.html (lihat
+     radio name="freq": 2-Weekly/Monthly/3-Monthly/2-Yearly) — "3-Monthly"
+     sempat tidak ada tab-nya sama sekali, jadi record dengan frequency itu
+     diam-diam ke-drop total (tidak error, cuma tidak pernah nongol di
+     grafik manapun). Ketauan lewat #dcsDiagPanel di trend_cems.html. */
   var TABS = [
-    { prefix: 'CEMS-W1', freq: '2-Weekly', slot: 1 },
-    { prefix: 'CEMS-W2', freq: '2-Weekly', slot: 2 },
-    { prefix: 'CEMS-M',  freq: 'Monthly',  slot: null },
-    { prefix: 'CEMS-Y',  freq: '2-Yearly', slot: null }
+    { prefix: 'CEMS-W1', freq: '2-Weekly',  slot: 1 },
+    { prefix: 'CEMS-W2', freq: '2-Weekly',  slot: 2 },
+    { prefix: 'CEMS-M',  freq: 'Monthly',   slot: null },
+    { prefix: 'CEMS-3M', freq: '3-Monthly', slot: null },
+    { prefix: 'CEMS-Y',  freq: '2-Yearly',  slot: null }
   ];
 
   function makeEmptyResult() {
@@ -71,11 +77,18 @@
 
   function parseCemsRecords(rows) {
     var result = makeEmptyResult();
+    // Diagnostik per record — dibaca trend_cems.html (#dcsDiagPanel) supaya
+    // kelihatan LANGSUNG dari HP kenapa 1 record tertentu tidak nyumbang
+    // titik (frequency tidak dikenal 4 tab, atau field zero/span1/span2
+    // masih kosong karena draft belum lengkap diisi) — tanpa perlu buka
+    // Supabase manual. Lihat §20 Trend Fitur.MD.
+    var debugRows = [];
 
     // Kelompokkan per frequency dulu, urutkan ascending by waktu — perlu
     // urutan yang benar sebelum membagi 2-Weekly ke slot 1 (index genap)
     // dan slot 2 (index ganjil).
     var byFreq = {};
+    var recognizedIds = {};
     (rows || []).forEach(function (r) {
       var freq = (r.data && r.data.meta && r.data.meta.frequency) || '';
       var t = window.SupabaseAdapter.recordTimestamp(r);
@@ -94,12 +107,14 @@
 
       entries.forEach(function (entry) {
         var r = entry.row, t = entry.time;
+        recognizedIds[r.id] = true;
         // PENTING: zero/span1/span2 ada LANGSUNG di r.data (lihat collectData()
         // di cems_calibration.html) — TIDAK dibungkus r.data.calibration.
         // Field per parameter juga bernama exp/act (bukan expected/actual/dcs).
         // Sempat salah ambil dari r.data.calibration (yang tidak pernah ada),
         // jadi parser selalu return null untuk semua tag CEMS.
         var cal = r.data || {};
+        var filledCount = 0;
 
         PARAMS.forEach(function (p) {
           var section = cal[p.section] || {};
@@ -111,9 +126,26 @@
           var tagId = tab.prefix + '-' + p.suffix;
           var pt = { time: t, recordId: r.id, pic: r.pic };
 
-          if (actual !== null) result[tagId].Actual.push(Object.assign({ value: actual }, pt));
-          if (exp !== null) result[tagId].Expected.push(Object.assign({ value: exp }, pt));
+          if (actual !== null) { result[tagId].Actual.push(Object.assign({ value: actual }, pt)); filledCount++; }
+          if (exp !== null) { result[tagId].Expected.push(Object.assign({ value: exp }, pt)); filledCount++; }
         });
+
+        debugRows.push({
+          recordId: r.id, tanggal: r.tanggal, status: r.status, pic: r.pic,
+          frequency: tab.freq, tab: tab.prefix, filledCount: filledCount, maxCount: PARAMS.length * 2
+        });
+      });
+    });
+
+    // Record yang frequency-nya TIDAK cocok satu pun dari 4 tab (mis. kosong,
+    // salah ketik, atau "3-Monthly" yang memang belum ada tab-nya) — supaya
+    // ketahuan, bukan cuma "hilang" diam-diam.
+    (rows || []).forEach(function (r) {
+      if (recognizedIds[r.id]) return;
+      var freq = (r.data && r.data.meta && r.data.meta.frequency) || '(kosong)';
+      debugRows.push({
+        recordId: r.id, tanggal: r.tanggal, status: r.status, pic: r.pic,
+        frequency: freq, tab: null, filledCount: 0, maxCount: PARAMS.length * 2
       });
     });
 
@@ -122,6 +154,7 @@
       result[tagId].Expected.sort(function (a, b) { return a.time - b.time; });
     });
 
+    window.CemsAdapter.lastParseDebug = debugRows;
     return result;
   }
 
