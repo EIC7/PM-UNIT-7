@@ -2110,6 +2110,7 @@ function raSubmitReport() {
     alert('Simpan dulu sebagai Draft sebelum submit.');
     return;
   }
+  if (!confirm('Apakah data sudah lengkap? Yakin Submit?')) return;
   raRequireLogin(['user', 'admin'], '🔒 Login untuk Submit Laporan', function(profile) {
     raUpdateRecord(window._editingId, {
       status: 'SUBMITTED',
@@ -2117,7 +2118,7 @@ function raSubmitReport() {
       submitted_at: new Date().toISOString()
     }, function(err, updated) {
       if (err) { alert('Gagal submit: ' + err); return; }
-      dbShowToast('✓ Laporan berhasil di-submit, menunggu Checker');
+      dbShowToast('✓ Data Sudah Tersubmit ke Review Approval Dashboard');
       if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
     });
   });
