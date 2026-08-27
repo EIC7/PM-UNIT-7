@@ -2,39 +2,34 @@
    SHARED.JS — Common utilities untuk semua modul PM Unit 7
    ═══════════════════════════════════════════════════════ */
 
-/* ── GATE AKSES (Login Akun — ReportAuthManager) ──
+/* ── GATE AKSES (Password + Trusted Device) ──
    HARUS paling atas file supaya halaman ke-block sebelum konten sempat
-   kelihatan (mencegah "flash" isi halaman sebelum login diverifikasi).
+   kelihatan (mencegah "flash" isi halaman sebelum password diverifikasi).
    document.write() di sini AMAN karena shared.js dipanggil lewat tag script
    dengan atribut src biasa (bukan async/defer) di <head> semua file modul,
    jadi masih di tengah proses parsing dokumen.
 
-   Ini MENGGANTIKAN gerbang lama "Trusted Device" (1 password dipakai
-   bersama semua orang, per-device). Sekarang tiap orang login pakai akun
-   sendiri (user1/checker1/spv1/admin1, dst -- lihat pm_profiles) lewat
-   Supabase Auth, session-nya persist otomatis di localStorage oleh
-   supabase-js -- jadi sekali login di halaman manapun, semua halaman lain
-   (origin sama) langsung "lihat" sudah login juga, sampai logout eksplisit.
-   Login logic sesungguhnya ada di raInitSiteGate() (bagian REPORT
-   AUTHENTICATION & WORKFLOW di bawah), dipanggil di akhir file ini.
-
-   Kode gerbang device-password LAMA (pmInitGate & fungsi pendukungnya)
-   sengaja TIDAK dihapus -- cuma tidak dipanggil lagi -- supaya gampang
-   rollback kalau perlu. Tabel trusted_devices/gate_config juga tetap ada
-   di database, cuma tidak dipakai buat mengunci apa pun lagi. ── */
+   Sempat diganti gerbang "Login Akun" (raInitSiteGate, username+password
+   per-orang lewat Supabase Auth) -- atas permintaan user, DIKEMBALIKAN lagi
+   ke gerbang Trusted Device ini (1 password dipakai bersama semua orang,
+   per-device, sekali "Trusted" tidak ditanya password lagi). Kode
+   raInitSiteGate & fungsi raXxx pendukungnya (dipakai juga oleh alur
+   Submit Laporan checker/SPV, lihat raRequireLogin) sengaja TIDAK dihapus,
+   cuma tidak dipanggil lagi sebagai gerbang situs. ── */
 (function(){
   document.write(
     '<style id="pmGateHideStyle">html,body{margin:0}body>*:not(#pmAuthGate){display:none !important}</style>' +
     '<div id="pmAuthGate" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:linear-gradient(135deg,#0f2b22,#132e2a);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">' +
       '<div style="width:100%;max-width:340px;background:#16211c;border:1px solid #23362c;border-radius:14px;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">' +
-        '<div style="text-align:center;font-size:34px;margin-bottom:6px">&#128100;</div>' +
-        '<div style="text-align:center;color:#e6f2ec;font-size:16px;font-weight:700;margin-bottom:4px">Login Diperlukan</div>' +
-        '<div style="text-align:center;color:#8fae9d;font-size:12.5px;margin-bottom:18px">Masukkan username &amp; password akun Anda</div>' +
-        '<div style="margin-bottom:10px">' +
-          '<input id="pmGateUser" type="text" placeholder="Username" autocomplete="username" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
+        '<div style="text-align:center;font-size:34px;margin-bottom:6px">&#128274;</div>' +
+        '<div style="text-align:center;color:#e6f2ec;font-size:16px;font-weight:700;margin-bottom:4px">Akses Terbatas</div>' +
+        '<div style="text-align:center;color:#8fae9d;font-size:12.5px;margin-bottom:18px">Masukkan password untuk membuka halaman ini</div>' +
+        '<div id="pmGateNameWrap" style="margin-bottom:10px;display:none">' +
+          '<div style="color:#8fae9d;font-size:11px;margin-bottom:6px">Masukkan nama hanya untuk dikenali admin</div>' +
+          '<input id="pmGateName" type="text" placeholder="Nama kamu (sekali isi saja)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
         '</div>' +
         '<div style="margin-bottom:10px">' +
-          '<input id="pmGatePw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
+          '<input id="pmGatePw" type="password" placeholder="Password" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
         '</div>' +
         '<div id="pmGateError" style="color:#ff8686;font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>' +
         '<button id="pmGateSubmit" type="button" style="width:100%;padding:11px;border:none;border-radius:8px;background:#16a085;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Masuk</button>' +
@@ -743,11 +738,10 @@ function pmInitGate() {
   else if (pwInput) pwInput.focus();
 }
 
-// pmInitGate() (gerbang device-password LAMA) SENGAJA TIDAK dipanggil lagi
-// di sini -- diganti raInitSiteGate() (gerbang login akun BARU), dipanggil
-// di paling akhir file ini (setelah semua fungsi raXxx & widget sesi
-// didefinisikan). Fungsi pmInitGate & pendukungnya tetap ada di atas,
-// dormant, untuk rollback kalau perlu.
+// Elemen gate sudah pasti ada di DOM di titik ini (ditulis via document.write
+// sinkron di atas, dalam satu eksekusi <script> yang sama), jadi aman
+// dipanggil langsung tanpa nunggu DOMContentLoaded.
+pmInitGate();
 
 /* ── TOAST NOTIFICATION ── */
 function dbShowToast(msg) {
@@ -1988,17 +1982,14 @@ function raSubmitReport() {
     return;
   }
   if (!confirm('Apakah data sudah lengkap? Yakin Submit?')) return;
-  raRequireLogin(['user', 'admin'], '🔒 Login untuk Submit Laporan', function(profile) {
-    raUpdateRecord(window._editingId, {
-      status: 'SUBMITTED',
-      submitted_by: profile.id,
-      submitted_at: new Date().toISOString()
-    }, function(err, updated) {
-      if (err) { alert('Gagal submit: ' + err); return; }
-      dbShowToast('✓ Data Sudah Tersubmit ke Review Approval Dashboard');
-      if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
-      raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, profile.display_name || profile.username);
-    });
+  raUpdateRecord(window._editingId, {
+    status: 'SUBMITTED',
+    submitted_at: new Date().toISOString()
+  }, function(err, updated) {
+    if (err) { alert('Gagal submit: ' + err); return; }
+    dbShowToast('✓ Data Sudah Tersubmit ke Review Approval Dashboard');
+    if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
+    raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, (updated && updated.pic) || '');
   });
 }
 
@@ -2303,4 +2294,8 @@ function raRenderSessionWidget(profile) {
   };
 }
 
-raInitSiteGate();
+// raInitSiteGate() (gerbang login akun) SENGAJA TIDAK dipanggil lagi --
+// gerbang situs dikembalikan ke pmInitGate() (Trusted Device) di atas.
+// Fungsi ini & fungsi raXxx pendukungnya TETAP dipakai oleh raRequireLogin
+// (modal login khusus di alur Submit Laporan checker/SPV, terpisah dari
+// gerbang situs), jadi sengaja tidak dihapus.

@@ -201,10 +201,6 @@ function rpRenderList() {
     return;
   }
 
-  var role = rpCurrentProfile ? rpCurrentProfile.role : null;
-  var canChecker = role === 'checker' || role === 'admin';
-  var canReviewer = role === 'reviewer' || role === 'admin';
-
   listEl.innerHTML = rows.map(function(r) {
     var label = MODUL_LABEL[normalizeModul(r.modul)] || r.modul;
     var previewUrl = modulToPrintUrl(r.modul, r.id);
@@ -236,22 +232,6 @@ function rpRenderList() {
     } else {
       actionsHtml += '<button class="rp-btn preview" onclick="window.open(\'' + previewUrl + '\',\'_blank\')">👁 Preview</button>';
       actionsHtml += '<button class="rp-btn edit" onclick="window.open(\'' + editUrl + '\',\'_blank\')">✎ Edit</button>';
-      if (r.status === 'SUBMITTED' && (canChecker || canReviewer)) {
-        actionsHtml += '<button class="rp-btn verify" onclick="rpToggleVerifyPanel(\'' + r.id + '\')">🔍 Review</button>';
-        actionsHtml += '<button class="rp-btn return" onclick="rpReturn(\'' + r.id + '\',\'checker\')">↩ Kembalikan</button>';
-      }
-      if (r.status === 'CHECKED' && canReviewer) {
-        actionsHtml += '<button class="rp-btn approve" onclick="rpToggleApprovePanel(\'' + r.id + '\')">✓ Approve Final</button>';
-        actionsHtml += '<button class="rp-btn return" onclick="rpReturn(\'' + r.id + '\',\'reviewer\')">↩ Kembalikan</button>';
-      }
-      if (r.status === 'FINAL_APPROVED' && canReviewer) {
-        // Batalkan Approve: balikin status ke CHECKED (bukan hapus record).
-        // Begitu status balik ke CHECKED, baris ini otomatis dirender ulang
-        // pakai kondisi "CHECKED && canReviewer" di atas -- tombol Kembalikan
-        // otomatis muncul lagi tanpa kode tambahan (sesuai spek: approved ->
-        // Kembalikan hilang, batalkan approve -> Kembalikan muncul lagi).
-        actionsHtml += '<button class="rp-btn return" onclick="rpCancelApprove(\'' + r.id + '\')">↩ Batalkan Approve</button>';
-      }
     }
 
     var reasonHtml = (r.status === 'RETURNED' && r.return_reason) ? '<div class="rp-reason">Alasan dikembalikan: ' + r.return_reason + '</div>' : '';
@@ -271,163 +251,10 @@ function rpRenderList() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   AKSI: VERIFIKASI (Checker), APPROVE (Reviewer/SPV), KEMBALIKAN
-   Cuma UPDATE kolom status/tanda-tangan/timestamp -- TIDAK menyentuh
-   `data`/`tanggal`/`pic`/`work_order` sama sekali (isi laporan dibetulkan
-   terpisah lewat tombol Edit, lihat raResaveInPlace di shared.js).
+   INIT — halaman ini sekarang cuma daftar/preview/edit (checker/SPV
+   dan login akun dihapus sepenuhnya, tidak diperlukan lagi).
    ═══════════════════════════════════════════════════════════════════ */
-function rpToggleVerifyPanel(id) {
-  var panel = document.getElementById('rpVerifyPanel-' + id);
-  if (panel.innerHTML) { panel.innerHTML = ''; return; }
-  var names = Object.keys(RA_SIGNATURE_FILE_MAP);
-  var defaultName = (rpCurrentProfile && names.indexOf(rpCurrentProfile.display_name) !== -1) ? rpCurrentProfile.display_name : names[0];
-  panel.innerHTML =
-    '<div class="rp-verify-panel stacked">' +
-      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">' +
-        '<label style="font-size:11.5px;color:var(--text3)">Diverifikasi oleh:</label>' +
-        '<select id="rpCheckerName-' + id + '">' +
-          names.map(function(n){ return '<option value="' + n + '"' + (n === defaultName ? ' selected' : '') + '>' + n + '</option>'; }).join('') +
-        '</select>' +
-      '</div>' +
-      '<label class="rp-field-label">Komentar <span style="color:#b91c1c">*</span></label>' +
-      '<textarea class="rp-textarea" id="rpCheckerComment-' + id + '" rows="2" oninput="rpValidateVerifyPanel(\'' + id + '\')"></textarea>' +
-      '<label class="rp-field-label">Rekomendasi <span style="color:#b91c1c">*</span></label>' +
-      '<textarea class="rp-textarea" id="rpCheckerRecommendation-' + id + '" rows="2" oninput="rpValidateVerifyPanel(\'' + id + '\')"></textarea>' +
-      '<div><button class="rp-btn verify" id="rpSubmitVerify-' + id + '" disabled onclick="rpVerify(\'' + id + '\')">✓ Submit Reviewed</button></div>' +
-    '</div>';
-}
-
-function rpValidateVerifyPanel(id) {
-  var comment = document.getElementById('rpCheckerComment-' + id);
-  var rec = document.getElementById('rpCheckerRecommendation-' + id);
-  var btn = document.getElementById('rpSubmitVerify-' + id);
-  if (!comment || !rec || !btn) return;
-  btn.disabled = !(comment.value.trim() && rec.value.trim());
-}
-
-function rpVerify(id) {
-  var select = document.getElementById('rpCheckerName-' + id);
-  var checkedByName = select ? select.value : null;
-  var comment = (document.getElementById('rpCheckerComment-' + id) || {}).value || '';
-  var recommendation = (document.getElementById('rpCheckerRecommendation-' + id) || {}).value || '';
-  comment = comment.trim(); recommendation = recommendation.trim();
-  if (!checkedByName) return;
-  if (!comment || !recommendation) { alert('Komentar dan Rekomendasi wajib diisi.'); return; }
-  // Diizinkan checker/reviewer/admin -- SPV (reviewer) boleh langsung proses
-  // review sendiri (skip nunggu Checker asli), misalnya lagi buru-buru atau
-  // Checker berhalangan. Konfirmasi eksplisit atas nama siapa laporan ini
-  // "direview", supaya gak kepencet gak sengaja / salah pilih nama.
-  if (!confirm('Yakin proses review laporan ini atas nama "' + checkedByName + '"?')) return;
-  raRequireLogin(['checker', 'reviewer', 'admin'], '🔍 Login untuk Review Laporan', function(profile) {
-    raGetSignatureUrl(checkedByName, function(sigErr) {
-      if (sigErr) {
-        if (!confirm('Tanda tangan "' + checkedByName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan verifikasi tanpa gambar tanda tangan?')) return;
-      }
-      raUpdateRecord(id, {
-        status: 'CHECKED',
-        checked_by_account: profile.id,
-        checked_by_name: checkedByName,
-        checked_signature_url: RA_SIGNATURE_FILE_MAP[checkedByName] || null,
-        checked_at: new Date().toISOString(),
-        checked_comment: comment,
-        checked_recommendation: recommendation
-      }, function(err) {
-        if (err) { alert('Gagal verifikasi: ' + err); return; }
-        dbShowToast('✓ Terverifikasi — menunggu approval SPV');
-        rpLoadAll();
-      });
-    });
-  });
-}
-
-function rpCancelApprove(id) {
-  // Batalkan Approve Final -- balikin status FINAL_APPROVED ke CHECKED lagi
-  // (bukan hapus/RETURNED). Bersihin jejak approval-nya (siapa & kapan) biar
-  // gak nyisa data approval lama yang udah gak berlaku begitu di-approve
-  // ulang nanti.
-  if (!confirm('Batalkan approval laporan ini? Status akan kembali ke CHECKED (menunggu approve ulang).')) return;
-  raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function() {
-    raUpdateRecord(id, {
-      status: 'CHECKED',
-      reviewed_by_account: null,
-      review_signature_url: null,
-      final_approved_at: null
-    }, function(err) {
-      if (err) { alert('Gagal membatalkan approval: ' + err); return; }
-      dbShowToast('↩ Approval dibatalkan — kembali ke status CHECKED');
-      rpLoadAll();
-    });
-  });
-}
-
-function rpToggleApprovePanel(id) {
-  var panel = document.getElementById('rpVerifyPanel-' + id);
-  if (panel.innerHTML) { panel.innerHTML = ''; return; }
-  panel.innerHTML =
-    '<div class="rp-verify-panel stacked">' +
-      '<label class="rp-field-label">Komentar SPV <span style="color:#b91c1c">*</span></label>' +
-      '<textarea class="rp-textarea" id="rpReviewComment-' + id + '" rows="2" oninput="rpValidateApprovePanel(\'' + id + '\')"></textarea>' +
-      '<label class="rp-field-label">Rekomendasi SPV <span style="color:#b91c1c">*</span></label>' +
-      '<textarea class="rp-textarea" id="rpReviewRecommendation-' + id + '" rows="2" oninput="rpValidateApprovePanel(\'' + id + '\')"></textarea>' +
-      '<div><button class="rp-btn approve" id="rpSubmitApprove-' + id + '" disabled onclick="rpApprove(\'' + id + '\')">✓ Approve Final</button></div>' +
-    '</div>';
-}
-
-function rpValidateApprovePanel(id) {
-  var comment = document.getElementById('rpReviewComment-' + id);
-  var rec = document.getElementById('rpReviewRecommendation-' + id);
-  var btn = document.getElementById('rpSubmitApprove-' + id);
-  if (!comment || !rec || !btn) return;
-  btn.disabled = !(comment.value.trim() && rec.value.trim());
-}
-
-function rpApprove(id) {
-  var comment = (document.getElementById('rpReviewComment-' + id) || {}).value || '';
-  var recommendation = (document.getElementById('rpReviewRecommendation-' + id) || {}).value || '';
-  comment = comment.trim(); recommendation = recommendation.trim();
-  if (!comment || !recommendation) { alert('Komentar dan Rekomendasi wajib diisi.'); return; }
-  raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function(profile) {
-    var spvName = profile.display_name || profile.username;
-    raGetSignatureUrl(spvName, function(sigErr) {
-      if (sigErr) {
-        if (!confirm('Tanda tangan "' + spvName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan approve tanpa gambar tanda tangan?')) return;
-      }
-      raUpdateRecord(id, {
-        status: 'FINAL_APPROVED',
-        reviewed_by_account: profile.id,
-        review_signature_url: RA_SIGNATURE_FILE_MAP[spvName] || null,
-        final_approved_at: new Date().toISOString(),
-        review_comment: comment,
-        review_recommendation: recommendation
-      }, function(err) {
-        if (err) { alert('Gagal approve: ' + err); return; }
-        dbShowToast('✓ Laporan FINAL APPROVED');
-        rpLoadAll();
-      });
-    });
-  });
-}
-
-function rpReturn(id, fromLevel) {
-  var reason = prompt('Alasan dikembalikan (opsional):') || '';
-  var roles = fromLevel === 'checker' ? ['checker', 'admin'] : ['reviewer', 'admin'];
-  var title = fromLevel === 'checker' ? '🔍 Login sebagai Checker' : '🖊️ Login sebagai Supervisor';
-  raRequireLogin(roles, title, function() {
-    raUpdateRecord(id, { status: 'RETURNED', return_reason: reason }, function(err) {
-      if (err) { alert('Gagal mengembalikan: ' + err); return; }
-      dbShowToast('↩ Laporan dikembalikan untuk revisi');
-      rpLoadAll();
-    });
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   INIT
-   ═══════════════════════════════════════════════════════════════════ */
-raGetCurrentProfile(function(profile) {
-  rpCurrentProfile = profile; // dipakai buat nentuin tombol Verifikasi/Approve mana yang muncul
-  rpLoadAll();
-});
+rpLoadAll();
 </script>
 </body>
 </html>
