@@ -474,3 +474,23 @@ Desktop menambah 1 baris di `grid-template-areas` untuk `historical` di kolom te
 Background pola garis grid teknik (`linear-gradient` 28px×28px) di halaman hub dihapus — dinilai user kelihatan "berisik"/kurang premium. Diganti background polos. Brand bar hub ditambah link "← Dashboard Utama" (`../index.html`, dashboard PM Diagnostic System root — sebelumnya cuma bisa MASUK ke `trend/` dari sana, tidak ada jalan pulang) plus jam berjalan (format sama dengan `topbar-clock` di `trend_*.html`, lewat script kecil berdiri sendiri karena hub tidak pakai `ui-manager.js`).
 
 File terdampak: `css/style.css`, `css/dcs-theme.css`, `index.html`, `trend_so2.html`, `trend_fegt.html`, `trend_cems.html`.
+
+---
+
+## 21. Sesi ini — CEMS: gabung semua frequency jadi 1 trend per parameter (bukan dipisah per tab)
+
+### Masalah
+
+User menjelaskan: pemisahan CEMS jadi 4-5 tab per frequency (2-Weekly #1/#2, Monthly, 3-Monthly, 2-Yearly — masing-masing tab dapat SET TAG ID SENDIRI, jadi 40-50 tag total) itu **salah secara proses**. Frequency yang dipilih di Step 1 form (`cems_calibration.html`) cuma menentukan **pekerjaan tambahan** (checklist inspeksi Step 9-11) yang ikut dikerjakan saat kunjungan itu — pengukuran kalibrasi Zero/Span1/Span2 (Before/After) sendiri **sama** untuk semua frequency. Akibat pemisahan per tab: 1 rangkaian kalibrasi yang harusnya jadi 1 trend panjang malah terpecah jadi banyak trend pendek (bahkan 2-Weekly sendiri masih dibagi lagi jadi slot ganjil/genap) — makanya trend tidak pernah kelihatan terbentuk meski sudah banyak record tersimpan (lihat §20).
+
+### Fix
+
+- **`config/default-tags-cems.js`**: 40 tag (10 parameter × 4 tab) diringkas jadi **10 tag** (1 per parameter: `CEMS-SO2-ZERO`, `CEMS-SO2-SPAN1`, dst — tanpa suffix tab).
+- **`js/adapters/cems-adapter.js`**: `TABS` (grouping per frequency + slot ganjil/genap untuk 2-Weekly) dihapus total. Semua record CEMS diurutkan by waktu lalu diparse langsung ke 10 tag itu — SEMUA frequency masuk ke trend yang sama. `frequency` tetap dicatat di debug output tapi cuma sebagai info, tidak lagi menentukan tag tujuan.
+- **`config/modules/cems.config.js`**: 5 module (`CEMS-WEEKLY-1/2`, `CEMS-MONTHLY`, `CEMS-3MONTHLY`, `CEMS-YEARLY`) diringkas jadi **1 module** (`CEMS`) — tab bar modul CEMS sekarang cuma 1 tab "CEMS Calibration" (pola sama dengan SO2 yang juga 1 tab).
+- **`trend_cems.html`**: panel diagnostik (`#dcsDiagPanel`) disesuaikan — kolom "tab tujuan" dihapus, `frequency` ditampilkan sebagai info saja.
+- **`index.html`** (hub): kartu CEMS diupdate (`10 tag`, deskripsi dijelaskan alasan digabung), total tag di ringkasan angka (`73`→`43`: SO2 2 + FEGT 31 + CEMS 10).
+
+Diverifikasi via Playwright (5 record mock lintas frequency 2-Weekly/Monthly/3-Monthly + 1 draft meta-only): tab bar cuma 1 ("CEMS Calibration"), TAG LIST 10 tag, dan `CEMS-SO2-ZERO` benar menggabungkan 4 titik dari 3 frequency berbeda jadi 1 trend (sebelumnya akan terpecah ke 3-4 tag berbeda).
+
+File terdampak: `config/default-tags-cems.js`, `config/modules/cems.config.js`, `js/adapters/cems-adapter.js`, `trend_cems.html`, `index.html`.
