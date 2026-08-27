@@ -386,7 +386,7 @@ html, body {
 
   .load-btn { width: 100%; padding: 10px 16px; }
 
-  .deviation-panel-chart { height: 120px; }
+  .deviation-panel-chart { height: 140px; }
 
   .module-log-wrap { max-height: 260px; overflow-y: auto; }
   .module-log-table { font-size: 10px; }

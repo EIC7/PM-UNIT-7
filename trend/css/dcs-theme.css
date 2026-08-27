@@ -215,7 +215,7 @@ body { background: var(--bg-main); }
 .deviation-panel-last { color: var(--accent-green); font-size: 13px; font-weight: 600; }
 .deviation-panel-last.deviation-out { color: var(--accent-red); }
 .deviation-panel-desc { color: var(--text-secondary); font-size: 10px; margin-bottom: 4px; }
-.deviation-panel-chart { height: 110px; width: 100%; }
+.deviation-panel-chart { height: 130px; width: 100%; }
 .deviation-panel-empty {
   height: 40px; display: flex; align-items: center;
   color: var(--text-dim); font-size: 10.5px; font-style: italic;

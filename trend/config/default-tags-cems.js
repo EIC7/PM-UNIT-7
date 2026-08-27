@@ -19,9 +19,9 @@
  * 2 series per tag: Actual (pembacaan CEMS) vs Expected (nilai reference
  * gas kalibrasi) — pola sama dengan DCS/Local di SO2.
  *
- * DEFAULT VISIBLE: cuma SO2-ZERO & SO2-SPAN1 yang nyala dari awal (parameter
- * paling sering jadi acuan utama kalibrasi CEMS) — sisanya tersedia lewat
- * checkbox, supaya chart tidak langsung penuh 10 tag x 2 series sekaligus.
+ * DEFAULT VISIBLE: semua 10 tag nyala dari awal saat halaman dibuka (biar
+ * langsung kelihatan tanpa perlu centang manual satu-satu) — checkbox di
+ * TAG LIST tetap bisa dipakai untuk menyembunyikan tag yang tidak perlu.
  *
  * ENGINEERING RANGE: ASUMSI rentang tipikal CEMS batubara (SO2/NOx/CO span
  * gas ~ratusan ppm, CO2 0-20%, O2 0-25%) -- sesuaikan kalau ada spesifikasi
@@ -65,7 +65,7 @@ window.DCS_DEFAULT_TAGS = [
     unit: 'ppm',
     engineeringLow: 0, engineeringHigh: 500, min: 0, max: 500, chartMax: 550,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
-    visible: false, enabled: true,
+    visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,
     series: [
       { key: 'Actual',   label: 'Actual',   color: '#667917' },
@@ -79,7 +79,7 @@ window.DCS_DEFAULT_TAGS = [
     unit: 'ppm',
     engineeringLow: 0, engineeringHigh: 50, min: 0, max: 50, chartMax: 60,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
-    visible: false, enabled: true,
+    visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,
     series: [
       { key: 'Actual',   label: 'Actual',   color: '#246613' },
@@ -93,7 +93,7 @@ window.DCS_DEFAULT_TAGS = [
     unit: 'ppm',
     engineeringLow: 0, engineeringHigh: 500, min: 0, max: 500, chartMax: 550,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
-    visible: false, enabled: true,
+    visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,
     series: [
       { key: 'Actual',   label: 'Actual',   color: '#1a8946' },
@@ -107,7 +107,7 @@ window.DCS_DEFAULT_TAGS = [
     unit: 'ppm',
     engineeringLow: 0, engineeringHigh: 50, min: 0, max: 50, chartMax: 60,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
-    visible: false, enabled: true,
+    visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,
     series: [
       { key: 'Actual',   label: 'Actual',   color: '#21abab' },
@@ -121,7 +121,7 @@ window.DCS_DEFAULT_TAGS = [
     unit: 'ppm',
     engineeringLow: 0, engineeringHigh: 1000, min: 0, max: 1000, chartMax: 1100,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
-    visible: false, enabled: true,
+    visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,
     series: [
       { key: 'Actual',   label: 'Actual',   color: '#2158ab' },
@@ -135,7 +135,7 @@ window.DCS_DEFAULT_TAGS = [
     unit: '%',
     engineeringLow: 0, engineeringHigh: 5, min: 0, max: 5, chartMax: 6,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
-    visible: false, enabled: true,
+    visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,
     series: [
       { key: 'Actual',   label: 'Actual',   color: '#3c21ab' },
@@ -149,7 +149,7 @@ window.DCS_DEFAULT_TAGS = [
     unit: '%',
     engineeringLow: 0, engineeringHigh: 20, min: 0, max: 20, chartMax: 22,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
-    visible: false, enabled: true,
+    visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,
     series: [
       { key: 'Actual',   label: 'Actual',   color: '#9021ab' },
@@ -163,7 +163,7 @@ window.DCS_DEFAULT_TAGS = [
     unit: '%',
     engineeringLow: 0, engineeringHigh: 25, min: 0, max: 25, chartMax: 26,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
-    visible: false, enabled: true,
+    visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,
     series: [
       { key: 'Actual',   label: 'Actual',   color: '#ab2174' },
