@@ -422,3 +422,27 @@ Diuji lewat headless browser: 4 tab CEMS masing-masing menampilkan 10 tag UNIK (
 ### Pelajaran untuk sesi berikutnya
 
 Kalau ada sesi Claude lain yang mengedit `trend/` secara paralel, **selalu `git fetch` + baca commit terbaru SEBELUM mulai kerja**, dan jangan asumsikan commit message merepresentasikan isi commit dengan akurat — commit CEMS ini message-nya terdengar lengkap ("BARU: ... DIUPDATE: ...") tapi isinya punya 2 bug yang bikin modul itu gagal total kalau tidak ditemukan lewat testing end-to-end.
+
+---
+
+## 18. Sesi ini — Redesign hub `index.html` (mewah/profesional) + fix urutan mobile
+
+### Masalah yang dilaporkan
+
+Screenshot dari HP menunjukkan `trend_cems.html` tampil sebagai 3 kolom desktop yang diperkecil (TAG LIST | TREND GRAPH | VALUES berdampingan, teks jadi sangat kecil) alih-alih ditumpuk vertikal — meski secara kode `@media (max-width: 900px)` sudah ada sejak §-§ sebelumnya. Akar masalahnya BUKAN media query itu sendiri (sudah diverifikasi lewat headless browser di lebar 390px — konten memang ditumpuk benar), melainkan **urutan tumpukan yang tidak sesuai alur pakai**: `.panel-center` (chart + historical + SEMUA panel deviasi + tabel log, bisa >2500px tinggi untuk modul CEMS 40-tag) adalah SATU flex-item yang di-`order:1`, sehingga tag list (`order:2`, alat untuk MEMILIH tag) baru muncul setelah pengguna scroll melewati seluruh dinding kartu KPI/deviasi/log — dan `.module-kpi-bar` (di LUAR `.main-grid`) selalu tampil di paling atas sebelum grafik sama sekali, di semua lebar layar.
+
+### Fix: pecah `.panel-center` + pindah ke CSS Grid dengan urutan sumber mobile-first
+
+- **`css/style.css`**: `.main-grid` diganti dari `display:flex` jadi `display:grid` dengan `grid-template-areas` 3-kolom (`tags chart values` / `tags kpi values` / `tags extra values`) di desktop. `.panel-center` dipecah jadi **`.panel-chart`** (toolbar + notice + chart-wrap saja) dan **`.panel-extra`** (historical-panel + module-deviation-area + module-log-wrap), keduanya jadi grid-item terpisah. `.module-kpi-bar` juga dipindah JADI CHILD `.main-grid` (grid-area `kpi`) alih-alih sibling di luar grid.
+- **`trend_so2.html` / `trend_fegt.html` / `trend_cems.html`**: DOM ditulis ulang dalam urutan SUMBER mobile-first — `panel-chart` → `panel-tags` → `panel-details` (values) → `module-kpi-bar` → `panel-extra`. Di mobile (`@media max-width:900px`, `.main-grid{display:block}`), urutan tampil otomatis mengikuti urutan sumber ini — TIDAK ada lagi trik `order` yang gampang meleset. Di desktop, `grid-template-areas` menata ulang jadi 3 kolom klasik seperti sebelumnya.
+- Hasil verifikasi (headless, viewport 390×844 & 1440×900, `trend_cems.html`): urutan mobile persis **1. grafik trend → 2. pilihan tag → 3. data (VALUES) tag yang dipilih → 4. sisanya (KPI cards, kontrol historical, panel deviasi, tabel log)**; desktop tetap 3 kolom (tags | chart+kpi+extra | values), tidak ada regresi. `panel-tags`/`panel-details` tetap `position:sticky` di desktop.
+- Kelas `.panel-center` yang sudah tidak dipakai HTML sempat tertinggal 1 baris di `css/dcs-theme.css` (`.panel-center{background:...}`) — diganti `.panel-chart, .panel-extra` supaya kedua panel baru tidak transparan.
+
+### Polish visual ("mewah"/profesional, tema tetap putih)
+
+- `--shadow-card` diperkaya jadi 2 layer, ditambah `--shadow-card-hover` untuk elevasi saat hover (dipakai di `.tag-row`, `.kpi-card`, `.deviation-panel`, `.load-btn`).
+- Border-radius dinaikkan (2–4px → 6–8px) di seluruh kontrol interaktif (`.tag-row`, `.icon-btn`, `.range-btn`, `.mode-btn`, `.load-btn`, `.value-row`, input search/date/time) + transisi hover yang lebih halus.
+- `.kpi-card` dapat aksen garis kiri (pola sama dengan `.hub-card`) + hover elevation. `.topbar` dan `.tag-search-wrap input` dapat sentuhan gradient/focus-ring tipis.
+- **`index.html` (hub) dirombak signifikan**: ditambah slim brand bar di atas (konsisten dengan `.topbar` halaman modul, supaya hub & modul terasa satu aplikasi), judul diperbesar dengan aksen gradient teks, baris ringkasan angka (`hub-stats`: jumlah modul aktif, total tag, sumber data), kartu modul dapat monogram berwarna (SO2/FG/CE) sesuai `--card-accent`, border-radius & shadow kartu diperkaya, kartu slot kosong dapat ikon "+". Diverifikasi tampilan mobile (390px) sudah menyerupai desktop (cuma ditumpuk 1 kolom), sesuai permintaan.
+
+File terdampak: `css/style.css`, `css/dcs-theme.css`, `index.html`, `trend_so2.html`, `trend_fegt.html`, `trend_cems.html`.
