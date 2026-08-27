@@ -79,9 +79,10 @@
         </div>
         <!-- PANEL DIAGNOSTIK: buat cek langsung dari HP tanpa DevTools --
              tampil setelah LOAD DATA diklik, per record CEMS yang ketemu:
-             frequency, tab yang cocok, dan berapa nilai (dari maks 20)
-             yang berhasil ke-parse -- biar ketahuan kalau ada record draft
-             yang belum lengkap diisi (bukan bug parser). -->
+             tanggal, status, frequency (info saja -- semua frequency
+             digabung jadi 1 trend), dan berapa nilai (dari maks 20) yang
+             berhasil ke-parse -- biar ketahuan kalau ada record draft yang
+             belum lengkap diisi (bukan bug parser). -->
         <div id="dcsDiagPanel" style="display:none;margin-top:10px;padding:10px;background:#f7f9fb;border:1px solid #c7d0d9;border-radius:4px;font-size:11px;font-family:'Consolas','Courier New',monospace;color:#16212b;max-height:220px;overflow:auto"></div>
       </div>
     </div>
@@ -140,9 +141,8 @@
       lines.push('');
       lines.push('=== PER RECORD CEMS ===');
       debugRows.forEach(function (d) {
-        var tabInfo = d.tab ? d.tab : 'TIDAK COCOK TAB MANAPUN';
         lines.push('- ' + (d.tanggal || '(tanpa tanggal)') + ' | status: ' + (d.status || '-') +
-          ' | frequency: "' + d.frequency + '" -> ' + tabInfo +
+          ' | frequency: "' + d.frequency + '" (info saja, semua frequency digabung 1 trend)' +
           ' | nilai terisi: ' + d.filledCount + '/' + d.maxCount);
       });
     } else {
@@ -166,13 +166,13 @@
      kepakai walau file di repo sudah ter-update. Naikkan angka ini tiap
      kali ada perubahan berarti di file-file di bawah / css/*.css. -->
 <script src="config/system-config.js?v=20260827a"></script>
-<script src="config/default-tags-cems.js?v=20260827a"></script>
-<script src="config/modules/cems.config.js?v=20260827a"></script>
+<script src="config/default-tags-cems.js?v=20260827b"></script>
+<script src="config/modules/cems.config.js?v=20260827b"></script>
 
 <!-- ===================== CORE MODULES ================ -->
 <script src="js/storage-manager.js?v=20260827a"></script>
 <script src="js/supabase-adapter.js?v=20260827a"></script>
-<script src="js/adapters/cems-adapter.js?v=20260827a"></script>
+<script src="js/adapters/cems-adapter.js?v=20260827b"></script>
 <script src="js/tag-manager.js?v=20260827a"></script>
 <script src="js/historical-manager.js?v=20260827a"></script>
 <script src="js/chart-manager.js?v=20260827a"></script>
