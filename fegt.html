@@ -9,6 +9,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 /* ── Fitur reusable: geser posisi foto ── */
@@ -212,7 +218,7 @@
       <div class="btn-row" style="margin-top:20px">
         <button class="btn btn-pdf" id="sixmBtnPdf" onclick="sixmDownloadPdf()">⬇ Print Preview PDF</button>
         <button class="btn" id="sixmBtnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('FEGT 6 Monthly')">💾 Simpan ke Database</button>
-        <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="raSubmitReport()">🔒 Submit Laporan</button>
+        <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=sixmDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
         <button class="btn btn-danger" onclick="sixmResetAll()">✕ Reset</button>
       </div>
     </div>
@@ -221,7 +227,7 @@
     <div class="btn-row" style="margin-top:20px" id="fegtMainBtnRow">
       <button class="btn btn-pdf"     id="btnPdf" onclick="runDiagnosisAndPrint()" disabled>⬇ Diagnostic &amp; Print Preview</button>
       <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('fegt')" disabled>💾 Simpan ke Database</button>
-      <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="raSubmitReport()">🔒 Submit Laporan</button>
+      <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=runDiagnosisAndPrint; raSubmitReport()">🔒 Submit Laporan</button>
       <button class="btn btn-danger"  onclick="resetAll()">✕ Reset</button>
     </div>
   </div>
@@ -1632,6 +1638,7 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
@@ -2079,10 +2086,11 @@ function downloadPdf(){
   LD_CLEANING_PORTS.forEach(function(p){ var pk='ldport'+p.id; if(ldCleaningImages[pk]) totalImgs += ((ldCleaningImages[pk].before||[]).length + (ldCleaningImages[pk].after||[]).length); });
   var loadingMsg = totalImgs>0 ? 'Memproses '+totalImgs+' gambar & menyusun tabel...' : 'Menyusun tabel...';
   // NOTE: `sig` sudah tidak dipakai di bawah (drawSignatureBlock() sudah
-  // dihapus -- tanda tangan sekarang cuma di halaman "Lembar Review &
-  // Approval" lewat raAddReviewApprovalPage()), wrapper ini sengaja
-  // dibiarkan apa adanya (bukan dibongkar) supaya tidak perlu re-indent
-  // seluruh isi fungsi render PDF di bawahnya.
+  // dihapus -- review/approval sekarang sepenuhnya di
+  // Review_Approval_Dashboard.html/Firebase, lihat raSendFinalPdfToFirebaseDashboard
+  // di shared.js), wrapper ini sengaja dibiarkan apa adanya (bukan
+  // dibongkar) supaya tidak perlu re-indent seluruh isi fungsi render PDF
+  // di bawahnya.
   raResolveWorkflowSignatures(window.fegtCurrentRecord, function(sig) {
   dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   ensureFegtBackground(function() {
@@ -2530,11 +2538,9 @@ function downloadPdf(){
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
 
-      raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBg).then(function() {
-        if (typeof hideImgLoading === 'function') hideImgLoading();
-        dbShowSavingOverlay(false);
-        showPdfPreview(doc, 'FEGT_LD_Report_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
-      });
+      if (typeof hideImgLoading === 'function') hideImgLoading();
+      dbShowSavingOverlay(false);
+      showPdfPreview(doc, 'FEGT_LD_Report_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
 
     } catch(err) {
       if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2965,10 +2971,8 @@ function sixmDownloadPdf() {
 
       var now = new Date();
       var dd = String(now.getDate()).padStart(2,'0');
-      raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBg).then(function() {
-        showPdfPreview(doc, 'FEGT_6Monthly_'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+dd+'.pdf');
-        dbShowSavingOverlay(false);
-      });
+      showPdfPreview(doc, 'FEGT_6Monthly_'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+dd+'.pdf');
+      dbShowSavingOverlay(false);
     } catch(err) {
       dbShowSavingOverlay(false);
       alert('Gagal membuat PDF: '+err.message);

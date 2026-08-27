@@ -8,6 +8,12 @@
 <script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 :root{
@@ -493,7 +499,7 @@ body{
   <div class="btn-row" style="margin-top:20px">
     <button class="btn btn-pdf" onclick="dcsDownloadPdf()">&#11015; Download PDF Report</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('dcs_hmi')">&#128190; Simpan ke Database</button>
-    <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="raSubmitReport()">🔒 Submit Laporan</button>
+    <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=dcsDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="dcsReset()">&#10005; Reset</button>
   </div>
 
@@ -1798,6 +1804,7 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
@@ -2516,11 +2523,9 @@ function dcsDownloadPdf() {
       y += 18;
 
       var dateStr = (gv('dcsDate')||'').replace(/-/g,'')||new Date().toISOString().slice(0,10).replace(/-/g,'');
-      raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, bgFooterH, drawBg).then(function() {
-        if (typeof hideImgLoading === 'function') hideImgLoading();
-        dbShowSavingOverlay(false);
-        showPdfPreview(doc, 'DCS_HMI_OIS_Inspection_'+dateStr+'.pdf');
-      });
+      if (typeof hideImgLoading === 'function') hideImgLoading();
+      dbShowSavingOverlay(false);
+      showPdfPreview(doc, 'DCS_HMI_OIS_Inspection_'+dateStr+'.pdf');
 
     } catch(err) {
       if (typeof hideImgLoading === 'function') hideImgLoading();

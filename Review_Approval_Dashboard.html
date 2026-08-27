@@ -16,9 +16,6 @@
 <script src="db-helper.js"></script>
 <script src="storage-helper.js"></script>
 <script src="approval-helper.js"></script>
-<!-- PM Unit 7 (Supabase) — dipakai HANYA oleh tab "PM Unit 7" di bawah,
-     tidak menyentuh alur Firebase/ELECTRIC 7 POMI yang sudah ada -->
-<script src="shared.js"></script>
 <style>
 :root{
   --bg:#f4f7fb; --bg-2:#eaf0f7; --surf:#ffffff; --surf-2:#f8fafc;
@@ -186,27 +183,6 @@ canvas.sig-canvas{border:1.5px dashed var(--bdr-2);border-radius:10px;background
   .action-row{justify-content:stretch}
   .action-row button{flex:1}
 }
-
-/* ── TAB "PM Unit 7" (Supabase pm_records) — style baru, ikut palet CSS
-   file ini (var(--pri) dkk), TIDAK menyentuh style tab lain di atas ── */
-.pu7-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.pu7-tab{padding:7px 14px;border-radius:20px;border:1px solid var(--bdr);background:var(--surf);color:var(--txt-2);font-size:12px;font-weight:700;white-space:nowrap}
-.pu7-tab.active{background:var(--pri);border-color:var(--pri);color:#fff}
-.pu7-tab .cnt{opacity:.75;font-weight:400;margin-left:3px}
-.pu7-card{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
-.pu7-main{flex:1;min-width:220px}
-.pu7-title{font-family:var(--display);font-weight:700;font-size:14.5px}
-.pu7-meta{font-size:11.5px;color:var(--txt-3);margin-top:4px;line-height:1.7}
-.pu7-meta b{color:var(--txt-2)}
-.pu7-badge{font-size:10.5px;font-weight:800;letter-spacing:.4px;padding:4px 11px;border-radius:20px;text-transform:uppercase;white-space:nowrap}
-.pu7-badge.SUBMITTED{background:var(--ind-soft);color:var(--ind)}
-.pu7-badge.CHECKED{background:var(--acc-soft);color:#92400e}
-.pu7-badge.FINAL_APPROVED{background:var(--ok-soft);color:#047857}
-.pu7-badge.RETURNED{background:var(--ng-soft);color:var(--ng)}
-.pu7-reason{font-size:11.5px;color:var(--ng);background:var(--ng-soft);border-radius:6px;padding:6px 10px;margin-top:6px;display:inline-block}
-.pu7-comment{font-size:11.5px;color:var(--txt-3);margin-top:4px}
-.pu7-comment b{color:var(--txt-2)}
-.pu7-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 </style>
 </head>
 <body>
@@ -227,15 +203,6 @@ canvas.sig-canvas{border:1.5px dashed var(--bdr-2);border-radius:10px;background
       <div class="login-err" id="login-err"></div>
       <div class="login-info">Hubungi admin untuk akses role TechOp2 / Supervisor / Admin.</div>
       <div class="auth-switch">Teknisi baru? <a onclick="toggleAuthMode('register')">Daftar akun di sini</a></div>
-      <!-- Login akun ELECTRIC 7 POMI (Firebase) di atas butuh firebase-config.js/
-           db-helper.js/storage-helper.js/approval-helper.js yang belum ada di
-           deployment ini, jadi SIGN IN akan selalu gagal ("Gagal terhubung ke
-           database"). Link ini langsung ke tab "PM Unit 7" (data Supabase,
-           login sendiri lewat raRequireLogin saat Review/Approve) TANPA
-           menghapus/mengubah gerbang login Firebase di atas. -->
-      <div class="auth-switch" style="margin-top:8px">
-        <a onclick="pu7SkipLogin()">➡️ Langsung ke PM Unit 7 (tanpa login ELECTRIC 7)</a>
-      </div>
     </div>
 
     <div id="register-panel" style="display:none">
@@ -285,7 +252,6 @@ canvas.sig-canvas{border:1.5px dashed var(--bdr-2);border-radius:10px;background
     <button class="tab-btn" data-tab="returned" onclick="switchTab('returned')">Dikembalikan <span class="tab-count" id="count-returned">0</span></button>
     <button class="tab-btn" data-tab="all" onclick="switchTab('all')">Semua Riwayat <span class="tab-count" id="count-all">0</span></button>
     <button class="tab-btn" data-tab="recap" onclick="switchTab('recap')">&#128202; Rekap Bulanan</button>
-    <button class="tab-btn" data-tab="pu7" onclick="switchTab('pu7')">PM Unit 7</button>
   </div>
 
   <div class="toolbar" id="list-toolbar">
@@ -338,15 +304,6 @@ canvas.sig-canvas{border:1.5px dashed var(--bdr-2);border-radius:10px;background
       </div>
     </div>
   </div>
-
-  <!-- PM UNIT 7 (Supabase pm_records) — data laporan checksheet PM Unit 7,
-       terpisah total dari data ELECTRIC 7 POMI (Firebase) di atas. Login
-       yang dipakai untuk Review/Approve di sini adalah login pm_profiles
-       (modal raRequireLogin dari shared.js), BUKAN akun dashboard_users. -->
-  <div id="pu7-area" style="display:none">
-    <div class="pu7-tabs" id="pu7Tabs"></div>
-    <div id="pu7List"><div class="list-loading"><div class="msg">Memuat...</div></div></div>
-  </div>
 </div>
 
 <!-- DETAIL OVERLAY -->
@@ -360,44 +317,6 @@ canvas.sig-canvas{border:1.5px dashed var(--bdr-2);border-radius:10px;background
       <button class="detail-x" onclick="closeDetail()">&#10005;</button>
     </div>
     <div class="detail-body" id="d-body"></div>
-  </div>
-</div>
-
-<!-- PM UNIT 7 — MODAL REVIEW/APPROVE (preview PDF + komentar + rekomendasi) -->
-<div id="pu7-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(11,18,32,.55);z-index:700;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;backdrop-filter:blur(3px)">
-  <div class="detail-box" style="width:min(760px,100%)">
-    <div class="detail-hdr">
-      <div>
-        <h2 id="pu7ModalTitle">&mdash;</h2>
-        <div class="sub" id="pu7ModalSub">&mdash;</div>
-      </div>
-      <button class="detail-x" onclick="pu7CloseModal()">&#10005;</button>
-    </div>
-    <div class="detail-body">
-      <div class="dsec">
-        <div class="dsec-title">Informasi Pekerjaan</div>
-        <div class="info-grid" id="pu7ModalInfo"></div>
-      </div>
-      <div class="dsec">
-        <div class="dsec-title">Preview Laporan</div>
-        <div style="border:1px solid var(--bdr);border-radius:10px;overflow:hidden">
-          <iframe id="pu7ModalPreviewFrame" style="width:100%;height:480px;border:none;display:block" src="about:blank"></iframe>
-        </div>
-      </div>
-      <div class="dsec" id="pu7ModalCheckerNameWrap" style="display:none">
-        <label class="field-lbl">Diverifikasi oleh</label>
-        <select class="filter-sel" id="pu7ModalCheckerName" onchange="pu7ModalValidate()"></select>
-      </div>
-      <div class="dsec">
-        <label class="field-lbl">Komentar <span style="color:var(--ng)">*</span></label>
-        <textarea class="dinput" id="pu7ModalComment" oninput="pu7ModalValidate()"></textarea>
-        <label class="field-lbl" style="margin-top:10px">Rekomendasi <span style="color:var(--ng)">*</span></label>
-        <textarea class="dinput" id="pu7ModalRecommendation" oninput="pu7ModalValidate()"></textarea>
-      </div>
-      <div class="action-row">
-        <button class="btn btn-pri" id="pu7ModalSubmitBtn" disabled onclick="pu7ModalSubmit()">Simpan</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -675,18 +594,14 @@ let _activeTab = 'inbox';
 function switchTab(tab){
   _activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+  document.getElementById('status-filter').style.display = tab==='all' ? '' : 'none';
   const isRecap = tab === 'recap';
-  const isPu7 = tab === 'pu7';
-  document.getElementById('status-filter').style.display = (tab==='all') ? '' : 'none';
-  document.getElementById('list-toolbar').style.display = (isRecap || isPu7) ? 'none' : '';
-  document.getElementById('list-area').style.display = (isRecap || isPu7) ? 'none' : '';
+  document.getElementById('list-toolbar').style.display = isRecap ? 'none' : '';
+  document.getElementById('list-area').style.display = isRecap ? 'none' : '';
   document.getElementById('recap-area').style.display = isRecap ? '' : 'none';
-  document.getElementById('pu7-area').style.display = isPu7 ? '' : 'none';
   if(isRecap){
     populateRecapPersonOptions();
     renderRecapChart();
-  }else if(isPu7){
-    pu7Load();
   }else{
     renderList();
   }
@@ -1280,344 +1195,6 @@ async function buildFinalPdf(approval, cs){
   copiedPages.forEach(p => origDoc.addPage(p));
   const mergedBytes = await origDoc.save();
   return new Blob([mergedBytes], {type:'application/pdf'});
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   TAB "PM UNIT 7" — laporan checksheet PM Unit 7 (Supabase pm_records),
-   digabung ke sini dari submit-report.html. Sumber data, login
-   (raRequireLogin/pm_profiles) dan aksi Review/Approve-nya TOTAL
-   TERPISAH dari data ELECTRIC 7 POMI (Firebase) di tab-tab lain di atas
-   -- tidak ada baris kode di sini yang membaca/menulis _allApprovals,
-   dashboard_users, atau collection Firestore mana pun.
-   ═══════════════════════════════════════════════════════════════════ */
-var PU7_MODUL_LABEL = {
-  FEGT: 'FEGT 6 Monthly', SO2: 'SO2 Scrubber Inlet', O2: 'O2 Report',
-  OPACITY: 'Opacity Monitor', CEMS_CALIBRATION: 'CEMS Calibration',
-  BELT_E45: 'Belt Conveyor E4-E5', BELT_E23: 'Belt Conveyor E2-E3', BELT_B12: 'Belt Conveyor B1-B2',
-  MAINTENANCE_REPORT: 'Maintenance Report', COAL_SILO_LEVEL: 'Coal Silo Level Transmitter',
-  COAL_FEEDER: 'Coal Feeder Calibration', DCS_HMI: 'DCS HMI/OIS Inspection',
-  FLOWMETER_FGD: 'Flow Meter FGD', 'PH-ANALYZER': 'Analyzer Indicator Transmitter (pH)',
-  PM_HG_ANALYZER: 'PM HG Analyzer', GENERATOR_STATOR_LEAK: 'Generator Stator Leak Monitoring',
-  MARK_VIE: 'Mark VIe Alarm & Module Inspection'
-};
-function pu7ModulToUrl(modul, id) {
-  var norm = normalizeModul(modul);
-  if (norm === 'FEGT')               return 'fegt.html?id=' + id;
-  if (norm === 'CEMS_CALIBRATION')   return 'cems_calibration.html?id=' + id;
-  if (norm === 'SO2')                return 'so2.html?id=' + id;
-  if (norm === 'OPACITY')            return 'opacity.html?id=' + id;
-  if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id;
-  if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id;
-  if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id;
-  if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id;
-  if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id;
-  if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id;
-  if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id;
-  if (norm === 'COAL_SILO_LEVEL')    return 'coal-silo-level.html?id=' + id;
-  if (norm === 'FLOWMETER_FGD')      return 'flow-meter-fgd.html?id=' + id;
-  if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id;
-  if (norm === 'O2')                 return 'form_o2_report.html?id=' + id;
-  if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
-  if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
-  return null;
-}
-function pu7ModulToPrintUrl(modul, id) { var u = pu7ModulToUrl(modul, id); return u ? (u + '&print=1') : null; }
-
-var PU7_TABS = [
-  { key: 'ALL', label: 'Semua', statuses: ['SUBMITTED','CHECKED','FINAL_APPROVED','RETURNED'] },
-  { key: 'SUBMITTED', label: 'Submitted', statuses: ['SUBMITTED'] },
-  { key: 'CHECKED', label: 'Reviewed', statuses: ['CHECKED'] },
-  { key: 'FINAL_APPROVED', label: 'Approved', statuses: ['FINAL_APPROVED'] },
-  { key: 'RETURNED', label: 'Dikembalikan', statuses: ['RETURNED'] }
-];
-var pu7ActiveTab = 'ALL';
-var pu7Rows = [];
-var pu7ProfileNames = {};
-var pu7CurrentProfile = null;
-var pu7Loaded = false;
-
-function pu7Load() {
-  if (!pu7Loaded) { pu7Loaded = true; raGetCurrentProfile(function(profile){ pu7CurrentProfile = profile; pu7LoadAll(); }); }
-  else { pu7LoadAll(); }
-}
-
-function pu7RenderTabs() {
-  var wrap = document.getElementById('pu7Tabs');
-  wrap.innerHTML = PU7_TABS.map(function(t) {
-    var count = t.key === 'ALL' ? pu7Rows.length : pu7Rows.filter(function(r){ return r.status === t.key; }).length;
-    return '<button class="pu7-tab' + (pu7ActiveTab === t.key ? ' active' : '') + '" onclick="pu7SetTab(\'' + t.key + '\')">' +
-      t.label + '<span class="cnt">(' + count + ')</span></button>';
-  }).join('');
-}
-function pu7SetTab(key) { pu7ActiveTab = key; pu7RenderTabs(); pu7RenderList(); }
-
-function pu7LoadAll() {
-  var listEl = document.getElementById('pu7List');
-  listEl.innerHTML = '<div class="list-loading"><div class="msg">Memuat daftar laporan...</div></div>';
-  supaFetch('GET', SUPA_TABLE +
-    '?select=id,modul,tanggal,pic,work_order,status,submitted_at,checked_by_name,checked_at,reviewed_by_account,final_approved_at,return_reason,checked_comment,checked_recommendation,review_comment,review_recommendation' +
-    '&status=in.(SUBMITTED,CHECKED,FINAL_APPROVED,RETURNED)&order=updated_at.desc&limit=300'
-  ).then(function(rows) {
-    pu7Rows = rows || [];
-    var ids = [];
-    pu7Rows.forEach(function(r){ if (r.reviewed_by_account && ids.indexOf(r.reviewed_by_account) === -1) ids.push(r.reviewed_by_account); });
-    if (!ids.length) { pu7RenderTabs(); pu7RenderList(); return; }
-    raGetClient().then(function(client) {
-      return client.from(RA_PROFILE_TABLE).select('id,username,display_name').in('id', ids);
-    }).then(function(res) {
-      (res.data || []).forEach(function(p){ pu7ProfileNames[p.id] = p.display_name || p.username; });
-      pu7RenderTabs(); pu7RenderList();
-    }).catch(function(){ pu7RenderTabs(); pu7RenderList(); });
-  }).catch(function(err) {
-    listEl.innerHTML = '<div class="list-empty"><div class="msg">Gagal memuat data</div><div>' + (err.message || err) + '</div></div>';
-  });
-}
-
-function pu7FmtDate(iso) {
-  if (!iso) return '-';
-  try { return new Date(iso).toLocaleString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
-  catch(e){ return iso; }
-}
-
-function pu7RenderList() {
-  var listEl = document.getElementById('pu7List');
-  var tab = PU7_TABS.filter(function(t){ return t.key === pu7ActiveTab; })[0];
-  var rows = pu7Rows.filter(function(r){ return tab.statuses.indexOf(r.status) !== -1; });
-
-  if (!rows.length) {
-    listEl.innerHTML = '<div class="list-empty"><div class="msg">Belum ada laporan di kategori ini.</div></div>';
-    return;
-  }
-
-  var role = pu7CurrentProfile ? pu7CurrentProfile.role : null;
-  var canChecker = role === 'checker' || role === 'admin';
-  var canReviewer = role === 'reviewer' || role === 'admin';
-  // Tombol Preview terpisah dihilangkan khusus utk Checker/Reviewer -- popup
-  // Review/Approve (pu7OpenModal) sudah menampilkan preview PDF di dalamnya,
-  // jadi tombol ini jadi redundan buat kedua role itu. Admin & role lain
-  // tetap lihat tombol Preview seperti biasa.
-  var hidePreviewBtn = (role === 'checker' || role === 'reviewer');
-
-  listEl.innerHTML = rows.map(function(r) {
-    var label = PU7_MODUL_LABEL[normalizeModul(r.modul)] || r.modul;
-    var previewUrl = pu7ModulToPrintUrl(r.modul, r.id);
-    var editUrl = pu7ModulToUrl(r.modul, r.id);
-    var routeMissing = !editUrl;
-
-    var metaLines = ['<b>' + (r.tanggal || '-') + '</b> · PIC: ' + (r.pic || '-') + (r.work_order ? ' · WO: ' + r.work_order : '')];
-    if (r.status === 'SUBMITTED') metaLines.push('Disubmit: ' + pu7FmtDate(r.submitted_at));
-    if (r.status === 'CHECKED') metaLines.push('Dicek oleh <b>' + (r.checked_by_name || '-') + '</b> · ' + pu7FmtDate(r.checked_at));
-    if (r.status === 'FINAL_APPROVED') {
-      var reviewerName = r.reviewed_by_account ? (pu7ProfileNames[r.reviewed_by_account] || '-') : '-';
-      metaLines.push('Checker: <b>' + (r.checked_by_name || '-') + '</b> · Approved oleh <b>' + reviewerName + '</b> · ' + pu7FmtDate(r.final_approved_at));
-    }
-    if (r.status === 'RETURNED') metaLines.push('Terakhir update: ' + pu7FmtDate(r.checked_at || r.submitted_at));
-
-    var commentHtml = '';
-    if (r.checked_comment || r.checked_recommendation) {
-      commentHtml += '<div class="pu7-comment"><b>Komentar Checker:</b> ' + (r.checked_comment || '-') +
-        '<br><b>Rekomendasi Checker:</b> ' + (r.checked_recommendation || '-') + '</div>';
-    }
-    if (r.review_comment || r.review_recommendation) {
-      commentHtml += '<div class="pu7-comment"><b>Komentar SPV:</b> ' + (r.review_comment || '-') +
-        '<br><b>Rekomendasi SPV:</b> ' + (r.review_recommendation || '-') + '</div>';
-    }
-
-    var actionsHtml = '';
-    if (routeMissing) {
-      actionsHtml += '<span style="font-size:11px;color:var(--ng)">⚠️ Modul tidak dikenali, tidak bisa dibuka</span>';
-    } else {
-      if (!hidePreviewBtn) actionsHtml += '<button class="btn btn-sm btn-pri" onclick="window.open(\'' + previewUrl + '\',\'_blank\')">👁 Preview</button>';
-      actionsHtml += '<button class="btn btn-sm" onclick="window.open(\'' + editUrl + '\',\'_blank\')">✎ Edit</button>';
-      if (r.status === 'SUBMITTED' && (canChecker || canReviewer)) {
-        actionsHtml += '<button class="btn btn-sm btn-pri" onclick="pu7OpenModal(\'' + r.id + '\',\'review\')">🔍 Review</button>';
-        actionsHtml += '<button class="btn btn-sm btn-danger" onclick="pu7Return(\'' + r.id + '\',\'checker\')">↩ Kembalikan</button>';
-      }
-      if (r.status === 'CHECKED' && canReviewer) {
-        actionsHtml += '<button class="btn btn-sm btn-ok" onclick="pu7OpenModal(\'' + r.id + '\',\'approve\')">✓ Approve Final</button>';
-        actionsHtml += '<button class="btn btn-sm btn-danger" onclick="pu7Return(\'' + r.id + '\',\'reviewer\')">↩ Kembalikan</button>';
-      }
-      if (r.status === 'FINAL_APPROVED' && canReviewer) {
-        actionsHtml += '<button class="btn btn-sm btn-danger" onclick="pu7CancelApprove(\'' + r.id + '\')">↩ Batalkan Approve</button>';
-      }
-    }
-
-    var reasonHtml = (r.status === 'RETURNED' && r.return_reason) ? '<div class="pu7-reason">Alasan dikembalikan: ' + r.return_reason + '</div>' : '';
-
-    return '' +
-      '<div class="pu7-card" id="pu7Card-' + r.id + '">' +
-        '<div class="pu7-main">' +
-          '<div class="pu7-title">' + label + ' <span class="pu7-badge ' + r.status + '">' + r.status + '</span></div>' +
-          '<div class="pu7-meta">' + metaLines.join('<br>') + '</div>' +
-          reasonHtml +
-          commentHtml +
-        '</div>' +
-        '<div class="pu7-actions">' + actionsHtml + '</div>' +
-      '</div>';
-  }).join('');
-}
-
-/* ── MODAL REVIEW/APPROVE: preview PDF (iframe read-only) + Komentar +
-   Rekomendasi, wajib diisi sebelum tombol Simpan aktif. Satu modal dipakai
-   bergantian untuk aksi Review (checker) maupun Approve (reviewer/SPV) --
-   dibedakan lewat pu7ModalMode ('review'/'approve'), disimpan bareng
-   pu7ModalRecordId begitu modal dibuka. ── */
-var pu7ModalRecordId = null;
-var pu7ModalMode = null;
-
-// Bypass gerbang login Firebase ELECTRIC 7 POMI -- HANYA menyembunyikan
-// overlay-nya, TIDAK mengisi loggedInUser/loggedInRole dan TIDAK memanggil
-// loadAll()/showApp() (keduanya butuh `db`/`Approvals` dari firebase-config.js
-// dkk yang belum ada di deployment ini, jadi akan error kalau dipanggil).
-// switchTab('pu7') sendiri sudah 100% independen dari Firebase.
-function pu7SkipLogin() {
-  var overlay = document.getElementById('login-overlay');
-  overlay.classList.add('hide');
-  setTimeout(function(){ overlay.style.display = 'none'; }, 400);
-  switchTab('pu7');
-}
-
-function pu7OpenModal(id, mode) {
-  var r = pu7Rows.filter(function(x){ return String(x.id) === String(id); })[0];
-  if (!r) return;
-  pu7ModalRecordId = id;
-  pu7ModalMode = mode;
-
-  var label = PU7_MODUL_LABEL[normalizeModul(r.modul)] || r.modul;
-  document.getElementById('pu7ModalTitle').textContent = label;
-  document.getElementById('pu7ModalSub').textContent = 'WO ' + (r.work_order || '-') + ' · ' + (r.tanggal || '-');
-  document.getElementById('pu7ModalInfo').innerHTML =
-    '<div class="info-cell"><div class="k">Asset</div><div class="v">' + escHtml(label) + '</div></div>' +
-    '<div class="info-cell"><div class="k">WO Number</div><div class="v">' + escHtml(r.work_order || '-') + '</div></div>' +
-    '<div class="info-cell"><div class="k">Tanggal Eksekusi</div><div class="v">' + escHtml(r.tanggal || '-') + '</div></div>' +
-    '<div class="info-cell"><div class="k">Diupload oleh</div><div class="v">' + escHtml(r.pic || '-') + '</div></div>';
-
-  var previewUrl = pu7ModulToUrl(r.modul, r.id);
-  document.getElementById('pu7ModalPreviewFrame').src = previewUrl ? (previewUrl + '&print=1&embed=1') : 'about:blank';
-
-  var nameWrap = document.getElementById('pu7ModalCheckerNameWrap');
-  if (mode === 'review') {
-    var names = Object.keys(RA_SIGNATURE_FILE_MAP);
-    var defaultName = (pu7CurrentProfile && names.indexOf(pu7CurrentProfile.display_name) !== -1) ? pu7CurrentProfile.display_name : names[0];
-    document.getElementById('pu7ModalCheckerName').innerHTML =
-      names.map(function(n){ return '<option value="' + n + '"' + (n === defaultName ? ' selected' : '') + '>' + n + '</option>'; }).join('');
-    nameWrap.style.display = '';
-  } else {
-    nameWrap.style.display = 'none';
-  }
-
-  document.getElementById('pu7ModalComment').value = '';
-  document.getElementById('pu7ModalRecommendation').value = '';
-  var btn = document.getElementById('pu7ModalSubmitBtn');
-  btn.textContent = mode === 'review' ? 'Simpan Dan Review' : 'Simpan Dan Approve';
-  btn.className = mode === 'review' ? 'btn btn-pri' : 'btn btn-ok';
-  btn.disabled = true;
-
-  document.getElementById('pu7-modal-overlay').style.display = 'flex';
-}
-
-function pu7CloseModal() {
-  document.getElementById('pu7-modal-overlay').style.display = 'none';
-  document.getElementById('pu7ModalPreviewFrame').src = 'about:blank';
-  pu7ModalRecordId = null;
-  pu7ModalMode = null;
-}
-
-function pu7ModalValidate() {
-  var comment = document.getElementById('pu7ModalComment').value.trim();
-  var rec = document.getElementById('pu7ModalRecommendation').value.trim();
-  document.getElementById('pu7ModalSubmitBtn').disabled = !(comment && rec);
-}
-
-function pu7ModalSubmit() {
-  if (pu7ModalMode === 'review') pu7Verify(pu7ModalRecordId);
-  else if (pu7ModalMode === 'approve') pu7Approve(pu7ModalRecordId);
-}
-
-function pu7Verify(id) {
-  var checkedByName = document.getElementById('pu7ModalCheckerName').value;
-  var comment = document.getElementById('pu7ModalComment').value.trim();
-  var recommendation = document.getElementById('pu7ModalRecommendation').value.trim();
-  if (!checkedByName) return;
-  if (!comment || !recommendation) { alert('Komentar dan Rekomendasi wajib diisi.'); return; }
-  if (!confirm('Yakin proses review laporan ini atas nama "' + checkedByName + '"?')) return;
-  raRequireLogin(['checker', 'reviewer', 'admin'], '🔍 Login untuk Review Laporan', function(profile) {
-    raGetSignatureUrl(checkedByName, function(sigErr) {
-      if (sigErr) {
-        if (!confirm('Tanda tangan "' + checkedByName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan verifikasi tanpa gambar tanda tangan?')) return;
-      }
-      raUpdateRecord(id, {
-        status: 'CHECKED',
-        checked_by_account: profile.id,
-        checked_by_name: checkedByName,
-        checked_signature_url: RA_SIGNATURE_FILE_MAP[checkedByName] || null,
-        checked_at: new Date().toISOString(),
-        checked_comment: comment,
-        checked_recommendation: recommendation
-      }, function(err) {
-        if (err) { alert('Gagal verifikasi: ' + err); return; }
-        dbShowToast('✓ Terverifikasi — menunggu approval SPV');
-        pu7CloseModal();
-        pu7LoadAll();
-      });
-    });
-  });
-}
-
-function pu7Approve(id) {
-  var comment = document.getElementById('pu7ModalComment').value.trim();
-  var recommendation = document.getElementById('pu7ModalRecommendation').value.trim();
-  if (!comment || !recommendation) { alert('Komentar dan Rekomendasi wajib diisi.'); return; }
-  raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function(profile) {
-    var spvName = profile.display_name || profile.username;
-    raGetSignatureUrl(spvName, function(sigErr) {
-      if (sigErr) {
-        if (!confirm('Tanda tangan "' + spvName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan approve tanpa gambar tanda tangan?')) return;
-      }
-      raUpdateRecord(id, {
-        status: 'FINAL_APPROVED',
-        reviewed_by_account: profile.id,
-        review_signature_url: RA_SIGNATURE_FILE_MAP[spvName] || null,
-        final_approved_at: new Date().toISOString(),
-        review_comment: comment,
-        review_recommendation: recommendation
-      }, function(err) {
-        if (err) { alert('Gagal approve: ' + err); return; }
-        dbShowToast('✓ Laporan FINAL APPROVED');
-        pu7CloseModal();
-        pu7LoadAll();
-      });
-    });
-  });
-}
-
-function pu7CancelApprove(id) {
-  if (!confirm('Batalkan approval laporan ini? Status akan kembali ke CHECKED (menunggu approve ulang).')) return;
-  raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function() {
-    raUpdateRecord(id, {
-      status: 'CHECKED',
-      reviewed_by_account: null,
-      review_signature_url: null,
-      final_approved_at: null
-    }, function(err) {
-      if (err) { alert('Gagal membatalkan approval: ' + err); return; }
-      dbShowToast('↩ Approval dibatalkan — kembali ke status CHECKED');
-      pu7LoadAll();
-    });
-  });
-}
-
-function pu7Return(id, fromLevel) {
-  var reason = prompt('Alasan dikembalikan (opsional):') || '';
-  var roles = fromLevel === 'checker' ? ['checker', 'admin'] : ['reviewer', 'admin'];
-  var title = fromLevel === 'checker' ? '🔍 Login sebagai Checker' : '🖊️ Login sebagai Supervisor';
-  raRequireLogin(roles, title, function() {
-    raUpdateRecord(id, { status: 'RETURNED', return_reason: reason }, function(err) {
-      if (err) { alert('Gagal mengembalikan: ' + err); return; }
-      dbShowToast('↩ Laporan dikembalikan untuk revisi');
-      pu7LoadAll();
-    });
-  });
 }
 
 checkSession();

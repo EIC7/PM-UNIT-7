@@ -1904,26 +1904,28 @@ function raResolveWorkflowSignatures(record, callback) {
   Promise.all(tasks).then(function(){ callback(result); }).catch(function(){ callback(result); });
 }
 
-/* ── LEMBAR REVIEW & APPROVAL: halaman TERAKHIR di export PDF, GENERIK
-   untuk semua modul ──
-   Dipanggil SEKALI di ujung exportPdf() tiap modul, SETELAH semua konten
-   (termasuk drawSignatureBlock kalau modul itu masih pakai) selesai, SEBELUM
-   doc.save()/showPdfPreview(). Async (fetch record + resolve tanda tangan
-   dari Supabase) makanya return Promise -- modul WAJIB .then(...) sebelum
-   lanjut save/preview:
-     raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBg)
-       .then(function(){ doc.save(...); });
-   Sengaja ambil datanya SENDIRI dari window._editingId (bukan minta modul
-   kirim record) -- window._editingId sudah standar di semua modul (lihat
-   raSubmitReport di atas), jadi rollout ke semua modul cukup nambah 1 baris
-   di ujung exportPdf(), tanpa modul perlu nyimpan currentRecord dulu.
-   Kalau laporan belum pernah lewat Checker (belum ada window._editingId,
-   atau statusnya masih DRAFT/SUBMITTED) halaman ini DILEWATI (resolve
-   langsung tanpa gambar apa pun) -- PDF preview/draft SEBELUM diverifikasi
-   tetap bisa dibuat seperti biasa. Gagal fetch (network/RLS) juga di-skip,
-   BUKAN melempar error -- satu halaman lampiran gagal tidak boleh
-   menggagalkan seluruh export PDF laporan. */
-var RA_MODUL_LABEL = {
+/* ── KIRIM PDF FINAL KE REVIEW APPROVAL DASHBOARD (ELECTRIC 7 POMI,
+   Firebase terpisah) ──
+   Review & approval untuk laporan PM Unit 7 SEPENUHNYA dilakukan di
+   Review_Approval_Dashboard.html (koleksi Firestore `checksheets` +
+   `approvals`, lihat firebase-config.js/db-helper.js/storage-helper.js/
+   approval-helper.js) -- kita TIDAK punya UI review/approve/tanda tangan
+   sendiri lagi. Fungsi ini cuma "menitipkan" PDF hasil export checksheet
+   ke sana, PERSIS seperti hasil klik Export PDF di modul ybs, TANPA
+   diedit/ditambah apa pun.
+   Dipanggil dari raSubmitReport() setelah status Supabase berhasil di-set
+   SUBMITTED. Modul WAJIB set window._raBuildPdf = <fungsi export PDF modul
+   ybs> (dipanggil TANPA argumen) SEKALI di scriptnya sendiri -- fungsi itu
+   pada akhirnya memanggil showPdfPreview(doc, filename) seperti biasa;
+   showPdfPreview() tiap modul sudah ditambah pengecekan
+   window._raPdfCapture di baris pertamanya, yang men-"tangkap" doc itu
+   alih-alih menampilkan modal preview, KHUSUS untuk pemanggilan ini.
+   Kalau modul belum punya window._raBuildPdf, atau Firebase SDK/DB/
+   Approvals belum termuat (file firebase-config.js dkk hilang), fungsi ini
+   diam-diam skip -- gagal kirim ke dashboard eksternal TIDAK BOLEH
+   menggagalkan submit laporan itu sendiri (status Supabase sudah kepakai
+   duluan). */
+var RA_ASSET_LABEL = {
   FEGT: 'FEGT 6 Monthly', SO2: 'SO2 Scrubber Inlet', O2: 'O2 Report',
   OPACITY: 'Opacity Monitor', CEMS_CALIBRATION: 'CEMS Calibration',
   BELT_E45: 'Belt Conveyor E4-E5', BELT_E23: 'Belt Conveyor E2-E3', BELT_B12: 'Belt Conveyor B1-B2',
@@ -1934,106 +1936,41 @@ var RA_MODUL_LABEL = {
   MARK_VIE: 'Mark VIe Alarm & Module Inspection'
 };
 
-function raFmtDateID(iso) {
-  if (!iso) return '-';
-  try { return new Date(iso).toLocaleString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
-  catch (e) { return iso; }
-}
-
-function raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgFn) {
-  return new Promise(function(resolve) {
-    if (!window._editingId) { resolve(); return; }
-    supaFetch('GET', SUPA_TABLE + '?id=eq.' + window._editingId +
-      '&select=modul,tanggal,pic,work_order,status,checked_by_name,checked_at,checked_comment,checked_recommendation,reviewed_by_account,final_approved_at,review_comment,review_recommendation&limit=1'
-    ).then(function(rows) {
-      var record = rows && rows[0];
-      if (!record || (record.status !== 'CHECKED' && record.status !== 'FINAL_APPROVED')) { resolve(); return; }
-      raResolveWorkflowSignatures(record, function(sig) {
-        try { raDrawReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgFn, record, sig); }
-        catch (e) { console.warn('[raAddReviewApprovalPage] gagal gambar halaman:', e); }
-        resolve();
+function raSendFinalPdfToFirebaseDashboard(record, submittedByName) {
+  if (typeof window._raBuildPdf !== 'function') {
+    console.warn('[raSendFinalPdfToFirebaseDashboard] window._raBuildPdf belum di-set modul ini, skip kirim ke Review Approval Dashboard.');
+    return;
+  }
+  if (typeof firebase === 'undefined' || typeof DB === 'undefined' || typeof Approvals === 'undefined') {
+    console.warn('[raSendFinalPdfToFirebaseDashboard] firebase-config.js/db-helper.js/approval-helper.js belum dimuat, skip kirim ke Review Approval Dashboard.');
+    return;
+  }
+  var modKey = normalizeModul(record.modul) || record.modul || 'UNKNOWN';
+  var label = RA_ASSET_LABEL[modKey] || record.modul || modKey;
+  window._raPdfCapture = function(doc) {
+    DB.save({
+      assetTag: modKey,
+      assetName: label,
+      woNumber: record.work_order || '',
+      executionDate: record.tanggal || '',
+      checkedBy: record.pic || ''
+    }).then(function(checksheetId) {
+      return Approvals.submitWithFiles(checksheetId, {
+        photos: null,
+        pdfBuilder: function() { return Promise.resolve(doc); },
+        assetTag: modKey,
+        assetName: label,
+        checksheetFile: location.pathname.split('/').pop(),
+        submittedBy: submittedByName || ''
       });
-    }).catch(function(err) { console.warn('[raAddReviewApprovalPage] gagal fetch record:', err); resolve(); });
-  });
-}
-
-function raDrawReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgFn, record, sig) {
-  doc.addPage();
-  if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph);
-  var y = marginTop;
-
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(15, 23, 42);
-  doc.text('LEMBAR REVIEW & APPROVAL', pw / 2, y, { align: 'center' });
-  y += 5;
-  doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.4);
-  doc.line(marginX, y, pw - marginX, y);
-  y += 10;
-
-  var label = RA_MODUL_LABEL[normalizeModul(record.modul)] || record.modul || '-';
-  doc.autoTable({
-    startY: y, margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
-    theme: 'plain', styles: { fontSize: 10, cellPadding: 2, textColor: [15, 23, 42] },
-    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } },
-    body: [
-      ['Asset', label],
-      ['WO Number', record.work_order || '-'],
-      ['Tanggal Eksekusi', record.tanggal || '-'],
-      ['Checked By', record.pic || '-']
-    ],
-    willDrawPage: function() { if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph); }
-  });
-  y = doc.lastAutoTable.finalY + 10;
-
-  function section(title, rows, signerName, sigDataUrl) {
-    // Perkiraan tinggi MINIMAL seluruh section (judul + tabel 4 baris +
-    // tanda tangan) -- sengaja konservatif/besar (160mm) supaya judul TIDAK
-    // pernah "kepisah" dari tabelnya sendiri. Sebelumnya threshold cuma
-    // 20mm (cukup buat judulnya doang), jadi autoTable sering ke-trigger
-    // pindah halaman SENDIRI di tengah karena isinya ternyata tidak muat --
-    // judul jadi keliatan nyangkut sendirian di halaman sebelumnya, tabelnya
-    // muncul di halaman berikutnya tanpa judul.
-    if (y + 160 > ph - marginBottom) { doc.addPage(); if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph); y = marginTop; }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(30, 64, 175);
-    doc.text(title, marginX, y);
-    y += 4;
-    doc.autoTable({
-      startY: y, margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
-      theme: 'grid', styles: { fontSize: 9.5, cellPadding: 4, textColor: [30, 41, 59] },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45, fillColor: [248, 250, 252] } },
-      body: rows,
-      willDrawPage: function() { if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph); }
+    }).then(function(ok) {
+      if (ok) dbShowToast('✓ PDF terkirim ke Review Approval Dashboard');
+      else console.warn('[raSendFinalPdfToFirebaseDashboard] Approvals.submitWithFiles gagal, lihat console.');
+    }).catch(function(err) {
+      console.error('[raSendFinalPdfToFirebaseDashboard] gagal kirim:', err);
     });
-    y = doc.lastAutoTable.finalY + 8;
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 30, 25);
-    doc.text('Tanda tangan: ' + (signerName || '-'), marginX, y);
-    y += 4;
-    if (sigDataUrl) {
-      // Lebar 75% (55->41.25) & tinggi 200% (24->48) dari ukuran awal --
-      // ukuran awal ketarik lebar/pendek jadi tanda tangan asli kelihatan
-      // "penyet". Rasio baru lebih dekat proporsi natural tanda tangan.
-      try { doc.addImage(sigDataUrl, 'PNG', marginX, y, 41.25, 48); }
-      catch (e) { /* format gambar tak didukung/korup -- biarkan kosong, nama tetap tercetak */ }
-      y += 48 - 24;
-    }
-    y += 30;
-  }
-
-  section('REVIEW — Checker', [
-    ['Komentar', record.checked_comment || '-'],
-    ['Rekomendasi / Future Work', record.checked_recommendation || '-'],
-    ['Direview oleh', record.checked_by_name || '-'],
-    ['Tanggal', raFmtDateID(record.checked_at)]
-  ], record.checked_by_name, sig.checkedSigDataUrl);
-
-  if (record.status === 'FINAL_APPROVED') {
-    section('APPROVAL — Supervisor', [
-      ['Komentar SPV', record.review_comment || '-'],
-      ['Rekomendasi SPV', record.review_recommendation || '-'],
-      ['Disetujui oleh', sig.reviewedByName || '-'],
-      ['Tanggal', raFmtDateID(record.final_approved_at)]
-    ], sig.reviewedByName, sig.reviewSigDataUrl);
-  }
+  };
+  window._raBuildPdf();
 }
 
 /* ── SUBMIT LAPORAN (Level 1) — GENERIK, dipakai semua modul ──
@@ -2060,6 +1997,7 @@ function raSubmitReport() {
       if (err) { alert('Gagal submit: ' + err); return; }
       dbShowToast('✓ Data Sudah Tersubmit ke Review Approval Dashboard');
       if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
+      raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, profile.display_name || profile.username);
     });
   });
 }

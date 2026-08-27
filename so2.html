@@ -8,6 +8,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 /* ── Image gallery (fitur reusable) ── */
@@ -241,7 +247,7 @@
   <div class="btn-row">
     <button class="btn btn-primary" onclick="so2DownloadPdf()">⬇ Download PDF Report</button>
     <button class="btn" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('so2')">💾 Simpan ke Database</button>
-    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="raSubmitReport()">🔒 Submit Laporan</button>
+    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=so2DownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="so2Reset()">✕ Reset</button>
   </div>
 
@@ -1602,6 +1608,7 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
@@ -2088,10 +2095,8 @@ function so2DownloadPdf() {
     }
 
     var dateStr = (gv('s2Date')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
-    raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, so2DrawBg).then(function() {
-      dbShowSavingOverlay(false);
-      showPdfPreview(doc, 'SO2_PM_Report_'+dateStr+'.pdf');
-    });
+    dbShowSavingOverlay(false);
+    showPdfPreview(doc, 'SO2_PM_Report_'+dateStr+'.pdf');
   } catch(err) {
     dbShowSavingOverlay(false);
     alert('PDF Error: '+err.message); console.error(err);

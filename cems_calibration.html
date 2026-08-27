@@ -8,6 +8,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 /* ── Struktur lokal khusus modul CEMS Calibration ── */
@@ -299,7 +305,7 @@
   <div class="btn-row" style="margin-top:20px;margin-bottom:40px">
     <button class="btn btn-pdf" id="btnPdf" onclick="exportPdf()">⬇ Export PDF</button>
     <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('CEMS Calibration')">💾 Simpan ke Database</button>
-    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="raSubmitReport()">🔒 Submit Laporan</button>
+    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=exportPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
   </div>
 
@@ -1633,6 +1639,7 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
@@ -2611,12 +2618,10 @@ function exportPdf(){
       doc.setPage(doc.internal.getNumberOfPages());
     }
 
-    raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgOnce).then(function() {
-      if (typeof hideImgLoading === 'function') hideImgLoading();
-      var fn = (pdfNamePart(d.meta.workorder,30)||'NoWO')+'_'+(pdfNamePart(d.meta.asset,25)||'NoAsset')+'_'+(pdfNamePart(d.meta.descAsset,40)||'NoDesc')+'.pdf';
-      if (typeof showPdfPreview === 'function') { showPdfPreview(doc, fn); }
-      else { doc.save(fn); }
-    });
+    if (typeof hideImgLoading === 'function') hideImgLoading();
+    var fn = (pdfNamePart(d.meta.workorder,30)||'NoWO')+'_'+(pdfNamePart(d.meta.asset,25)||'NoAsset')+'_'+(pdfNamePart(d.meta.descAsset,40)||'NoDesc')+'.pdf';
+    if (typeof showPdfPreview === 'function') { showPdfPreview(doc, fn); }
+    else { doc.save(fn); }
   } catch (err) {
     if (typeof hideImgLoading === 'function') hideImgLoading();
     console.error(err);

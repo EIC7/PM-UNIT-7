@@ -7,6 +7,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="shared.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="db-helper.js"></script>
+    <script src="storage-helper.js"></script>
+    <script src="approval-helper.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;padding:8px;overflow-x:hidden}
@@ -238,7 +244,7 @@
             <div id="raSubmitBox" style="background:#eef7ff;border:1px solid #cfe4fb;border-radius:8px;padding:14px;margin-bottom:12px">
                 <div style="font-weight:700;font-size:0.9em;color:#1f5a8a;margin-bottom:6px">🔒 Submit Laporan (perlu login)</div>
                 <div style="font-size:0.8em;color:#4b6a85;margin-bottom:10px">Simpan draft dulu di atas, baru submit. Setelah submit, laporan terkunci untuk Checker periksa.</div>
-                <button class="btn btn-blue btn-full" onclick="raSubmitReport()">🔒 Submit Laporan</button>
+                <button class="btn btn-blue btn-full" onclick="window._raBuildPdf=exportPdf; raSubmitReport()">🔒 Submit Laporan</button>
             </div>
 
             <!-- LEVEL 2: CHECKER -->
@@ -2529,12 +2535,10 @@ function applyImageEdits(){
                     var adsc = safe(document.getElementById('assetDesc').value)|| 'desc';
                     var fn = [wo, date.replace(/-/g,''), atag, adsc].join('_').replace(/\s+/g,'_').replace(/[\\/:*?"<>|]+/g,'').toLowerCase()+'.pdf';
 
-                    raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawPdfBackground).then(function() {
-                        if (typeof hideImgLoading === 'function') hideImgLoading();
+                    if (typeof hideImgLoading === 'function') hideImgLoading();
 
-                        dbShowSavingOverlay(false);
-                        showPdfPreview(doc, fn);
-                    });
+                    dbShowSavingOverlay(false);
+                    showPdfPreview(doc, fn);
 
                 } catch(err) {
                     if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2557,6 +2561,7 @@ function applyImageEdits(){
         }
 
         function showPdfPreview(doc, filename) {
+            if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
             if (pdfPreviewState.blobUrl) {
                 URL.revokeObjectURL(pdfPreviewState.blobUrl);
                 pdfPreviewState.blobUrl = '';
