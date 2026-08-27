@@ -1800,6 +1800,7 @@ function showPdfPreview(doc, filename) {
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2517,9 +2518,11 @@ function dcsDownloadPdf() {
       y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, bgFooterH, y, drawBg, gv('dcsCheckedBy'));
 
       var dateStr = (gv('dcsDate')||'').replace(/-/g,'')||new Date().toISOString().slice(0,10).replace(/-/g,'');
-      if (typeof hideImgLoading === 'function') hideImgLoading();
-      dbShowSavingOverlay(false);
-      showPdfPreview(doc, 'DCS_HMI_OIS_Inspection_'+dateStr+'.pdf');
+      raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, bgFooterH, drawBg).then(function() {
+        if (typeof hideImgLoading === 'function') hideImgLoading();
+        dbShowSavingOverlay(false);
+        showPdfPreview(doc, 'DCS_HMI_OIS_Inspection_'+dateStr+'.pdf');
+      });
 
     } catch(err) {
       if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2636,6 +2639,7 @@ function restoreDraftData(rec, editingId) {
   var params  = new URLSearchParams(window.location.search);
   var id      = params.get('id');
   var doPrint = params.get('print') === '1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if (!id) return;
 
   dbLoad(id, function(rec){

@@ -1586,6 +1586,7 @@ function applyImageEdits(){
             var params = new URLSearchParams(window.location.search);
             var id = params.get('id');
             var doPrint = params.get('print') === '1';
+            if (params.get('embed') === '1') window._pdfEmbedMode = true;
             if (id) loadMaintenanceRecord(id, doPrint);
         })();
 
@@ -2528,10 +2529,12 @@ function applyImageEdits(){
                     var adsc = safe(document.getElementById('assetDesc').value)|| 'desc';
                     var fn = [wo, date.replace(/-/g,''), atag, adsc].join('_').replace(/\s+/g,'_').replace(/[\\/:*?"<>|]+/g,'').toLowerCase()+'.pdf';
 
-                    if (typeof hideImgLoading === 'function') hideImgLoading();
+                    raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawPdfBackground).then(function() {
+                        if (typeof hideImgLoading === 'function') hideImgLoading();
 
-                    dbShowSavingOverlay(false);
-                    showPdfPreview(doc, fn);
+                        dbShowSavingOverlay(false);
+                        showPdfPreview(doc, fn);
+                    });
 
                 } catch(err) {
                     if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2562,6 +2565,7 @@ function applyImageEdits(){
             pdfPreviewState.filename = filename;
 
             var modal = document.getElementById('pdfPreviewModal');
+            if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
             var container = document.getElementById('pdfPreviewFrame');
             container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
             modal.classList.add('show');

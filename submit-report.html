@@ -47,7 +47,15 @@
     border:1px dashed var(--panel-border); border-radius:8px; display:flex;
     gap:10px; align-items:center; flex-wrap:wrap;
   }
+  .rp-verify-panel.stacked { flex-direction:column; align-items:stretch; }
   .rp-verify-panel select { padding:8px 10px; border:1px solid var(--panel-border); border-radius:6px; font-size:12.5px; }
+  .rp-field-label { font-size:11.5px; color:var(--text3); font-weight:600; }
+  .rp-textarea {
+    width:100%; padding:8px 10px; border:1px solid var(--panel-border); border-radius:6px;
+    font-size:12.5px; font-family:inherit; resize:vertical; min-height:44px;
+  }
+  .rp-comment { font-size:11.5px; color:var(--text3); margin-top:4px; }
+  .rp-comment b { color:var(--text2); }
 
   .rp-empty { text-align:center; padding:50px 20px; color:var(--text3); }
   .rp-empty .ic { font-size:34px; margin-bottom:10px; }
@@ -154,7 +162,7 @@ function rpLoadAll() {
   var listEl = document.getElementById('rpList');
   listEl.innerHTML = '<div class="rp-loading">Memuat daftar laporan...</div>';
   supaFetch('GET', SUPA_TABLE +
-    '?select=id,modul,tanggal,pic,work_order,status,submitted_at,checked_by_name,checked_at,reviewed_by_account,final_approved_at,return_reason' +
+    '?select=id,modul,tanggal,pic,work_order,status,submitted_at,checked_by_name,checked_at,reviewed_by_account,final_approved_at,return_reason,checked_comment,checked_recommendation,review_comment,review_recommendation' +
     '&status=in.(SUBMITTED,CHECKED,FINAL_APPROVED,RETURNED)&order=updated_at.desc&limit=300'
   ).then(function(rows) {
     rpRows = rows || [];
@@ -212,6 +220,16 @@ function rpRenderList() {
     }
     if (r.status === 'RETURNED') metaLines.push('Terakhir update: ' + rpFmtDate(r.checked_at || r.submitted_at));
 
+    var commentHtml = '';
+    if (r.checked_comment || r.checked_recommendation) {
+      commentHtml += '<div class="rp-comment"><b>Komentar Checker:</b> ' + (r.checked_comment || '-') +
+        '<br><b>Rekomendasi Checker:</b> ' + (r.checked_recommendation || '-') + '</div>';
+    }
+    if (r.review_comment || r.review_recommendation) {
+      commentHtml += '<div class="rp-comment"><b>Komentar SPV:</b> ' + (r.review_comment || '-') +
+        '<br><b>Rekomendasi SPV:</b> ' + (r.review_recommendation || '-') + '</div>';
+    }
+
     var actionsHtml = '';
     if (routeMissing) {
       actionsHtml += '<span style="font-size:11px;color:var(--fail)">⚠️ Modul tidak dikenali, tidak bisa dibuka</span>';
@@ -223,7 +241,7 @@ function rpRenderList() {
         actionsHtml += '<button class="rp-btn return" onclick="rpReturn(\'' + r.id + '\',\'checker\')">↩ Kembalikan</button>';
       }
       if (r.status === 'CHECKED' && canReviewer) {
-        actionsHtml += '<button class="rp-btn approve" onclick="rpApprove(\'' + r.id + '\')">✓ Approve Final</button>';
+        actionsHtml += '<button class="rp-btn approve" onclick="rpToggleApprovePanel(\'' + r.id + '\')">✓ Approve Final</button>';
         actionsHtml += '<button class="rp-btn return" onclick="rpReturn(\'' + r.id + '\',\'reviewer\')">↩ Kembalikan</button>';
       }
       if (r.status === 'FINAL_APPROVED' && canReviewer) {
@@ -244,6 +262,7 @@ function rpRenderList() {
           '<div class="rp-modul">' + label + ' <span class="rp-status ' + r.status + '">' + r.status + '</span></div>' +
           '<div class="rp-meta">' + metaLines.join('<br>') + '</div>' +
           reasonHtml +
+          commentHtml +
         '</div>' +
         '<div class="rp-actions">' + actionsHtml + '</div>' +
         '<div id="rpVerifyPanel-' + r.id + '"></div>' +
@@ -263,19 +282,37 @@ function rpToggleVerifyPanel(id) {
   var names = Object.keys(RA_SIGNATURE_FILE_MAP);
   var defaultName = (rpCurrentProfile && names.indexOf(rpCurrentProfile.display_name) !== -1) ? rpCurrentProfile.display_name : names[0];
   panel.innerHTML =
-    '<div class="rp-verify-panel">' +
-      '<label style="font-size:11.5px;color:var(--text3)">Diverifikasi oleh:</label>' +
-      '<select id="rpCheckerName-' + id + '">' +
-        names.map(function(n){ return '<option value="' + n + '"' + (n === defaultName ? ' selected' : '') + '>' + n + '</option>'; }).join('') +
-      '</select>' +
-      '<button class="rp-btn verify" onclick="rpVerify(\'' + id + '\')">✓ Submit Reviewed</button>' +
+    '<div class="rp-verify-panel stacked">' +
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">' +
+        '<label style="font-size:11.5px;color:var(--text3)">Diverifikasi oleh:</label>' +
+        '<select id="rpCheckerName-' + id + '">' +
+          names.map(function(n){ return '<option value="' + n + '"' + (n === defaultName ? ' selected' : '') + '>' + n + '</option>'; }).join('') +
+        '</select>' +
+      '</div>' +
+      '<label class="rp-field-label">Komentar <span style="color:#b91c1c">*</span></label>' +
+      '<textarea class="rp-textarea" id="rpCheckerComment-' + id + '" rows="2" oninput="rpValidateVerifyPanel(\'' + id + '\')"></textarea>' +
+      '<label class="rp-field-label">Rekomendasi <span style="color:#b91c1c">*</span></label>' +
+      '<textarea class="rp-textarea" id="rpCheckerRecommendation-' + id + '" rows="2" oninput="rpValidateVerifyPanel(\'' + id + '\')"></textarea>' +
+      '<div><button class="rp-btn verify" id="rpSubmitVerify-' + id + '" disabled onclick="rpVerify(\'' + id + '\')">✓ Submit Reviewed</button></div>' +
     '</div>';
+}
+
+function rpValidateVerifyPanel(id) {
+  var comment = document.getElementById('rpCheckerComment-' + id);
+  var rec = document.getElementById('rpCheckerRecommendation-' + id);
+  var btn = document.getElementById('rpSubmitVerify-' + id);
+  if (!comment || !rec || !btn) return;
+  btn.disabled = !(comment.value.trim() && rec.value.trim());
 }
 
 function rpVerify(id) {
   var select = document.getElementById('rpCheckerName-' + id);
   var checkedByName = select ? select.value : null;
+  var comment = (document.getElementById('rpCheckerComment-' + id) || {}).value || '';
+  var recommendation = (document.getElementById('rpCheckerRecommendation-' + id) || {}).value || '';
+  comment = comment.trim(); recommendation = recommendation.trim();
   if (!checkedByName) return;
+  if (!comment || !recommendation) { alert('Komentar dan Rekomendasi wajib diisi.'); return; }
   // Diizinkan checker/reviewer/admin -- SPV (reviewer) boleh langsung proses
   // review sendiri (skip nunggu Checker asli), misalnya lagi buru-buru atau
   // Checker berhalangan. Konfirmasi eksplisit atas nama siapa laporan ini
@@ -291,7 +328,9 @@ function rpVerify(id) {
         checked_by_account: profile.id,
         checked_by_name: checkedByName,
         checked_signature_url: RA_SIGNATURE_FILE_MAP[checkedByName] || null,
-        checked_at: new Date().toISOString()
+        checked_at: new Date().toISOString(),
+        checked_comment: comment,
+        checked_recommendation: recommendation
       }, function(err) {
         if (err) { alert('Gagal verifikasi: ' + err); return; }
         dbShowToast('✓ Terverifikasi — menunggu approval SPV');
@@ -321,7 +360,32 @@ function rpCancelApprove(id) {
   });
 }
 
+function rpToggleApprovePanel(id) {
+  var panel = document.getElementById('rpVerifyPanel-' + id);
+  if (panel.innerHTML) { panel.innerHTML = ''; return; }
+  panel.innerHTML =
+    '<div class="rp-verify-panel stacked">' +
+      '<label class="rp-field-label">Komentar SPV <span style="color:#b91c1c">*</span></label>' +
+      '<textarea class="rp-textarea" id="rpReviewComment-' + id + '" rows="2" oninput="rpValidateApprovePanel(\'' + id + '\')"></textarea>' +
+      '<label class="rp-field-label">Rekomendasi SPV <span style="color:#b91c1c">*</span></label>' +
+      '<textarea class="rp-textarea" id="rpReviewRecommendation-' + id + '" rows="2" oninput="rpValidateApprovePanel(\'' + id + '\')"></textarea>' +
+      '<div><button class="rp-btn approve" id="rpSubmitApprove-' + id + '" disabled onclick="rpApprove(\'' + id + '\')">✓ Approve Final</button></div>' +
+    '</div>';
+}
+
+function rpValidateApprovePanel(id) {
+  var comment = document.getElementById('rpReviewComment-' + id);
+  var rec = document.getElementById('rpReviewRecommendation-' + id);
+  var btn = document.getElementById('rpSubmitApprove-' + id);
+  if (!comment || !rec || !btn) return;
+  btn.disabled = !(comment.value.trim() && rec.value.trim());
+}
+
 function rpApprove(id) {
+  var comment = (document.getElementById('rpReviewComment-' + id) || {}).value || '';
+  var recommendation = (document.getElementById('rpReviewRecommendation-' + id) || {}).value || '';
+  comment = comment.trim(); recommendation = recommendation.trim();
+  if (!comment || !recommendation) { alert('Komentar dan Rekomendasi wajib diisi.'); return; }
   raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function(profile) {
     var spvName = profile.display_name || profile.username;
     raGetSignatureUrl(spvName, function(sigErr) {
@@ -332,7 +396,9 @@ function rpApprove(id) {
         status: 'FINAL_APPROVED',
         reviewed_by_account: profile.id,
         review_signature_url: RA_SIGNATURE_FILE_MAP[spvName] || null,
-        final_approved_at: new Date().toISOString()
+        final_approved_at: new Date().toISOString(),
+        review_comment: comment,
+        review_recommendation: recommendation
       }, function(err) {
         if (err) { alert('Gagal approve: ' + err); return; }
         dbShowToast('✓ Laporan FINAL APPROVED');

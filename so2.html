@@ -1604,6 +1604,7 @@ function showPdfPreview(doc, filename) {
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2089,8 +2090,10 @@ function so2DownloadPdf() {
     y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, so2DrawBg, gv('s2CheckedBy'));
 
     var dateStr = (gv('s2Date')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
-    dbShowSavingOverlay(false);
-    showPdfPreview(doc, 'SO2_PM_Report_'+dateStr+'.pdf');
+    raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, so2DrawBg).then(function() {
+      dbShowSavingOverlay(false);
+      showPdfPreview(doc, 'SO2_PM_Report_'+dateStr+'.pdf');
+    });
   } catch(err) {
     dbShowSavingOverlay(false);
     alert('PDF Error: '+err.message); console.error(err);
@@ -2171,6 +2174,7 @@ initCropDrag();
   var params=new URLSearchParams(window.location.search);
   var id=params.get('id');
   var doPrint=params.get('print')==='1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if(!id) return;
   dbLoad(id, function(rec){
     setTimeout(function(){

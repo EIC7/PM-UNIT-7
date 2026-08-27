@@ -1763,6 +1763,7 @@ function showPdfPreview(doc, filename) {
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -3126,8 +3127,10 @@ function cfDownloadPdf() {
         var woPart = pdfNamePart(gv('cfWO'), 30) || 'NoWO';
         pdfFilename = woPart + '_FeederCalibration_' + feederNoPart + '.pdf';
       }
-      dbShowSavingOverlay(false);
-      showPdfPreview(doc, pdfFilename);
+      raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBg).then(function() {
+        dbShowSavingOverlay(false);
+        showPdfPreview(doc, pdfFilename);
+      });
 
     } catch(err) { dbShowSavingOverlay(false); alert('PDF Error: '+err.message); console.error(err); }
   });
@@ -3215,6 +3218,7 @@ function applyRecordToForm(rec, editingId) {
 (function(){
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id'), doPrint = params.get('print')==='1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if (!id) return;
   dbLoad(id, function(rec) {
     setTimeout(function(){

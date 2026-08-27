@@ -1635,6 +1635,7 @@ function showPdfPreview(doc, filename) {
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2613,10 +2614,12 @@ function exportPdf(){
     // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
     y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgOnce, val('metaCheckedBy'));
 
-    if (typeof hideImgLoading === 'function') hideImgLoading();
-    var fn = (pdfNamePart(d.meta.workorder,30)||'NoWO')+'_'+(pdfNamePart(d.meta.asset,25)||'NoAsset')+'_'+(pdfNamePart(d.meta.descAsset,40)||'NoDesc')+'.pdf';
-    if (typeof showPdfPreview === 'function') { showPdfPreview(doc, fn); }
-    else { doc.save(fn); }
+    raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgOnce).then(function() {
+      if (typeof hideImgLoading === 'function') hideImgLoading();
+      var fn = (pdfNamePart(d.meta.workorder,30)||'NoWO')+'_'+(pdfNamePart(d.meta.asset,25)||'NoAsset')+'_'+(pdfNamePart(d.meta.descAsset,40)||'NoDesc')+'.pdf';
+      if (typeof showPdfPreview === 'function') { showPdfPreview(doc, fn); }
+      else { doc.save(fn); }
+    });
   } catch (err) {
     if (typeof hideImgLoading === 'function') hideImgLoading();
     console.error(err);
@@ -2643,6 +2646,7 @@ setInterval(function(){ var el=document.getElementById('clock'); if(el) el.textC
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
   var doPrint = params.get('print') === '1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if (!id || typeof dbLoad !== 'function') return;
   dbLoad(id, function(rec){
     setTimeout(function(){

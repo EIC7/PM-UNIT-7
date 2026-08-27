@@ -1971,6 +1971,131 @@ function raResolveWorkflowSignatures(record, callback) {
   Promise.all(tasks).then(function(){ callback(result); }).catch(function(){ callback(result); });
 }
 
+/* ── LEMBAR REVIEW & APPROVAL: halaman TERAKHIR di export PDF, GENERIK
+   untuk semua modul ──
+   Dipanggil SEKALI di ujung exportPdf() tiap modul, SETELAH semua konten
+   (termasuk drawSignatureBlock kalau modul itu masih pakai) selesai, SEBELUM
+   doc.save()/showPdfPreview(). Async (fetch record + resolve tanda tangan
+   dari Supabase) makanya return Promise -- modul WAJIB .then(...) sebelum
+   lanjut save/preview:
+     raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBg)
+       .then(function(){ doc.save(...); });
+   Sengaja ambil datanya SENDIRI dari window._editingId (bukan minta modul
+   kirim record) -- window._editingId sudah standar di semua modul (lihat
+   raSubmitReport di atas), jadi rollout ke semua modul cukup nambah 1 baris
+   di ujung exportPdf(), tanpa modul perlu nyimpan currentRecord dulu.
+   Kalau laporan belum pernah lewat Checker (belum ada window._editingId,
+   atau statusnya masih DRAFT/SUBMITTED) halaman ini DILEWATI (resolve
+   langsung tanpa gambar apa pun) -- PDF preview/draft SEBELUM diverifikasi
+   tetap bisa dibuat seperti biasa. Gagal fetch (network/RLS) juga di-skip,
+   BUKAN melempar error -- satu halaman lampiran gagal tidak boleh
+   menggagalkan seluruh export PDF laporan. */
+var RA_MODUL_LABEL = {
+  FEGT: 'FEGT 6 Monthly', SO2: 'SO2 Scrubber Inlet', O2: 'O2 Report',
+  OPACITY: 'Opacity Monitor', CEMS_CALIBRATION: 'CEMS Calibration',
+  BELT_E45: 'Belt Conveyor E4-E5', BELT_E23: 'Belt Conveyor E2-E3', BELT_B12: 'Belt Conveyor B1-B2',
+  MAINTENANCE_REPORT: 'Maintenance Report', COAL_SILO_LEVEL: 'Coal Silo Level Transmitter',
+  COAL_FEEDER: 'Coal Feeder Calibration', DCS_HMI: 'DCS HMI/OIS Inspection',
+  FLOWMETER_FGD: 'Flow Meter FGD', 'PH-ANALYZER': 'Analyzer Indicator Transmitter (pH)',
+  PM_HG_ANALYZER: 'PM HG Analyzer', GENERATOR_STATOR_LEAK: 'Generator Stator Leak Monitoring',
+  MARK_VIE: 'Mark VIe Alarm & Module Inspection'
+};
+
+function raFmtDateID(iso) {
+  if (!iso) return '-';
+  try { return new Date(iso).toLocaleString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  catch (e) { return iso; }
+}
+
+function raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgFn) {
+  return new Promise(function(resolve) {
+    if (!window._editingId) { resolve(); return; }
+    supaFetch('GET', SUPA_TABLE + '?id=eq.' + window._editingId +
+      '&select=modul,tanggal,pic,work_order,status,checked_by_name,checked_at,checked_comment,checked_recommendation,reviewed_by_account,final_approved_at,review_comment,review_recommendation&limit=1'
+    ).then(function(rows) {
+      var record = rows && rows[0];
+      if (!record || (record.status !== 'CHECKED' && record.status !== 'FINAL_APPROVED')) { resolve(); return; }
+      raResolveWorkflowSignatures(record, function(sig) {
+        try { raDrawReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgFn, record, sig); }
+        catch (e) { console.warn('[raAddReviewApprovalPage] gagal gambar halaman:', e); }
+        resolve();
+      });
+    }).catch(function(err) { console.warn('[raAddReviewApprovalPage] gagal fetch record:', err); resolve(); });
+  });
+}
+
+function raDrawReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgFn, record, sig) {
+  doc.addPage();
+  if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph);
+  var y = marginTop;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(15, 23, 42);
+  doc.text('LEMBAR REVIEW & APPROVAL', pw / 2, y, { align: 'center' });
+  y += 5;
+  doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.4);
+  doc.line(marginX, y, pw - marginX, y);
+  y += 10;
+
+  var label = RA_MODUL_LABEL[normalizeModul(record.modul)] || record.modul || '-';
+  doc.autoTable({
+    startY: y, margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
+    theme: 'plain', styles: { fontSize: 10, cellPadding: 2, textColor: [15, 23, 42] },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } },
+    body: [
+      ['Asset', label],
+      ['WO Number', record.work_order || '-'],
+      ['Tanggal Eksekusi', record.tanggal || '-'],
+      ['Checked By', record.pic || '-']
+    ],
+    willDrawPage: function() { if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph); }
+  });
+  y = doc.lastAutoTable.finalY + 10;
+
+  function section(title, rows, signerName, sigDataUrl) {
+    if (y + 20 > ph - marginBottom) { doc.addPage(); if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph); y = marginTop; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(30, 64, 175);
+    doc.text(title, marginX, y);
+    y += 4;
+    doc.autoTable({
+      startY: y, margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
+      theme: 'grid', styles: { fontSize: 9.5, cellPadding: 4, textColor: [30, 41, 59] },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45, fillColor: [248, 250, 252] } },
+      body: rows,
+      willDrawPage: function() { if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph); }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 30, 25);
+    doc.text('Tanda tangan: ' + (signerName || '-'), marginX, y);
+    y += 4;
+    if (sigDataUrl) {
+      // Lebar 75% (55->41.25) & tinggi 200% (24->48) dari ukuran awal --
+      // ukuran awal ketarik lebar/pendek jadi tanda tangan asli kelihatan
+      // "penyet". Rasio baru lebih dekat proporsi natural tanda tangan.
+      try { doc.addImage(sigDataUrl, 'PNG', marginX, y, 41.25, 48); }
+      catch (e) { /* format gambar tak didukung/korup -- biarkan kosong, nama tetap tercetak */ }
+      y += 48 - 24;
+    }
+    y += 30;
+  }
+
+  section('REVIEW — Checker', [
+    ['Komentar', record.checked_comment || '-'],
+    ['Rekomendasi / Future Work', record.checked_recommendation || '-'],
+    ['Direview oleh', record.checked_by_name || '-'],
+    ['Tanggal', raFmtDateID(record.checked_at)]
+  ], record.checked_by_name, sig.checkedSigDataUrl);
+
+  if (record.status === 'FINAL_APPROVED') {
+    section('APPROVAL — Supervisor', [
+      ['Komentar SPV', record.review_comment || '-'],
+      ['Rekomendasi SPV', record.review_recommendation || '-'],
+      ['Disetujui oleh', sig.reviewedByName || '-'],
+      ['Tanggal', raFmtDateID(record.final_approved_at)]
+    ], sig.reviewedByName, sig.reviewSigDataUrl);
+  }
+}
+
 /* ── SUBMIT LAPORAN (Level 1) — GENERIK, dipakai semua modul ──
    Dulu didefinisikan per-file (maintenance_report_form.html), sekarang
    dipindah ke sini karena isinya sudah 100% generik: cuma butuh

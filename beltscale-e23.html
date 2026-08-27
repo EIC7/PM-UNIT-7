@@ -1598,6 +1598,7 @@ function showPdfPreview(doc, filename) {
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2347,9 +2348,11 @@ function bsDownloadPdf() {
 
     var suffix = hasDefect ? 'Defect' : (has3m ? '3Monthly' : 'Monthly');
     var dateStr = (gv('bsDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
-    if (typeof hideImgLoading === 'function') hideImgLoading();
-    dbShowSavingOverlay(false);
-    showPdfPreview(doc, 'BeltScale_E23_'+suffix+'_'+dateStr+'.pdf');
+    raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, bsDrawBg).then(function() {
+      if (typeof hideImgLoading === 'function') hideImgLoading();
+      dbShowSavingOverlay(false);
+      showPdfPreview(doc, 'BeltScale_E23_'+suffix+'_'+dateStr+'.pdf');
+    });
   } catch(err) {
     if (typeof hideImgLoading === 'function') hideImgLoading();
     dbShowSavingOverlay(false);
@@ -2454,6 +2457,7 @@ function restoreDraftData(rec, editingId) {
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
   var doPrint = params.get('print') === '1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if (id) {
     dbLoad(id, function(rec){
       setTimeout(function(){
