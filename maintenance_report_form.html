@@ -7,6 +7,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="shared.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="db-helper.js"></script>
+    <script src="storage-helper.js"></script>
+    <script src="approval-helper.js"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;padding:8px;overflow-x:hidden}
@@ -231,71 +237,12 @@
             <button class="btn btn-green btn-full" onclick="exportPdf()" style="padding:13px;font-size:1em">⬇ Export ke PDF</button>
         </div>
 
-        <!-- ═══ PANEL WORKFLOW: Submit (Lv.1) / Checker (Lv.2) / Reviewer (Lv.3) ═══ -->
+        <!-- ═══ PANEL SUBMIT (checker/reviewer/login dihapus — tinggal Submit) ═══ -->
         <div class="no-print" id="raWorkflowPanel" style="margin-top:20px;border-top:2px dashed #ddd;padding-top:16px">
-
-            <!-- LEVEL 1: SUBMIT -->
             <div id="raSubmitBox" style="background:#eef7ff;border:1px solid #cfe4fb;border-radius:8px;padding:14px;margin-bottom:12px">
-                <div style="font-weight:700;font-size:0.9em;color:#1f5a8a;margin-bottom:6px">🔒 Submit Laporan (perlu login)</div>
-                <div style="font-size:0.8em;color:#4b6a85;margin-bottom:10px">Simpan draft dulu di atas, baru submit. Setelah submit, laporan terkunci untuk Checker periksa.</div>
-                <button class="btn btn-blue btn-full" onclick="raSubmitReport()">🔒 Submit Laporan</button>
-            </div>
-
-            <!-- LEVEL 2: CHECKER -->
-            <div id="raCheckerBox" style="background:#fff9ec;border:1px solid #fbe6b8;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
-                <div style="font-weight:700;font-size:0.9em;color:#8a6d1f;margin-bottom:6px">🔍 Verifikasi Checker (Tingkat 2)</div>
-                <div style="font-size:0.8em;color:#8a7742;margin-bottom:10px">Periksa & edit data di atas kalau perlu, pilih nama Checker, lalu Verifikasi — tanda tangan terisi otomatis.</div>
-                <div class="form-group">
-                    <label>Checked By — Technician</label>
-                    <select id="raCheckedByName" onchange="raPreviewCheckerTtd()">
-                        <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-                        <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-                    </select>
-                </div>
-                <!-- Preview TTD Checker -->
-                <div id="raCheckerTtdWrap" style="background:#fffbf0;border:1px dashed #f59e0b;border-radius:8px;padding:10px;margin-bottom:10px;text-align:center">
-                    <div style="font-size:11px;color:#92713a;font-weight:600;margin-bottom:6px">Tanda Tangan Checker</div>
-                    <img id="raCheckerTtdImg" src="" alt="" style="height:70px;max-width:100%;object-fit:contain;display:none">
-                    <div id="raCheckerTtdEmpty" style="font-size:11px;color:#b8974a;font-style:italic">Belum ada TTD tersimpan</div>
-                    <button type="button" onclick="raOpenSignPadChecker()" style="margin-top:6px;padding:6px 14px;border:1px solid #f59e0b;border-radius:6px;background:#fffdf0;color:#8a6d1f;font-size:11px;font-weight:600;cursor:pointer">✍️ Gambar / Update TTD</button>
-                </div>
-                <button class="btn btn-full" style="background:#f59e0b;color:#fff" onclick="raVerifyChecker()">✅ Verifikasi & Tanda Tangan</button>
-                <button class="btn btn-full btn-gray" style="margin-top:6px" onclick="raReturnReport('checker')">↩ Kembalikan ke User (Perlu Revisi)</button>
-            </div>
-
-            <!-- LEVEL 3: REVIEWER / SPV -->
-            <div id="raReviewerBox" style="background:#eefcf3;border:1px solid #bdeecb;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
-                <div style="font-weight:700;font-size:0.9em;color:#1c7a45;margin-bottom:6px">🖊️ Approve Final — Supervisor (Tingkat 3)</div>
-                <div style="font-size:0.8em;color:#3f8a5c;margin-bottom:10px">Preview hasil laporan, kalau sudah benar klik Approve — tanda tangan SPV terisi otomatis dan laporan menjadi final.</div>
-                <!-- Preview TTD SPV -->
-                <div id="raSpvTtdWrap" style="background:#f0fdf7;border:1px dashed #16a085;border-radius:8px;padding:10px;margin-bottom:10px;text-align:center">
-                    <div style="font-size:11px;color:#1c7a45;font-weight:600;margin-bottom:6px">Tanda Tangan Supervisor</div>
-                    <img id="raSpvTtdImg" src="" alt="" style="height:70px;max-width:100%;object-fit:contain;display:none">
-                    <div id="raSpvTtdEmpty" style="font-size:11px;color:#3f8a5c;font-style:italic">Belum ada TTD tersimpan</div>
-                    <button type="button" onclick="raOpenSignPadSpv()" style="margin-top:6px;padding:6px 14px;border:1px solid #16a085;border-radius:6px;background:#f0fdf7;color:#1c7a45;font-size:11px;font-weight:600;cursor:pointer">✍️ Gambar / Update TTD</button>
-                </div>
-                <button class="btn btn-full" style="background:#16a085;color:#fff" onclick="raApproveReviewer()">🖊️ Approve Final</button>
-                <button class="btn btn-full btn-gray" style="margin-top:6px" onclick="raReturnReport('reviewer')">↩ Kembalikan ke Checker (Perlu Revisi)</button>
-            </div>
-
-            <!-- STATUS: RETURNED (dikembalikan checker/reviewer, perlu direvisi) -->
-            <div id="raReturnedBox" style="background:#fdf2f2;border:1px solid #f5c6c6;border-radius:8px;padding:14px;margin-bottom:12px;display:none">
-                <div style="font-weight:700;font-size:0.9em;color:#a33333;margin-bottom:6px">↩ Laporan Dikembalikan — Perlu Revisi</div>
-                <div id="raReturnReasonText" style="font-size:0.8em;color:#7a3a3a;margin-bottom:10px"></div>
-                <button class="btn btn-full" style="background:#dc3545;color:#fff" onclick="raReviseReturned()">📝 Revisi & Kirim Ulang (buka jadi Draft)</button>
-            </div>
-
-            <!-- STATUS: FINAL_APPROVED (selesai, tapi SPV/admin masih bisa batalkan) -->
-            <div id="raFinalBox" style="background:#eefcf3;border:1px solid #bdeecb;border-radius:8px;padding:14px;margin-bottom:12px;display:none;text-align:center">
-                <div style="font-weight:700;font-size:0.95em;color:#1c7a45">✅ Laporan Sudah Final Approved</div>
-                <div style="font-size:0.8em;color:#3f8a5c;margin-top:4px;margin-bottom:10px">Sudah disetujui SPV, tidak ada aksi lagi yang diperlukan.</div>
-                <button class="btn btn-full btn-gray" onclick="raCancelApprove()">↩ Batalkan Approve</button>
-            </div>
-
-            <!-- TANDA TANGAN TERSIMPAN (preview) -->
-            <div id="raSignatureDisplay" style="display:none;background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:14px">
-                <div style="font-weight:700;font-size:0.85em;color:#333;margin-bottom:8px">Tanda Tangan Laporan Ini</div>
-                <div id="raSignatureList" style="display:flex;gap:16px;flex-wrap:wrap"></div>
+                <div style="font-weight:700;font-size:0.9em;color:#1f5a8a;margin-bottom:6px">📤 Submit Laporan</div>
+                <div style="font-size:0.8em;color:#4b6a85;margin-bottom:10px">Simpan draft dulu di atas, baru submit. Laporan yang sudah disubmit otomatis terkirim ke Review Approval Dashboard.</div>
+                <button class="btn btn-blue btn-full" onclick="window._raBuildPdf=exportPdf; raSubmitReport()">📤 Submit Laporan</button>
             </div>
         </div>
     </div>
@@ -1586,6 +1533,7 @@ function applyImageEdits(){
             var params = new URLSearchParams(window.location.search);
             var id = params.get('id');
             var doPrint = params.get('print') === '1';
+            if (params.get('embed') === '1') window._pdfEmbedMode = true;
             if (id) loadMaintenanceRecord(id, doPrint);
         })();
 
@@ -2554,6 +2502,7 @@ function applyImageEdits(){
         }
 
         function showPdfPreview(doc, filename) {
+            if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
             if (pdfPreviewState.blobUrl) {
                 URL.revokeObjectURL(pdfPreviewState.blobUrl);
                 pdfPreviewState.blobUrl = '';
@@ -2562,6 +2511,7 @@ function applyImageEdits(){
             pdfPreviewState.filename = filename;
 
             var modal = document.getElementById('pdfPreviewModal');
+            if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
             var container = document.getElementById('pdfPreviewFrame');
             container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
             modal.classList.add('show');
@@ -2612,18 +2562,12 @@ function applyImageEdits(){
             pdfPreviewState.doc = null;
         }
 
-        // ═══ WORKFLOW: SUBMIT (Lv.1) / CHECKER (Lv.2) / REVIEWER (Lv.3) ═══════════
-        // Terpisah dari dbSave/dbLoad (draft biasa, anon key) -- semua transisi
-        // status di bawah ini pakai raUpdateRecord (session login user, ditegakkan
-        // oleh RLS Supabase, lihat sql/001_report_auth_workflow.sql).
+        // ═══ SUBMIT (checker/reviewer/login dihapus — status cuma DRAFT/SUBMITTED) ═══
         var raCurrentRecord = null; // record penuh (termasuk status, dst) hasil dbLoad terakhir
 
         var RA_STATUS_LABEL = {
             DRAFT: '📝 DRAFT',
-            SUBMITTED: '📤 SUBMITTED — menunggu Checker',
-            CHECKED: '🔍 CHECKED — menunggu Approval SPV',
-            FINAL_APPROVED: '✅ FINAL APPROVED',
-            RETURNED: '↩ DIKEMBALIKAN — perlu revisi'
+            SUBMITTED: '📤 SUBMITTED'
         };
 
         function raSetCurrentRecord(rec) {
@@ -2632,295 +2576,12 @@ function applyImageEdits(){
         }
 
         function raRenderWorkflowUI() {
-            // Normalisasi ke UPPERCASE -- pernah ketemu kasus status kesimpan
-            // huruf kecil ('draft') di database (kemungkinan dari data lama
-            // sebelum constraint di sql/001 aktif, atau edit manual di Table
-            // Editor). Perbandingan status === 'DRAFT' di bawah itu
-            // case-sensitive -- kalau statusnya 'draft' (huruf kecil), TIDAK
-            // ADA satu pun kondisi yang cocok, jadi SEMUA kotak (Submit,
-            // Checker, Reviewer, Returned, Final) sembunyi total, kelihatan
-            // seperti area workflow kosong/rusak. Normalisasi di sini
-            // menutup itu untuk SEMUA kemungkinan penyebab, tanpa perlu tau
-            // persis kenapa data itu jadi huruf kecil.
+            // Normalisasi ke UPPERCASE (data lama bisa kesimpan 'draft' huruf kecil).
             var status = ((raCurrentRecord && raCurrentRecord.status) || 'DRAFT').toUpperCase();
             var badge = document.getElementById('raStatusBadge');
             if (badge) badge.textContent = RA_STATUS_LABEL[status] || status;
-
-            document.getElementById('raSubmitBox').style.display   = (status === 'DRAFT') ? 'block' : 'none';
-            document.getElementById('raCheckerBox').style.display  = (status === 'SUBMITTED') ? 'block' : 'none';
-            document.getElementById('raReviewerBox').style.display = (status === 'CHECKED') ? 'block' : 'none';
-            document.getElementById('raReturnedBox').style.display = (status === 'RETURNED') ? 'block' : 'none';
-            document.getElementById('raFinalBox').style.display    = (status === 'FINAL_APPROVED') ? 'block' : 'none';
-            if (status === 'RETURNED') {
-                var reasonText = (raCurrentRecord && raCurrentRecord.return_reason) || '';
-                document.getElementById('raReturnReasonText').textContent =
-                    reasonText ? ('Alasan: ' + reasonText) : 'Tidak ada alasan spesifik yang dicatat.';
-            }
-
-            // Kalau checker sebelumnya sudah pilih nama, pertahankan pilihan itu
-            // sebagai default dropdown (bisa diubah lagi kalau perlu).
-            if (raCurrentRecord && raCurrentRecord.checked_by_name) {
-                var sel = document.getElementById('raCheckedByName');
-                if (sel) sel.value = raCurrentRecord.checked_by_name;
-            }
-
-            raRenderSignatures();
+            document.getElementById('raSubmitBox').style.display = (status === 'DRAFT') ? 'block' : 'none';
         }
-
-        function raRenderSignatures() {
-            var wrap = document.getElementById('raSignatureDisplay');
-            var list = document.getElementById('raSignatureList');
-            list.innerHTML = '';
-            if (!raCurrentRecord) { wrap.style.display = 'none'; return; }
-            function addSig(label, name) {
-                if (!name) return;
-                raGetSignatureUrl(name, function(err, url) {
-                    if (!err && url) {
-                        wrap.style.display = 'block';
-                        var box = document.createElement('div');
-                        box.style.cssText = 'text-align:center';
-                        box.innerHTML = '<img src="' + url + '" style="height:70px;object-fit:contain;display:block;margin:0 auto 4px">' +
-                            '<div style="font-size:11px;font-weight:600;color:#555">' + label + '<br>' + name + '</div>';
-                        list.appendChild(box);
-                    }
-                });
-            }
-            addSig('Checked By', raCurrentRecord.checked_by_name);
-            // Nama SPV tidak disimpan sebagai kolom teks terpisah (cuma reviewed_by_account
-            // = uuid akun) -- ambil display_name-nya dari pm_profiles kalau approved.
-            if (raCurrentRecord.reviewed_by_account && raCurrentRecord.final_approved_at) {
-                raGetClient().then(function(client){
-                    return client.from(RA_PROFILE_TABLE).select('display_name').eq('id', raCurrentRecord.reviewed_by_account).single();
-                }).then(function(res){
-                    if (res.data && res.data.display_name) addSig('Approved By (SPV)', res.data.display_name);
-                });
-            }
-            if (!raCurrentRecord.checked_by_name && !raCurrentRecord.reviewed_by_account) wrap.style.display = 'none';
-        }
-
-        // ── LEVEL 1: SUBMIT ──────────────────────────────────────────────────────
-        function raSubmitReport() {
-            if (!window._editingId) {
-                alert('Simpan dulu sebagai Draft (tombol "💾 Simpan ke Database") sebelum submit.');
-                return;
-            }
-            raRequireLogin(['user', 'admin'], '🔒 Login untuk Submit Laporan', function(profile) {
-                raUpdateRecord(window._editingId, {
-                    status: 'SUBMITTED',
-                    submitted_by: profile.id,
-                    submitted_at: new Date().toISOString()
-                }, function(err, updated) {
-                    if (err) { alert('Gagal submit: ' + err); return; }
-                    dbShowToast('✓ Laporan berhasil di-submit, menunggu Checker');
-                    raSetCurrentRecord(updated);
-                });
-            });
-        }
-
-        // ── LEVEL 2: CHECKER — edit data + verifikasi (tanda tangan otomatis) ───
-        function raVerifyChecker() {
-            if (!raCurrentRecord || raCurrentRecord.status !== 'SUBMITTED') {
-                alert('Laporan ini belum berstatus SUBMITTED.');
-                return;
-            }
-            var checkedByName = document.getElementById('raCheckedByName').value;
-            // Diizinkan checker/reviewer/admin -- SPV (reviewer) boleh langsung
-            // proses review sendiri (skip nunggu Checker asli, misal lagi buru-buru
-            // atau Checker berhalangan), dengan konfirmasi eksplisit atas nama siapa.
-            if (!confirm('Yakin proses review laporan ini atas nama "' + checkedByName + '"?')) return;
-            raRequireLogin(['checker', 'reviewer', 'admin'], '🔍 Login untuk Review Laporan', function(profile) {
-                // Checker boleh EDIT ISI DATA sebelum verifikasi -- ambil data
-                // TERBARU dari form (bukan raCurrentRecord lama) via dbCollectData.
-                syncSectionsFromDom();
-                var latest = dbCollectData('Maintenance Report');
-                if (!latest) { alert('Gagal membaca data form.'); return; }
-                raGetSignatureUrl(checkedByName, function(sigErr) {
-                    if (sigErr) {
-                        if (!confirm('Tanda tangan "' + checkedByName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan verifikasi tanpa gambar tanda tangan?')) return;
-                    }
-                    raUpdateRecord(raCurrentRecord.id, {
-                        data: latest.data,
-                        tanggal: latest.tanggal,
-                        pic: latest.pic,
-                        work_order: latest.work_order,
-                        status: 'CHECKED',
-                        checked_by_account: profile.id,
-                        checked_by_name: checkedByName,
-                        checked_signature_url: RA_SIGNATURE_FILE_MAP[checkedByName] || null,
-                        checked_at: new Date().toISOString()
-                    }, function(err, updated) {
-                        if (err) { alert('Gagal verifikasi: ' + err); return; }
-                        dbShowToast('✓ Terverifikasi — menunggu approval SPV');
-                        raSetCurrentRecord(updated);
-                    });
-                });
-            });
-        }
-
-        // ── LEVEL 3: REVIEWER/SPV — approve final (tanda tangan otomatis) ───────
-        function raApproveReviewer() {
-            if (!raCurrentRecord || raCurrentRecord.status !== 'CHECKED') {
-                alert('Laporan ini belum berstatus CHECKED.');
-                return;
-            }
-            raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function(profile) {
-                var spvName = profile.display_name || profile.username;
-                raGetSignatureUrl(spvName, function(sigErr) {
-                    if (sigErr) {
-                        if (!confirm('Tanda tangan "' + spvName + '" belum ditemukan di Storage (' + sigErr + '). Lanjutkan approve tanpa gambar tanda tangan?')) return;
-                    }
-                    raUpdateRecord(raCurrentRecord.id, {
-                        status: 'FINAL_APPROVED',
-                        reviewed_by_account: profile.id,
-                        review_signature_url: RA_SIGNATURE_FILE_MAP[spvName] || null,
-                        final_approved_at: new Date().toISOString()
-                    }, function(err, updated) {
-                        if (err) { alert('Gagal approve: ' + err); return; }
-                        dbShowToast('✓ Laporan FINAL APPROVED');
-                        raSetCurrentRecord(updated);
-                    });
-                });
-            });
-        }
-
-        // ── BATALKAN APPROVE (SPV/admin) — balik status FINAL_APPROVED ke CHECKED,
-        //    bersihin jejak approval lama biar gak nyisa data approval yang udah
-        //    gak berlaku begitu di-approve ulang nanti ──────────────────────────
-        function raCancelApprove() {
-            if (!raCurrentRecord || raCurrentRecord.status !== 'FINAL_APPROVED') return;
-            if (!confirm('Batalkan approval laporan ini? Status akan kembali ke CHECKED (menunggu approve ulang).')) return;
-            raRequireLogin(['reviewer', 'admin'], '🖊️ Login sebagai Supervisor', function() {
-                raUpdateRecord(raCurrentRecord.id, {
-                    status: 'CHECKED',
-                    reviewed_by_account: null,
-                    review_signature_url: null,
-                    final_approved_at: null
-                }, function(err, updated) {
-                    if (err) { alert('Gagal membatalkan approval: ' + err); return; }
-                    dbShowToast('↩ Approval dibatalkan — kembali ke status CHECKED');
-                    raSetCurrentRecord(updated);
-                });
-            });
-        }
-
-        // ── RETURN (dikembalikan ke tahap sebelumnya untuk revisi) ──────────────
-        function raReturnReport(fromLevel) {
-            if (!raCurrentRecord) return;
-            var reason = prompt('Alasan dikembalikan (opsional):') || '';
-            var roles = fromLevel === 'checker' ? ['checker', 'admin'] : ['reviewer', 'admin'];
-            var title = fromLevel === 'checker' ? '🔍 Login sebagai Checker' : '🖊️ Login sebagai Supervisor';
-            raRequireLogin(roles, title, function(profile) {
-                raUpdateRecord(raCurrentRecord.id, {
-                    status: 'RETURNED',
-                    return_reason: reason
-                }, function(err, updated) {
-                    if (err) { alert('Gagal mengembalikan: ' + err); return; }
-                    dbShowToast('↩ Laporan dikembalikan untuk revisi');
-                    raSetCurrentRecord(updated);
-                });
-            });
-        }
-        function raReviseReturned() {
-            if (!raCurrentRecord) return;
-            raRequireLogin(['user', 'admin'], '📝 Login untuk Revisi Laporan', function(profile) {
-                raUpdateRecord(raCurrentRecord.id, { status: 'DRAFT' }, function(err, updated) {
-                    if (err) { alert('Gagal membuka untuk revisi: ' + err); return; }
-                    dbShowToast('📝 Laporan dibuka kembali untuk revisi — edit lalu Simpan/Submit lagi');
-                    raSetCurrentRecord(updated);
-                });
-            });
-        }
-
-        /* ── TTD PREVIEW & SIGN PAD HELPERS ── */
-
-        /* Load preview TTD Checker setiap kali dropdown berubah */
-        function raPreviewCheckerTtd() {
-            var name = (document.getElementById('raCheckedByName') || {}).value;
-            if (!name) return;
-            var img = document.getElementById('raCheckerTtdImg');
-            var empty = document.getElementById('raCheckerTtdEmpty');
-            if (!img) return;
-            raGetSignatureDataUrl(name, function(err, dataUrl) {
-                if (!err && dataUrl) {
-                    img.src = dataUrl; img.style.display = 'block';
-                    if (empty) empty.style.display = 'none';
-                } else {
-                    img.style.display = 'none';
-                    if (empty) empty.style.display = 'block';
-                }
-            });
-        }
-
-        /* Load preview TTD SPV dari profile yang sedang login */
-        function raPreviewSpvTtd(displayName) {
-            var img = document.getElementById('raSpvTtdImg');
-            var empty = document.getElementById('raSpvTtdEmpty');
-            if (!img || !displayName) return;
-            raGetSignatureDataUrl(displayName, function(err, dataUrl) {
-                if (!err && dataUrl) {
-                    img.src = dataUrl; img.style.display = 'block';
-                    if (empty) empty.style.display = 'none';
-                } else {
-                    img.style.display = 'none';
-                    if (empty) empty.style.display = 'block';
-                }
-            });
-        }
-
-        /* Buka signature pad untuk Checker */
-        function raOpenSignPadChecker() {
-            var name = (document.getElementById('raCheckedByName') || {}).value;
-            if (!name) { alert('Pilih nama Checker dulu.'); return; }
-            raRequireLogin(['checker','admin'], '🔍 Login sebagai Checker untuk simpan TTD', function(profile) {
-                raSignPadShow({
-                    displayName: name,
-                    role: 'Checker / Technician',
-                    onSaved: function(dataUrl) {
-                        var img = document.getElementById('raCheckerTtdImg');
-                        var empty = document.getElementById('raCheckerTtdEmpty');
-                        if (img) { img.src = dataUrl; img.style.display = 'block'; }
-                        if (empty) empty.style.display = 'none';
-                        dbShowToast('✓ TTD Checker berhasil disimpan');
-                    }
-                });
-            });
-        }
-
-        /* Buka signature pad untuk SPV */
-        function raOpenSignPadSpv() {
-            raRequireLogin(['reviewer','admin'], '🖊️ Login sebagai Supervisor untuk simpan TTD', function(profile) {
-                var spvName = profile.display_name || profile.username;
-                raSignPadShow({
-                    displayName: spvName,
-                    role: 'Supervisor',
-                    onSaved: function(dataUrl) {
-                        var img = document.getElementById('raSpvTtdImg');
-                        var empty = document.getElementById('raSpvTtdEmpty');
-                        if (img) { img.src = dataUrl; img.style.display = 'block'; }
-                        if (empty) empty.style.display = 'none';
-                        dbShowToast('✓ TTD Supervisor berhasil disimpan');
-                    }
-                });
-            });
-        }
-
-        /* Panggil preview TTD saat panel Checker/SPV pertama kali muncul --
-           hook ke raRenderWorkflowUI yang sudah ada (override ringan) */
-        var _origRenderWorkflowUI = raRenderWorkflowUI;
-        raRenderWorkflowUI = function() {
-            _origRenderWorkflowUI();
-            var status = ((raCurrentRecord && raCurrentRecord.status) || 'DRAFT').toUpperCase();
-            if (status === 'SUBMITTED') {
-                // Checker box muncul: load TTD sesuai pilihan dropdown
-                setTimeout(raPreviewCheckerTtd, 200);
-            }
-            if (status === 'CHECKED') {
-                // SPV box muncul: load TTD SPV yang sedang login
-                raGetCurrentProfile(function(profile) {
-                    if (profile) raPreviewSpvTtd(profile.display_name || profile.username);
-                });
-            }
-        };
     </script>
 </body>
 </html>

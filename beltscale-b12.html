@@ -8,6 +8,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
+<!-- Review Approval Dashboard (Firebase, terpisah dari Supabase) -- dipakai
+     raSendFinalPdfToFirebaseDashboard() di shared.js saat Submit Laporan -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 .img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
@@ -342,6 +350,7 @@
     <button class="btn btn-primary" onclick="bsCheckAll(true)">&#10003; Centang Semua (B1 &amp; B2)</button>
     <button class="btn btn-pdf" onclick="bsDownloadPdf()">&#8595; Download PDF</button>
     <button class="btn" style="background:#0891b2;color:#fff;border-color:#0891b2;padding:14px 22px;font-size:15px;min-height:48px;min-width:180px" onclick="dbSave('beltscale')">&#128190; Simpan ke Database</button>
+    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=bsDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-secondary" onclick="window.location.href='history.html'">&#128216; RIWAYAT</button>
     <button class="btn btn-danger" onclick="bsReset()">&#10005; Reset</button>
   </div>
@@ -1596,9 +1605,11 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2360,9 +2371,6 @@ function bsDownloadPdf() {
       addSide('Note '+safe(BS_CFG.b.note)+' ('+safe(BS_CFG.b.code)+'):', n2, imgs2);
     }
 
-    // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, bsDrawBg, gv('bsCheckedBy'));
-
     var dateStr = (gv('bsDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
     var suffix = hasDefect ? 'Defect' : (has3m ? '3Monthly' : 'Monthly');
     if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2480,6 +2488,7 @@ function restoreDraftData(rec, editingId) {
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
   var doPrint = params.get('print') === '1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if (id) {
     dbLoad(id, function(rec){
       setTimeout(function(){

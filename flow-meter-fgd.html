@@ -8,6 +8,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 :root{--bg:#eef5fb;--bg2:#dceaf6;--panel:rgba(255,255,255,0.78);--panel-border:rgba(150,180,210,0.65);--steel:#294c6f;--steel-light:#3f6f9f;--ok:#1d74c7;--text:#152638;--text2:#2c4660;--text3:#6f879c;--border:rgba(150,180,210,0.65);--shadow:0 4px 24px rgba(35,75,120,0.10);--shadow2:0 2px 8px rgba(35,75,120,0.08);}
@@ -251,6 +257,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   <div class="btn-row" style="margin-top:20px">
     <button class="btn btn-pdf" onclick="fmDownloadPdf()">&#11015; Download PDF Report</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('Flow Meter FGD Inlet &amp; Quencher')">&#128190; Simpan ke Database</button>
+    <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=fmDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="fmReset()">&#10005; Reset</button>
   </div>
 </div>
@@ -1600,9 +1607,11 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2198,9 +2207,6 @@ function fmDownloadPdf() {
         });
       }
 
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, gv('fmCheckedBy'));
-
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
 
@@ -2316,6 +2322,7 @@ function restoreDraftData(rec, editingId) {
 (function(){
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id'), doPrint = params.get('print')==='1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if (!id) return;
   dbLoad(id, function(rec) {
     setTimeout(function(){

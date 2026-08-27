@@ -8,6 +8,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 /* ── Struktur lokal khusus modul CEMS Calibration ── */
@@ -299,6 +305,7 @@
   <div class="btn-row" style="margin-top:20px;margin-bottom:40px">
     <button class="btn btn-pdf" id="btnPdf" onclick="exportPdf()">⬇ Export PDF</button>
     <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('CEMS Calibration')">💾 Simpan ke Database</button>
+    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=exportPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
   </div>
 
@@ -1632,9 +1639,11 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2606,12 +2615,8 @@ function exportPdf(){
     var lastPageNum = doc.internal.getNumberOfPages();
     if (lastPageNum > 1 && y <= marginTop + 5) {
       doc.deletePage(lastPageNum);
-      y = doc.internal.pageSize.getHeight(); // paksa drawSignatureBlock di bawah nganggep halaman ini penuh->pindah ke halaman sebelumnya yg valid kalau perlu
       doc.setPage(doc.internal.getNumberOfPages());
     }
-
-    // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgOnce, val('metaCheckedBy'));
 
     if (typeof hideImgLoading === 'function') hideImgLoading();
     var fn = (pdfNamePart(d.meta.workorder,30)||'NoWO')+'_'+(pdfNamePart(d.meta.asset,25)||'NoAsset')+'_'+(pdfNamePart(d.meta.descAsset,40)||'NoDesc')+'.pdf';
@@ -2643,6 +2648,7 @@ setInterval(function(){ var el=document.getElementById('clock'); if(el) el.textC
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
   var doPrint = params.get('print') === '1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if (!id || typeof dbLoad !== 'function') return;
   dbLoad(id, function(rec){
     setTimeout(function(){

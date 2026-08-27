@@ -104,34 +104,18 @@ function modulToPrintUrl(modul, id) {
   return 'index.html';
 }
 
-/* Badge status laporan -- HANYA maintenance_report_form.html yang benar-benar
-   menjalankan alur Submit->Checker->Reviewer (lihat sql/001). Modul lain
-   (FEGT, SO2, dst) tidak punya alur itu sama sekali, jadi status-nya akan
-   selalu 'DRAFT' (nilai default kolom) -- itu wajar, BUKAN berarti
-   laporannya "belum selesai" dalam artian modul itu. */
+/* Badge status laporan -- alur Checker/Reviewer/SPV sudah dihapus, jadi
+   status yang ada sekarang cuma DRAFT (belum submit) dan SUBMITTED (sudah
+   dikirim ke Review Approval Dashboard). Status lama (CHECKED/RETURNED/
+   FINAL_APPROVED) masih mungkin nempel di data lama sebelum revert ini --
+   fallback ke DRAFT lewat historyStatusBadge() kalau ketemu. */
 var HISTORY_STATUS_MAP = {
-  DRAFT:          { label: 'Draft',       bg: '#fef3c7', fg: '#92400e' }, // kuning
-  SUBMITTED:      { label: 'Submitted',   bg: '#dbeafe', fg: '#1e40af' }, // biru
-  CHECKED:        { label: 'Checked',     bg: '#dbeafe', fg: '#1e40af' }, // biru
-  RETURNED:       { label: 'Dikembalikan',bg: '#fef3c7', fg: '#92400e' }, // kuning (perlu aksi lagi, mirip draft)
-  FINAL_APPROVED: { label: 'Approved',    bg: '#d1fae5', fg: '#065f46' }  // hijau
+  DRAFT:     { label: 'Draft',     bg: '#fef3c7', fg: '#92400e' }, // kuning
+  SUBMITTED: { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' }  // biru
 };
 function historyStatusBadge(status) {
   var s = HISTORY_STATUS_MAP[(status || 'DRAFT').toUpperCase()] || HISTORY_STATUS_MAP.DRAFT;
   return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'">'+s.label+'</span>';
-}
-
-/* Tombol Hapus cuma boleh kelihatan buat admin -- supaya tidak ada yang
-   nggak sengaja hapus data orang lain. Dicek lewat sistem login yang SAMA
-   dengan maintenance_report_form.html (pm_profiles/raGetCurrentProfile) --
-   kalau sesi login itu masih tersimpan di browser (dari buka halaman lain
-   sebelumnya), admin-nya otomatis kedeteksi tanpa perlu login ulang. */
-var _historyIsAdmin = false;
-function historyRefreshAdminFlag(cb) {
-  raGetCurrentProfile(function(profile) {
-    _historyIsAdmin = !!(profile && profile.role === 'admin');
-    if (cb) cb();
-  });
 }
 
 function loadHistory(modul) {
@@ -148,9 +132,7 @@ function loadHistory(modul) {
       var saved = r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : '-';
       var openUrl = modulToUrl(r.modul, r.id);
       var printUrl = modulToPrintUrl(r.modul, r.id);
-      var delBtn = _historyIsAdmin
-        ? '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>'
-        : '';
+      var delBtn = '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>';
       html += '<tr>'+
         '<td><span class="path-label">'+r.modul+'</span></td>'+
         '<td>'+(r.tanggal||'-')+'</td>'+
@@ -180,7 +162,7 @@ function historyDelete(id) {
 }
 
 /* Auto-load all on open */
-historyRefreshAdminFlag(function(){ loadHistory(''); });
+loadHistory('');
 </script>
 </body>
 </html>

@@ -9,6 +9,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 /* ── Fitur reusable: geser posisi foto ── */
@@ -212,6 +218,7 @@
       <div class="btn-row" style="margin-top:20px">
         <button class="btn btn-pdf" id="sixmBtnPdf" onclick="sixmDownloadPdf()">⬇ Print Preview PDF</button>
         <button class="btn" id="sixmBtnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('FEGT 6 Monthly')">💾 Simpan ke Database</button>
+        <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=sixmDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
         <button class="btn btn-danger" onclick="sixmResetAll()">✕ Reset</button>
       </div>
     </div>
@@ -220,6 +227,7 @@
     <div class="btn-row" style="margin-top:20px" id="fegtMainBtnRow">
       <button class="btn btn-pdf"     id="btnPdf" onclick="runDiagnosisAndPrint()" disabled>⬇ Diagnostic &amp; Print Preview</button>
       <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('fegt')" disabled>💾 Simpan ke Database</button>
+      <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=runDiagnosisAndPrint; raSubmitReport()">🔒 Submit Laporan</button>
       <button class="btn btn-danger"  onclick="resetAll()">✕ Reset</button>
     </div>
   </div>
@@ -1630,9 +1638,11 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2075,6 +2085,13 @@ function downloadPdf(){
   CLEANING_PORTS.forEach(function(p){ var pk='port'+p.id; totalImgs += (cleaningImages[pk].before.length + cleaningImages[pk].after.length); });
   LD_CLEANING_PORTS.forEach(function(p){ var pk='ldport'+p.id; if(ldCleaningImages[pk]) totalImgs += ((ldCleaningImages[pk].before||[]).length + (ldCleaningImages[pk].after||[]).length); });
   var loadingMsg = totalImgs>0 ? 'Memproses '+totalImgs+' gambar & menyusun tabel...' : 'Menyusun tabel...';
+  // NOTE: `sig` sudah tidak dipakai di bawah (drawSignatureBlock() sudah
+  // dihapus -- review/approval sekarang sepenuhnya di
+  // Review_Approval_Dashboard.html/Firebase, lihat raSendFinalPdfToFirebaseDashboard
+  // di shared.js), wrapper ini sengaja dibiarkan apa adanya (bukan
+  // dibongkar) supaya tidak perlu re-indent seluruh isi fungsi render PDF
+  // di bawahnya.
+  raResolveWorkflowSignatures(window.fegtCurrentRecord, function(sig) {
   dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   ensureFegtBackground(function() {
     try {
@@ -2518,9 +2535,6 @@ function downloadPdf(){
 
       // Footer area dibiarkan kosong — mengandalkan background template (sama seperti opacity)
 
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, metaInfo.checkedBy);
-
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
 
@@ -2535,11 +2549,14 @@ function downloadPdf(){
       console.error(err);
     }
   });
+  });
 }
 
 function resetAll(){
   if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
+  window.fegtCurrentRecord = null;
+  window.fegtCurrentRecord = null; // record penuh (termasuk status/checked_by_name/dst) hasil dbLoad terakhir -- dipakai buat tempel tanda tangan asli di PDF (lihat raResolveWorkflowSignatures di shared.js)
   pathData=[];diagResults={};metaInfo={tanggal:'—',workorder:'—',operator:'—'};rawHeaders=[];rawRows=[];
   document.getElementById('fileInput').value='';
   document.getElementById('fileInfo').classList.remove('visible');
@@ -2805,6 +2822,8 @@ function sixmReEdit(idx, si, i) {
 
 function sixmResetAll() {
   if (!confirm('Reset semua data 6 Monthly (checksheet, asset, foto)? Foto yang sudah ter-upload ke Drive akan ikut dihapus.')) return;
+  window._editingId = null;
+  window.fegtCurrentRecord = null;
   sixmAssets.forEach(function(a){
     (a.evidenceByStep||[]).forEach(function(arr){
       (arr||[]).forEach(function(img){
@@ -2822,6 +2841,7 @@ function sixmResetAll() {
 /* ── PDF 6 Monthly ── */
 function sixmDownloadPdf() {
   if (!sixmAssets.length) { alert('Belum ada asset yang dipilih.'); return; }
+  raResolveWorkflowSignatures(window.fegtCurrentRecord, function(sig) {
   dbShowSavingOverlay(true, 'Sedang memuat print preview...', 'Menyusun checksheet 6 Monthly...');
   ensureFegtBackground(function(){
     try {
@@ -2949,11 +2969,6 @@ function sixmDownloadPdf() {
         y += 6;
       });
 
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) — sama seperti
-      //     modul lain, BUKAN di info box "informasi pekerjaan" di atas ═══
-      var checkedByVal = document.getElementById('sixmCheckedBy').value;
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, checkedByVal);
-
       var now = new Date();
       var dd = String(now.getDate()).padStart(2,'0');
       showPdfPreview(doc, 'FEGT_6Monthly_'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+dd+'.pdf');
@@ -2963,6 +2978,7 @@ function sixmDownloadPdf() {
       alert('Gagal membuat PDF: '+err.message);
       console.error(err);
     }
+  });
   });
 }
 
@@ -3599,6 +3615,7 @@ function restoreDraftData(rec, editingId) {
   if (!rec) return;
   setTimeout(function(){
     applyRecordToForm(rec, editingId);
+    window.fegtCurrentRecord = rec;
     if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
   }, 400);
 }
@@ -3621,10 +3638,12 @@ initCropDrag();
   var params=new URLSearchParams(window.location.search);
   var id=params.get('id');
   var doPrint=params.get('print')==='1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if(!id) return;
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec, id);
+      window.fegtCurrentRecord = rec;
       dbShowToast('Data dimuat dari riwayat ✓');
       if(doPrint)setTimeout(function(){runDiagnosisAndPrint();},500);
     },400);

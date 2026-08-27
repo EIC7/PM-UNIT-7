@@ -2,39 +2,34 @@
    SHARED.JS — Common utilities untuk semua modul PM Unit 7
    ═══════════════════════════════════════════════════════ */
 
-/* ── GATE AKSES (Login Akun — ReportAuthManager) ──
+/* ── GATE AKSES (Password + Trusted Device) ──
    HARUS paling atas file supaya halaman ke-block sebelum konten sempat
-   kelihatan (mencegah "flash" isi halaman sebelum login diverifikasi).
+   kelihatan (mencegah "flash" isi halaman sebelum password diverifikasi).
    document.write() di sini AMAN karena shared.js dipanggil lewat tag script
    dengan atribut src biasa (bukan async/defer) di <head> semua file modul,
    jadi masih di tengah proses parsing dokumen.
 
-   Ini MENGGANTIKAN gerbang lama "Trusted Device" (1 password dipakai
-   bersama semua orang, per-device). Sekarang tiap orang login pakai akun
-   sendiri (user1/checker1/spv1/admin1, dst -- lihat pm_profiles) lewat
-   Supabase Auth, session-nya persist otomatis di localStorage oleh
-   supabase-js -- jadi sekali login di halaman manapun, semua halaman lain
-   (origin sama) langsung "lihat" sudah login juga, sampai logout eksplisit.
-   Login logic sesungguhnya ada di raInitSiteGate() (bagian REPORT
-   AUTHENTICATION & WORKFLOW di bawah), dipanggil di akhir file ini.
-
-   Kode gerbang device-password LAMA (pmInitGate & fungsi pendukungnya)
-   sengaja TIDAK dihapus -- cuma tidak dipanggil lagi -- supaya gampang
-   rollback kalau perlu. Tabel trusted_devices/gate_config juga tetap ada
-   di database, cuma tidak dipakai buat mengunci apa pun lagi. ── */
+   Sempat diganti gerbang "Login Akun" (raInitSiteGate, username+password
+   per-orang lewat Supabase Auth) -- atas permintaan user, DIKEMBALIKAN lagi
+   ke gerbang Trusted Device ini (1 password dipakai bersama semua orang,
+   per-device, sekali "Trusted" tidak ditanya password lagi). Kode
+   raInitSiteGate & fungsi raXxx pendukungnya (dipakai juga oleh alur
+   Submit Laporan checker/SPV, lihat raRequireLogin) sengaja TIDAK dihapus,
+   cuma tidak dipanggil lagi sebagai gerbang situs. ── */
 (function(){
   document.write(
     '<style id="pmGateHideStyle">html,body{margin:0}body>*:not(#pmAuthGate){display:none !important}</style>' +
     '<div id="pmAuthGate" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:linear-gradient(135deg,#0f2b22,#132e2a);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">' +
       '<div style="width:100%;max-width:340px;background:#16211c;border:1px solid #23362c;border-radius:14px;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">' +
-        '<div style="text-align:center;font-size:34px;margin-bottom:6px">&#128100;</div>' +
-        '<div style="text-align:center;color:#e6f2ec;font-size:16px;font-weight:700;margin-bottom:4px">Login Diperlukan</div>' +
-        '<div style="text-align:center;color:#8fae9d;font-size:12.5px;margin-bottom:18px">Masukkan username &amp; password akun Anda</div>' +
-        '<div style="margin-bottom:10px">' +
-          '<input id="pmGateUser" type="text" placeholder="Username" autocomplete="username" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
+        '<div style="text-align:center;font-size:34px;margin-bottom:6px">&#128274;</div>' +
+        '<div style="text-align:center;color:#e6f2ec;font-size:16px;font-weight:700;margin-bottom:4px">Akses Terbatas</div>' +
+        '<div style="text-align:center;color:#8fae9d;font-size:12.5px;margin-bottom:18px">Masukkan password untuk membuka halaman ini</div>' +
+        '<div id="pmGateNameWrap" style="margin-bottom:10px;display:none">' +
+          '<div style="color:#8fae9d;font-size:11px;margin-bottom:6px">Masukkan nama hanya untuk dikenali admin</div>' +
+          '<input id="pmGateName" type="text" placeholder="Nama kamu (sekali isi saja)" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
         '</div>' +
         '<div style="margin-bottom:10px">' +
-          '<input id="pmGatePw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
+          '<input id="pmGatePw" type="password" placeholder="Password" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid #2b3f34;background:#0f1a15;color:#e6f2ec;font-size:14px;outline:none">' +
         '</div>' +
         '<div id="pmGateError" style="color:#ff8686;font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>' +
         '<button id="pmGateSubmit" type="button" style="width:100%;padding:11px;border:none;border-radius:8px;background:#16a085;color:#fff;font-size:14px;font-weight:700;cursor:pointer">Masuk</button>' +
@@ -473,54 +468,6 @@ function pmLS(op, key, val) {
   return null;
 }
 
-/* ── SIGNATURE BLOCK: tanda tangan permanen di akhir laporan PDF ──
-   Dipanggil SEKALI di akhir pembuatan PDF tiap modul (setelah semua konten
-   selesai digambar, sebelum showPdfPreview/doc.save). Kalau ruang di
-   halaman terakhir gak cukup, otomatis nambah halaman baru (drawBgFn
-   dipanggil buat gambar background halaman itu, sama seperti checkPage()
-   lokal di tiap modul).
-   Nama & jabatan penandatangan SENGAJA di-hardcode di sini (bukan input
-   form) -- tanda tangan ini permanen untuk SEMUA laporan di SEMUA modul,
-   bukan per-laporan/per-user. Kalau nanti nama/jabatan berubah, cukup
-   diedit di SATU tempat ini, otomatis kepakai di semua modul yang manggil
-   fungsi ini.
-   Parameter: doc, pw/ph (ukuran halaman), marginX, marginTop, marginBottom
-   (angka margin yang sudah dipakai modul pemanggil), y (posisi konten
-   terakhir), drawBgFn (fungsi drawBg lokal modul, buat halaman baru kalau
-   perlu), checkedByName (opsional -- nama utk "Checked By - Technician",
-   dipilih user dari dropdown di form kalau modulnya sudah punya field itu;
-   kalau kosong/tidak dikirim, fallback ke default 'Zaini Nur Hidayat' biar
-   modul yang belum punya dropdown pemilihan tetap jalan seperti biasa).
-   Return: posisi y setelah blok tanda tangan. */
-function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgFn, checkedByName) {
-  var blockH = 40; // 32 -> 40, ikut nambahnya jarak kolom ttd di bawah
-  if (y + blockH > ph - marginBottom) {
-    doc.addPage();
-    if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph);
-    y = marginTop;
-  } else {
-    y += 6; // jarak dari konten sebelumnya
-  }
-  var contentW = pw - marginX * 2;
-  var colW = contentW / 2;
-  var pairs = [
-    { title: 'Checked By - Technician', name: checkedByName || 'Zaini Nur Hidayat', x: marginX },
-    { title: 'Reviewed By - Supervisor', name: 'Fajar Dwi Saksana', x: marginX + colW }
-  ];
-  pairs.forEach(function(p) {
-    var cx = p.x + colW / 2;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30, 64, 175);
-    doc.text(p.title, cx, y, { align: 'center' });
-    var lineY = y + 27.5; // 22 -> 27.5 (+seperempat), lebih lega buat area tanda tangan asli
-    var lineHalfW = 32;
-    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
-    doc.line(cx - lineHalfW, lineY, cx + lineHalfW, lineY);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 30, 25);
-    doc.text(p.name, cx, lineY + 5, { align: 'center' });
-  });
-  return y + blockH;
-}
-
 function pmGetDeviceId() {
   var id = pmLS('get', 'pm_device_id');
   if (!id) {
@@ -791,11 +738,10 @@ function pmInitGate() {
   else if (pwInput) pwInput.focus();
 }
 
-// pmInitGate() (gerbang device-password LAMA) SENGAJA TIDAK dipanggil lagi
-// di sini -- diganti raInitSiteGate() (gerbang login akun BARU), dipanggil
-// di paling akhir file ini (setelah semua fungsi raXxx & widget sesi
-// didefinisikan). Fungsi pmInitGate & pendukungnya tetap ada di atas,
-// dormant, untuk rollback kalau perlu.
+// Elemen gate sudah pasti ada di DOM di titik ini (ditulis via document.write
+// sinkron di atas, dalam satu eksekusi <script> yang sama), jadi aman
+// dipanggil langsung tanpa nunggu DOMContentLoaded.
+pmInitGate();
 
 /* ── TOAST NOTIFICATION ── */
 function dbShowToast(msg) {
@@ -1868,6 +1814,185 @@ function raGetSignatureUrl(displayName, callback) {
   }).catch(function(err) { callback((err && err.message) || String(err), null); });
 }
 
+/* Download URL gambar (mis. signed URL tanda tangan) & convert jadi base64
+   data-URL -- dibutuhkan jsPDF doc.addImage() (tidak bisa langsung dikasih
+   URL eksternal, harus data-URL atau elemen <img> yang sudah termuat). */
+function raFetchImageAsDataUrl(url, callback) {
+  fetch(url).then(function(res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.blob();
+  }).then(function(blob) {
+    var reader = new FileReader();
+    reader.onload = function() { callback(null, reader.result); };
+    reader.onerror = function() { callback('Gagal membaca gambar tanda tangan.', null); };
+    reader.readAsDataURL(blob);
+  }).catch(function(err) { callback((err && err.message) || String(err), null); });
+}
+
+/* Gabungan raGetSignatureUrl + raFetchImageAsDataUrl -- langsung dapat
+   data-URL siap pakai buat doc.addImage(). */
+function raGetSignatureDataUrl(displayName, callback) {
+  raGetSignatureUrl(displayName, function(err, url) {
+    if (err) { callback(err, null); return; }
+    raFetchImageAsDataUrl(url, callback);
+  });
+}
+
+/* Dipanggil oleh tiap modul SEBELUM drawSignatureBlock() (lihat shared.js
+   bagian atas), buat nyiapin nama & gambar tanda tangan checker/reviewer
+   berdasarkan STATUS record yang lagi dibuka -- supaya PDF yang
+   di-export/preview otomatis nampilin tanda tangan ASLI (bukan cuma nama
+   teks) begitu laporan sudah diverifikasi/di-approve lewat
+   submit-report.html.
+     - record null / status DRAFT / SUBMITTED -> semua null (belum ada yang
+       tanda tangan, drawSignatureBlock jatuh ke default text-only seperti
+       biasa).
+     - status CHECKED / FINAL_APPROVED -> checkedByName dari
+       record.checked_by_name langsung (kolom teks, sudah ada), tanda
+       tangannya di-fetch dari Storage.
+     - status FINAL_APPROVED -> reviewedByName di-resolve dulu dari
+       record.reviewed_by_account (uuid) -> pm_profiles.display_name (TIDAK
+       disimpan sebagai kolom teks terpisah di pm_records), baru tanda
+       tangannya di-fetch.
+   Gagal ambil gambar (network/file belum diupload admin/dst) TIDAK PERNAH
+   menggagalkan PDF -- cuma warning di console, area itu dibiarkan kosong
+   (nama tetap tercetak sebagai bukti proses sudah terjadi). callback selalu
+   dipanggil, tidak pernah reject. */
+function raResolveWorkflowSignatures(record, callback) {
+  var result = { checkedByName: null, checkedSigDataUrl: null, reviewedByName: null, reviewSigDataUrl: null };
+  var status = record && record.status;
+  if (!record || (status !== 'CHECKED' && status !== 'FINAL_APPROVED')) { callback(result); return; }
+
+  result.checkedByName = record.checked_by_name || null;
+  var tasks = [];
+
+  if (result.checkedByName) {
+    tasks.push(new Promise(function(resolve) {
+      raGetSignatureDataUrl(result.checkedByName, function(err, dataUrl) {
+        if (err) console.warn('[raResolveWorkflowSignatures] TTD checker:', err);
+        else result.checkedSigDataUrl = dataUrl;
+        resolve();
+      });
+    }));
+  }
+
+  if (status === 'FINAL_APPROVED' && record.reviewed_by_account) {
+    tasks.push(
+      raGetClient().then(function(client) {
+        return client.from(RA_PROFILE_TABLE).select('display_name,username').eq('id', record.reviewed_by_account).single();
+      }).then(function(res) {
+        if (res.error || !res.data) return;
+        result.reviewedByName = res.data.display_name || res.data.username;
+        return new Promise(function(resolve) {
+          raGetSignatureDataUrl(result.reviewedByName, function(err, dataUrl) {
+            if (err) console.warn('[raResolveWorkflowSignatures] TTD reviewer:', err);
+            else result.reviewSigDataUrl = dataUrl;
+            resolve();
+          });
+        });
+      }).catch(function(err) { console.warn('[raResolveWorkflowSignatures] reviewer lookup:', err); })
+    );
+  }
+
+  if (!tasks.length) { callback(result); return; }
+  Promise.all(tasks).then(function(){ callback(result); }).catch(function(){ callback(result); });
+}
+
+/* ── KIRIM PDF FINAL KE REVIEW APPROVAL DASHBOARD (ELECTRIC 7 POMI,
+   Firebase terpisah) ──
+   Review & approval untuk laporan PM Unit 7 SEPENUHNYA dilakukan di
+   Review_Approval_Dashboard.html (koleksi Firestore `checksheets` +
+   `approvals`, lihat firebase-config.js/db-helper.js/storage-helper.js/
+   approval-helper.js) -- kita TIDAK punya UI review/approve/tanda tangan
+   sendiri lagi. Fungsi ini cuma "menitipkan" PDF hasil export checksheet
+   ke sana, PERSIS seperti hasil klik Export PDF di modul ybs, TANPA
+   diedit/ditambah apa pun.
+   Dipanggil dari raSubmitReport() setelah status Supabase berhasil di-set
+   SUBMITTED. Modul WAJIB set window._raBuildPdf = <fungsi export PDF modul
+   ybs> (dipanggil TANPA argumen) SEKALI di scriptnya sendiri -- fungsi itu
+   pada akhirnya memanggil showPdfPreview(doc, filename) seperti biasa;
+   showPdfPreview() tiap modul sudah ditambah pengecekan
+   window._raPdfCapture di baris pertamanya, yang men-"tangkap" doc itu
+   alih-alih menampilkan modal preview, KHUSUS untuk pemanggilan ini.
+   Kalau modul belum punya window._raBuildPdf, atau Firebase SDK/DB/
+   Approvals belum termuat (file firebase-config.js dkk hilang), fungsi ini
+   diam-diam skip -- gagal kirim ke dashboard eksternal TIDAK BOLEH
+   menggagalkan submit laporan itu sendiri (status Supabase sudah kepakai
+   duluan). */
+var RA_ASSET_LABEL = {
+  FEGT: 'FEGT 6 Monthly', SO2: 'SO2 Scrubber Inlet', O2: 'O2 Report',
+  OPACITY: 'Opacity Monitor', CEMS_CALIBRATION: 'CEMS Calibration',
+  BELT_E45: 'Belt Conveyor E4-E5', BELT_E23: 'Belt Conveyor E2-E3', BELT_B12: 'Belt Conveyor B1-B2',
+  MAINTENANCE_REPORT: 'Maintenance Report', COAL_SILO_LEVEL: 'Coal Silo Level Transmitter',
+  COAL_FEEDER: 'Coal Feeder Calibration', DCS_HMI: 'DCS HMI/OIS Inspection',
+  FLOWMETER_FGD: 'Flow Meter FGD', 'PH-ANALYZER': 'Analyzer Indicator Transmitter (pH)',
+  PM_HG_ANALYZER: 'PM HG Analyzer', GENERATOR_STATOR_LEAK: 'Generator Stator Leak Monitoring',
+  MARK_VIE: 'Mark VIe Alarm & Module Inspection'
+};
+
+function raSendFinalPdfToFirebaseDashboard(record, submittedByName) {
+  if (typeof window._raBuildPdf !== 'function') {
+    console.warn('[raSendFinalPdfToFirebaseDashboard] window._raBuildPdf belum di-set modul ini, skip kirim ke Review Approval Dashboard.');
+    return;
+  }
+  if (typeof firebase === 'undefined' || typeof DB === 'undefined' || typeof Approvals === 'undefined') {
+    console.warn('[raSendFinalPdfToFirebaseDashboard] firebase-config.js/db-helper.js/approval-helper.js belum dimuat, skip kirim ke Review Approval Dashboard.');
+    return;
+  }
+  var modKey = normalizeModul(record.modul) || record.modul || 'UNKNOWN';
+  var label = RA_ASSET_LABEL[modKey] || record.modul || modKey;
+  window._raPdfCapture = function(doc) {
+    DB.save({
+      assetTag: modKey,
+      assetName: label,
+      woNumber: record.work_order || '',
+      executionDate: record.tanggal || '',
+      checkedBy: record.pic || ''
+    }).then(function(checksheetId) {
+      return Approvals.submitWithFiles(checksheetId, {
+        photos: null,
+        pdfBuilder: function() { return Promise.resolve(doc); },
+        assetTag: modKey,
+        assetName: label,
+        checksheetFile: location.pathname.split('/').pop(),
+        submittedBy: submittedByName || ''
+      });
+    }).then(function(ok) {
+      if (ok) dbShowToast('✓ PDF terkirim ke Review Approval Dashboard');
+      else console.warn('[raSendFinalPdfToFirebaseDashboard] Approvals.submitWithFiles gagal, lihat console.');
+    }).catch(function(err) {
+      console.error('[raSendFinalPdfToFirebaseDashboard] gagal kirim:', err);
+    });
+  };
+  window._raBuildPdf();
+}
+
+/* ── SUBMIT LAPORAN (Level 1) — GENERIK, dipakai semua modul ──
+   Dulu didefinisikan per-file (maintenance_report_form.html), sekarang
+   dipindah ke sini karena isinya sudah 100% generik: cuma butuh
+   window._editingId (sudah standar di semua modul) + shared functions.
+   raSetCurrentRecord (kalau ada, dipanggil abis submit sukses) OPSIONAL --
+   cuma dipanggil kalau modul yang manggil punya panel workflow lokal (mis.
+   maintenance_report_form.html); modul lain (mis. fegt.html, yang cuma
+   punya tombol Submit tanpa panel checker/reviewer lokal -- itu sekarang
+   di submit-report.html) aman-aman saja tanpa fungsi itu. */
+function raSubmitReport() {
+  if (!window._editingId) {
+    alert('Simpan dulu sebagai Draft sebelum submit.');
+    return;
+  }
+  if (!confirm('Apakah data sudah lengkap? Yakin Submit?')) return;
+  raUpdateRecord(window._editingId, {
+    status: 'SUBMITTED',
+    submitted_at: new Date().toISOString()
+  }, function(err, updated) {
+    if (err) { alert('Gagal submit: ' + err); return; }
+    dbShowToast('✓ Data Sudah Tersubmit ke Review Approval Dashboard');
+    if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
+    raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, (updated && updated.pic) || '');
+  });
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    SIGNATURE PAD SYSTEM
    - raSignPadShow(options)  : tampilkan modal pad TTD
@@ -2169,4 +2294,8 @@ function raRenderSessionWidget(profile) {
   };
 }
 
-raInitSiteGate();
+// raInitSiteGate() (gerbang login akun) SENGAJA TIDAK dipanggil lagi --
+// gerbang situs dikembalikan ke pmInitGate() (Trusted Device) di atas.
+// Fungsi ini & fungsi raXxx pendukungnya TETAP dipakai oleh raRequireLogin
+// (modal login khusus di alur Submit Laporan checker/SPV, terpisah dari
+// gerbang situs), jadi sengaja tidak dihapus.

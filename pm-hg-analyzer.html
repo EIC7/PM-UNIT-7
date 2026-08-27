@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PM HG Analyzer — Unit 7</title>
 <script src="shared.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db-helper.js"></script>
+<script src="storage-helper.js"></script>
+<script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css">
 <style>
 /* Checkbox kustom: tampilan konsisten di semua browser/HP (Android/iOS/MIUI dll),
@@ -203,6 +209,7 @@ input[type="checkbox"]:checked::after {
     <div class="btn-row" id="hgActionRow">
       <button class="btn btn-primary" id="hgBtnPdf" onclick="hgDownloadPdf()">&#128438; Download PDF</button>
       <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('PM HG Analyzer')">&#128190; Simpan ke Database</button>
+      <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=hgDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
       <button class="btn btn-danger" onclick="hgResetAll()">&#10005; Reset</button>
     </div>
   </div>
@@ -1500,9 +1507,11 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 function showPdfPreview(doc, filename) {
+    if (typeof window._raPdfCapture === 'function') { var _raCb = window._raPdfCapture; window._raPdfCapture = null; _raCb(doc, filename); return; }
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = doc; pdfPreviewState.filename = filename;
     var modal = document.getElementById('pdfPreviewModal');
+    if (window._pdfEmbedMode) { var pf=document.querySelector('.pdf-preview-footer'); if (pf) pf.style.display='none'; }
     var container = document.getElementById('pdfPreviewFrame');
     container.innerHTML = '<div class="pdf-canvas-loading">⏳ Menyiapkan preview...</div>';
     modal.classList.add('show');
@@ -2110,9 +2119,6 @@ function hgDownloadPdf() {
       });
       y = doc.lastAutoTable.finalY + 6;
 
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, gv('hgCheckedBy'));
-
       var now = new Date();
       var dateStr = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
       if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2212,6 +2218,7 @@ initCropDrag();
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id');
   var doPrint = params.get('print') === '1';
+  if (params.get('embed') === '1') window._pdfEmbedMode = true;
   if (!id) {
     var todayEl = document.getElementById('hgTanggal');
     if (todayEl && !todayEl.value) {
