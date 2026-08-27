@@ -86,7 +86,15 @@ body { background: var(--bg-main); }
 }
 .tag-search-wrap input:focus { outline: none; border-color: var(--accent-cyan); box-shadow: 0 0 0 3px var(--accent-cyan-tint); }
 
-.tag-row { border: 1px solid var(--border-soft); background: var(--bg-main); }
+/* Aksen warna kiri per tag — dari warna series chart-nya sendiri (di-set
+   inline lewat --tag-accent di js/ui-manager.js), biar TAG LIST langsung
+   "berbicara" warna yang sama dengan garis di grafik. Fallback abu-abu
+   netral kalau --tag-accent belum di-set (mis. sebelum tag punya series). */
+.tag-row { position: relative; overflow: hidden; border: 1px solid var(--border-soft); background: var(--bg-main); }
+.tag-row::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--tag-accent, var(--border-strong));
+}
 .tag-row:hover { border-color: var(--border-strong); box-shadow: var(--shadow-card-hover); }
 .tag-row-active { border-color: var(--accent-cyan); background: var(--accent-cyan-tint); box-shadow: var(--shadow-card); }
 
@@ -177,6 +185,14 @@ body { background: var(--bg-main); }
   content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
   background: var(--accent-cyan);
 }
+/* 4 metrik per grup tag (baca/baca-2/deviasi/hari) dapat warna berbeda-beda
+   biar sekilas gampang dibedakan tanpa harus baca labelnya — masing-masing
+   .kpi-group-row grup punya urutan anak sendiri jadi nth-child ini otomatis
+   mulai dari 1 lagi tiap grup, bukan lanjut dari grup sebelumnya. */
+.kpi-group-row .kpi-card:nth-child(1)::before { background: var(--accent-cyan); }
+.kpi-group-row .kpi-card:nth-child(2)::before { background: var(--accent-amber); }
+.kpi-group-row .kpi-card:nth-child(3)::before { background: #7a52a8; }
+.kpi-group-row .kpi-card:nth-child(4)::before { background: var(--accent-green); }
 .kpi-card:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
 .kpi-card-label { color: var(--text-dim); font-size: 10px; letter-spacing: .05em; margin-bottom: 4px; }
 .kpi-card-value { color: var(--text-primary); font-size: 16px; font-weight: 600; }
@@ -184,10 +200,15 @@ body { background: var(--bg-main); }
 
 .module-deviation-area { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
 .deviation-panel {
-  background: var(--bg-main); border: 1px solid var(--border-soft); border-radius: 8px; padding: 10px 12px;
+  background: var(--bg-main); border: 1px solid var(--border-soft); border-left: 3px solid var(--accent-green);
+  border-radius: 8px; padding: 10px 12px;
   box-shadow: var(--shadow-card);
-  transition: box-shadow .15s;
+  transition: box-shadow .15s, border-left-color .15s;
 }
+/* Deviasi terakhir di luar band toleransi -> aksen kiri jadi merah, tanpa
+   perlu JS tambahan (deteksi lewat kelas .deviation-out yang sudah dipasang
+   di dalam panel ini oleh module-view.js). */
+.deviation-panel:has(.deviation-out) { border-left-color: var(--accent-red); }
 .deviation-panel:hover { box-shadow: var(--shadow-card-hover); }
 .deviation-panel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
 .deviation-panel-title { color: var(--text-secondary); font-size: 11px; letter-spacing: .04em; }

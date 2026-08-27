@@ -77,6 +77,11 @@
       var row = document.createElement('div');
       row.className = 'tag-row' + (tag.visible ? ' tag-row-active' : '');
       row.dataset.tagId = tag.id;
+      // Aksen kiri = warna series pertama tag ini, biar TAG LIST langsung
+      // konsisten secara visual dengan warna garisnya sendiri di grafik.
+      if (tag.series && tag.series[0] && tag.series[0].color) {
+        row.style.setProperty('--tag-accent', tag.series[0].color);
+      }
       row.innerHTML =
         '<div class="tag-row-top">' +
           '<input type="checkbox" class="tag-visible-cb" ' + (tag.visible ? 'checked' : '') + '>' +
@@ -142,6 +147,8 @@
     values.forEach(function (v) {
       var row = document.createElement('div');
       row.className = 'value-row';
+      // Aksen kiri = warna series ini sendiri (sama seperti garis di grafik).
+      row.style.borderLeft = '3px solid ' + v.color;
       var displayVal = (v.value === null || v.value === undefined) ? '—' : formatNum(v.value);
       row.innerHTML =
         '<span class="value-label" style="color:' + v.color + '">' + v.name + '</span>' +
