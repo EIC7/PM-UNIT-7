@@ -10,12 +10,10 @@
   /* Halaman hub tidak butuh app-shell (itu punya trend_*.html) — layout sendiri, ringan */
   html, body { min-height: 100vh; }
   body {
-    /* Pola grid halus ala kertas gambar teknik — nuansa "engineering", bukan dekorasi kosong */
-    background-image:
-      linear-gradient(var(--border-soft) 1px, transparent 1px),
-      linear-gradient(90deg, var(--border-soft) 1px, transparent 1px);
-    background-size: 28px 28px;
-    background-position: -1px -1px;
+    /* Polos — sempat pakai pola garis grid teknik, tapi itu bikin halaman
+       kelihatan "berisik"/jelek alih-alih premium. Background bersih saja,
+       kedalaman cukup dari shadow kartu + brand bar di atas. */
+    background: var(--bg-main);
   }
 
   /* ── SLIM BRAND BAR ─────────────────────────────────────────────────
@@ -23,11 +21,20 @@
      status dot) supaya hub & halaman modul terasa satu aplikasi, bukan
      2 desain berbeda yang ditempel jadi satu. */
   .hub-topbar {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 6px;
     padding: 12px 20px;
     background: linear-gradient(180deg, #ffffff 0%, var(--bg-panel) 100%);
     border-bottom: 1px solid var(--border-strong);
   }
+  .hub-topbar-home {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
+    color: var(--text-secondary); text-decoration: none;
+    padding: 5px 10px 5px 8px; border-radius: 6px; border: 1px solid var(--border-soft);
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .hub-topbar-home:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); background: var(--accent-cyan-tint); }
+  .hub-topbar-divider { width: 1px; height: 16px; background: var(--border-soft); flex-shrink: 0; }
   .hub-topbar-mark {
     width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
     background: linear-gradient(135deg, var(--accent-cyan), #0a4f6e);
@@ -35,6 +42,10 @@
   }
   .hub-topbar-label { font-size: 11.5px; font-weight: 700; letter-spacing: .12em; color: var(--text-primary); }
   .hub-topbar-label span { color: var(--accent-cyan); }
+  .hub-topbar-clock {
+    font-size: 11px; letter-spacing: .04em; color: var(--text-secondary);
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
   .hub-topbar-status {
     margin-left: auto; display: flex; align-items: center; gap: 6px;
     font-size: 10px; letter-spacing: .08em; color: var(--text-dim);
@@ -157,9 +168,12 @@
 <body>
 
 <div class="hub-topbar">
+  <a class="hub-topbar-home" href="../index.html" title="Kembali ke Dashboard Utama">&larr; DASHBOARD UTAMA</a>
+  <div class="hub-topbar-divider"></div>
   <div class="hub-topbar-mark"></div>
   <div class="hub-topbar-label">PM-UNIT-7 · <span>DCS TREND</span></div>
   <div class="hub-topbar-status"><span class="dot dot-ok"></span>SYSTEM ONLINE</div>
+  <div class="hub-topbar-clock" id="hubClock">--</div>
 </div>
 
 <div class="hub-shell">
@@ -261,6 +275,23 @@
     untuk dokumentasi arsitektur &amp; cara menambah modul baru.</span>
   </div>
 </div>
+
+<script>
+  // Jam berjalan di brand bar — format sama dengan topbar-clock di trend_*.html
+  // (biar konsisten), tapi berdiri sendiri karena hub ini tidak pakai app-shell/ui-manager.js.
+  (function () {
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function tick() {
+      var el = document.getElementById('hubClock');
+      if (!el) return;
+      var d = new Date();
+      el.textContent = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+        ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
 
 </body>
 </html>
