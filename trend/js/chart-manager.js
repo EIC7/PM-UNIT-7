@@ -439,7 +439,7 @@
     inst.setOption({
       backgroundColor: 'transparent',
       textStyle: { color: '#16212b', fontFamily: "'Consolas','Courier New',monospace" },
-      grid: { left: 44, right: 14, top: 10, bottom: 22 },
+      grid: { left: 44, right: 14, top: 10, bottom: 36 }, // bottom diperbesar utk muat label tanggal dirotasi (sama pola dgn chart utama)
       tooltip: {
         trigger: 'axis',
         backgroundColor: 'rgba(255,255,255,0.97)',
@@ -455,7 +455,11 @@
       xAxis: {
         type: 'time',
         axisLine: { lineStyle: { color: '#c7d0d9' } },
-        axisLabel: { color: '#56646f', fontSize: 10, formatter: timeFormatter },
+        // Sama pola dgn chart utama (dateAxisFormatter tanggal-saja + rotate
+        // + hideOverlap) -- sebelumnya pakai timeFormatter (tanggal+jam) TANPA
+        // rotasi, jadi label numpuk/tumpang-tindih begitu titik data banyak
+        // dan berdekatan (chart mini ini sempit, cuma ~110-140px tinggi).
+        axisLabel: { color: '#56646f', formatter: dateAxisFormatter, rotate: 35, hideOverlap: true, margin: 10, fontSize: 9.5 },
         splitLine: { show: false }
       },
       yAxis: {

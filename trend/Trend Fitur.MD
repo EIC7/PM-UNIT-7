@@ -510,3 +510,19 @@ Setelah §21 (CEMS digabung jadi 1 trend), user masih lihat titik-titik menumpuk
 Diverifikasi via Playwright: 8 record mock dengan `tanggal` tersebar April–Agustus tapi `updated_at` numpuk di 1-2 timestamp — sebelum fix akan collapse ke 1-2 titik; setelah fix, posisi tiap titik di trend benar mengikuti `tanggal` masing-masing record (dicek dengan filter rentang "3 TAHUN": 2 record `tanggal` 2026-04-16 & 2026-05-26 muncul benar di posisi masing-masing meski `updated_at` keduanya sama).
 
 File terdampak: `js/supabase-adapter.js`, cache-busting `trend_so2.html`/`trend_fegt.html`/`trend_cems.html` (`?v=20260827c` khusus `supabase-adapter.js`).
+
+---
+
+## 23. Sesi ini — Semua tag tercentang default + label tanggal panel deviasi dirotasi
+
+### 1. Semua tag tercentang otomatis saat halaman dibuka
+
+Sebelumnya tiap modul cuma menyalakan 1-2 tag default (`visible: true`) supaya chart tidak langsung penuh — user minta SEMUA tag tercentang dari awal (berlaku untuk semua modul: SO2, FEGT, CEMS). `default-tags-fegt.js` (31 tag) dan `default-tags-cems.js` (10 tag) diubah semua entrinya jadi `visible: true` (SO2 sudah begitu dari awal, 2 tag). Checkbox di TAG LIST tetap berfungsi normal untuk menyembunyikan tag yang tidak diperlukan.
+
+### 2. Label tanggal panel mini deviasi dirotasi (sama gaya dengan chart utama)
+
+Panel mini "Deviasi Actual − Expected" (`js/module-view.js` → `ChartManager.renderDeviationChart`) sebelumnya pakai `timeFormatter` (format tanggal+jam, mis. "22/06 09:16") TANPA rotasi label — begitu titik data banyak & berdekatan, label sumbu-X saling tumpang tindih jadi tidak terbaca (terlihat di screenshot user: deretan angka menyatu). Chart utama sudah lebih dulu menangani ini dengan `dateAxisFormatter` (tanggal saja, tanpa jam) + `rotate: 35` + `hideOverlap: true` — pola yang sama sekarang diterapkan ke `renderDeviationChart`. `grid.bottom` dinaikkan (22→36) dan tinggi kontainer `.deviation-panel-chart` (110-120px → 130-140px) supaya label miring itu punya cukup ruang, tidak terpotong.
+
+Diverifikasi via Playwright: tag checkbox 10/10 (CEMS) dan 21/21+10 (FEGT) tercentang saat load; `xAxis.axisLabel` panel deviasi menunjukkan `rotate:35, hideOverlap:true` dan formatter menghasilkan `"6/22/2026"` (bukan lagi `"22/06 09:16"`).
+
+File terdampak: `config/default-tags-fegt.js`, `config/default-tags-cems.js`, `js/chart-manager.js`, `css/dcs-theme.css`, `css/style.css`.
