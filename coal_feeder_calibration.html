@@ -3108,8 +3108,6 @@ function cfDownloadPdf() {
         });
       } // end if(doPulv)
 
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, gv('cfCheckedBy'));
 
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }

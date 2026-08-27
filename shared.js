@@ -473,73 +473,6 @@ function pmLS(op, key, val) {
   return null;
 }
 
-/* ── SIGNATURE BLOCK: tanda tangan permanen di akhir laporan PDF ──
-   Dipanggil SEKALI di akhir pembuatan PDF tiap modul (setelah semua konten
-   selesai digambar, sebelum showPdfPreview/doc.save). Kalau ruang di
-   halaman terakhir gak cukup, otomatis nambah halaman baru (drawBgFn
-   dipanggil buat gambar background halaman itu, sama seperti checkPage()
-   lokal di tiap modul).
-   Nama & jabatan penandatangan SENGAJA di-hardcode di sini (bukan input
-   form) -- tanda tangan ini permanen untuk SEMUA laporan di SEMUA modul,
-   bukan per-laporan/per-user. Kalau nanti nama/jabatan berubah, cukup
-   diedit di SATU tempat ini, otomatis kepakai di semua modul yang manggil
-   fungsi ini.
-   Parameter: doc, pw/ph (ukuran halaman), marginX, marginTop, marginBottom
-   (angka margin yang sudah dipakai modul pemanggil), y (posisi konten
-   terakhir), drawBgFn (fungsi drawBg lokal modul, buat halaman baru kalau
-   perlu), checkedByName (nama utk "Checked By - Technician", dari
-   record.checked_by_name kalau laporan sudah diverifikasi checker; kalau
-   kosong fallback ke default 'Zaini Nur Hidayat' biar modul yang belum
-   pakai workflow tetap jalan seperti biasa), reviewedByName (nama SPV yang
-   approve, di-resolve dari reviewed_by_account -> pm_profiles.display_name;
-   fallback 'Fajar Dwi Saksana' kalau kosong), checkedSigDataUrl/
-   reviewSigDataUrl (base64 data-URL gambar tanda tangan, HASIL
-   raResolveWorkflowSignatures() -- ditempel di ATAS garis kalau ada; kalau
-   null/gagal diambil, area itu dibiarkan kosong seperti sebelumnya, nama
-   di bawah garis tetap tercetak sebagai bukti).
-   Return: posisi y setelah blok tanda tangan. */
-function drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgFn, checkedByName, reviewedByName, checkedSigDataUrl, reviewSigDataUrl) {
-  var blockH = 40; // 32 -> 40, ikut nambahnya jarak kolom ttd di bawah
-  if (y + blockH > ph - marginBottom) {
-    doc.addPage();
-    if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph);
-    y = marginTop;
-  } else {
-    y += 6; // jarak dari konten sebelumnya
-  }
-  var contentW = pw - marginX * 2;
-  var colW = contentW / 2;
-  var pairs = [
-    { title: 'Checked By - Technician', name: checkedByName || 'Zaini Nur Hidayat', x: marginX, sigDataUrl: checkedSigDataUrl },
-    { title: 'Reviewed By - Supervisor', name: reviewedByName || 'Fajar Dwi Saksana', x: marginX + colW, sigDataUrl: reviewSigDataUrl }
-  ];
-  pairs.forEach(function(p) {
-    var cx = p.x + colW / 2;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(30, 64, 175);
-    doc.text(p.title, cx, y, { align: 'center' });
-    var lineY = y + 27.5; // 22 -> 27.5 (+seperempat), lebih lega buat area tanda tangan asli
-    var lineHalfW = 32;
-    // Tanda tangan ASLI (gambar .png dari Supabase Storage) ditempel DI
-    // ATAS garis, di ruang yang sebelumnya cuma dibiarkan kosong -- CUMA
-    // digambar kalau checker/reviewer sudah benar-benar memproses laporan
-    // ini lewat submit-report.html (sigDataUrl dikirim dari
-    // raResolveWorkflowSignatures, null kalau belum/gagal ambil -- gagal
-    // ambil gambar TIDAK BOLEH menggagalkan seluruh PDF, jadi dibungkus
-    // try/catch, sama seperti pola addImage lain di file ini).
-    if (p.sigDataUrl) {
-      try {
-        var sigMaxW = lineHalfW * 2 - 6, sigMaxH = 16;
-        doc.addImage(p.sigDataUrl, 'PNG', cx - sigMaxW / 2, lineY - sigMaxH - 1, sigMaxW, sigMaxH);
-      } catch (e) { /* format gambar tak didukung / korup -- biarkan kosong, nama di bawah tetap tercetak */ }
-    }
-    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
-    doc.line(cx - lineHalfW, lineY, cx + lineHalfW, lineY);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 30, 25);
-    doc.text(p.name, cx, lineY + 5, { align: 'center' });
-  });
-  return y + blockH;
-}
-
 function pmGetDeviceId() {
   var id = pmLS('get', 'pm_device_id');
   if (!id) {
@@ -2052,7 +1985,14 @@ function raDrawReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom,
   y = doc.lastAutoTable.finalY + 10;
 
   function section(title, rows, signerName, sigDataUrl) {
-    if (y + 20 > ph - marginBottom) { doc.addPage(); if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph); y = marginTop; }
+    // Perkiraan tinggi MINIMAL seluruh section (judul + tabel 4 baris +
+    // tanda tangan) -- sengaja konservatif/besar (160mm) supaya judul TIDAK
+    // pernah "kepisah" dari tabelnya sendiri. Sebelumnya threshold cuma
+    // 20mm (cukup buat judulnya doang), jadi autoTable sering ke-trigger
+    // pindah halaman SENDIRI di tengah karena isinya ternyata tidak muat --
+    // judul jadi keliatan nyangkut sendirian di halaman sebelumnya, tabelnya
+    // muncul di halaman berikutnya tanpa judul.
+    if (y + 160 > ph - marginBottom) { doc.addPage(); if (typeof drawBgFn === 'function') drawBgFn(doc, pw, ph); y = marginTop; }
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(30, 64, 175);
     doc.text(title, marginX, y);
     y += 4;

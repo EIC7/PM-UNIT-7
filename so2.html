@@ -2087,9 +2087,6 @@ function so2DownloadPdf() {
       });
     }
 
-    // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, so2DrawBg, gv('s2CheckedBy'));
-
     var dateStr = (gv('s2Date')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
     raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, so2DrawBg).then(function() {
       dbShowSavingOverlay(false);

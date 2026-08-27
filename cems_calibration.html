@@ -2608,12 +2608,8 @@ function exportPdf(){
     var lastPageNum = doc.internal.getNumberOfPages();
     if (lastPageNum > 1 && y <= marginTop + 5) {
       doc.deletePage(lastPageNum);
-      y = doc.internal.pageSize.getHeight(); // paksa drawSignatureBlock di bawah nganggep halaman ini penuh->pindah ke halaman sebelumnya yg valid kalau perlu
       doc.setPage(doc.internal.getNumberOfPages());
     }
-
-    // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-    y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBgOnce, val('metaCheckedBy'));
 
     raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBgOnce).then(function() {
       if (typeof hideImgLoading === 'function') hideImgLoading();

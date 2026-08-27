@@ -2338,8 +2338,6 @@ function csDownloadPdf(){
       doc.text('- Entry PM Result into maximo work order.', marginX+2, y); y+=4;
       doc.text('- Inform to immediate superior if any defect found.', marginX+2, y); y+=8;
 
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, gv('csCheckedBy'));
 
       var dateStr=(gv('csDate')||'').replace(/-/g,'')||yy+String(now.getMonth()+1).padStart(2,'0')+dd;
       raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBg).then(function() {

@@ -1752,9 +1752,6 @@ function downloadPdf(){
         });
       }
 
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, (document.getElementById('mvCheckedBy')||{}).value);
-
       raAddReviewApprovalPage(doc, pw, ph, marginX, marginTop, marginBottom, drawBg).then(function() {
         if (typeof hideImgLoading === 'function') hideImgLoading();
 

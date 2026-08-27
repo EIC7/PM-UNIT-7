@@ -2078,11 +2078,11 @@ function downloadPdf(){
   CLEANING_PORTS.forEach(function(p){ var pk='port'+p.id; totalImgs += (cleaningImages[pk].before.length + cleaningImages[pk].after.length); });
   LD_CLEANING_PORTS.forEach(function(p){ var pk='ldport'+p.id; if(ldCleaningImages[pk]) totalImgs += ((ldCleaningImages[pk].before||[]).length + (ldCleaningImages[pk].after||[]).length); });
   var loadingMsg = totalImgs>0 ? 'Memproses '+totalImgs+' gambar & menyusun tabel...' : 'Menyusun tabel...';
-  // Siapkan nama + gambar tanda tangan checker/reviewer DULU (kalau laporan
-  // ini sudah diverifikasi/di-approve lewat submit-report.html) SEBELUM
-  // masuk ke alur render PDF yang sudah ada -- `sig` ke-capture di closure,
-  // dipakai nanti pas manggil drawSignatureBlock() di bawah tanpa perlu
-  // ubah struktur render yang sudah ada sama sekali.
+  // NOTE: `sig` sudah tidak dipakai di bawah (drawSignatureBlock() sudah
+  // dihapus -- tanda tangan sekarang cuma di halaman "Lembar Review &
+  // Approval" lewat raAddReviewApprovalPage()), wrapper ini sengaja
+  // dibiarkan apa adanya (bukan dibongkar) supaya tidak perlu re-indent
+  // seluruh isi fungsi render PDF di bawahnya.
   raResolveWorkflowSignatures(window.fegtCurrentRecord, function(sig) {
   dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   ensureFegtBackground(function() {
@@ -2527,9 +2527,6 @@ function downloadPdf(){
 
       // Footer area dibiarkan kosong — mengandalkan background template (sama seperti opacity)
 
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) ═══
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, sig.checkedByName || metaInfo.checkedBy, sig.reviewedByName, sig.checkedSigDataUrl, sig.reviewSigDataUrl);
-
       var nPages = doc.internal.getNumberOfPages();
       for (var i=1; i<=nPages; i++) { doc.setPage(i); }
 
@@ -2965,11 +2962,6 @@ function sixmDownloadPdf() {
         doc.line(marginX, y, marginX+contentW, y);
         y += 6;
       });
-
-      // ═══ TANDA TANGAN PERMANEN (Checked By / Reviewed By) — sama seperti
-      //     modul lain, BUKAN di info box "informasi pekerjaan" di atas ═══
-      var checkedByVal = document.getElementById('sixmCheckedBy').value;
-      y = drawSignatureBlock(doc, pw, ph, marginX, marginTop, marginBottom, y, drawBg, sig.checkedByName || checkedByVal, sig.reviewedByName, sig.checkedSigDataUrl, sig.reviewSigDataUrl);
 
       var now = new Date();
       var dd = String(now.getDate()).padStart(2,'0');
