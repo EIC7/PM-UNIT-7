@@ -355,7 +355,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.02), transparent);
+            background: linear-gradient(135deg, color-mix(in srgb, var(--card-color, var(--primary-green)) 6%, transparent), transparent);
             opacity: 0;
             transition: opacity 0.3s;
             border-radius: 12px;
@@ -394,7 +394,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, var(--card-bg-light, rgba(37, 99, 235, 0.15)), var(--card-bg-dark, rgba(37, 99, 235, 0.05)));
+            background: linear-gradient(135deg,
+                color-mix(in srgb, var(--card-color, var(--primary-green)) 18%, white),
+                color-mix(in srgb, var(--card-color, var(--primary-green)) 6%, white));
             font-size: 28px;
             position: relative;
             z-index: 1;
@@ -445,17 +447,17 @@
             font-size: 10px;
             padding: 4px 8px;
             border-radius: 6px;
-            background: var(--tag-bg, rgba(37, 99, 235, 0.1));
+            background: color-mix(in srgb, var(--card-color, var(--primary-green)) 10%, white);
             color: var(--card-color, var(--primary-green));
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            border: 1px solid rgba(37, 99, 235, 0.2);
+            border: 1px solid color-mix(in srgb, var(--card-color, var(--primary-green)) 20%, white);
             transition: all 0.2s;
         }
 
         .pm-card:hover .tag {
-            background: var(--tag-bg, rgba(37, 99, 235, 0.15));
+            background: color-mix(in srgb, var(--card-color, var(--primary-green)) 16%, white);
             border-color: var(--card-color, var(--primary-green));
         }
 
@@ -475,20 +477,13 @@
             transform: translate(4px, -4px);
         }
 
-        /* Color variations for each MOD - All Blue */
-        .pm-card:nth-child(1) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(2) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(3) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(4) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(5) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(6) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(7) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(8) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(9) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(10) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(11) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(12) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
-        .pm-card:nth-child(13) { --card-color: var(--primary-blue); --card-bg-light: rgba(59, 130, 246, 0.15); --card-bg-dark: rgba(59, 130, 246, 0.05); --tag-bg: rgba(59, 130, 246, 0.1); }
+        /* Warna tiap modul: cukup set --card-color per kartu (inline style di
+           HTML) — ikon, tag, border, judul-hover, panah semua otomatis ikut
+           lewat color-mix() di atas. Sebelumnya di sini ada 13 aturan
+           nth-child yang SEMUANYA disetel ke warna biru yang sama (komentar
+           lama: "Color variations for each MOD - All Blue") — bug kosmetik
+           yang bikin sebagian besar kartu monoton biru/hijau alih-alih warni
+           sesuai modulnya masing-masing. */
 
         /* Animation */
         .pm-card {
@@ -1080,7 +1075,7 @@
             </div>
 
             <!-- MOD-09 Maintenance Report Form (PINDAH KE ATAS) -->
-            <div class="pm-card" onclick="window.location.href='maintenance_report_form.html'">
+            <div class="pm-card" onclick="window.location.href='maintenance_report_form.html'" style="--card-color: #4f46e5;">
                 <div class="card-index">MOD-09</div>
                 <div class="card-icon">📝</div>
                 <div class="card-title">Maintenance<br>Report Form</div>
@@ -1125,7 +1120,7 @@
             </div>
 
             <!-- MOD-01 PM O2 Inlet & Outlet -->
-            <div class="pm-card" data-area="boiler" onclick="openO2Popup()">
+            <div class="pm-card" data-area="boiler" onclick="openO2Popup()" style="--card-color: #f43f5e;">
                 <div class="card-index">MOD-01</div>
                 <div class="card-icon">🫧</div>
                 <div class="card-title">PM O2<br>Inlet & Outlet</div>
@@ -1155,7 +1150,7 @@
             </div>
 
             <!-- MOD-03 FEGT & LD -->
-            <div class="pm-card" data-area="boiler" onclick="window.location.href='fegt.html'">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='fegt.html'" style="--card-color: #f97316;">
                 <div class="card-index">MOD-03</div>
                 <div class="card-icon">🌡️</div>
                 <div class="card-title">FEGT &<br>Leak Detection</div>
@@ -1170,7 +1165,7 @@
             </div>
 
             <!-- MOD-04 SO2 Scrubber -->
-            <div class="pm-card" data-area="boiler" onclick="window.location.href='so2.html'">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='so2.html'" style="--card-color: #65a30d;">
                 <div class="card-index">MOD-04</div>
                 <div class="card-icon">💨</div>
                 <div class="card-title">SO2 Scrubber<br>Inlet</div>
@@ -1184,7 +1179,7 @@
             </div>
 
             <!-- MOD-05 Opacity -->
-            <div class="pm-card" data-area="boiler" onclick="window.location.href='opacity.html'">
+            <div class="pm-card" data-area="boiler" onclick="window.location.href='opacity.html'" style="--card-color: #c026d3;">
                 <div class="card-index">MOD-05</div>
                 <div class="card-icon">👁️</div>
                 <div class="card-title">Opacity<br>Monitor</div>
@@ -1198,7 +1193,7 @@
             </div>
 
             <!-- MOD-06 Belt Scale E4 & E5 -->
-            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-e45.html'">
+            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-e45.html'" style="--card-color: #14b8a6;">
                 <div class="card-index">MOD-06</div>
                 <div class="card-icon">⚖️</div>
                 <div class="card-title">Belt Scale<br>Conveyor E4 & E5</div>
@@ -1213,7 +1208,7 @@
             </div>
 
             <!-- MOD-07 Belt Scale E2 & E3 -->
-            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-e23.html'">
+            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-e23.html'" style="--card-color: #10b981;">
                 <div class="card-index">MOD-07</div>
                 <div class="card-icon">⚖️</div>
                 <div class="card-title">Belt Scale<br>Conveyor E2 & E3</div>
@@ -1228,7 +1223,7 @@
             </div>
 
             <!-- MOD-08 Belt Scale B1 & B2 -->
-            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-b12.html'">
+            <div class="pm-card" data-area="common" onclick="window.location.href='beltscale-b12.html'" style="--card-color: #ca8a04;">
                 <div class="card-index">MOD-08</div>
                 <div class="card-icon">⚖️</div>
                 <div class="card-title">Belt Scale<br>Conveyor B1 & B2</div>
@@ -1243,7 +1238,7 @@
             </div>
 
             <!-- MOD-10 Analyzer Indicator Transmitter (pH) -->
-            <div class="pm-card" data-area="common" onclick="window.location.href='ph-analyzer.html'">
+            <div class="pm-card" data-area="common" onclick="window.location.href='ph-analyzer.html'" style="--card-color: #ec4899;">
                 <div class="card-index">MOD-10</div>
                 <div class="card-icon">🧪</div>
                 <div class="card-title">Analyzer Indicator<br>Transmitter (pH)</div>
@@ -1258,7 +1253,7 @@
             </div>
 
             <!-- MOD-11 Coal Feeder Calibration -->
-            <div class="pm-card" onclick="window.location.href='coal_feeder_calibration.html'">
+            <div class="pm-card" onclick="window.location.href='coal_feeder_calibration.html'" style="--card-color: #c2410c;">
                 <div class="card-index">MOD-11</div>
                 <div class="card-icon">⛏️</div>
                 <div class="card-title">PM 4000 Hr Pulverizer &<br>Coal Feeder Calibration</div>
@@ -1273,7 +1268,7 @@
             </div>
 
             <!-- MOD-12 Inspection and Cleaning DCS HMI/OIS -->
-            <div class="pm-card" data-area="boiler common" onclick="window.location.href='dcs-hmi-inspection.html'">
+            <div class="pm-card" data-area="boiler common" onclick="window.location.href='dcs-hmi-inspection.html'" style="--card-color: #3b82f6;">
                 <div class="card-index">MOD-12</div>
                 <div class="card-icon">🖥️</div>
                 <div class="card-title">Inspection & Cleaning<br>DCS HMI/OIS</div>
@@ -1288,7 +1283,7 @@
             </div>
 
             <!-- MOD-13 PM Conductivity -->
-            <div class="pm-card" data-area="boiler common" onclick="window.location.href='conductivity.html'">
+            <div class="pm-card" data-area="boiler common" onclick="window.location.href='conductivity.html'" style="--card-color: #0891b2;">
                 <div class="card-index">MOD-13</div>
                 <div class="card-icon">⚡</div>
                 <div class="card-title">PM<br>Conductivity</div>
@@ -1362,7 +1357,7 @@
             </div>
 
             <!-- MOD-14 Outage -->
-            <div class="pm-card" onclick="(function(){var p=prompt('🔒 Masukkan password untuk akses MOD-14 Outage:');if(p==='comingsoonbro'){window.location.href='outage-index.html';}else if(p!==null){alert('❌ Password salah!');}})()" style="cursor:pointer">
+            <div class="pm-card" onclick="(function(){var p=prompt('🔒 Masukkan password untuk akses MOD-14 Outage:');if(p==='comingsoonbro'){window.location.href='outage-index.html';}else if(p!==null){alert('❌ Password salah!');}})()" style="cursor:pointer;--card-color:#dc2626;">
                 <div class="card-index">MOD-14</div>
                 <div class="card-icon">🔧</div>
                 <div class="card-title">Outage<br>Maintenance</div>
