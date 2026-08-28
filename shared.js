@@ -1185,7 +1185,7 @@ function raResaveInPlace(modul, callback) {
 
 /* ── DB LIST (untuk history page) ── */
 function dbList(modul, callback) {
-  var path = SUPA_TABLE + '?select=id,modul,tanggal,pic,work_order,created_at,updated_at,status&order=updated_at.desc&limit=100';
+  var path = SUPA_TABLE + '?select=id,modul,tanggal,pic,work_order,created_at,updated_at,status,firebase_synced_at&order=updated_at.desc&limit=100';
   supaFetch('GET', path)
     .then(function(rows) {
       if (!modul) { callback(rows || []); return; }
@@ -1234,6 +1234,38 @@ function normalizeModul(name) {
   if (n.indexOf('HG')>=0 || n.indexOf('MERCURY')>=0) return 'PM_HG_ANALYZER';
   if (n.indexOf('PH')>=0 || n.indexOf('TRANSMITTER')>=0 || n.indexOf('AIT')>=0 || n.indexOf('ANALYZER')>=0) return 'PH-ANALYZER';
   return n;
+}
+
+/* ── MODUL -> URL HALAMAN ──
+   Versi kanonis (dulu ada 2 salinan identik di history.html & submit-report.html
+   yang gampang nyimpang) -- dipakai history.html DAN raRetryPendingFirebaseSyncs()
+   (perlu tahu halaman modul mana yang harus dibuka lewat iframe tersembunyi
+   buat kirim ulang PDF yang belum sukses ke Firebase). */
+function raModulToUrl(modul, id) {
+  var norm = normalizeModul(modul);
+  if (norm === 'FEGT')               return 'fegt.html?id=' + id;
+  if (norm === 'CEMS_CALIBRATION')   return 'cems_calibration.html?id=' + id;
+  if (norm === 'SO2')                return 'so2.html?id=' + id;
+  if (norm === 'OPACITY')            return 'opacity.html?id=' + id;
+  if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id;
+  if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id;
+  if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id;
+  if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id;
+  if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id;
+  if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id;
+  if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id;
+  if (norm === 'COAL_SILO_LEVEL')    return 'coal-silo-level.html?id=' + id;
+  if (norm === 'CONDUCTIVITY')       return 'conductivity.html?id=' + id;
+  if (norm === 'FLOWMETER_FGD')      return 'flow-meter-fgd.html?id=' + id;
+  if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id;
+  if (norm === 'O2')                 return 'form_o2_report.html?id=' + id;
+  if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
+  if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
+  return 'index.html';
+}
+function raModulToPrintUrl(modul, id) {
+  var u = raModulToUrl(modul, id);
+  return u === 'index.html' ? u : (u + '&print=1');
 }
 
 /* ── FILE TYPE HELPERS ── */
@@ -2094,7 +2126,18 @@ function raResolveWorkflowSignatures(record, callback) {
    Approvals belum termuat (file firebase-config.js dkk hilang), fungsi ini
    diam-diam skip -- gagal kirim ke dashboard eksternal TIDAK BOLEH
    menggagalkan submit laporan itu sendiri (status Supabase sudah kepakai
-   duluan). */
+   duluan).
+   onDone(ok, err) OPSIONAL -- dipanggil persis SEKALI di setiap jalur
+   keluar (termasuk dua guard skip di atas), SETELAH proses kirim (yang
+   async: build PDF -> upload -> Firestore) benar-benar selesai/gagal --
+   BUKAN begitu fungsi ini dipanggil. Ini penting supaya caller (raSubmitReportCore,
+   dan raRetryPendingFirebaseSyncs lewat iframe tersembunyi) tahu KAPAN
+   aman menganggap pekerjaan ini selesai/menutup iframe-nya -- sebelumnya
+   caller melapor "selesai" seketika tanpa menunggu bagian ini, jadi kalau
+   dipanggil dari iframe tersembunyi (submit dari Riwayat / retry otomatis),
+   iframe-nya keburu dibuang SEBELUM PDF sempat ke-build & ke-upload,
+   sehingga laporan tercatat SUBMITTED di Supabase tapi TIDAK PERNAH sampai
+   ke Review Approval Dashboard. */
 var RA_ASSET_LABEL = {
   FEGT: 'FEGT 6 Monthly', SO2: 'SO2 Scrubber Inlet', O2: 'O2 Report',
   OPACITY: 'Opacity Monitor', CEMS_CALIBRATION: 'CEMS Calibration',
@@ -2106,17 +2149,45 @@ var RA_ASSET_LABEL = {
   MARK_VIE: 'Mark VIe Alarm & Module Inspection'
 };
 
-function raSendFinalPdfToFirebaseDashboard(record, submittedByName) {
+function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
+  function finish(ok, err) {
+    if (ok) {
+      // Tandai "sudah nyampe" -- dicek oleh raRetryPendingFirebaseSyncs()
+      // supaya record ini tidak dicoba kirim ulang lagi di kunjungan
+      // berikutnya. Fire-and-forget (RLS 008 mengizinkan ini untuk record
+      // yang statusnya SUBMITTED) -- gagal nulis kolom ini TIDAK dianggap
+      // gagal kirim (PDF-nya sendiri sudah beneran sampai di Firebase),
+      // paling buruk cuma dicoba kirim ulang (duplikat) lain kali.
+      supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
+        firebase_synced_at: new Date().toISOString(), firebase_sync_error: null
+      }).catch(function(){});
+    } else if (record && record.id) {
+      supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
+        firebase_sync_error: String((err && err.message) || err || 'gagal tidak diketahui').slice(0, 500)
+      }).catch(function(){});
+    }
+    if (onDone) onDone(ok, err);
+  }
   if (typeof window._raBuildPdf !== 'function') {
     console.warn('[raSendFinalPdfToFirebaseDashboard] window._raBuildPdf belum di-set modul ini, skip kirim ke Review Approval Dashboard.');
+    finish(false, 'window._raBuildPdf belum di-set modul ini.');
     return;
   }
   if (typeof firebase === 'undefined' || typeof DB === 'undefined' || typeof Approvals === 'undefined') {
     console.warn('[raSendFinalPdfToFirebaseDashboard] firebase-config.js/db-helper.js/approval-helper.js belum dimuat, skip kirim ke Review Approval Dashboard.');
+    finish(false, 'firebase-config.js/db-helper.js/approval-helper.js belum dimuat.');
     return;
   }
   var modKey = normalizeModul(record.modul) || record.modul || 'UNKNOWN';
-  var label = RA_ASSET_LABEL[modKey] || record.modul || modKey;
+  // Prioritaskan nama SPESIFIK yang benar-benar disimpan modul ybs
+  // (record.modul) -- SEBAGIAN BESAR modul sudah menyimpan nama tampilan
+  // yang bagus di sana (mis. 'FEGT & Leak Detection' vs 'FEGT 6 Monthly' --
+  // dua form BEDA yang keduanya di-normalizeModul() jadi satu bucket 'FEGT'
+  // untuk keperluan ROUTING/buka-file-mana, jadi TIDAK BOLEH dipakai lagi
+  // sebagai label tampilan, nanti dua form beda kekirim dengan nama yang
+  // sama). RA_ASSET_LABEL[record.modul] cuma buat modul yang nyimpan KODE
+  // singkat mentah sebagai modul (mis. 'O2', 'GENERATOR_STATOR_LEAK').
+  var label = RA_ASSET_LABEL[record.modul] || record.modul || RA_ASSET_LABEL[modKey] || modKey;
   window._raPdfCapture = function(doc) {
     DB.save({
       assetTag: modKey,
@@ -2134,10 +2205,11 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName) {
         submittedBy: submittedByName || ''
       });
     }).then(function(ok) {
-      if (ok) dbShowToast('✓ PDF terkirim ke Review Approval Dashboard');
-      else console.warn('[raSendFinalPdfToFirebaseDashboard] Approvals.submitWithFiles gagal, lihat console.');
+      if (ok) { dbShowToast('✓ PDF terkirim ke Review Approval Dashboard'); finish(true, null); }
+      else { console.warn('[raSendFinalPdfToFirebaseDashboard] Approvals.submitWithFiles gagal, lihat console.'); finish(false, 'Approvals.submitWithFiles mengembalikan gagal.'); }
     }).catch(function(err) {
       console.error('[raSendFinalPdfToFirebaseDashboard] gagal kirim:', err);
+      finish(false, err);
     });
   };
   window._raBuildPdf();
@@ -2157,8 +2229,14 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName) {
    confirm dulu) dan raSubmitReportAuto() (dipanggil headless dari iframe
    tersembunyi via history.html, TIDAK BOLEH nge-confirm karena usernya
    sudah konfirmasi di halaman histori sebelum iframe ini dibuka).
-   onDone(ok, err) opsional -- dipanggil di akhir, dipakai raSubmitReportAuto
-   buat lapor balik ke parent lewat postMessage. */
+   onDone(ok, err) opsional -- dipanggil PERSIS SEKALI, SETELAH status
+   Supabase ter-update DAN pengiriman PDF ke Firebase benar-benar
+   selesai/gagal (bukan begitu dikirim) -- dipakai raSubmitReportAuto buat
+   lapor balik ke parent lewat postMessage HANYA kalau pekerjaannya sudah
+   betul-betul tuntas, supaya history.html/raRetryPendingFirebaseSyncs
+   tidak membuang iframe-nya lebih awal (lihat catatan panjang di
+   raSendFinalPdfToFirebaseDashboard di atas -- ini bug lama yang
+   diperbaiki). */
 function raSubmitReportCore(onDone) {
   raUpdateRecord(window._editingId, {
     status: 'SUBMITTED',
@@ -2168,10 +2246,9 @@ function raSubmitReportCore(onDone) {
       if (onDone) onDone(false, err); else alert('Gagal submit: ' + err);
       return;
     }
-    dbShowToast('✓ Data Sudah Tersubmit ke Review Approval Dashboard');
+    dbShowToast('✓ Tersubmit, mengirim PDF ke Review Approval Dashboard...');
     if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
-    raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, (updated && updated.pic) || '');
-    if (onDone) onDone(true, null);
+    raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, (updated && updated.pic) || '', onDone);
   });
 }
 function raSubmitReport() {
@@ -2180,19 +2257,24 @@ function raSubmitReport() {
     return;
   }
   if (!confirm('Apakah data sudah lengkap? Yakin Submit?')) return;
-  raSubmitReportCore();
+  raSubmitReportCore(function(ok, err) {
+    if (!ok) dbShowToast('⚠️ Tersubmit, tapi belum terkirim ke Review Approval Dashboard (' + ((err && err.message) || err) + ') — akan dicoba otomatis lagi nanti.');
+  });
 }
 
 /* Submit HEADLESS dari history.html -- halaman modul ini dimuat di dalam
    iframe tersembunyi (lihat historySubmit() di history.html) dengan
-   ?id=xxx&autosubmit=1. Modul WAJIB panggil ini SETELAH window._raBuildPdf
-   di-set & data record selesai dimuat ke form (lihat contoh pemasangan di
-   "LOAD FROM HISTORY" tiap modul). Tidak pernah nge-confirm() (iframe-nya
-   invisible, dialog confirm() di dalam iframe akan aneh/membingungkan buat
-   user yang lagi lihat halaman histori) -- konfirmasi sudah terjadi satu
-   kali di history.html sebelum iframe ini dibuka. Selalu lapor balik ke
-   window.parent lewat postMessage, sukses maupun gagal, supaya tombol di
-   histori tidak nyangkut di "Sedang mensubmit...". */
+   ?id=xxx&autosubmit=1, ATAU dipanggil ulang otomatis oleh
+   raRetryPendingFirebaseSyncs() (lihat di bawah) untuk record yang SUDAH
+   SUBMITTED di Supabase tapi belum sukses terkirim ke Firebase di
+   percobaan sebelumnya (mis. tab/iframe keburu tertutup, jaringan putus).
+   Modul WAJIB panggil ini SETELAH window._raBuildPdf di-set & data record
+   selesai dimuat ke form (lihat contoh pemasangan di "LOAD FROM HISTORY"
+   tiap modul). Tidak pernah nge-confirm() (iframe-nya invisible, dialog
+   confirm() di dalam iframe akan aneh/membingungkan buat user) --
+   konfirmasi sudah terjadi satu kali di history.html sebelum iframe ini
+   dibuka. Selalu lapor balik ke window.parent lewat postMessage, sukses
+   maupun gagal, HANYA setelah proses benar-benar tuntas. */
 function raSubmitReportAuto() {
   function report(ok, err) {
     try {
@@ -2202,8 +2284,79 @@ function raSubmitReportAuto() {
     } catch (e) {}
   }
   if (!window._editingId) { report(false, 'Tidak ada draft tersimpan untuk laporan ini.'); return; }
-  raSubmitReportCore(report);
+  // Cek status TERKINI dulu (query ringan, TANPA kolom `data` yang berat) --
+  // kalau record ini SUDAH SUBMITTED (berarti dipanggil ulang buat retry,
+  // bukan submit pertama kali), JANGAN coba ubah status lagi: RLS
+  // "pm_records_submit_authenticated" cuma izinkan transisi DARI DRAFT,
+  // jadi re-update status SUBMITTED->SUBMITTED bakal ditolak RLS (0 baris
+  // ke-update, raUpdateRecord gagal). Cukup kirim ulang PDF-nya saja.
+  supaFetch('GET', SUPA_TABLE + '?id=eq.' + window._editingId + '&select=id,modul,tanggal,pic,work_order,status&limit=1')
+    .then(function(rows) {
+      var rec = rows && rows[0];
+      if (rec && String(rec.status || '').toUpperCase() === 'SUBMITTED') {
+        raSendFinalPdfToFirebaseDashboard(rec, rec.pic || '', report);
+        return;
+      }
+      raSubmitReportCore(report);
+    })
+    .catch(function() { raSubmitReportCore(report); }); // gagal cek status -- anggap belum submit, coba jalur normal
 }
+
+/* ── RETRY OTOMATIS: laporan SUBMITTED yang belum sukses terkirim ke
+   Review Approval Dashboard ──
+   Kalau tab/iframe kebetulan tertutup (atau jaringan putus) di tengah
+   proses kirim PDF setelah status Supabase sudah SUBMITTED, laporan itu
+   "nyangkut": sudah tercatat submit di Supabase tapi belum pernah sampai
+   ke dashboard. Fungsi ini dipanggil otomatis (lihat pemanggilan di akhir
+   file ini) SETIAP kali halaman mana pun di situs ini dibuka -- selama ada
+   koneksi, laporan yang nyangkut akan otomatis dicoba kirim ulang lewat
+   iframe tersembunyi yang membuka ulang halaman modulnya sendiri (persis
+   mekanisme "Submit dari Riwayat"), TANPA perlu user submit ulang manual.
+   Diproses SATU PER SATU (bukan sekaligus) supaya tidak membuka banyak
+   iframe/permintaan network bersamaan. Timeout per-record cuma jaring
+   pengaman (1 record macet tidak boleh menyandera antrian selamanya) --
+   BUKAN alasan untuk berhenti mencoba: selama firebase_synced_at masih
+   null, record itu akan dicoba lagi di kunjungan berikutnya. */
+var _raSyncQueueRunning = false;
+function raRetryPendingFirebaseSyncs() {
+  if (_raSyncQueueRunning) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  // Halaman ini sendiri sedang jadi "worker" submit/retry (dibuka lewat
+  // iframe tersembunyi) -- jangan ikut nge-scan/buka iframe baru lagi di
+  // dalam sini (cegah rekursi tak terkendali).
+  if (/[?&]autosubmit=1(&|$)/.test(location.search)) return;
+  _raSyncQueueRunning = true;
+  supaFetch('GET', SUPA_TABLE + '?select=id,modul&status=eq.SUBMITTED&firebase_synced_at=is.null&order=submitted_at.asc&limit=10')
+    .then(function(rows) { _raProcessSyncQueue(rows || [], 0); })
+    .catch(function() { _raSyncQueueRunning = false; });
+}
+function _raProcessSyncQueue(rows, idx) {
+  if (idx >= rows.length) { _raSyncQueueRunning = false; return; }
+  var row = rows[idx];
+  var url = typeof raModulToUrl === 'function' ? raModulToUrl(row.modul, row.id) : null;
+  if (!url || url === 'index.html') { _raProcessSyncQueue(rows, idx + 1); return; } // modul tidak dikenali, lewati baris ini
+  var iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  var done = false;
+  var timeoutId;
+  function onMsg(e) {
+    if (!e.data || e.data.type !== 'raAutosubmitDone' || String(e.data.id) !== String(row.id)) return;
+    finish();
+  }
+  function finish() {
+    if (done) return;
+    done = true;
+    clearTimeout(timeoutId);
+    window.removeEventListener('message', onMsg);
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    _raProcessSyncQueue(rows, idx + 1);
+  }
+  window.addEventListener('message', onMsg);
+  timeoutId = setTimeout(finish, 120000); // 2 menit -- jaring pengaman, BUKAN batas nyerah (lihat catatan di atas fungsi ini)
+  iframe.src = url + '&autosubmit=1';
+  document.body.appendChild(iframe);
+}
+setTimeout(raRetryPendingFirebaseSyncs, 3000);
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SIGNATURE PAD SYSTEM

@@ -57,62 +57,31 @@
 </div>
 
 <script>
-/* Mapping modul ke URL page */
-function modulToUrl(modul, id) {
-  var norm = normalizeModul(modul);
-  if (norm === 'FEGT')               return 'fegt.html?id=' + id;
-  if (norm === 'CEMS_CALIBRATION')   return 'cems_calibration.html?id=' + id;
-  if (norm === 'SO2')                return 'so2.html?id=' + id;
-  if (norm === 'OPACITY')            return 'opacity.html?id=' + id;
-  if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id;
-  if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id;
-  if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id;
-  if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id;
-  if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id;
-  if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id;
-  if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id;
-  if (norm === 'COAL_SILO_LEVEL')    return 'coal-silo-level.html?id=' + id;
-  if (norm === 'CONDUCTIVITY')       return 'conductivity.html?id=' + id;
-  if (norm === 'FLOWMETER_FGD')      return 'flow-meter-fgd.html?id=' + id;
-  if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id;
-  if (norm === 'O2')                 return 'form_o2_report.html?id=' + id;
-  if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
-  if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
-  return 'index.html';
-}
-
-function modulToPrintUrl(modul, id) {
-  var norm = normalizeModul(modul);
-  if (norm === 'FEGT')               return 'fegt.html?id=' + id + '&print=1';
-  if (norm === 'CEMS_CALIBRATION')   return 'cems_calibration.html?id=' + id + '&print=1';
-  if (norm === 'SO2')                return 'so2.html?id=' + id + '&print=1';
-  if (norm === 'OPACITY')            return 'opacity.html?id=' + id + '&print=1';
-  if (norm === 'BELT_E45')           return 'beltscale-e45.html?id=' + id + '&print=1';
-  if (norm === 'BELT_E23')           return 'beltscale-e23.html?id=' + id + '&print=1';
-  if (norm === 'BELT_B12')           return 'beltscale-b12.html?id=' + id + '&print=1';
-  if (norm === 'MAINTENANCE_REPORT') return 'maintenance_report_form.html?id=' + id + '&print=1';
-  if (norm === 'COAL_FEEDER')        return 'coal_feeder_calibration.html?id=' + id + '&print=1';
-  if (norm === 'DCS_HMI')            return 'dcs-hmi-inspection.html?id=' + id + '&print=1';
-  if (norm === 'PH-ANALYZER')        return 'ph-analyzer.html?id=' + id + '&print=1';
-  if (norm === 'COAL_SILO_LEVEL')    return 'coal-silo-level.html?id=' + id + '&print=1';
-  if (norm === 'CONDUCTIVITY')       return 'conductivity.html?id=' + id + '&print=1';
-  if (norm === 'FLOWMETER_FGD')      return 'flow-meter-fgd.html?id=' + id + '&print=1';
-  if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id + '&print=1';
-  if (norm === 'O2')                 return 'form_o2_report.html?id=' + id + '&print=1';
-  if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id + '&print=1';
-  if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id + '&print=1';
-  return 'index.html';
-}
+/* Mapping modul ke URL page -- sekarang di shared.js (raModulToUrl/
+   raModulToPrintUrl), dipakai juga oleh raRetryPendingFirebaseSyncs().
+   Alias nama lokal dipertahankan supaya baris lain di file ini tidak perlu
+   diubah. */
+function modulToUrl(modul, id) { return raModulToUrl(modul, id); }
+function modulToPrintUrl(modul, id) { return raModulToPrintUrl(modul, id); }
 
 /* Badge status laporan -- alur Checker/Reviewer/SPV sudah dihapus, jadi
    status yang ada sekarang cuma DRAFT (belum submit) dan SUBMITTED (sudah
-   dikirim ke Review Approval Dashboard). Status lama (CHECKED/RETURNED/
+   diminta kirim ke Review Approval Dashboard). Status lama (CHECKED/RETURNED/
    FINAL_APPROVED) masih mungkin nempel di data lama sebelum revert ini --
    fallback ke DRAFT lewat historyStatusBadge() kalau ketemu. */
 var HISTORY_STATUS_MAP = {
   DRAFT:     { label: 'Draft',     bg: '#fef3c7', fg: '#92400e' }, // kuning
   SUBMITTED: { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' }  // biru
 };
+/* SUBMITTED tidak selalu berarti sudah beneran nyampe di Firebase --
+   firebase_synced_at null berarti masih diproses/dicoba ulang di latar
+   belakang oleh raRetryPendingFirebaseSyncs() (shared.js). Badge kedua ini
+   kasih tahu bedanya tanpa bikin user panik "gagal" padahal cuma nunggu. */
+function historyFirebaseBadge(status, firebaseSyncedAt) {
+  if ((status || 'DRAFT').toUpperCase() !== 'SUBMITTED') return '';
+  if (firebaseSyncedAt) return '<span style="display:inline-block;margin-left:4px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:#d1fae5;color:#065f46">✓ Dashboard</span>';
+  return '<span style="display:inline-block;margin-left:4px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:#f3f4f6;color:#6b7280" title="Belum sukses terkirim ke Review Approval Dashboard -- otomatis dicoba lagi di latar belakang selama ada koneksi">⏳ Menyusul</span>';
+}
 function historyStatusBadge(status) {
   var s = HISTORY_STATUS_MAP[(status || 'DRAFT').toUpperCase()] || HISTORY_STATUS_MAP.DRAFT;
   return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'">'+s.label+'</span>';
@@ -146,7 +115,7 @@ function loadHistory(modul) {
         '<td>'+(r.tanggal||'-')+'</td>'+
         '<td>'+(r.pic||'-')+'</td>'+
         '<td>'+(r.work_order||'-')+'</td>'+
-        '<td>'+historyStatusBadge(r.status)+'</td>'+
+        '<td>'+historyStatusBadge(r.status)+historyFirebaseBadge(r.status, r.firebase_synced_at)+'</td>'+
         '<td style="font-size:10px;color:var(--text3)">'+saved+'</td>'+
         '<td style="white-space:nowrap;text-align:right">'+
           submitBtn+
@@ -176,7 +145,16 @@ function historyDelete(id) {
    PDF ke Review Approval Dashboard) jalan persis seperti biasa di dalam
    iframe itu, cuma usernya tidak pernah melihat halamannya. Modul yang
    sudah selesai (sukses/gagal) lapor balik lewat postMessage
-   (raSubmitReportAuto() di shared.js), ditangkap oleh listener di bawah. */
+   (raSubmitReportAuto() di shared.js), ditangkap oleh listener di bawah --
+   BARU setelah PDF-nya benar-benar tuntas dikirim (bukan begitu status
+   Supabase ke-update), jadi iframe ini tidak akan dibuang sebelum
+   waktunya. Timeout di bawah cuma jaring pengaman kalau modulnya
+   benar-benar macet total -- KALAU kena timeout ATAU tab ini malah
+   ditutup usernya sebelum selesai, laporan TIDAK hilang: statusnya sudah
+   SUBMITTED di Supabase, dan raRetryPendingFirebaseSyncs() (shared.js)
+   akan otomatis mencoba mengirim ulang PDF-nya di kunjungan berikutnya ke
+   halaman mana pun, selama ada koneksi -- tanpa perlu submit ulang
+   manual. */
 var _histSubmitJobs = {}; // id -> {iframe, btn, timeoutId}
 
 function historySubmit(id, modul) {
@@ -192,8 +170,8 @@ function historySubmit(id, modul) {
   iframe.src = url + '&autosubmit=1';
 
   var timeoutId = setTimeout(function(){
-    historySubmitDone(id, false, 'Timeout -- modul tidak merespons dalam 45 detik.');
-  }, 45000);
+    historySubmitDone(id, false, 'Belum selesai dalam 3 menit -- kemungkinan koneksi lambat (banyak foto). Laporan TETAP tersubmit, akan otomatis dicoba lagi di latar belakang.');
+  }, 180000);
 
   _histSubmitJobs[id] = { iframe: iframe, btn: btn, timeoutId: timeoutId };
   document.body.appendChild(iframe);
@@ -214,15 +192,17 @@ function historySubmitDone(id, ok, err) {
       job.btn.style.opacity = '1';
     }
     dbShowToast('✓ Laporan berhasil disubmit ke Review Approval Dashboard');
-    setTimeout(function(){ loadHistory(''); }, 800); // refresh badge status jadi SUBMITTED
   } else {
-    if (job.btn) {
-      job.btn.disabled = false;
-      job.btn.textContent = '🔒 Submit';
-      job.btn.style.opacity = '1';
-    }
-    alert('Gagal submit: ' + (err || 'terjadi kesalahan tidak diketahui.'));
+    // Bisa dua hal: (a) status Supabase gagal ke-update sama sekali (jarang,
+    // biasanya jaringan putus di awal) -- tombol Submit akan muncul lagi
+    // setelah reload di bawah karena statusnya masih DRAFT, atau (b) status
+    // sudah SUBMITTED tapi kirim PDF-nya belum tuntas -- setelah reload,
+    // badge "⏳ Menyusul" muncul dan raRetryPendingFirebaseSyncs() yang
+    // melanjutkan otomatis. Tidak perlu dibedakan di sini -- reload di bawah
+    // akan menampilkan status yang sebenarnya.
+    dbShowToast('⏳ ' + (err || 'Belum selesai, akan dicoba lagi otomatis di latar belakang.'));
   }
+  setTimeout(function(){ loadHistory(''); }, 800); // refresh badge status/dashboard sesuai kondisi sebenarnya
 }
 
 window.addEventListener('message', function(e) {
