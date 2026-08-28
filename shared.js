@@ -2323,24 +2323,22 @@ var RA_ASSET_LABEL = {
   MARK_VIE: 'Mark VIe Alarm & Module Inspection'
 };
 
-/* ── PEMETAAN MODUL -> AREA (buat submittedBy sintetis, routing reviewer) ──
-   Review_Approval_Dashboard.html (Firebase, EenPutra) TIDAK me-routing
-   submission dari isi checksheet -- dia mencocokkan (name-match, case-
-   insensitive) field `submittedBy` ke akun `dashboard_users` (role
-   Teknisi) yang sudah didaftarkan dengan `team`+`area`, lalu area akun itu
-   yang dipakai buat nyocokkan ke TechOp2 (reviewer) mana yang meng-cover
-   area tsb (scopeOfApproval() di Review_Approval_Dashboard.html -- sudah
-   dicek ulang di source terbarunya, mekanismenya SAMA, tidak ada cara lain
-   berbasis assetTag/data). Repo itu punya OWNER LAIN (EenPutra) -- kita
-   TIDAK BOLEH/TIDAK BISA ubah kodenya, jadi satu-satunya cara nge-grup
-   TANPA bergantung siapa yang ngetik PIC/Checked By di form adalah pakai
-   4 identitas "Teknisi" sintetis di bawah, DIDAFTARKAN LEWAT UI dashboard
-   itu sendiri (data, bukan kode) -- lihat RA_AREA_SUBMITTER_NAME untuk
-   nama persisnya. Nama asli PIC/Checked By TETAP UTUH di PDF & Supabase
-   kita sendiri, yang diganti CUMA field submittedBy yang dikirim ke
-   Firebase. Modul yang TIDAK ada di peta ini (mis. Maintenance Report --
-   form generik, tidak terikat 1 area tetap) tetap pakai submittedByName
-   asli seperti sebelumnya.
+/* ── PEMETAAN MODUL -> AREA (routing eksplisit ke reviewer) ──
+   Versi lama: Review_Approval_Dashboard.html cuma bisa routing lewat
+   name-match `submittedBy` ke akun dashboard_users terdaftar, jadi kita
+   kirim identitas "Teknisi" SINTETIS per area (bukan nama asli) supaya
+   routing pasti benar -- lihat riwayat git kalau perlu detail pendekatan
+   lama ini.
+   SEKARANG: approval-helper.js (EenPutra) sudah menerima parameter
+   team/area/src eksplisit di Approvals.submitWithFiles(), dicek
+   scopeOfApproval() SEBELUM jatuh ke name-match -- jadi routing tidak lagi
+   perlu bergantung sama isi submittedBy sama sekali. submittedBy sekarang
+   bisa balik jadi NAMA ASLI (PIC/Checked By yang diketik user), tidak perlu
+   akun sintetis atau auto-provisioning apa pun lagi.
+   Modul yang TIDAK ada di peta ini (mis. Maintenance Report -- form
+   generik, tidak terikat 1 area tetap) kirim team/area sebagai undefined,
+   Firestore-nya jadi tidak punya key itu sama sekali, dan
+   Review_Approval_Dashboard.html fallback ke name-match seperti biasa.
    Kunci area di bawah ('boiler'/'turbine'/'common'/'wwtp') SENGAJA
    disamakan persis dengan value <option> filter Area di index.html --
    supaya cuma ada SATU kosakata area di seluruh repo, tidak nyimpang kalau
@@ -2352,83 +2350,16 @@ var RA_MODUL_AREA = {
   'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp',
   GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
 };
-var RA_AREA_SUBMITTER_NAME = {
-  boiler: 'PM Unit 7 - Boiler',
-  turbine: 'PM Unit 7 - Turbine',
-  common: 'PM Unit 7 - Common CHCB',
-  wwtp: 'PM Unit 7 - Common WWTP'
-};
-// Username Firestore (dashboard_users) per akun sintetis -- harus huruf
-// kecil/angka/titik/garis bawah/strip saja (aturan doRegister() di
-// Review_Approval_Dashboard.html), makanya beda dari RA_AREA_SUBMITTER_NAME.
-var RA_AREA_USERNAME = {
-  boiler: 'pm-unit7-boiler',
-  turbine: 'pm-unit7-turbine',
-  common: 'pm-unit7-chcb',
-  wwtp: 'pm-unit7-wwtp'
-};
 // Nilai AREA PERSIS seperti pilihan checkbox Register di
 // Review_Approval_Dashboard.html (TEAM_AREAS.C7 di file itu) -- kalau
-// mereka ganti label/ejaan area C7, samakan lagi di sini.
+// mereka ganti label/ejaan area C7, samakan lagi di sini. Dikirim sebagai
+// parameter `area` eksplisit ke Approvals.submitWithFiles().
 var RA_AREA_LABEL_C7 = {
   boiler: 'Boiler',
   turbine: 'Turbine',
   common: 'Common (CHCB)',
   wwtp: 'Common (WWTP-Ashdisposal)'
 };
-
-/* ── AUTO-PROVISION AKUN AREA DI dashboard_users (Firestore, Review
-   Approval Dashboard) ──
-   Daripada berharap 4 akun ini didaftarkan MANUAL lewat form Register
-   dashboard itu (rawan typo/salah role/area, dan tidak bisa kita cek dari
-   sini kalau meleset), shared.js langsung MEMASTIKAN dokumennya ADA di
-   collection `dashboard_users`, persis bentuk yang dihasilkan
-   doRegister()-nya sendiri: { username, password (hash sha256 -- akun ini
-   TIDAK PERNAH dipakai login manual jadi isinya bebas), role:'technician'
-   (tidak butuh kode akses admin, beda dari techop2/supervisor),
-   name, team:'C7', area:[satu string sesuai RA_AREA_LABEL_C7], createdAt }.
-   Firestore rules project itu open (write:true) buat collection ini --
-   sama seperti yang dipakai form Register publik mereka sendiri, jadi
-   aman ditulis dari client biasa seperti kita tanpa kredensial admin.
-   Idempoten (cek `username` dulu via query, baru `.add()` kalau belum
-   ketemu) & fire-and-forget -- dipanggil tiap mau kirim PDF, TIDAK PERNAH
-   ditunggu (await) atau menggagalkan proses submit kalau gagal (offline,
-   rules berubah, dst -- cukup di-log ke console). */
-var _raAreaAccountEnsured = {}; // areaKey -> true sekali sukses per page load, jangan query ulang tiap submit
-function raHashPassSha256(str) {
-  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(function(buf) {
-    return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
-  });
-}
-function raEnsurePmUnit7AreaAccount(areaKey) {
-  if (!areaKey || _raAreaAccountEnsured[areaKey]) return;
-  if (typeof db === 'undefined' || typeof firebase === 'undefined') return; // firebase-config.js belum dimuat
-  var username = RA_AREA_USERNAME[areaKey];
-  var name = RA_AREA_SUBMITTER_NAME[areaKey];
-  var area = RA_AREA_LABEL_C7[areaKey];
-  if (!username || !name || !area) return;
-  db.collection('dashboard_users').where('username', '==', username).limit(1).get()
-    .then(function(snap) {
-      if (!snap.empty) { _raAreaAccountEnsured[areaKey] = true; return; }
-      return raHashPassSha256('pm-unit7-' + username + '-' + Date.now()).then(function(hashed) {
-        return db.collection('dashboard_users').add({
-          username: username,
-          password: hashed,
-          role: 'technician',
-          name: name,
-          team: 'C7',
-          area: [area],
-          createdAt: new Date().toISOString()
-        });
-      }).then(function() {
-        _raAreaAccountEnsured[areaKey] = true;
-        console.log('[raEnsurePmUnit7AreaAccount] akun "' + name + '" (area: ' + area + ') dibuat di dashboard_users.');
-      });
-    })
-    .catch(function(err) {
-      console.warn('[raEnsurePmUnit7AreaAccount] gagal memastikan akun "' + name + '" ada, akan dicoba lagi lain kali:', err);
-    });
-}
 
 function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   function finish(ok, err) {
@@ -2469,18 +2400,12 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   // sama). RA_ASSET_LABEL[record.modul] cuma buat modul yang nyimpan KODE
   // singkat mentah sebagai modul (mis. 'O2', 'GENERATOR_STATOR_LEAK').
   var label = RA_ASSET_LABEL[record.modul] || record.modul || RA_ASSET_LABEL[modKey] || modKey;
-  // Lihat catatan RA_MODUL_AREA di atas -- ganti submittedBy jadi identitas
-  // sintetis per area kalau modul ini sudah dipetakan, supaya routing
-  // reviewer PASTI ikut area modulnya, bukan tergantung nama PIC/Checked
-  // By yang diketik user. Modul yang belum dipetakan (mis. Maintenance
-  // Report) tetap pakai nama asli seperti sebelumnya.
+  // Nama PIC/Checked By ASLI -- lihat catatan RA_MODUL_AREA di atas,
+  // routing reviewer sekarang lewat parameter team/area eksplisit di
+  // Approvals.submitWithFiles(), bukan lagi lewat name-match submittedBy,
+  // jadi tidak perlu diganti identitas sintetis lagi.
+  var effectiveSubmittedBy = submittedByName || record.pic || '';
   var areaKey = RA_MODUL_AREA[modKey];
-  var effectiveSubmittedBy = areaKey ? RA_AREA_SUBMITTER_NAME[areaKey] : (submittedByName || '');
-  // Fire-and-forget: pastikan akun dashboard_users buat area ini ADA
-  // (lihat raEnsurePmUnit7AreaAccount di atas) -- tidak pernah ditunggu,
-  // karena urutan penulisan dengan submission-nya sendiri tidak penting
-  // (reviewer baru baca keduanya belakangan, bukan langsung detik ini).
-  raEnsurePmUnit7AreaAccount(areaKey);
   // Ditemukan laporan yang macet TANPA PERNAH melapor sukses ATAU gagal
   // (firebase_synced_at dan firebase_sync_error dua-duanya kosong selamanya)
   // -- root cause paling mungkin: fetch() ke Apps Script Drive proxy milik
@@ -2515,7 +2440,14 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
         assetTag: modKey,
         assetName: label,
         checksheetFile: location.pathname.split('/').pop(),
-        submittedBy: effectiveSubmittedBy
+        submittedBy: effectiveSubmittedBy,
+        // Routing eksplisit (lihat catatan RA_MODUL_AREA) -- undefined
+        // untuk modul yang belum dipetakan, supaya Firestore-nya tidak
+        // punya key ini sama sekali dan scopeOfApproval() fallback ke
+        // name-match seperti biasa.
+        team: areaKey ? 'C7' : undefined,
+        area: areaKey ? RA_AREA_LABEL_C7[areaKey] : undefined,
+        src: 'PM Unit 7'
       // 3 menit (bukan cuma 45 detik) -- PDF checksheet dengan banyak foto
       // (mis. Coal Feeder + 4000 Hours Mill) hasil PDF-nya besar, upload
       // base64-nya ke Apps Script Drive proxy bisa genuinely butuh lebih
