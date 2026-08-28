@@ -27,6 +27,12 @@
     </div>
   </div>
 
+  <div class="tab-bar">
+    <button class="tab-btn active" id="histTabBtnList" onclick="switchHistTab('list')">📋 Riwayat</button>
+    <button class="tab-btn" id="histTabBtnAreaMap" onclick="switchHistTab('areamap')">🗺️ Pemetaan Area</button>
+  </div>
+
+  <div class="tab-content active" id="histTabList">
   <div class="panel">
     <div class="section-label">Filter Modul</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
@@ -52,6 +58,22 @@
     <div id="historyList" style="overflow-x:auto">
       <div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Memuat...</div>
     </div>
+  </div>
+  </div>
+
+  <div class="tab-content" id="histTabAreaMap">
+  <div class="panel">
+    <div class="section-label">Pemetaan Modul → Area → Review Approval Dashboard</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6">
+      Review Approval Dashboard (Firebase, punya EenPutra) me-routing laporan ke TechOp2 (reviewer)
+      berdasarkan siapa yang terdaftar meng-cover satu area, dicocokkan lewat field <code>submittedBy</code> —
+      bukan berdasarkan isi checksheet. Supaya laporan tiap modul PASTI masuk ke reviewer area yang benar
+      (bukan tergantung siapa yang ngetik PIC/Checked By di form), tiap modul yang sudah dipetakan di bawah
+      ini dikirim dengan identitas <code>submittedBy</code> sintetis sesuai areanya — nama PIC/Checked By asli
+      tetap utuh di PDF &amp; riwayat sini, cuma field pengiriman ke Firebase yang diganti.
+    </div>
+    <div id="areaMapList"></div>
+  </div>
   </div>
 
 </div>
@@ -145,6 +167,55 @@ function loadHistory(modul) {
     html += '</tbody></table>';
     container.innerHTML = html;
   });
+}
+
+function switchHistTab(tab) {
+  document.getElementById('histTabBtnList').classList.toggle('active', tab === 'list');
+  document.getElementById('histTabBtnAreaMap').classList.toggle('active', tab === 'areamap');
+  document.getElementById('histTabList').classList.toggle('active', tab === 'list');
+  document.getElementById('histTabAreaMap').classList.toggle('active', tab === 'areamap');
+  if (tab === 'areamap') renderAreaMapping();
+}
+
+/* Render tab "Pemetaan Area" -- baca LANGSUNG dari RA_MODUL_AREA/
+   RA_AREA_SUBMITTER_NAME/RA_ASSET_LABEL di shared.js (satu-satunya sumber
+   data, tidak diduplikasi ke sini) supaya kalau pemetaannya diubah di sana,
+   tab ini otomatis ikut berubah tanpa perlu disentuh lagi. */
+function renderAreaMapping() {
+  var container = document.getElementById('areaMapList');
+  if (!container || typeof RA_ASSET_LABEL === 'undefined') return;
+  var areaOrder = ['boiler', 'turbine', 'common', 'wwtp'];
+  var areaLabel = { boiler: 'Boiler', turbine: 'Turbine', common: 'Common CHCB', wwtp: 'Common WWTP' };
+  var byArea = {};
+  var unmapped = [];
+  Object.keys(RA_ASSET_LABEL).forEach(function(key) {
+    var area = (typeof RA_MODUL_AREA !== 'undefined') ? RA_MODUL_AREA[key] : null;
+    if (!area) { unmapped.push(key); return; }
+    (byArea[area] = byArea[area] || []).push(key);
+  });
+  var html = '';
+  areaOrder.forEach(function(area) {
+    var mods = byArea[area] || [];
+    var submitterName = (typeof RA_AREA_SUBMITTER_NAME !== 'undefined') ? RA_AREA_SUBMITTER_NAME[area] : '-';
+    html += '<div style="margin-bottom:20px">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+        '<span style="font-weight:700;font-size:13px">' + areaLabel[area] + '</span>' +
+        '<span style="font-size:10.5px;color:var(--text3)">→ dikirim sebagai <code>' + submitterName + '</code></span>' +
+      '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+      (mods.length
+        ? mods.map(function(k){ return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;background:#eef2f6;color:var(--text-mid,#334155)">' + RA_ASSET_LABEL[k] + '</span>'; }).join('')
+        : '<span style="font-size:11px;color:var(--text3)">(belum ada modul)</span>') +
+      '</div></div>';
+  });
+  if (unmapped.length) {
+    html += '<div style="margin-top:8px;padding-top:16px;border-top:1px dashed var(--panel-border)">' +
+      '<div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--text3)">Belum dipetakan ke area manapun (pakai nama PIC/Checked By asli apa adanya)</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+      unmapped.map(function(k){ return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e">' + RA_ASSET_LABEL[k] + '</span>'; }).join('') +
+      '</div></div>';
+  }
+  container.innerHTML = html;
 }
 
 function historyDelete(id) {
