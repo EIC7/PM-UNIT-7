@@ -2188,22 +2188,42 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   // sama). RA_ASSET_LABEL[record.modul] cuma buat modul yang nyimpan KODE
   // singkat mentah sebagai modul (mis. 'O2', 'GENERATOR_STATOR_LEAK').
   var label = RA_ASSET_LABEL[record.modul] || record.modul || RA_ASSET_LABEL[modKey] || modKey;
+  // Ditemukan laporan yang macet TANPA PERNAH melapor sukses ATAU gagal
+  // (firebase_synced_at dan firebase_sync_error dua-duanya kosong selamanya)
+  // -- root cause paling mungkin: fetch() ke Apps Script Drive proxy milik
+  // Review Approval Dashboard (storage-helper.js, server PIHAK LAIN, di
+  // luar kendali kita) macet/hang tanpa pernah resolve ATAU reject. Tanpa
+  // batas waktu di sisi kita, promise chain di bawah nunggu selamanya --
+  // satu-satunya yang menghentikannya adalah timeout 120 detik di
+  // _raProcessSyncQueue yang CUMA membuang iframe-nya (tidak sempat catat
+  // error apa pun ke firebase_sync_error), jadi kita tidak pernah tahu
+  // penyebab pastinya. raWithTimeout membungkus proses ini dengan batas
+  // waktu tegas supaya SELALU ada firebase_sync_error yang tercatat kalau
+  // macet lagi, bukan diam selamanya.
+  function raWithTimeout(promise, ms, stepLabel) {
+    return Promise.race([
+      promise,
+      new Promise(function(_, reject) {
+        setTimeout(function(){ reject(new Error(stepLabel + ' tidak merespons dalam ' + Math.round(ms/1000) + ' detik.')); }, ms);
+      })
+    ]);
+  }
   window._raPdfCapture = function(doc) {
-    DB.save({
+    raWithTimeout(DB.save({
       assetTag: modKey,
       assetName: label,
       woNumber: record.work_order || '',
       executionDate: record.tanggal || '',
       checkedBy: record.pic || ''
-    }).then(function(checksheetId) {
-      return Approvals.submitWithFiles(checksheetId, {
+    }), 30000, 'Menyimpan checksheet ke Firestore').then(function(checksheetId) {
+      return raWithTimeout(Approvals.submitWithFiles(checksheetId, {
         photos: null,
         pdfBuilder: function() { return Promise.resolve(doc); },
         assetTag: modKey,
         assetName: label,
         checksheetFile: location.pathname.split('/').pop(),
         submittedBy: submittedByName || ''
-      });
+      }), 45000, 'Upload PDF ke Google Drive (Review Approval Dashboard)');
     }).then(function(ok) {
       if (ok) { dbShowToast('✓ PDF terkirim ke Review Approval Dashboard'); finish(true, null); }
       else { console.warn('[raSendFinalPdfToFirebaseDashboard] Approvals.submitWithFiles gagal, lihat console.'); finish(false, 'Approvals.submitWithFiles mengembalikan gagal.'); }
