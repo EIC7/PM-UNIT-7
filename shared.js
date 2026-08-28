@@ -1702,7 +1702,17 @@ function skipCrop() {
 }
 
 function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUrl, caption, replaceIdx) {
-  var MAX_TOTAL = 1 * 1024 * 1024;
+  // Diturunkan dari 1MB -- laporan dengan BANYAK kelompok foto terpisah (mis.
+  // Coal Feeder Calibration: 17 kelompok evidence, masing-masing dijatah
+  // budget ini SENDIRI-SENDIRI) jadi PDF akhirnya besar totalnya (17 x 1MB =
+  // ~17MB + overhead PDF = ~19MB yang ditemukan user) meski tiap kelompok
+  // sudah benar terkompresi sesuai batasnya masing-masing. 500KB per
+  // kelompok menghasilkan total yang jauh lebih masuk akal untuk laporan
+  // banyak-section, kualitas tetap wajar untuk dilihat di layar/print biasa
+  // (resolusi tetap di-cap 1920px duluan, lihat MAX_DIMENSION di bawah --
+  // penurunan cap ini cuma mendorong kualitas JPEG turun sedikit lebih jauh
+  // di foto yang sudah padat, bukan resolusinya).
+  var MAX_TOTAL = 500 * 1024;
   // Cap resolusi maksimal SEBELUM kompresi kualitas dimulai. Foto kamera HP modern
   // biasanya 3000-4000px+ di sisi terpanjang, padahal di PDF foto ini paling besar
   // dicetak ~18cm lebar (lihat iePhotoDrawSize / maxPhotoW di tiap modul) -- di
