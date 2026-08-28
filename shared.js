@@ -255,7 +255,7 @@ function _photoCacheSet(fileId, dataUrl) {
 function _pmFetchDriveFileAsBase64(fileId) {
   return _photoCacheGet(fileId).then(function(cached) {
     if (cached) return cached;
-    return fetch(GDRIVE_WEB_APP_URL, {
+    var fetchPromise = fetch(GDRIVE_WEB_APP_URL, {
       method: 'POST',
       body: JSON.stringify({ token: GDRIVE_SECRET_TOKEN, action: 'get', fileId: fileId })
     }).then(function(res){ return res.json(); })
@@ -263,8 +263,19 @@ function _pmFetchDriveFileAsBase64(fileId) {
         var dataUrl = (result && result.success && result.imageBase64) ? result.imageBase64 : null;
         if (dataUrl) _photoCacheSet(fileId, dataUrl);
         return dataUrl;
-      })
-      .catch(function(){ return null; });
+      });
+    // 25 detik per foto -- SEBELUMNYA tidak ada batas waktu sama sekali di
+    // sini, jadi kalau proxy Drive kita macet buat SATU foto saja,
+    // Promise.all(jobs) di _pmRestoreBase64AfterLoad ikut nunggu selamanya,
+    // dbLoad() TIDAK PERNAH manggil callback-nya -- laporan yang punya
+    // banyak foto (jadi banyak job paralel) makin gampang kena ini kalau
+    // ada 1 saja yang macet. Kegagalan (termasuk timeout) sudah ditangani
+    // aman oleh .catch(()=>null) yang sama seperti sebelumnya -- foto itu
+    // dibiarkan kosong, TIDAK menggagalkan proses buka data lainnya.
+    return Promise.race([
+      fetchPromise,
+      new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 25000); })
+    ]).catch(function(){ return null; });
   });
 }
 
@@ -803,6 +814,62 @@ function pmInitGate() {
 // sinkron di atas, dalam satu eksekusi <script> yang sama), jadi aman
 // dipanggil langsung tanpa nunggu DOMContentLoaded.
 pmInitGate();
+
+/* ── JARING PENGAMAN TOTAL untuk halaman ?autosubmit=1 ──
+   Ditemukan laporan yang macet total di alur Submit dari Riwayat/retry
+   otomatis TANPA PERNAH lapor sukses maupun gagal, bahkan setelah
+   raSendFinalPdfToFirebaseDashboard() dikasih timeout eksplisit -- artinya
+   proses itu tidak pernah nyampe ke titik itu SAMA SEKALI (kemungkinan
+   besar ada error JS yang throw di suatu tempat sebelum sempat ke situ,
+   mis. di dbLoad()/pemulihan foto/generate PDF -- terutama untuk laporan
+   dengan data besar yang bisa bikin tab kehabisan memori). Dipasang
+   SEDINI MUNGKIN (baris-baris awal shared.js, sebelum kode lain di file
+   ini ATAU script modul sempat jalan) supaya menangkap error dari MANA
+   PUN di halaman ini, bukan cuma dari raSendFinalPdfToFirebaseDashboard.
+   window._raAutosubmitReport (dipakai raSubmitReportAuto() di bawah)
+   memastikan HANYA SATU laporan yang benar-benar terkirim ke
+   opener/parent, dari sumber mana pun yang pertama kali memicu (sukses
+   asli, error yang ketangkap normal, error JS tak terduga, promise gagal
+   tak tertangani, atau watchdog kalau semuanya diam lebih dari 4.5 menit). */
+(function() {
+  var params = new URLSearchParams(location.search);
+  if (params.get('autosubmit') !== '1') return; // cuma aktif di halaman yang memang dibuka buat submit otomatis
+  var reported = false;
+  window._raAutosubmitReport = function(ok, err) {
+    if (reported) return;
+    reported = true;
+    try {
+      var target = window.opener || ((window.parent && window.parent !== window) ? window.parent : null);
+      if (target) {
+        target.postMessage({
+          type: 'raAutosubmitDone',
+          id: window._editingId || params.get('id'),
+          ok: !!ok,
+          error: err ? String((err && err.message) || err) : null
+        }, '*');
+      }
+    } catch (e) {}
+    try {
+      if (window.opener && params.get('autoclose') === '1') {
+        setTimeout(function(){ try { window.close(); } catch (e) {} }, ok ? 1500 : 6000);
+      }
+    } catch (e) {}
+  };
+  window.addEventListener('error', function(e) {
+    window._raAutosubmitReport(false, 'JS error tak tertangkap: ' + (e && e.message || 'unknown') + (e && e.filename ? (' @' + e.filename + ':' + e.lineno) : ''));
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    var reason = e && e.reason;
+    window._raAutosubmitReport(false, 'Promise gagal tak tertangani: ' + String((reason && reason.message) || reason || 'unknown'));
+  });
+  // Watchdog -- kalau BENAR-BENAR tidak ada apa pun yang lapor dalam 4.5
+  // menit (lebih besar dari total timeout internal raSendFinalPdfToFirebaseDashboard:
+  // 30 detik + 3 menit = 3.5 menit), paksa lapor gagal supaya tab/tombol
+  // di sisi pemanggil TIDAK PERNAH nyangkut diam selamanya.
+  setTimeout(function() {
+    window._raAutosubmitReport(false, 'Watchdog: tidak ada aktivitas yang lapor selesai dalam 4.5 menit -- kemungkinan macet/tab kehabisan memori (data laporan ini mungkin besar).');
+  }, 270000);
+})();
 
 /* ── FORMAT TANGGAL/JAM LOKAL dari timestamp Supabase (UTC) ──
    r.updated_at/r.created_at dari Supabase itu UTC (mis. "...T03:08:12+00:00").
@@ -2309,20 +2376,22 @@ function raSubmitReport() {
    tuntas -- lalu tutup diri sendiri kalau dibuka sebagai tab biasa
    (?autoclose=1), supaya user tidak perlu menutup manual. */
 function raSubmitReportAuto() {
+  // report() cuma tipis membungkus window._raAutosubmitReport (dipasang
+  // SEDINI MUNGKIN di awal shared.js, lihat "JARING PENGAMAN TOTAL" di
+  // atas) -- itu satu-satunya jalur lapor balik sekarang, sudah otomatis
+  // dedupe (cuma laporan PERTAMA yang benar-benar terkirim, entah dari
+  // sini, dari error JS tak tertangkap, promise gagal, atau watchdog) dan
+  // sudah menangani window.opener/window.parent + autoclose. Fallback
+  // inline HANYA buat jaga-jaga kalau fungsi itu somehow belum sempat
+  // terpasang (mis. dipanggil sebelum shared.js selesai load -- seharusnya
+  // tidak pernah terjadi karena shared.js dimuat duluan, tapi lebih aman
+  // ada fallback daripada diam total).
   function report(ok, err) {
+    if (typeof window._raAutosubmitReport === 'function') { window._raAutosubmitReport(ok, err); return; }
     try {
       var target = (window.opener) ? window.opener : ((window.parent && window.parent !== window) ? window.parent : null);
       if (target) {
         target.postMessage({ type: 'raAutosubmitDone', id: window._editingId, ok: ok, error: err ? String(err.message || err) : null }, '*');
-      }
-    } catch (e) {}
-    // Tab biasa (window.open, bukan iframe) yang minta ditutup otomatis --
-    // dikasih jeda supaya toast/notifikasi terakhir sempat kebaca sekilas
-    // sebelum tabnya hilang, dan supaya kasus gagal sempat kebaca lebih
-    // lama (bukan langsung raib) kalau usernya kebetulan sedang melihat.
-    try {
-      if (window.opener && new URLSearchParams(location.search).get('autoclose') === '1') {
-        setTimeout(function(){ try { window.close(); } catch (e) {} }, ok ? 1500 : 5000);
       }
     } catch (e) {}
   }
