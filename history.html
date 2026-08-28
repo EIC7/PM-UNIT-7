@@ -70,30 +70,28 @@
 function modulToUrl(modul, id) { return raModulToUrl(modul, id); }
 function modulToPrintUrl(modul, id) { return raModulToPrintUrl(modul, id); }
 
-/* Badge status laporan -- alur Checker/Reviewer/SPV sudah dihapus, jadi
-   status yang ada sekarang cuma DRAFT (belum submit) dan SUBMITTED (sudah
-   diminta kirim ke Review Approval Dashboard). Status lama (CHECKED/RETURNED/
-   FINAL_APPROVED) masih mungkin nempel di data lama sebelum revert ini --
-   fallback ke DRAFT lewat historyStatusBadge() kalau ketemu. */
-/* SATU badge saja per laporan (dulu 2 badge terpisah -- "Submitted" +
-   "Menyusul" -- kesannya kontradiktif: kok sudah "Submitted" tapi masih
-   "menyusul"? Digabung supaya tulisannya sendiri sudah jelas tahapannya:
-     - DRAFT                         -> "Draft" (kuning)
-     - SUBMITTED, belum ada feedback -> "Submitted — Menunggu Feedback" (abu2,
-       masih diproses/dicoba ulang otomatis oleh raRetryPendingFirebaseSyncs
-       di shared.js, BUKAN berarti gagal)
-     - SUBMITTED, sudah confirmed    -> "✓ Tersubmit" (hijau, benar-benar
-       sudah sampai & tercatat di Review Approval Dashboard)
+/* Badge status laporan -- 4 tahap sesuai alur nyata di Review Approval
+   Dashboard (lihat historyRaStatusBadge untuk 3 tahap terakhir):
+     - Draft     (kuning) -- baru disimpan dari html modul, belum disubmit.
+     - Submitted (biru)   -- sudah disubmit DAN dapat feedback (confirmed
+       sampai di Review Approval Dashboard, firebase_synced_at terisi).
+       Ini juga default awal sebelum status Firestore yang lebih spesifik
+       (reviewed/approved) berhasil diambil -- lihat historyUpgradeStatusBadges.
+     - Reviewed  (kuning) -- sudah direview TechOp2, menunggu approval SPV.
+     - Approved  (hijau)  -- sudah disetujui SPV, tuntas.
+   Status transisi "SUBMITTED tapi firebase_synced_at belum terisi" (proses
+   pengiriman masih berjalan/dicoba ulang di background) bukan salah satu
+   dari 4 tahap ini -- tetap abu2 "Menunggu Feedback" seperti sebelumnya.
    Status lama (CHECKED/RETURNED/FINAL_APPROVED, alur Checker/Reviewer/SPV
-   yang sudah dihapus) masih mungkin nempel di data lama -- fallback ke
-   Draft. */
+   Supabase yang sudah dihapus total) masih mungkin nempel di data lama --
+   fallback ke Draft kalau ketemu. */
 function historyStatusBadge(status, firebaseSyncedAt) {
   var up = (status || 'DRAFT').toUpperCase();
   var s;
   if (up === 'SUBMITTED') {
     s = firebaseSyncedAt
-      ? { label: '✓ Tersubmit', bg: '#d1fae5', fg: '#065f46', title: 'Sudah dikonfirmasi sampai di Review Approval Dashboard.' }
-      : { label: '⏳ Submitted — Menunggu Feedback', bg: '#f3f4f6', fg: '#6b7280', title: 'Sudah disubmit dari sini, tapi belum ada konfirmasi sukses dari Review Approval Dashboard -- otomatis dicoba lagi di latar belakang selama ada koneksi. Bukan berarti gagal.' };
+      ? { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af', title: 'Sudah dikonfirmasi sampai di Review Approval Dashboard, menunggu direview.' }
+      : { label: '⏳ Menunggu Feedback', bg: '#f3f4f6', fg: '#6b7280', title: 'Sudah disubmit dari sini, tapi belum ada konfirmasi sukses dari Review Approval Dashboard -- otomatis dicoba lagi di latar belakang selama ada koneksi. Bukan berarti gagal.' };
   } else {
     s = { label: 'Draft', bg: '#fef3c7', fg: '#92400e', title: '' };
   }
@@ -198,14 +196,19 @@ function historyUpgradeStatusBadges(rows) {
   if (typeof _pmRunPool === 'function') _pmRunPool(tasks, 6);
   else tasks.forEach(function(t){ t(); });
 }
+/* 4 tahap: Draft (kuning, historyStatusBadge) -> Submitted (biru) ->
+   Reviewed (kuning) -> Approved (hijau). "returned_to_technician" bukan
+   salah satu dari 4 tahap itu (laporan dikembalikan, bukan maju ke tahap
+   berikutnya) -- tetap ditandai terpisah (merah) supaya tidak disangka
+   masih di tahap Reviewed biasa. */
 function historyRaStatusBadge(raStatus) {
   var map = {
-    submitted: { label: '✓ Menunggu Review', bg: '#d1fae5', fg: '#065f46' },
-    reviewed: { label: '👁 Menunggu Approval', bg: '#dbeafe', fg: '#1e40af' },
-    approved: { label: '✅ Disetujui', bg: '#dcfce7', fg: '#166534' },
+    submitted: { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' },
+    reviewed: { label: 'Reviewed', bg: '#fef3c7', fg: '#92400e' },
+    approved: { label: 'Approved', bg: '#dcfce7', fg: '#166534' },
     returned_to_technician: { label: '↩ Dikembalikan ke Teknisi', bg: '#fee2e2', fg: '#991b1b' }
   };
-  var s = map[raStatus] || { label: '✓ Tersubmit', bg: '#d1fae5', fg: '#065f46' };
+  var s = map[raStatus] || { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' };
   return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'" title="Status sungguhan dari Review Approval Dashboard.">'+s.label+'</span>';
 }
 
