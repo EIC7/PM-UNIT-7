@@ -2223,7 +2223,12 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
         assetName: label,
         checksheetFile: location.pathname.split('/').pop(),
         submittedBy: submittedByName || ''
-      }), 45000, 'Upload PDF ke Google Drive (Review Approval Dashboard)');
+      // 3 menit (bukan cuma 45 detik) -- PDF checksheet dengan banyak foto
+      // (mis. Coal Feeder + 4000 Hours Mill) hasil PDF-nya besar, upload
+      // base64-nya ke Apps Script Drive proxy bisa genuinely butuh lebih
+      // dari 1 menit. Timeout terlalu pendek justru bikin upload yang
+      // sebenarnya BAKAL SUKSES (cuma lambat) malah dianggap gagal duluan.
+      }), 180000, 'Upload PDF ke Google Drive (Review Approval Dashboard)');
     }).then(function(ok) {
       if (ok) { dbShowToast('✓ PDF terkirim ke Review Approval Dashboard'); finish(true, null); }
       else { console.warn('[raSendFinalPdfToFirebaseDashboard] Approvals.submitWithFiles gagal, lihat console.'); finish(false, 'Approvals.submitWithFiles mengembalikan gagal.'); }
@@ -2372,7 +2377,14 @@ function _raProcessSyncQueue(rows, idx) {
     _raProcessSyncQueue(rows, idx + 1);
   }
   window.addEventListener('message', onMsg);
-  timeoutId = setTimeout(finish, 120000); // 2 menit -- jaring pengaman, BUKAN batas nyerah (lihat catatan di atas fungsi ini)
+  // 4.5 menit -- HARUS lebih besar dari total timeout internal di
+  // raSendFinalPdfToFirebaseDashboard (30 detik simpan + 3 menit upload PDF
+  // = 3.5 menit) supaya laporan besar/banyak foto sempat dapat kesempatan
+  // melapor gagal dengan pesan error yang jelas SEBELUM iframe-nya dibuang
+  // paksa di sini. Ini jaring pengaman, BUKAN batas nyerah (lihat catatan
+  // di atas fungsi ini) -- record yang timeout di sini dicoba lagi di
+  // kunjungan berikutnya.
+  timeoutId = setTimeout(finish, 270000);
   iframe.src = url + '&autosubmit=1';
   document.body.appendChild(iframe);
 }

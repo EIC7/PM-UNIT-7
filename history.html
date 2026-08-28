@@ -179,9 +179,15 @@ function historySubmit(id, modul) {
   iframe.style.display = 'none';
   iframe.src = url + '&autosubmit=1';
 
+  // 4 menit -- HARUS lebih besar dari total timeout internal di
+  // raSendFinalPdfToFirebaseDashboard (shared.js: 30 detik simpan + 3
+  // menit upload PDF = 3.5 menit), supaya laporan besar/banyak foto (mis.
+  // Coal Feeder + 4000 Hours Mill) sempat dapat pesan error yang jelas dari
+  // sana duluan, bukan keburu dianggap "timeout" di sini padahal masih
+  // benar-benar berjalan.
   var timeoutId = setTimeout(function(){
-    historySubmitDone(id, false, 'Belum selesai dalam 3 menit -- kemungkinan koneksi lambat (banyak foto). Laporan TETAP tersubmit, akan otomatis dicoba lagi di latar belakang.');
-  }, 180000);
+    historySubmitDone(id, false, 'Belum selesai dalam 4 menit -- kemungkinan koneksi lambat (banyak foto). Laporan TETAP tersubmit, akan otomatis dicoba lagi di latar belakang.');
+  }, 240000);
 
   _histSubmitJobs[id] = { iframe: iframe, btn: btn, timeoutId: timeoutId };
   document.body.appendChild(iframe);
