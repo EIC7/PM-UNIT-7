@@ -69,22 +69,29 @@ function modulToPrintUrl(modul, id) { return raModulToPrintUrl(modul, id); }
    diminta kirim ke Review Approval Dashboard). Status lama (CHECKED/RETURNED/
    FINAL_APPROVED) masih mungkin nempel di data lama sebelum revert ini --
    fallback ke DRAFT lewat historyStatusBadge() kalau ketemu. */
-var HISTORY_STATUS_MAP = {
-  DRAFT:     { label: 'Draft',     bg: '#fef3c7', fg: '#92400e' }, // kuning
-  SUBMITTED: { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' }  // biru
-};
-/* SUBMITTED tidak selalu berarti sudah beneran nyampe di Firebase --
-   firebase_synced_at null berarti masih diproses/dicoba ulang di latar
-   belakang oleh raRetryPendingFirebaseSyncs() (shared.js). Badge kedua ini
-   kasih tahu bedanya tanpa bikin user panik "gagal" padahal cuma nunggu. */
-function historyFirebaseBadge(status, firebaseSyncedAt) {
-  if ((status || 'DRAFT').toUpperCase() !== 'SUBMITTED') return '';
-  if (firebaseSyncedAt) return '<span style="display:inline-block;margin-left:4px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:#d1fae5;color:#065f46">✓ Dashboard</span>';
-  return '<span style="display:inline-block;margin-left:4px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:#f3f4f6;color:#6b7280" title="Belum sukses terkirim ke Review Approval Dashboard -- otomatis dicoba lagi di latar belakang selama ada koneksi">⏳ Menyusul</span>';
-}
-function historyStatusBadge(status) {
-  var s = HISTORY_STATUS_MAP[(status || 'DRAFT').toUpperCase()] || HISTORY_STATUS_MAP.DRAFT;
-  return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'">'+s.label+'</span>';
+/* SATU badge saja per laporan (dulu 2 badge terpisah -- "Submitted" +
+   "Menyusul" -- kesannya kontradiktif: kok sudah "Submitted" tapi masih
+   "menyusul"? Digabung supaya tulisannya sendiri sudah jelas tahapannya:
+     - DRAFT                         -> "Draft" (kuning)
+     - SUBMITTED, belum ada feedback -> "Submitted — Menunggu Feedback" (abu2,
+       masih diproses/dicoba ulang otomatis oleh raRetryPendingFirebaseSyncs
+       di shared.js, BUKAN berarti gagal)
+     - SUBMITTED, sudah confirmed    -> "✓ Tersubmit" (hijau, benar-benar
+       sudah sampai & tercatat di Review Approval Dashboard)
+   Status lama (CHECKED/RETURNED/FINAL_APPROVED, alur Checker/Reviewer/SPV
+   yang sudah dihapus) masih mungkin nempel di data lama -- fallback ke
+   Draft. */
+function historyStatusBadge(status, firebaseSyncedAt) {
+  var up = (status || 'DRAFT').toUpperCase();
+  var s;
+  if (up === 'SUBMITTED') {
+    s = firebaseSyncedAt
+      ? { label: '✓ Tersubmit', bg: '#d1fae5', fg: '#065f46', title: 'Sudah dikonfirmasi sampai di Review Approval Dashboard.' }
+      : { label: '⏳ Submitted — Menunggu Feedback', bg: '#f3f4f6', fg: '#6b7280', title: 'Sudah disubmit dari sini, tapi belum ada konfirmasi sukses dari Review Approval Dashboard -- otomatis dicoba lagi di latar belakang selama ada koneksi. Bukan berarti gagal.' };
+  } else {
+    s = { label: 'Draft', bg: '#fef3c7', fg: '#92400e', title: '' };
+  }
+  return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'" title="'+s.title+'">'+s.label+'</span>';
 }
 
 function loadHistory(modul) {
@@ -105,11 +112,12 @@ function loadHistory(modul) {
       // Tombol Submit buat laporan yang masih DRAFT. Tombol Resubmit (beda
       // warna, oranye) khusus laporan yang SUDAH SUBMITTED tapi BELUM
       // sukses nyampe ke Review Approval Dashboard (firebase_synced_at
-      // masih kosong -- lihat historyFirebaseBadge "⏳ Menyusul") --
-      // raRetryPendingFirebaseSyncs() (shared.js) sudah otomatis coba kirim
-      // ulang di background tiap halaman dibuka, tombol ini cuma buat user
-      // yang mau langsung memicu percobaan tanpa nunggu. Begitu sudah
-      // sukses (badge jadi "✓ Dashboard"), tombol ini otomatis hilang lagi.
+      // masih kosong -- lihat historyStatusBadge "⏳ Submitted — Menunggu
+      // Feedback") -- raRetryPendingFirebaseSyncs() (shared.js) sudah
+      // otomatis coba kirim ulang di background tiap halaman dibuka,
+      // tombol ini cuma buat user yang mau langsung memicu percobaan tanpa
+      // nunggu. Begitu sudah sukses (badge jadi "✓ Tersubmit"), tombol ini
+      // otomatis hilang lagi.
       // id tombol dipakai historySubmit() buat update tulisan/nonaktifkan
       // tombol ini sendiri begitu proses (di iframe tersembunyi) selesai.
       var submitBtnId = 'histSubmitBtn-' + r.id;
@@ -125,7 +133,7 @@ function loadHistory(modul) {
         '<td>'+(r.tanggal||'-')+'</td>'+
         '<td>'+(r.pic||'-')+'</td>'+
         '<td>'+(r.work_order||'-')+'</td>'+
-        '<td>'+historyStatusBadge(r.status)+historyFirebaseBadge(r.status, r.firebase_synced_at)+'</td>'+
+        '<td>'+historyStatusBadge(r.status, r.firebase_synced_at)+'</td>'+
         '<td style="font-size:10px;color:var(--text3)">'+saved+'</td>'+
         '<td style="white-space:nowrap;text-align:right">'+
           submitBtn+
@@ -203,7 +211,7 @@ function historySubmitDone(id, ok, err) {
   if (ok) {
     if (job.btn) {
       job.btn.disabled = true;
-      job.btn.textContent = '✓ Submitted';
+      job.btn.textContent = '✓ Tersubmit';
       job.btn.style.background = 'var(--ok)';
       job.btn.style.opacity = '1';
     }
