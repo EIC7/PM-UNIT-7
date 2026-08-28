@@ -1349,17 +1349,28 @@ function raResaveInPlace(modul, callback) {
 
 /* ── DB LIST (untuk history page) ── */
 function dbList(modul, callback) {
-  var path = SUPA_TABLE + '?select=id,modul,tanggal,pic,work_order,created_at,updated_at,status,firebase_synced_at&order=updated_at.desc&limit=100';
-  supaFetch('GET', path)
-    .then(function(rows) {
-      if (!modul) { callback(rows || []); return; }
-      var normFilter = normalizeModul(modul);
-      var filtered = (rows || []).filter(function(r) {
-        return normalizeModul(r.modul) === normFilter;
-      });
-      callback(filtered);
-    })
-    .catch(function(){ callback([]); });
+  var BASE_COLS = 'id,modul,tanggal,pic,work_order,created_at,updated_at,status,firebase_synced_at';
+  function finishWith(rows) {
+    if (!modul) { callback(rows || []); return; }
+    var normFilter = normalizeModul(modul);
+    var filtered = (rows || []).filter(function(r) {
+      return normalizeModul(r.modul) === normFilter;
+    });
+    callback(filtered);
+  }
+  // firebase_checksheet_id baru ada setelah migration 010 dijalankan --
+  // PostgREST menolak SELURUH query select=... kalau ada 1 kolom yang belum
+  // ada, bukan cuma mengabaikannya. Coba select LENGKAP dulu (buat baca
+  // status review/approval sungguhan di historyUpgradeStatusBadges), kalau
+  // gagal (migration belum jalan) baru ulang tanpa kolom itu -- supaya
+  // Riwayat tidak ikut rusak total gara-gara 1 kolom baru belum ada.
+  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id&order=updated_at.desc&limit=100')
+    .then(finishWith)
+    .catch(function() {
+      supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + '&order=updated_at.desc&limit=100')
+        .then(finishWith)
+        .catch(function(){ callback([]); });
+    });
 }
 
 /* ── NORMALIZE MODUL NAME ── */
@@ -2362,17 +2373,34 @@ var RA_AREA_LABEL_C7 = {
 };
 
 function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
+  var _raLastChecksheetId = null; // diisi begitu DB.save() sukses, lihat window._raPdfCapture di bawah
   function finish(ok, err) {
     if (ok) {
       // Tandai "sudah nyampe" -- dicek oleh raRetryPendingFirebaseSyncs()
       // supaya record ini tidak dicoba kirim ulang lagi di kunjungan
-      // berikutnya. Fire-and-forget (RLS 008 mengizinkan ini untuk record
+      // berikutnya. Fire-and-forget (RLS 009 mengizinkan ini untuk record
       // yang statusnya SUBMITTED) -- gagal nulis kolom ini TIDAK dianggap
       // gagal kirim (PDF-nya sendiri sudah beneran sampai di Firebase),
       // paling buruk cuma dicoba kirim ulang (duplikat) lain kali.
       supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
         firebase_synced_at: new Date().toISOString(), firebase_sync_error: null
       }).catch(function(){});
+      // firebase_checksheet_id disimpan TERPISAH (bukan digabung ke PATCH di
+      // atas) SENGAJA -- kolom ini baru ada setelah migration 010 dijalankan;
+      // kalau digabung jadi satu request dan kolomnya belum ada, PostgREST
+      // menolak SELURUH PATCH (termasuk firebase_synced_at yang sudah lama
+      // jalan) karena satu kolom tak dikenal, bukan cuma mengabaikan field
+      // itu. Dipisah supaya migration 010 yang telat dijalankan tidak
+      // meregresi fitur sync-tracking yang sudah ada. history.html
+      // (historyUpgradeStatusBadges) pakai kolom ini buat baca balik status
+      // review/approval SUNGGUHAN lewat Approvals.getByChecksheetId() --
+      // sebelum ini checksheetId cuma dipakai sekali pakai di memory lalu
+      // dibuang, history.html cuma pernah tahu "sudah terkirim".
+      if (_raLastChecksheetId) {
+        supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
+          firebase_checksheet_id: _raLastChecksheetId
+        }).catch(function(){});
+      }
     } else if (record && record.id) {
       supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
         firebase_sync_error: String((err && err.message) || err || 'gagal tidak diketahui').slice(0, 500)
@@ -2434,6 +2462,7 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
       executionDate: record.tanggal || '',
       checkedBy: record.pic || ''
     }), 30000, 'Menyimpan checksheet ke Firestore').then(function(checksheetId) {
+      _raLastChecksheetId = checksheetId;
       return raWithTimeout(Approvals.submitWithFiles(checksheetId, {
         photos: null,
         pdfBuilder: function() { return Promise.resolve(doc); },
