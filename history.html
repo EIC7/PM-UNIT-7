@@ -148,10 +148,10 @@ function loadHistory(modul) {
         '<td>'+(r.work_order||'-')+'</td>'+
         '<td>'+historyStatusBadge(r.status)+'</td>'+
         '<td style="font-size:10px;color:var(--text3)">'+saved+'</td>'+
-        '<td style="white-space:nowrap">'+
+        '<td style="white-space:nowrap;text-align:right">'+
+          submitBtn+
           '<button onclick="window.location.href=\''+openUrl+'\'" style="padding:4px 10px;font-size:11px;background:var(--ok);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#9998; Buka</button>'+
           '<button onclick="window.open(\''+printUrl+'\',\'_blank\')" style="padding:4px 10px;font-size:11px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128438; Print</button>'+
-          submitBtn+
           delBtn+
         '</td></tr>';
     });
