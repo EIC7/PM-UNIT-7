@@ -821,7 +821,7 @@ function renderTable() {
   page.forEach(function(r, i) {
     var no   = start + i + 1;
     var dt   = r.tanggal || (r.created_at ? r.created_at.substring(0,10) : '-');
-    var saved= r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : (r.created_at ? r.created_at.substring(0,16).replace('T',' ') : '-');
+    var saved= r.updated_at ? dbFmtLocalDateTime(r.updated_at) : dbFmtLocalDateTime(r.created_at);
 
     var badgeClass = r._source === 'asset' ? 'badge-asset' : 'badge-check';
     var badgeLabel = r._source === 'asset' ? 'DATA ASSET' : (r.modul || 'CHECKSHEET');
@@ -919,8 +919,8 @@ function openDetail(idx) {
     {label:'Lokasi',        val: r.lokasi || '—'},
     {label:'PIC',           val: r.pic || '—'},
     {label:'Tanggal',       val: r.tanggal || '—'},
-    {label:'Dibuat',        val: r.created_at ? r.created_at.substring(0,16).replace('T',' ') : '—'},
-    {label:'Diperbarui',    val: r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : '—'},
+    {label:'Dibuat',        val: dbFmtLocalDateTime(r.created_at) === '-' ? '—' : dbFmtLocalDateTime(r.created_at)},
+    {label:'Diperbarui',    val: dbFmtLocalDateTime(r.updated_at) === '-' ? '—' : dbFmtLocalDateTime(r.updated_at)},
   ];
 
   var grid = document.getElementById('detailGrid');

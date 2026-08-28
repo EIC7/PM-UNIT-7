@@ -804,6 +804,21 @@ function pmInitGate() {
 // dipanggil langsung tanpa nunggu DOMContentLoaded.
 pmInitGate();
 
+/* ── FORMAT TANGGAL/JAM LOKAL dari timestamp Supabase (UTC) ──
+   r.updated_at/r.created_at dari Supabase itu UTC (mis. "...T03:08:12+00:00").
+   Beberapa halaman (history.html, outage-history.html) dulu cuma
+   substring(0,16) mentah tanpa dikonversi -- jamnya kelihatan mundur
+   sejumlah selisih timezone (7 jam buat WIB). new Date() + getter lokal di
+   sini otomatis ikut timezone perangkat/browser yang buka halaman. */
+function dbFmtLocalDateTime(iso) {
+  if (!iso) return '-';
+  try {
+    var d = new Date(iso);
+    var pad = function(n){ return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  } catch (e) { return iso; }
+}
+
 /* ── TOAST NOTIFICATION ── */
 function dbShowToast(msg) {
   var t = document.getElementById('dbToast');

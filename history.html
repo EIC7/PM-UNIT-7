@@ -129,7 +129,7 @@ function loadHistory(modul) {
     var html = '<table class="manual-table" style="width:100%;font-size:12px">'+
       '<thead><tr><th>Modul</th><th>Tanggal</th><th>PIC</th><th>Work Order</th><th>Status</th><th>Disimpan</th><th>Aksi</th></tr></thead><tbody>';
     rows.forEach(function(r) {
-      var saved = r.updated_at ? r.updated_at.substring(0,16).replace('T',' ') : '-';
+      var saved = dbFmtLocalDateTime(r.updated_at);
       var openUrl = modulToUrl(r.modul, r.id);
       var printUrl = modulToPrintUrl(r.modul, r.id);
       var delBtn = '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>';
