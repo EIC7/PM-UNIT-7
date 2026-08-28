@@ -157,35 +157,45 @@ function historyDelete(id) {
     .catch(function(err){ alert('Gagal hapus: ' + (err.message||err)); });
 }
 
-/* ── SUBMIT LANGSUNG DARI RIWAYAT (tanpa buka tab baru) ──
-   Halaman modul aslinya dimuat di iframe TERSEMBUNYI (?id=xxx&autosubmit=1)
-   -- semua proses (load data, generate PDF, update status Supabase, kirim
-   PDF ke Review Approval Dashboard) jalan persis seperti biasa di dalam
-   iframe itu, cuma usernya tidak pernah melihat halamannya. Modul yang
-   sudah selesai (sukses/gagal) lapor balik lewat postMessage
-   (raSubmitReportAuto() di shared.js), ditangkap oleh listener di bawah --
-   BARU setelah PDF-nya benar-benar tuntas dikirim (bukan begitu status
-   Supabase ke-update), jadi iframe ini tidak akan dibuang sebelum
-   waktunya. Timeout di bawah cuma jaring pengaman kalau modulnya
-   benar-benar macet total -- KALAU kena timeout ATAU tab ini malah
-   ditutup usernya sebelum selesai, laporan TIDAK hilang: statusnya sudah
-   SUBMITTED di Supabase, dan raRetryPendingFirebaseSyncs() (shared.js)
-   akan otomatis mencoba mengirim ulang PDF-nya di kunjungan berikutnya ke
-   halaman mana pun, selama ada koneksi -- tanpa perlu submit ulang
-   manual. */
-var _histSubmitJobs = {}; // id -> {iframe, btn, timeoutId}
+/* ── SUBMIT LANGSUNG DARI RIWAYAT (tab biasa, bukan iframe tersembunyi) ──
+   Versi awal fitur ini pakai iframe TERSEMBUNYI (display:none) supaya
+   usernya tidak perlu lihat halaman modulnya sama sekali. Ternyata itu
+   JADI MASALAH di HP: browser mobile (terutama Chrome Android) membatasi/
+   menunda aktivitas jaringan di iframe/tab yang TIDAK TERLIHAT untuk hemat
+   baterai -- akibatnya upload PDF ke Review Approval Dashboard bisa
+   nyangkut TANPA PERNAH selesai (sukses maupun gagal) selama iframe-nya
+   tersembunyi, bahkan dengan timeout sekalipun (timeout-nya sendiri bisa
+   ikut tertunda kalau tab/iframe sedang di-throttle browser).
+   Sekarang pakai window.open() -- tab BIASA yang kelihatan -- supaya
+   prosesnya jalan di tab yang aktif/foreground, tidak kena pembatasan itu.
+   Tab itu otomatis menutup diri sendiri begitu selesai (lihat autoclose=1
+   di raSubmitReportAuto(), shared.js), jadi user tetap tidak perlu
+   menutup manual, cuma akan melihat sekilas tab itu terbuka lalu tertutup
+   sendiri. Modul yang sudah selesai (sukses/gagal) lapor balik lewat
+   postMessage ke window.opener, ditangkap oleh listener di bawah -- BARU
+   setelah PDF-nya benar-benar tuntas dikirim, bukan begitu status Supabase
+   ke-update. Timeout di bawah cuma jaring pengaman kalau modulnya
+   benar-benar macet total -- KALAU kena timeout ATAU tabnya ditutup
+   usernya sebelum selesai, laporan TIDAK hilang: statusnya sudah SUBMITTED
+   di Supabase, dan raRetryPendingFirebaseSyncs() (shared.js, lewat iframe
+   tersembunyi sebagai best-effort) akan tetap otomatis mencoba mengirim
+   ulang di kunjungan berikutnya. */
+var _histSubmitJobs = {}; // id -> {popup, btn, timeoutId}
 
 function historySubmit(id, modul) {
   if (_histSubmitJobs[id]) return; // sudah ada proses submit berjalan buat id ini
-  if (!confirm('Yakin submit laporan ini ke Review Approval Dashboard?')) return;
+  if (!confirm('Yakin submit laporan ini ke Review Approval Dashboard?\n\nSebuah tab baru akan terbuka sebentar untuk memprosesnya, lalu tertutup otomatis.')) return;
   var url = modulToUrl(modul, id);
   if (!url || url === 'index.html') { alert('Modul tidak dikenali, tidak bisa disubmit dari sini.'); return; }
   var btn = document.getElementById('histSubmitBtn-' + id);
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Sedang mensubmit...'; btn.style.opacity = '0.75'; }
 
-  var iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = url + '&autosubmit=1';
+  var popup = window.open(url + '&autosubmit=1&autoclose=1', '_blank');
+  if (!popup) {
+    alert('Tab baru diblokir browser (popup blocker). Izinkan pop-up untuk situs ini, lalu coba Resubmit lagi.');
+    if (btn) { btn.disabled = false; btn.textContent = '🔁 Resubmit'; btn.style.opacity = '1'; }
+    return;
+  }
 
   // 4 menit -- HARUS lebih besar dari total timeout internal di
   // raSendFinalPdfToFirebaseDashboard (shared.js: 30 detik simpan + 3
@@ -197,8 +207,7 @@ function historySubmit(id, modul) {
     historySubmitDone(id, false, 'Belum selesai dalam 4 menit -- kemungkinan koneksi lambat (banyak foto). Laporan TETAP tersubmit, akan otomatis dicoba lagi di latar belakang.');
   }, 240000);
 
-  _histSubmitJobs[id] = { iframe: iframe, btn: btn, timeoutId: timeoutId };
-  document.body.appendChild(iframe);
+  _histSubmitJobs[id] = { popup: popup, btn: btn, timeoutId: timeoutId };
 }
 
 function historySubmitDone(id, ok, err) {
@@ -206,7 +215,7 @@ function historySubmitDone(id, ok, err) {
   if (!job) return; // sudah ditangani sebelumnya (mis. timeout duluan lalu pesan asli nyusul)
   delete _histSubmitJobs[id];
   clearTimeout(job.timeoutId);
-  if (job.iframe && job.iframe.parentNode) job.iframe.parentNode.removeChild(job.iframe);
+  try { if (job.popup && !job.popup.closed) job.popup.close(); } catch (e) {} // jaga-jaga kalau autoclose di sisi tab gagal
 
   if (ok) {
     if (job.btn) {

@@ -2292,19 +2292,37 @@ function raSubmitReport() {
    ?id=xxx&autosubmit=1, ATAU dipanggil ulang otomatis oleh
    raRetryPendingFirebaseSyncs() (lihat di bawah) untuk record yang SUDAH
    SUBMITTED di Supabase tapi belum sukses terkirim ke Firebase di
-   percobaan sebelumnya (mis. tab/iframe keburu tertutup, jaringan putus).
+   percobaan sebelumnya (mis. tab/iframe keburu tertutup, jaringan putus,
+   ATAU browser mobile membatasi aktivitas jaringan di iframe/tab yang
+   tidak sedang terlihat -- alasan inilah kenapa history.html sekarang
+   membuka TAB BIASA yang terlihat lewat window.open() untuk tombol
+   Resubmit manual, bukan lagi iframe tersembunyi; retry otomatis di
+   halaman manapun tetap pakai iframe tersembunyi sebagai best-effort,
+   karena browser MEMBLOKIR window.open() yang tidak dipicu klik user).
    Modul WAJIB panggil ini SETELAH window._raBuildPdf di-set & data record
    selesai dimuat ke form (lihat contoh pemasangan di "LOAD FROM HISTORY"
-   tiap modul). Tidak pernah nge-confirm() (iframe-nya invisible, dialog
-   confirm() di dalam iframe akan aneh/membingungkan buat user) --
-   konfirmasi sudah terjadi satu kali di history.html sebelum iframe ini
-   dibuka. Selalu lapor balik ke window.parent lewat postMessage, sukses
-   maupun gagal, HANYA setelah proses benar-benar tuntas. */
+   tiap modul). Tidak pernah nge-confirm() -- konfirmasi sudah terjadi satu
+   kali di history.html sebelum halaman ini dibuka. Lapor balik ke
+   window.opener (kalau dibuka lewat window.open(), tab biasa) ATAU
+   window.parent (kalau dibuka lewat iframe, retry otomatis) lewat
+   postMessage, sukses maupun gagal, HANYA setelah proses benar-benar
+   tuntas -- lalu tutup diri sendiri kalau dibuka sebagai tab biasa
+   (?autoclose=1), supaya user tidak perlu menutup manual. */
 function raSubmitReportAuto() {
   function report(ok, err) {
     try {
-      if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ type: 'raAutosubmitDone', id: window._editingId, ok: ok, error: err ? String(err.message || err) : null }, '*');
+      var target = (window.opener) ? window.opener : ((window.parent && window.parent !== window) ? window.parent : null);
+      if (target) {
+        target.postMessage({ type: 'raAutosubmitDone', id: window._editingId, ok: ok, error: err ? String(err.message || err) : null }, '*');
+      }
+    } catch (e) {}
+    // Tab biasa (window.open, bukan iframe) yang minta ditutup otomatis --
+    // dikasih jeda supaya toast/notifikasi terakhir sempat kebaca sekilas
+    // sebelum tabnya hilang, dan supaya kasus gagal sempat kebaca lebih
+    // lama (bukan langsung raib) kalau usernya kebetulan sedang melihat.
+    try {
+      if (window.opener && new URLSearchParams(location.search).get('autoclose') === '1') {
+        setTimeout(function(){ try { window.close(); } catch (e) {} }, ok ? 1500 : 5000);
       }
     } catch (e) {}
   }
