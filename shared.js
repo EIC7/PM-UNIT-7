@@ -2308,6 +2308,77 @@ var RA_AREA_SUBMITTER_NAME = {
   common: 'PM Unit 7 - Common CHCB',
   wwtp: 'PM Unit 7 - Common WWTP'
 };
+// Username Firestore (dashboard_users) per akun sintetis -- harus huruf
+// kecil/angka/titik/garis bawah/strip saja (aturan doRegister() di
+// Review_Approval_Dashboard.html), makanya beda dari RA_AREA_SUBMITTER_NAME.
+var RA_AREA_USERNAME = {
+  boiler: 'pm-unit7-boiler',
+  turbine: 'pm-unit7-turbine',
+  common: 'pm-unit7-chcb',
+  wwtp: 'pm-unit7-wwtp'
+};
+// Nilai AREA PERSIS seperti pilihan checkbox Register di
+// Review_Approval_Dashboard.html (TEAM_AREAS.C7 di file itu) -- kalau
+// mereka ganti label/ejaan area C7, samakan lagi di sini.
+var RA_AREA_LABEL_C7 = {
+  boiler: 'Boiler',
+  turbine: 'Turbine',
+  common: 'Common (CHCB)',
+  wwtp: 'Common (WWTP-Ashdisposal)'
+};
+
+/* ── AUTO-PROVISION AKUN AREA DI dashboard_users (Firestore, Review
+   Approval Dashboard) ──
+   Daripada berharap 4 akun ini didaftarkan MANUAL lewat form Register
+   dashboard itu (rawan typo/salah role/area, dan tidak bisa kita cek dari
+   sini kalau meleset), shared.js langsung MEMASTIKAN dokumennya ADA di
+   collection `dashboard_users`, persis bentuk yang dihasilkan
+   doRegister()-nya sendiri: { username, password (hash sha256 -- akun ini
+   TIDAK PERNAH dipakai login manual jadi isinya bebas), role:'technician'
+   (tidak butuh kode akses admin, beda dari techop2/supervisor),
+   name, team:'C7', area:[satu string sesuai RA_AREA_LABEL_C7], createdAt }.
+   Firestore rules project itu open (write:true) buat collection ini --
+   sama seperti yang dipakai form Register publik mereka sendiri, jadi
+   aman ditulis dari client biasa seperti kita tanpa kredensial admin.
+   Idempoten (cek `username` dulu via query, baru `.add()` kalau belum
+   ketemu) & fire-and-forget -- dipanggil tiap mau kirim PDF, TIDAK PERNAH
+   ditunggu (await) atau menggagalkan proses submit kalau gagal (offline,
+   rules berubah, dst -- cukup di-log ke console). */
+var _raAreaAccountEnsured = {}; // areaKey -> true sekali sukses per page load, jangan query ulang tiap submit
+function raHashPassSha256(str) {
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(function(buf) {
+    return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+  });
+}
+function raEnsurePmUnit7AreaAccount(areaKey) {
+  if (!areaKey || _raAreaAccountEnsured[areaKey]) return;
+  if (typeof db === 'undefined' || typeof firebase === 'undefined') return; // firebase-config.js belum dimuat
+  var username = RA_AREA_USERNAME[areaKey];
+  var name = RA_AREA_SUBMITTER_NAME[areaKey];
+  var area = RA_AREA_LABEL_C7[areaKey];
+  if (!username || !name || !area) return;
+  db.collection('dashboard_users').where('username', '==', username).limit(1).get()
+    .then(function(snap) {
+      if (!snap.empty) { _raAreaAccountEnsured[areaKey] = true; return; }
+      return raHashPassSha256('pm-unit7-' + username + '-' + Date.now()).then(function(hashed) {
+        return db.collection('dashboard_users').add({
+          username: username,
+          password: hashed,
+          role: 'technician',
+          name: name,
+          team: 'C7',
+          area: [area],
+          createdAt: new Date().toISOString()
+        });
+      }).then(function() {
+        _raAreaAccountEnsured[areaKey] = true;
+        console.log('[raEnsurePmUnit7AreaAccount] akun "' + name + '" (area: ' + area + ') dibuat di dashboard_users.');
+      });
+    })
+    .catch(function(err) {
+      console.warn('[raEnsurePmUnit7AreaAccount] gagal memastikan akun "' + name + '" ada, akan dicoba lagi lain kali:', err);
+    });
+}
 
 function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   function finish(ok, err) {
@@ -2355,6 +2426,11 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   // Report) tetap pakai nama asli seperti sebelumnya.
   var areaKey = RA_MODUL_AREA[modKey];
   var effectiveSubmittedBy = areaKey ? RA_AREA_SUBMITTER_NAME[areaKey] : (submittedByName || '');
+  // Fire-and-forget: pastikan akun dashboard_users buat area ini ADA
+  // (lihat raEnsurePmUnit7AreaAccount di atas) -- tidak pernah ditunggu,
+  // karena urutan penulisan dengan submission-nya sendiri tidak penting
+  // (reviewer baru baca keduanya belakangan, bukan langsung detik ini).
+  raEnsurePmUnit7AreaAccount(areaKey);
   // Ditemukan laporan yang macet TANPA PERNAH melapor sukses ATAU gagal
   // (firebase_synced_at dan firebase_sync_error dua-duanya kosong selamanya)
   // -- root cause paling mungkin: fetch() ke Apps Script Drive proxy milik
