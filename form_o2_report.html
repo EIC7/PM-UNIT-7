@@ -2552,12 +2552,14 @@ initCropDrag();
   var id=params.get('id');
   var doPrint=params.get('print')==='1';
   if (params.get('embed') === '1') window._pdfEmbedMode = true;
+  var doAutosubmit = params.get('autosubmit') === '1';
   if(!id) return;
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec, id);
       dbShowToast('Data dimuat dari riwayat ✓');
       if(doPrint)setTimeout(function(){downloadPdf();},500);
+      if(doAutosubmit){ window._raBuildPdf = downloadPdf; raSubmitReportAuto(); }
     },400);
   });
 })();

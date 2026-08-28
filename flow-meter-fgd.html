@@ -2323,12 +2323,14 @@ function restoreDraftData(rec, editingId) {
   var params = new URLSearchParams(window.location.search);
   var id = params.get('id'), doPrint = params.get('print')==='1';
   if (params.get('embed') === '1') window._pdfEmbedMode = true;
+  var doAutosubmit = params.get('autosubmit') === '1';
   if (!id) return;
   dbLoad(id, function(rec) {
     setTimeout(function(){
       applyRecordToForm(rec, id);
       dbShowToast('Data dimuat dari riwayat ✓');
       if (doPrint) { ensureReportBackground(function(){ setTimeout(fmDownloadPdf, 300); }); }
+      if (doAutosubmit) { window._raBuildPdf = fmDownloadPdf; raSubmitReportAuto(); }
     }, 800);
   });
 })();

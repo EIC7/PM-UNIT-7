@@ -2643,6 +2643,7 @@ function restoreDraftData(rec, editingId) {
   var id      = params.get('id');
   var doPrint = params.get('print') === '1';
   if (params.get('embed') === '1') window._pdfEmbedMode = true;
+  var doAutosubmit = params.get('autosubmit') === '1';
   if (!id) return;
 
   dbLoad(id, function(rec){
@@ -2650,6 +2651,7 @@ function restoreDraftData(rec, editingId) {
       applyRecordToForm(rec, id);
       dbShowToast('Data dimuat dari riwayat ✓');
       if (doPrint){ setTimeout(dcsDownloadPdf, 400); }
+      if (doAutosubmit){ window._raBuildPdf = dcsDownloadPdf; raSubmitReportAuto(); }
     }, 600);
   });
 })();

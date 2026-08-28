@@ -2649,6 +2649,7 @@ setInterval(function(){ var el=document.getElementById('clock'); if(el) el.textC
   var id = params.get('id');
   var doPrint = params.get('print') === '1';
   if (params.get('embed') === '1') window._pdfEmbedMode = true;
+  var doAutosubmit = params.get('autosubmit') === '1';
   if (!id || typeof dbLoad !== 'function') return;
   dbLoad(id, function(rec){
     setTimeout(function(){
@@ -2656,6 +2657,7 @@ setInterval(function(){ var el=document.getElementById('clock'); if(el) el.textC
       window._editingId = id;
       if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
       if (doPrint && typeof exportPdf === 'function') setTimeout(exportPdf, 300);
+      if (doAutosubmit && typeof exportPdf === 'function') { window._raBuildPdf = exportPdf; raSubmitReportAuto(); }
     }, 300);
   });
 })();

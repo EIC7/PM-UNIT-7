@@ -2219,6 +2219,7 @@ initCropDrag();
   var id = params.get('id');
   var doPrint = params.get('print') === '1';
   if (params.get('embed') === '1') window._pdfEmbedMode = true;
+  var doAutosubmit = params.get('autosubmit') === '1';
   if (!id) {
     var todayEl = document.getElementById('hgTanggal');
     if (todayEl && !todayEl.value) {
@@ -2232,6 +2233,7 @@ initCropDrag();
     window._editingId = id;
     hgRestoreRecord(rec, {});
     if (doPrint) setTimeout(function(){ hgDownloadPdf(); }, 500);
+    if (doAutosubmit) { window._raBuildPdf = hgDownloadPdf; raSubmitReportAuto(); }
   });
 })();
 

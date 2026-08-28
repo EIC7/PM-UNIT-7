@@ -1511,7 +1511,7 @@ function applyImageEdits(){
             box.style.height = newH + 'px';
         }
 
-        function loadMaintenanceRecord(id, doPrint) {
+        function loadMaintenanceRecord(id, doPrint, doAutosubmit) {
             if (!id) return;
             dbLoad(id, function(rec) {
                 if (!rec) return;
@@ -1526,6 +1526,7 @@ function applyImageEdits(){
                     // native) yang salah: itu langsung buka dialog print, bukan preview.
                     setTimeout(exportPdf, 250);
                 }
+                if (doAutosubmit) { window._raBuildPdf = exportPdf; raSubmitReportAuto(); }
             });
         }
 
@@ -1534,7 +1535,8 @@ function applyImageEdits(){
             var id = params.get('id');
             var doPrint = params.get('print') === '1';
             if (params.get('embed') === '1') window._pdfEmbedMode = true;
-            if (id) loadMaintenanceRecord(id, doPrint);
+            var doAutosubmit = params.get('autosubmit') === '1';
+            if (id) loadMaintenanceRecord(id, doPrint, doAutosubmit);
         })();
 
         // ── RENDER ─────────────────────────────────────────────────────────────────

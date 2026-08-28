@@ -133,6 +133,14 @@ function loadHistory(modul) {
       var openUrl = modulToUrl(r.modul, r.id);
       var printUrl = modulToPrintUrl(r.modul, r.id);
       var delBtn = '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>';
+      // Tombol Submit cuma buat laporan yang masih DRAFT -- yang sudah
+      // SUBMITTED tidak perlu (dan tidak masuk akal) di-submit ulang lewat
+      // sini. id tombol dipakai historySubmit() buat update tulisan/nonaktifkan
+      // tombol ini sendiri begitu proses (di iframe tersembunyi) selesai.
+      var submitBtnId = 'histSubmitBtn-' + r.id;
+      var submitBtn = ((r.status || 'DRAFT').toUpperCase() === 'DRAFT')
+        ? '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128274; Submit</button>'
+        : '';
       html += '<tr>'+
         '<td><span class="path-label">'+r.modul+'</span></td>'+
         '<td>'+(r.tanggal||'-')+'</td>'+
@@ -143,6 +151,7 @@ function loadHistory(modul) {
         '<td style="white-space:nowrap">'+
           '<button onclick="window.location.href=\''+openUrl+'\'" style="padding:4px 10px;font-size:11px;background:var(--ok);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#9998; Buka</button>'+
           '<button onclick="window.open(\''+printUrl+'\',\'_blank\')" style="padding:4px 10px;font-size:11px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128438; Print</button>'+
+          submitBtn+
           delBtn+
         '</td></tr>';
     });
@@ -160,6 +169,66 @@ function historyDelete(id) {
     })
     .catch(function(err){ alert('Gagal hapus: ' + (err.message||err)); });
 }
+
+/* ── SUBMIT LANGSUNG DARI RIWAYAT (tanpa buka tab baru) ──
+   Halaman modul aslinya dimuat di iframe TERSEMBUNYI (?id=xxx&autosubmit=1)
+   -- semua proses (load data, generate PDF, update status Supabase, kirim
+   PDF ke Review Approval Dashboard) jalan persis seperti biasa di dalam
+   iframe itu, cuma usernya tidak pernah melihat halamannya. Modul yang
+   sudah selesai (sukses/gagal) lapor balik lewat postMessage
+   (raSubmitReportAuto() di shared.js), ditangkap oleh listener di bawah. */
+var _histSubmitJobs = {}; // id -> {iframe, btn, timeoutId}
+
+function historySubmit(id, modul) {
+  if (_histSubmitJobs[id]) return; // sudah ada proses submit berjalan buat id ini
+  if (!confirm('Yakin submit laporan ini ke Review Approval Dashboard?')) return;
+  var url = modulToUrl(modul, id);
+  if (!url || url === 'index.html') { alert('Modul tidak dikenali, tidak bisa disubmit dari sini.'); return; }
+  var btn = document.getElementById('histSubmitBtn-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sedang mensubmit...'; btn.style.opacity = '0.75'; }
+
+  var iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  iframe.src = url + '&autosubmit=1';
+
+  var timeoutId = setTimeout(function(){
+    historySubmitDone(id, false, 'Timeout -- modul tidak merespons dalam 45 detik.');
+  }, 45000);
+
+  _histSubmitJobs[id] = { iframe: iframe, btn: btn, timeoutId: timeoutId };
+  document.body.appendChild(iframe);
+}
+
+function historySubmitDone(id, ok, err) {
+  var job = _histSubmitJobs[id];
+  if (!job) return; // sudah ditangani sebelumnya (mis. timeout duluan lalu pesan asli nyusul)
+  delete _histSubmitJobs[id];
+  clearTimeout(job.timeoutId);
+  if (job.iframe && job.iframe.parentNode) job.iframe.parentNode.removeChild(job.iframe);
+
+  if (ok) {
+    if (job.btn) {
+      job.btn.disabled = true;
+      job.btn.textContent = '✓ Submitted';
+      job.btn.style.background = 'var(--ok)';
+      job.btn.style.opacity = '1';
+    }
+    dbShowToast('✓ Laporan berhasil disubmit ke Review Approval Dashboard');
+    setTimeout(function(){ loadHistory(''); }, 800); // refresh badge status jadi SUBMITTED
+  } else {
+    if (job.btn) {
+      job.btn.disabled = false;
+      job.btn.textContent = '🔒 Submit';
+      job.btn.style.opacity = '1';
+    }
+    alert('Gagal submit: ' + (err || 'terjadi kesalahan tidak diketahui.'));
+  }
+}
+
+window.addEventListener('message', function(e) {
+  if (!e.data || e.data.type !== 'raAutosubmitDone') return;
+  historySubmitDone(e.data.id, !!e.data.ok, e.data.error);
+});
 
 /* Auto-load all on open */
 loadHistory('');

@@ -194,17 +194,78 @@ function _pmStripBase64ForSave(obj) {
    yang resolve setelah SEMUA foto selesai dipulihkan (atau di-skip kalau
    fetch-nya gagal -- gagal ambil 1 foto tidak boleh bikin seluruh proses
    buka data gagal total, biarin foto itu kosong daripada nge-block semuanya). */
+/* ── CACHE FOTO (IndexedDB) -- foto yang driveFileId-nya sama TIDAK PERNAH
+   berubah isinya (lihat _pmGenUniqueDriveFileName: setiap slot foto = nama
+   Drive unik permanen, foto yang di-crop ulang dapat driveFileId BARU,
+   bukan overwrite yang lama) -- jadi begitu satu foto pernah di-download
+   sekali di browser ini, aman disimpan permanen di cache lokal dan tidak
+   perlu diambil ulang dari Drive lagi kapan pun laporan yang sama dibuka
+   lagi. Database TERPISAH dari pm_unit7_autosave (draft recovery) supaya
+   tidak saling ganggu skema/versioning-nya. */
+var PHOTOCACHE_DB_NAME = 'pm_unit7_photocache';
+var PHOTOCACHE_STORE   = 'photos';
+var _photoCacheDbPromise = null;
+
+function _photoCacheOpenDb() {
+  if (_photoCacheDbPromise) return _photoCacheDbPromise;
+  _photoCacheDbPromise = new Promise(function(resolve, reject) {
+    if (!window.indexedDB) { reject(new Error('IndexedDB tidak didukung browser ini')); return; }
+    var req = indexedDB.open(PHOTOCACHE_DB_NAME, 1);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(PHOTOCACHE_STORE)) db.createObjectStore(PHOTOCACHE_STORE, {keyPath:'fileId'});
+    };
+    req.onsuccess = function(e){ resolve(e.target.result); };
+    req.onerror = function(e){ reject(e.target.error); };
+  });
+  return _photoCacheDbPromise;
+}
+// Tidak pernah reject -- cache itu murni optimasi, gagal baca/tulis cache
+// TIDAK BOLEH menggagalkan proses ambil foto dari Drive yang sebenarnya.
+function _photoCacheGet(fileId) {
+  return _photoCacheOpenDb().then(function(db) {
+    return new Promise(function(resolve) {
+      try {
+        var req = db.transaction(PHOTOCACHE_STORE, 'readonly').objectStore(PHOTOCACHE_STORE).get(fileId);
+        req.onsuccess = function(){ resolve(req.result ? req.result.dataUrl : null); };
+        req.onerror = function(){ resolve(null); };
+      } catch (e) { resolve(null); }
+    });
+  }).catch(function(){ return null; });
+}
+function _photoCacheSet(fileId, dataUrl) {
+  return _photoCacheOpenDb().then(function(db) {
+    return new Promise(function(resolve) {
+      try {
+        var tx = db.transaction(PHOTOCACHE_STORE, 'readwrite');
+        tx.objectStore(PHOTOCACHE_STORE).put({fileId: fileId, dataUrl: dataUrl, cachedAt: Date.now()});
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ resolve(); };
+      } catch (e) { resolve(); }
+    });
+  }).catch(function(){});
+}
+
 /* Ambil 1 file Drive sebagai base64 lewat Apps Script (action:'get') --
    BUKAN fetch() langsung ke lh3.googleusercontent.com (itu kena CORS, lihat
-   catatan di _pmRestoreBase64AfterLoad). Tidak pernah reject -- gagal ambil
-   1 foto cukup bikin foto itu kosong, tidak boleh gagalkan proses lain. */
+   catatan di _pmRestoreBase64AfterLoad). Cek cache lokal DULU (lihat blok
+   CACHE FOTO di atas) -- kalau ketemu, tidak perlu roundtrip ke Apps Script
+   sama sekali. Tidak pernah reject -- gagal ambil 1 foto cukup bikin foto
+   itu kosong, tidak boleh gagalkan proses lain. */
 function _pmFetchDriveFileAsBase64(fileId) {
-  return fetch(GDRIVE_WEB_APP_URL, {
-    method: 'POST',
-    body: JSON.stringify({ token: GDRIVE_SECRET_TOKEN, action: 'get', fileId: fileId })
-  }).then(function(res){ return res.json(); })
-    .then(function(result){ return (result && result.success && result.imageBase64) ? result.imageBase64 : null; })
-    .catch(function(){ return null; });
+  return _photoCacheGet(fileId).then(function(cached) {
+    if (cached) return cached;
+    return fetch(GDRIVE_WEB_APP_URL, {
+      method: 'POST',
+      body: JSON.stringify({ token: GDRIVE_SECRET_TOKEN, action: 'get', fileId: fileId })
+    }).then(function(res){ return res.json(); })
+      .then(function(result){
+        var dataUrl = (result && result.success && result.imageBase64) ? result.imageBase64 : null;
+        if (dataUrl) _photoCacheSet(fileId, dataUrl);
+        return dataUrl;
+      })
+      .catch(function(){ return null; });
+  });
 }
 
 function _pmRestoreBase64AfterLoad(obj) {
@@ -788,7 +849,7 @@ function dbLoad(id, callback) {
       }
       else dbShowSavingOverlayError('Data tidak ditemukan.', 'Kemungkinan data sudah dihapus atau ID tidak valid.');
     })
-    .catch(function(err){ dbShowSavingOverlayError('Gagal memuat data.', err.message || String(err)); });
+    .catch(function(err){ dbShowSavingOverlayError('Gagal memuat data.', err.message || String(err), function(){ dbLoad(id, callback); }); });
 }
 
 /* ── DB DELETE ── */
@@ -839,6 +900,7 @@ function dbShowSavingOverlay(show, msg, submsg) {
         +     '</div>'
         +     '<div id="dbSavingProgressPct" style="font-size:12px;font-weight:700;color:#fff;margin-top:5px;display:none"></div>'
         +     '<div id="dbSavingOverlaySub" style="font-size:clamp(9px,2.8vw,11px);font-weight:400;margin-top:8px;color:rgba(255,255,255,0.75);line-height:1.3"></div>'
+        +     '<button id="dbSavingRetryBtn" type="button" style="display:none;margin-top:14px;padding:9px 22px;border:none;border-radius:8px;background:#2ecc71;color:#fff;font-size:13px;font-weight:700;cursor:pointer;z-index:2">&#8635; Coba Lagi</button>'
         +   '</div>'
         + '</div>'
         + '<div id="dbSavingOverlayTapHint" style="display:none;font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);margin-top:14px;letter-spacing:0.3px;z-index:1">Tap dimana saja untuk menutup</div>';
@@ -848,6 +910,15 @@ function dbShowSavingOverlay(show, msg, submsg) {
       // sengaja/gak-sengaja pas proses simpan/muat masih benar-benar berjalan.
       ov.addEventListener('click', function() {
         if (ov._isError) dbShowSavingOverlay(false);
+      });
+      // Tombol Coba Lagi -- stopPropagation supaya klik di tombol ini TIDAK
+      // ikut kena listener "tap dimana saja untuk menutup" di atas (yang
+      // akan langsung menyembunyikan overlay sebelum retryFn sempat jalan).
+      document.getElementById('dbSavingRetryBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var fn = ov._retryFn;
+        ov._retryFn = null;
+        if (typeof fn === 'function') fn();
       });
       if (!document.getElementById('dbSpinKeyframes')) {
         var style = document.createElement('style');
@@ -873,6 +944,8 @@ function dbShowSavingOverlay(show, msg, submsg) {
     document.getElementById('dbSavingEicWrap').style.display = 'flex';
     document.getElementById('dbSavingErrorIcon').style.display = 'none';
     document.getElementById('dbSavingOverlayTapHint').style.display = 'none';
+    document.getElementById('dbSavingRetryBtn').style.display = 'none';
+    ov._retryFn = null;
     ov.style.display = 'flex';
     dbStartFakeProgress(); // langsung tampil & jalan 0% -> ~90%, di-override begitu ada progress asli
   } else if (ov) {
@@ -890,13 +963,19 @@ function dbShowSavingOverlay(show, msg, submsg) {
    kalau user kebetulan lagi AFK / HP diletak pas errornya kejadian, alert()
    gampang kelewat/ke-skip (apalagi di HP: alert() browser bisa otomatis
    ke-dismiss kalau tab pindah fokus/HP dikunci). Overlay full-screen begini
-   jauh lebih susah kelewat karena nutupin seluruh layar terus sampai dibuka. */
-function dbShowSavingOverlayError(msg, submsg) {
+   jauh lebih susah kelewat karena nutupin seluruh layar terus sampai dibuka.
+   retryFn (opsional): kalau diisi, tombol "↺ Coba Lagi" muncul dan
+   memanggil fungsi ini persis (retry beneran -- ulang proses yang gagal
+   dengan argumen yang sama, bukan cuma tutup lalu user klik manual lagi
+   dari awal). Dibiarkan kosong/null kalau proses itu tidak aman/tidak
+   masuk akal untuk diulang otomatis. */
+function dbShowSavingOverlayError(msg, submsg, retryFn) {
   var ov = document.getElementById('dbSavingOverlay');
   if (!ov) { alert(msg || 'Terjadi kesalahan.'); return; } // safety net kalau overlay belum sempat dibuat
   dbStopFakeProgress();
   dbSetSavingProgress(null);
   ov._isError = true;
+  ov._retryFn = retryFn || null;
   ov.style.cursor = 'pointer';
   ov.style.backgroundColor = '#1a0505'; // semburat merah gelap solid, beda dari overlay normal
   document.getElementById('dbSavingRingSvg').style.display = 'none';
@@ -904,6 +983,10 @@ function dbShowSavingOverlayError(msg, submsg) {
   document.getElementById('dbSavingErrorIcon').style.display = 'flex';
   document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Terjadi kesalahan, proses tidak selesai.';
   document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
+  document.getElementById('dbSavingRetryBtn').style.display = retryFn ? 'inline-block' : 'none';
+  document.getElementById('dbSavingOverlayTapHint').textContent = retryFn
+    ? 'Tap "Coba Lagi" untuk mengulang, atau tap di luar untuk menutup'
+    : 'Tap dimana saja untuk menutup';
   document.getElementById('dbSavingOverlayTapHint').style.display = 'block';
   ov.style.display = 'flex';
 }
@@ -977,6 +1060,7 @@ function dbSetSavingProgress(percent) {
 /* ── DB SAVE (generic — modul-specific dbCollectData defined per page) ── */
 function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   if (window._dbSaving) return; // cegah klik dobel saat masih proses simpan
+  var _dbSaveRetryArgs = arguments; // dipakai tombol "Coba Lagi" -- ulang panggilan ini persis kalau gagal
   var rec, existingId, callback;
   if (arg6 !== undefined && typeof arg6 === 'object') {
     rec = { modul:modul, tanggal:arg2||null, pic:arg3||null, work_order:arg4||null,
@@ -1040,7 +1124,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         // dalam 3 detik, jadi kalau user lagi AFK/HP diletak pas errornya
         // kejadian, notifikasinya kelewat dan data yang gagal simpan
         // (kadang sudah termasuk banyak foto) jadi tidak ketahuan.
-        dbShowSavingOverlayError('Gagal menyimpan data.', err.message || String(err));
+        dbShowSavingOverlayError('Gagal menyimpan data.', err.message || String(err), function(){ dbSave.apply(null, _dbSaveRetryArgs); });
       });
   });
 }
@@ -1075,7 +1159,7 @@ function raResaveInPlace(modul, callback) {
       window._dbSaving = false;
       dbShowSavingOverlay(false);
       if (err) {
-        dbShowSavingOverlayError('Gagal menyimpan perubahan.', err);
+        dbShowSavingOverlayError('Gagal menyimpan perubahan.', err, function(){ raResaveInPlace(modul, callback); });
         return;
       }
       dbShowToast('✓ Perubahan tersimpan (status tidak berubah)');
@@ -1589,6 +1673,7 @@ function _autosaveIndicator() {
   el._t = setTimeout(function(){ el.style.opacity='0'; }, 1800);
 }
 function autosaveTrigger() {
+  window._raDirty = true; // dipakai AUTOSAVE SERVER di bawah -- ada perubahan sejak autosave server terakhir
   clearTimeout(_autosaveTimer);
   _autosaveTimer = setTimeout(function(){
     try {
@@ -1601,6 +1686,82 @@ function autosaveTrigger() {
     } catch(e) {}
   }, AUTOSAVE_DELAY);
 }
+
+/* ── AUTOSAVE SERVER (diam-diam, ke Supabase) ──
+   BEDA dari autosaveTrigger() di atas (itu draft LOKAL di IndexedDB, cuma
+   buat recovery kalau tab kepencet close -- tidak pernah menyentuh
+   database). Ini sungguhan nyimpan ke pm_records tiap 60 detik SEKALI,
+   dari pertama kali halaman dibuka (timer mulai jalan begitu shared.js
+   dimuat) sampai halaman ditutup/dipindah (setInterval otomatis berhenti
+   begitu halaman unload, tidak perlu dibersihkan manual).
+   Sengaja TIDAK pakai overlay/spinner apa pun -- background total, tidak
+   boleh mengganggu user yang lagi ngisi form (beda dari Simpan/Submit
+   manual yang memang harus kelihatan prosesnya). Kalau gagal (timeout/
+   network error), cuma di-log ke console + skip diam-diam -- percobaan
+   BERIKUTNYA 60 detik lagi yang akan coba lagi otomatis (bukan retry
+   button manual seperti dbShowSavingOverlayError, karena ini tidak ada
+   UI yang bisa di-tap user).
+   window._raDirty (di-set true oleh autosaveTrigger() setiap ada
+   input/change) dipakai supaya tick yang TIDAK ADA PERUBAHAN APA PUN sejak
+   autosave server terakhir di-skip -- menghindari nyimpan draft kosong
+   berulang-ulang kalau user cuma buka halaman lalu diam saja, dan
+   menghindari request Supabase yang percuma. */
+var RA_SERVER_AUTOSAVE_INTERVAL = 60000;
+
+function _raServerAutosaveIndicator() {
+  var el = document.getElementById('raServerAutosaveIndicator');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'raServerAutosaveIndicator';
+    el.className = 'no-print';
+    el.style.cssText = 'position:fixed;bottom:14px;right:14px;background:rgba(16,80,40,0.78);color:#d7ffe6;font-size:11px;padding:5px 11px;border-radius:14px;z-index:99998;pointer-events:none;opacity:0;transition:opacity .35s';
+    document.body.appendChild(el);
+  }
+  var t = new Date();
+  el.textContent = '☁️ Auto-tersimpan ' + String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.style.opacity = '0'; }, 2500);
+}
+
+function dbSaveSilent(modul) {
+  if (window._dbSaving) return; // biarkan Simpan/Submit manual yang lagi jalan, jangan tabrakan
+  if (typeof dbCollectData !== 'function') return;
+  var rec = dbCollectData(modul);
+  if (!rec) return;
+  rec.updated_at = new Date().toISOString();
+  var existingId = window._editingId || null;
+  window._dbSaving = true;
+  waitForPendingDriveUploads().then(function() {
+    _pmStripBase64ForSave(rec.data);
+    rec.payload_size = _dbByteLength(JSON.stringify(rec));
+    var path = existingId ? (SUPA_TABLE + '?id=eq.' + existingId) : SUPA_TABLE;
+    var method = existingId ? 'PATCH' : 'POST';
+    supaFetch(method, path, rec)
+      .then(function(rows) {
+        window._dbSaving = false;
+        var savedId = (rows && rows[0] && rows[0].id) ? rows[0].id : existingId;
+        window._editingId = savedId || null;
+        window._raDirty = false;
+        if (typeof autosaveClear === 'function') autosaveClear(); // draft lokal tidak perlu lagi, sudah kepakai di server
+        _raServerAutosaveIndicator();
+      })
+      .catch(function(err) {
+        window._dbSaving = false;
+        console.warn('[autosave-server] gagal simpan otomatis, akan dicoba lagi ~1 menit ke depan:', err);
+      });
+  });
+}
+
+setInterval(function() {
+  try {
+    if (!window._raDirty) return;
+    if (window._dbSaving) return;
+    if (typeof dbCollectData !== 'function') return;
+    if (!window.CURRENT_MODUL) return;
+    dbSaveSilent(window.CURRENT_MODUL);
+  } catch (e) {}
+}, RA_SERVER_AUTOSAVE_INTERVAL);
 function autosaveClear() {
   autosaveDelete(_autosaveKey()).catch(function(){});
 }
@@ -1976,21 +2137,57 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName) {
    maintenance_report_form.html); modul lain (mis. fegt.html, yang cuma
    punya tombol Submit tanpa panel checker/reviewer lokal -- itu sekarang
    di submit-report.html) aman-aman saja tanpa fungsi itu. */
+/* Inti proses submit (update status + kirim PDF ke Firebase), TANPA
+   confirm() -- dipakai bareng oleh raSubmitReport() (tombol manual, ada
+   confirm dulu) dan raSubmitReportAuto() (dipanggil headless dari iframe
+   tersembunyi via history.html, TIDAK BOLEH nge-confirm karena usernya
+   sudah konfirmasi di halaman histori sebelum iframe ini dibuka).
+   onDone(ok, err) opsional -- dipanggil di akhir, dipakai raSubmitReportAuto
+   buat lapor balik ke parent lewat postMessage. */
+function raSubmitReportCore(onDone) {
+  raUpdateRecord(window._editingId, {
+    status: 'SUBMITTED',
+    submitted_at: new Date().toISOString()
+  }, function(err, updated) {
+    if (err) {
+      if (onDone) onDone(false, err); else alert('Gagal submit: ' + err);
+      return;
+    }
+    dbShowToast('✓ Data Sudah Tersubmit ke Review Approval Dashboard');
+    if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
+    raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, (updated && updated.pic) || '');
+    if (onDone) onDone(true, null);
+  });
+}
 function raSubmitReport() {
   if (!window._editingId) {
     alert('Simpan dulu sebagai Draft sebelum submit.');
     return;
   }
   if (!confirm('Apakah data sudah lengkap? Yakin Submit?')) return;
-  raUpdateRecord(window._editingId, {
-    status: 'SUBMITTED',
-    submitted_at: new Date().toISOString()
-  }, function(err, updated) {
-    if (err) { alert('Gagal submit: ' + err); return; }
-    dbShowToast('✓ Data Sudah Tersubmit ke Review Approval Dashboard');
-    if (typeof raSetCurrentRecord === 'function') raSetCurrentRecord(updated);
-    raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, (updated && updated.pic) || '');
-  });
+  raSubmitReportCore();
+}
+
+/* Submit HEADLESS dari history.html -- halaman modul ini dimuat di dalam
+   iframe tersembunyi (lihat historySubmit() di history.html) dengan
+   ?id=xxx&autosubmit=1. Modul WAJIB panggil ini SETELAH window._raBuildPdf
+   di-set & data record selesai dimuat ke form (lihat contoh pemasangan di
+   "LOAD FROM HISTORY" tiap modul). Tidak pernah nge-confirm() (iframe-nya
+   invisible, dialog confirm() di dalam iframe akan aneh/membingungkan buat
+   user yang lagi lihat halaman histori) -- konfirmasi sudah terjadi satu
+   kali di history.html sebelum iframe ini dibuka. Selalu lapor balik ke
+   window.parent lewat postMessage, sukses maupun gagal, supaya tombol di
+   histori tidak nyangkut di "Sedang mensubmit...". */
+function raSubmitReportAuto() {
+  function report(ok, err) {
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'raAutosubmitDone', id: window._editingId, ok: ok, error: err ? String(err.message || err) : null }, '*');
+      }
+    } catch (e) {}
+  }
+  if (!window._editingId) { report(false, 'Tidak ada draft tersimpan untuk laporan ini.'); return; }
+  raSubmitReportCore(report);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
