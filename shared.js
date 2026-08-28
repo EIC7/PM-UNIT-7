@@ -291,8 +291,35 @@ function _pmFetchDriveFileAsBase64(fileId, _attempt) {
   });
 }
 
+// Jalankan `tasks` (array fungsi yang masing-masing me-return Promise)
+// MAKSIMAL `limit` biji BERSAMAAN, bukan langsung semuanya lewat
+// Promise.all -- ditemukan (Coal Feeder Calibration, 71 foto lewat
+// pengujian nyata) proxy Apps Script kita kena error CORS
+// ("MissingAllowOriginHeader") pada SEBAGIAN foto kalau dibebani puluhan
+// fetch sekaligus (kemungkinan besar kena limit eksekusi paralel Apps
+// Script itu sendiri) -- dan retry SAJA (lihat _pmFetchDriveFileAsBase64)
+// TIDAK CUKUP kalau retry-nya ikut menumpuk di burst besar yang sama.
+// Membatasi jumlah yang jalan bersamaan mengurangi beban puncaknya dari
+// akarnya, laporan dengan sedikit foto praktis tidak berubah kecepatannya.
+function _pmRunPool(tasks, limit) {
+  return new Promise(function(resolve) {
+    if (!tasks.length) { resolve(); return; }
+    var next = 0, active = 0, done = 0;
+    function runNext() {
+      if (done >= tasks.length) { resolve(); return; }
+      while (active < limit && next < tasks.length) {
+        (function(task) {
+          active++;
+          task().catch(function(){}).then(function(){ active--; done++; runNext(); });
+        })(tasks[next++]);
+      }
+    }
+    runNext();
+  });
+}
+
 function _pmRestoreBase64AfterLoad(obj) {
-  var jobs = [];
+  var tasks = [];
   (function walk(o) {
     if (Array.isArray(o)) { o.forEach(walk); return; }
     if (!o || typeof o !== 'object') return;
@@ -304,19 +331,20 @@ function _pmRestoreBase64AfterLoad(obj) {
       // Sekarang dilewatkan Apps Script yang sama (action:'get') yang SUDAH
       // terbukti CORS-nya lolos, sama seperti upload/delete foto.
       if (o.driveFileId) {
-        jobs.push(_pmFetchDriveFileAsBase64(o.driveFileId).then(function(dataUrl){ if (dataUrl) o.dataUrl = dataUrl; }));
+        var fid = o.driveFileId;
+        tasks.push(function(){ return _pmFetchDriveFileAsBase64(fid).then(function(dataUrl){ if (dataUrl) o.dataUrl = dataUrl; }); });
       } else {
         // Jaga-jaga: record lama yang cuma punya driveUrl tanpa driveFileId
         // tersimpan terpisah -- ekstrak fileId dari URL-nya
         // (https://lh3.googleusercontent.com/d/FILE_ID).
         var m = /\/d\/([^/?]+)/.exec(o.driveUrl);
-        if (m) jobs.push(_pmFetchDriveFileAsBase64(m[1]).then(function(dataUrl){ if (dataUrl) o.dataUrl = dataUrl; }));
+        if (m) { var mid = m[1]; tasks.push(function(){ return _pmFetchDriveFileAsBase64(mid).then(function(dataUrl){ if (dataUrl) o.dataUrl = dataUrl; }); }); }
       }
       return; // object foto -- gak perlu turun lebih dalam lagi
     }
     Object.keys(o).forEach(function(k){ walk(o[k]); });
   })(obj);
-  return Promise.all(jobs);
+  return _pmRunPool(tasks, 8);
 }
 
 /* Nama file yang dikirim ke Drive TIDAK BOLEH pakai nama asli dari device
