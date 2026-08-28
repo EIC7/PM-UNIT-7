@@ -2279,30 +2279,33 @@ var RA_ASSET_LABEL = {
    insensitive) field `submittedBy` ke akun `dashboard_users` (role
    Teknisi) yang sudah didaftarkan dengan `team`+`area`, lalu area akun itu
    yang dipakai buat nyocokkan ke TechOp2 (reviewer) mana yang meng-cover
-   area tsb. Supaya submission dari modul PM Unit 7 PASTI ke-routing sesuai
-   AREA MODUL-nya sendiri (bukan tergantung siapa yang kebetulan ngetik PIC/
-   Checked By di form), `submittedBy` yang dikirim ke Firebase DIGANTI
-   otomatis jadi salah satu dari 4 identitas "Teknisi" sintetis di bawah --
-   nama asli PIC/Checked By TETAP UTUH di PDF & Supabase kita sendiri, yang
-   diganti CUMA field submittedBy yang dikirim ke Firebase.
-   4 akun ini WAJIB didaftarkan (persis sama namanya, role Teknisi, Team C7,
-   1 area sesuai) di Review_Approval_Dashboard.html supaya name-match-nya
-   berhasil -- lihat RA_AREA_SUBMITTER_NAME di bawah untuk nama persisnya.
-   Modul yang TIDAK ada di peta ini (mis. Maintenance Report -- form
-   generik, tidak terikat 1 area tetap, sengaja belum dipetakan) tetap
-   pakai submittedByName asli (parameter fungsi raSendFinalPdfToFirebaseDashboard)
-   seperti sebelumnya. */
+   area tsb (scopeOfApproval() di Review_Approval_Dashboard.html -- sudah
+   dicek ulang di source terbarunya, mekanismenya SAMA, tidak ada cara lain
+   berbasis assetTag/data). Repo itu punya OWNER LAIN (EenPutra) -- kita
+   TIDAK BOLEH/TIDAK BISA ubah kodenya, jadi satu-satunya cara nge-grup
+   TANPA bergantung siapa yang ngetik PIC/Checked By di form adalah pakai
+   4 identitas "Teknisi" sintetis di bawah, DIDAFTARKAN LEWAT UI dashboard
+   itu sendiri (data, bukan kode) -- lihat RA_AREA_SUBMITTER_NAME untuk
+   nama persisnya. Nama asli PIC/Checked By TETAP UTUH di PDF & Supabase
+   kita sendiri, yang diganti CUMA field submittedBy yang dikirim ke
+   Firebase. Modul yang TIDAK ada di peta ini (mis. Maintenance Report --
+   form generik, tidak terikat 1 area tetap) tetap pakai submittedByName
+   asli seperti sebelumnya.
+   Kunci area di bawah ('boiler'/'turbine'/'common'/'wwtp') SENGAJA
+   disamakan persis dengan value <option> filter Area di index.html --
+   supaya cuma ada SATU kosakata area di seluruh repo, tidak nyimpang kalau
+   salah satu diubah nanti. */
 var RA_MODUL_AREA = {
   FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
   COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler',
-  BELT_E45: 'chcb', BELT_E23: 'chcb', BELT_B12: 'chcb', DCS_HMI: 'chcb',
+  BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common',
   'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp',
   GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
 };
 var RA_AREA_SUBMITTER_NAME = {
   boiler: 'PM Unit 7 - Boiler',
   turbine: 'PM Unit 7 - Turbine',
-  chcb: 'PM Unit 7 - Common CHCB',
+  common: 'PM Unit 7 - Common CHCB',
   wwtp: 'PM Unit 7 - Common WWTP'
 };
 
