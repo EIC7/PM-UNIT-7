@@ -2273,6 +2273,39 @@ var RA_ASSET_LABEL = {
   MARK_VIE: 'Mark VIe Alarm & Module Inspection'
 };
 
+/* ── PEMETAAN MODUL -> AREA (buat submittedBy sintetis, routing reviewer) ──
+   Review_Approval_Dashboard.html (Firebase, EenPutra) TIDAK me-routing
+   submission dari isi checksheet -- dia mencocokkan (name-match, case-
+   insensitive) field `submittedBy` ke akun `dashboard_users` (role
+   Teknisi) yang sudah didaftarkan dengan `team`+`area`, lalu area akun itu
+   yang dipakai buat nyocokkan ke TechOp2 (reviewer) mana yang meng-cover
+   area tsb. Supaya submission dari modul PM Unit 7 PASTI ke-routing sesuai
+   AREA MODUL-nya sendiri (bukan tergantung siapa yang kebetulan ngetik PIC/
+   Checked By di form), `submittedBy` yang dikirim ke Firebase DIGANTI
+   otomatis jadi salah satu dari 4 identitas "Teknisi" sintetis di bawah --
+   nama asli PIC/Checked By TETAP UTUH di PDF & Supabase kita sendiri, yang
+   diganti CUMA field submittedBy yang dikirim ke Firebase.
+   4 akun ini WAJIB didaftarkan (persis sama namanya, role Teknisi, Team C7,
+   1 area sesuai) di Review_Approval_Dashboard.html supaya name-match-nya
+   berhasil -- lihat RA_AREA_SUBMITTER_NAME di bawah untuk nama persisnya.
+   Modul yang TIDAK ada di peta ini (mis. Maintenance Report -- form
+   generik, tidak terikat 1 area tetap, sengaja belum dipetakan) tetap
+   pakai submittedByName asli (parameter fungsi raSendFinalPdfToFirebaseDashboard)
+   seperti sebelumnya. */
+var RA_MODUL_AREA = {
+  FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
+  COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler',
+  BELT_E45: 'chcb', BELT_E23: 'chcb', BELT_B12: 'chcb', DCS_HMI: 'chcb',
+  'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp',
+  GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
+};
+var RA_AREA_SUBMITTER_NAME = {
+  boiler: 'PM Unit 7 - Boiler',
+  turbine: 'PM Unit 7 - Turbine',
+  chcb: 'PM Unit 7 - Common CHCB',
+  wwtp: 'PM Unit 7 - Common WWTP'
+};
+
 function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   function finish(ok, err) {
     if (ok) {
@@ -2312,6 +2345,13 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   // sama). RA_ASSET_LABEL[record.modul] cuma buat modul yang nyimpan KODE
   // singkat mentah sebagai modul (mis. 'O2', 'GENERATOR_STATOR_LEAK').
   var label = RA_ASSET_LABEL[record.modul] || record.modul || RA_ASSET_LABEL[modKey] || modKey;
+  // Lihat catatan RA_MODUL_AREA di atas -- ganti submittedBy jadi identitas
+  // sintetis per area kalau modul ini sudah dipetakan, supaya routing
+  // reviewer PASTI ikut area modulnya, bukan tergantung nama PIC/Checked
+  // By yang diketik user. Modul yang belum dipetakan (mis. Maintenance
+  // Report) tetap pakai nama asli seperti sebelumnya.
+  var areaKey = RA_MODUL_AREA[modKey];
+  var effectiveSubmittedBy = areaKey ? RA_AREA_SUBMITTER_NAME[areaKey] : (submittedByName || '');
   // Ditemukan laporan yang macet TANPA PERNAH melapor sukses ATAU gagal
   // (firebase_synced_at dan firebase_sync_error dua-duanya kosong selamanya)
   // -- root cause paling mungkin: fetch() ke Apps Script Drive proxy milik
@@ -2346,7 +2386,7 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
         assetTag: modKey,
         assetName: label,
         checksheetFile: location.pathname.split('/').pop(),
-        submittedBy: submittedByName || ''
+        submittedBy: effectiveSubmittedBy
       // 3 menit (bukan cuma 45 detik) -- PDF checksheet dengan banyak foto
       // (mis. Coal Feeder + 4000 Hours Mill) hasil PDF-nya besar, upload
       // base64-nya ke Apps Script Drive proxy bisa genuinely butuh lebih
