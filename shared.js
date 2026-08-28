@@ -250,9 +250,18 @@ function _photoCacheSet(fileId, dataUrl) {
    BUKAN fetch() langsung ke lh3.googleusercontent.com (itu kena CORS, lihat
    catatan di _pmRestoreBase64AfterLoad). Cek cache lokal DULU (lihat blok
    CACHE FOTO di atas) -- kalau ketemu, tidak perlu roundtrip ke Apps Script
-   sama sekali. Tidak pernah reject -- gagal ambil 1 foto cukup bikin foto
-   itu kosong, tidak boleh gagalkan proses lain. */
-function _pmFetchDriveFileAsBase64(fileId) {
+   sama sekali. Tidak pernah reject -- gagal ambil 1 foto (setelah semua
+   percobaan) cukup bikin foto itu kosong, tidak boleh gagalkan proses lain.
+   Retry sampai 3x kalau gagal -- ditemukan (lewat pengujian nyata, laporan
+   Coal Feeder Calibration 71 foto) proxy Apps Script ini SERING melempar
+   CORS error ("MissingAllowOriginHeader") kalau dibebani banyak fetch foto
+   paralel sekaligus, TAPI itu transient -- percobaan ulang beberapa saat
+   kemudian biasanya sukses. Sebelum ada retry ini, foto yang kena
+   kegagalan transient itu tercetak KOSONG selamanya di PDF final yang
+   terkirim ke Review Approval Dashboard (kotak foto putih + keterangan
+   doang, tanpa gambar) -- padahal fotonya sendiri aman-aman saja di Drive. */
+function _pmFetchDriveFileAsBase64(fileId, _attempt) {
+  var attempt = _attempt || 1;
   return _photoCacheGet(fileId).then(function(cached) {
     if (cached) return cached;
     var fetchPromise = fetch(GDRIVE_WEB_APP_URL, {
@@ -264,18 +273,21 @@ function _pmFetchDriveFileAsBase64(fileId) {
         if (dataUrl) _photoCacheSet(fileId, dataUrl);
         return dataUrl;
       });
-    // 25 detik per foto -- SEBELUMNYA tidak ada batas waktu sama sekali di
-    // sini, jadi kalau proxy Drive kita macet buat SATU foto saja,
-    // Promise.all(jobs) di _pmRestoreBase64AfterLoad ikut nunggu selamanya,
-    // dbLoad() TIDAK PERNAH manggil callback-nya -- laporan yang punya
-    // banyak foto (jadi banyak job paralel) makin gampang kena ini kalau
-    // ada 1 saja yang macet. Kegagalan (termasuk timeout) sudah ditangani
-    // aman oleh .catch(()=>null) yang sama seperti sebelumnya -- foto itu
-    // dibiarkan kosong, TIDAK menggagalkan proses buka data lainnya.
+    // 25 detik per percobaan -- SEBELUMNYA tidak ada batas waktu sama
+    // sekali di sini, jadi kalau proxy Drive kita macet buat SATU foto
+    // saja, Promise.all(jobs) di _pmRestoreBase64AfterLoad ikut nunggu
+    // selamanya, dbLoad() TIDAK PERNAH manggil callback-nya -- laporan yang
+    // punya banyak foto (jadi banyak job paralel) makin gampang kena ini
+    // kalau ada 1 saja yang macet.
     return Promise.race([
       fetchPromise,
       new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, 25000); })
-    ]).catch(function(){ return null; });
+    ]).catch(function(){ return null; }).then(function(dataUrl) {
+      if (dataUrl || attempt >= 3) return dataUrl;
+      return new Promise(function(resolve){
+        setTimeout(function(){ resolve(_pmFetchDriveFileAsBase64(fileId, attempt + 1)); }, attempt * 400);
+      });
+    });
   });
 }
 
