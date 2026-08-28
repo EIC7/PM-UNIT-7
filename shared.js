@@ -351,6 +351,49 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
   return promise;
 }
 
+/* ── PASTIKAN SEMUA FOTO SUDAH DI DRIVE SEBELUM SIMPAN (WAJIB, bukan
+   best-effort) ──
+   Ditemukan laporan (Coal Feeder ~31MB, FEGT & Leak Detection ~6.5MB) yang
+   base64 fotonya nempel PENUH di Supabase karena upload ke Drive gagal
+   diam-diam saat awal disimpan -- usernya sendiri TIDAK PERNAH tahu
+   fotonya gagal ke Drive, karena dbSave() dulu tetap "berhasil" (fallback
+   diam-diam: simpan base64 kalau upload gagal, lihat catatan lama di
+   _pmStripBase64ForSave). Ini bikin record jadi berat (lambat dibuka lagi,
+   lambat di-submit ulang) TANPA usernya sadar sama sekali sampai lama
+   kemudian.
+   Sekarang upload ke Drive WAJIB berhasil sebelum data boleh disimpan ke
+   Supabase -- dipanggil dbSave() SETELAH waitForPendingDriveUploads(),
+   nyoba ulang (bukan cuma nunggu percobaan pertama) untuk foto mana pun
+   yang masih belum punya driveUrl, sampai MAX_ATTEMPTS kali per foto.
+   Kalau SETELAH itu masih ada yang gagal, dbSave() akan MENOLAK menyimpan
+   (lihat pemanggilnya) -- BUKAN lagi diam-diam nyimpen base64-nya --
+   supaya user LANGSUNG tahu ada foto yang gagal terkirim selagi masih di
+   lokasi/koneksi yang sama, bukan ketahuan berbulan-bulan kemudian.
+   Return: array nama foto yang MASIH gagal setelah semua percobaan
+   (kosong = semua sukses, aman lanjut simpan). */
+function _pmEnsureAllPhotosOnDrive(dataObj, modul) {
+  var MAX_ATTEMPTS = 3;
+  function collectPending(obj) {
+    var found = [];
+    (function walk(o) {
+      if (Array.isArray(o)) { o.forEach(walk); return; }
+      if (!o || typeof o !== 'object') return;
+      if (typeof o.dataUrl === 'string' && o.dataUrl.indexOf('data:') === 0 && !o.driveUrl) { found.push(o); return; }
+      Object.keys(o).forEach(function(k){ walk(o[k]); });
+    })(obj);
+    return found;
+  }
+  function attempt(n) {
+    var pending = collectPending(dataObj);
+    if (!pending.length) return Promise.resolve([]);
+    if (n > MAX_ATTEMPTS) return Promise.resolve(pending.map(function(p){ return p.name || '(tanpa nama)'; }));
+    return Promise.all(pending.map(function(entry) {
+      return uploadFotoKeGDrive(entry.dataUrl, entry.name, modul, entry.caption, entry);
+    })).then(function() { return attempt(n + 1); });
+  }
+  return attempt(1);
+}
+
 /* Hapus 1 file di Drive berdasarkan fileId PASTI (bukan berdasarkan nama).
    Dipanggil saat: (a) foto di-crop-ulang -- versi lama dihapus setelah versi
    baru selesai diupload dengan nama Drive baru, dan (b) foto dihapus
@@ -1162,13 +1205,27 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   var origText = btn ? btn.innerHTML : '';
   window._dbSaving = true;
   if (btn) { btn.innerHTML = '⏳ Menyimpan...'; btn.disabled = true; }
-  dbShowSavingOverlay(true, existingId ? 'Memperbarui data, mohon tunggu...' : 'Menyimpan data, mohon tunggu...', 'Mengupload banyak gambar membutuhkan waktu yang lama');
+  dbShowSavingOverlay(true, existingId ? 'Memperbarui data, mohon tunggu...' : 'Menyimpan data, mohon tunggu...', 'Mengupload foto ke Google Drive dulu, mohon tunggu...');
   // Tunggu semua upload foto ke Google Drive yang masih berjalan (dipicu pas
-  // user crop foto) kelar dulu -- supaya driveUrl-nya sudah pasti ter-attach
-  // ke object foto sebelum kita putuskan foto mana yang base64-nya boleh
-  // dibuang dari payload. Foto yang upload Drive-nya gagal/timeout tetap
-  // kirim dataUrl base64-nya (tidak ada foto yang hilang).
+  // user crop foto) kelar dulu, LALU pastikan SEMUA foto benar-benar sudah
+  // di Drive (retry sampai 3x per foto kalau ada yang masih gagal) --
+  // upload ke Drive sekarang WAJIB, bukan lagi best-effort. Kalau setelah
+  // semua percobaan masih ada foto yang gagal, data TIDAK disimpan sama
+  // sekali (lihat blok if di bawah) -- supaya tidak ada lagi laporan yang
+  // diam-diam jadi puluhan MB karena fotonya nempel base64 tanpa user sadar.
   waitForPendingDriveUploads().then(function() {
+    return _pmEnsureAllPhotosOnDrive(rec.data, modul);
+  }).then(function(stillFailed) {
+    if (stillFailed.length) {
+      window._dbSaving = false;
+      if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+      dbShowSavingOverlayError(
+        'Gagal upload ' + stillFailed.length + ' foto ke Google Drive.',
+        'Data BELUM disimpan supaya foto tidak nyangkut/hilang. Cek koneksi internet, lalu coba lagi. Foto: ' + stillFailed.slice(0, 3).join(', ') + (stillFailed.length > 3 ? ', dll.' : ''),
+        function(){ dbSave.apply(null, _dbSaveRetryArgs); }
+      );
+      return; // hentikan di sini -- overlay error+retry sudah ditampilkan di atas, jangan lanjut simpan
+    }
     _pmStripBase64ForSave(rec.data);
     // Hitung ukuran byte ASLI (uncompressed) dari payload SETELAH base64 yang
     // sudah punya driveUrl dibuang, dan simpan sebagai payload_size di record
