@@ -19,17 +19,8 @@
 -- (selama ada koneksi) -- kolom di migration ini yang dipakai untuk tahu
 -- laporan mana saja yang masih "nyangkut".
 --
--- CATATAN: ada draft migration 008_fb_checksheet_link.sql (belum dijalankan)
--- yang menambah kolom fb_checksheet_id + policy
--- "pm_records_update_submitted_metadata" untuk kebutuhan SERUPA (izinkan
--- anon patch record yang statusnya SUDAH SUBMITTED). Migration ini SENGAJA
--- reuse nama policy yang SAMA (bukan bikin policy baru terpisah) supaya
--- tidak ada dua policy UPDATE yang isinya identik -- aman dijalankan
--- dalam urutan apa pun (008 dulu baru 009, atau 009 duluan) karena
--- keduanya cuma drop-if-exists + create ulang policy dengan nama itu.
---
 -- CARA PAKAI: copy-paste SELURUH file ini ke Supabase Dashboard →
--- SQL Editor → Run (setelah 001-007; boleh sebelum atau sesudah 008).
+-- SQL Editor → Run (setelah 001-007).
 -- ═══════════════════════════════════════════════════════════════════════
 
 alter table pm_records

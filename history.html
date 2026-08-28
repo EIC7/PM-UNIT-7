@@ -102,14 +102,24 @@ function loadHistory(modul) {
       var openUrl = modulToUrl(r.modul, r.id);
       var printUrl = modulToPrintUrl(r.modul, r.id);
       var delBtn = '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>';
-      // Tombol Submit cuma buat laporan yang masih DRAFT -- yang sudah
-      // SUBMITTED tidak perlu (dan tidak masuk akal) di-submit ulang lewat
-      // sini. id tombol dipakai historySubmit() buat update tulisan/nonaktifkan
+      // Tombol Submit buat laporan yang masih DRAFT. Tombol Resubmit (beda
+      // warna, oranye) khusus laporan yang SUDAH SUBMITTED tapi BELUM
+      // sukses nyampe ke Review Approval Dashboard (firebase_synced_at
+      // masih kosong -- lihat historyFirebaseBadge "⏳ Menyusul") --
+      // raRetryPendingFirebaseSyncs() (shared.js) sudah otomatis coba kirim
+      // ulang di background tiap halaman dibuka, tombol ini cuma buat user
+      // yang mau langsung memicu percobaan tanpa nunggu. Begitu sudah
+      // sukses (badge jadi "✓ Dashboard"), tombol ini otomatis hilang lagi.
+      // id tombol dipakai historySubmit() buat update tulisan/nonaktifkan
       // tombol ini sendiri begitu proses (di iframe tersembunyi) selesai.
       var submitBtnId = 'histSubmitBtn-' + r.id;
-      var submitBtn = ((r.status || 'DRAFT').toUpperCase() === 'DRAFT')
-        ? '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128274; Submit</button>'
-        : '';
+      var statusUp = (r.status || 'DRAFT').toUpperCase();
+      var submitBtn = '';
+      if (statusUp === 'DRAFT') {
+        submitBtn = '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128274; Submit</button>';
+      } else if (statusUp === 'SUBMITTED' && !r.firebase_synced_at) {
+        submitBtn = '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#f59e0b;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128260; Resubmit</button>';
+      }
       html += '<tr>'+
         '<td><span class="path-label">'+r.modul+'</span></td>'+
         '<td>'+(r.tanggal||'-')+'</td>'+
