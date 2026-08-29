@@ -1500,7 +1500,7 @@ function cropAndSave() {
     // mengecualikan index replaceIdx secara eksplisit lewat ternary, sama
     // seperti pola di modul lain (opacity.html dkk).
 
-    var MAX = 1*1024*1024;
+    var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
     var dataUrl;
     for (var q=0.9; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);
@@ -2048,7 +2048,7 @@ function evidCompressFullImage(dataUrl, imgArr, cb){
     var canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
     canvas.getContext('2d').drawImage(img, 0, 0);
-    var MAX = 1*1024*1024;
+    var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
     var out;
     for (var q=0.9; q>=0.25; q-=0.1) {
       out = canvas.toDataURL('image/jpeg', q);

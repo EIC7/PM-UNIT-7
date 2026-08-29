@@ -1372,7 +1372,7 @@ function cropAndSave() {
     var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
     var caption = existing ? (existing.caption||'') : '';
     var offsetX = existing ? (existing.offsetX||0) : 0;
-    var MAX = 1*1024*1024;
+    var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
     var otherTotal = imgArr.reduce(function(a,im,i){ return a+((existing && i===p.replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0)); }, 0);
     var dataUrl;
     for (var q=0.9; q>=0.25; q-=0.1) {
@@ -1465,7 +1465,7 @@ function puCompressFullImage(dataUrl, imgArr, cb) {
         var canvas = document.createElement('canvas');
         canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
         canvas.getContext('2d').drawImage(img, 0, 0);
-        var MAX = 1*1024*1024;
+        var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
         var out;
         for (var q=0.9; q>=0.25; q-=0.1) {
             out = canvas.toDataURL('image/jpeg', q);

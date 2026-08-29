@@ -2815,7 +2815,7 @@ function cropAndSave() {
     canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
     canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
-    var MAX = 1*1024*1024;
+    var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
     var dataUrl;
     for (var q=0.9; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);

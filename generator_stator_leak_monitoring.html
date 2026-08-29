@@ -1236,7 +1236,7 @@ function cropAndSave() {
     var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
     var caption = existing ? (existing.caption||'') : '';
     var offsetX = existing ? (existing.offsetX||0) : 0;
-    var MAX = 1*1024*1024;
+    var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
     var otherTotal = imgArr.reduce(function(a,im,i){ return a+((existing && i===p.replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0)); }, 0);
     var dataUrl;
     for (var q=0.85; q>=0.25; q-=0.1) {

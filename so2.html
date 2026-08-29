@@ -1387,7 +1387,7 @@ function cropAndSave() {
 
     var imgArr = getPhotoArr(p.groupKey);
     var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
-    var MAX = 1*1024*1024;
+    var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
     var dataUrl;
     for (var q=0.9; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);
