@@ -9,6 +9,7 @@
 
 | Versi | Tanggal | Perubahan |
 |---|---|---|
+| v1.14 | 2026-08-29 | **Audit menyeluruh sebelum bikin file HTML checksheet baru.** (1) **Isi gap dokumentasi lama**: bagian Fitur B sebelumnya cuma bilang "kode `cropAndSave`/`closeCropModal`/`cropReset`/`reshapeCropBoxToRatio` lengkap ada di dump Fitur J di bawah" — **padahal kode itu TIDAK PERNAH benar-benar ada di dokumen ini** (dicek: 0 hasil untuk `function cropAndSave` di seluruh file). Sekarang kode aslinya (sumber: `form_o2_report.html`, termasuk kompresi adaptif budget 1MB, in-place replace Fitur C, render callback generik) ditempel langsung di Fitur B, plus `rotateCropImage()` (Fitur R). (2) **Bug baru ditemukan & didokumentasikan** (belum diperbaiki di semua file, cek per file kalau audit ulang): dangling-else di `cropAndSave()` pada blok hapus foto lama dari Drive — kalau `else`-nya salah nempel ke kondisi `driveFileId` (bukan ke `existing`), foto yang di-crop-ulang tapi belum py `driveFileId` bisa dobel muncul di galeri (lihat catatan tambahan di Fitur C). (3) **Verifikasi cakupan**: `beltscale.html` (polos, beda dari `beltscale-b12/e23/e45.html`) dan `checksheet-level-switch.html` dicek — **keduanya TIDAK punya sistem crop/upload foto sama sekali** (bukan gap, memang di luar cakupan dokumen ini). Tidak ada file checksheet lain yang belum pernah disebut di tabel riwayat ini. |
 | v1.13 | 2026-08-26 | **Tambah Signature Pad System di `shared.js`** — sistem tanda tangan digital lengkap yang terintegrasi dengan workflow 3-level di `maintenance_report_form.html`. Fungsi baru di `shared.js`: `raSignPadShow(opts)` (modal pad TTD interaktif, canvas draw, upload ke Supabase Storage bucket `signatures` sebagai PNG, update `RA_SIGNATURE_FILE_MAP` in-memory), `raSignPadSave()`, `raSignPadClear()`, `raSignPadCancel()`, `raGetSignatureDataUrl(displayName, callback)` (fetch signed URL → blob → dataUrl, fallback-safe), `raRenderSignatureToElement(displayName, role, elementId, showPadIfMissing)`. Update `maintenance_report_form.html`: panel Checker box kini punya preview TTD (`<img id="raCheckerTtdImg">`) + tombol "✍️ Gambar / Update TTD" (`raOpenSignPadChecker()`), dropdown onchange memicu `raPreviewCheckerTtd()`; panel SPV box punya preview TTD (`<img id="raSpvTtdImg">`) + tombol `raOpenSignPadSpv()`; kedua preview otomatis load saat panel muncul via override `raRenderWorkflowUI`. **Alur TTD:** login sebagai checker/spv → klik tombol TTD → gambar di canvas → simpan ke Storage bucket → TTD muncul di preview → Verifikasi/Approve → TTD ikut tersimpan di record via `raGetSignatureUrl`. Filename di Storage = slug dari `display_name` (`zaini_nur_hidayat.png`). `RA_SIGNATURE_FILE_MAP` tetap sebagai in-memory cache — setelah `raSignPadSave()` berhasil, entry baru langsung ditambahkan ke map tanpa perlu reload halaman. |
 | v1.12 | 2026-08-16 | **PENUTUP roll-out Fitur R (dan Fitur O di mana relevan) — 100% TUNTAS untuk seluruh repo.** Melengkapi 7 file yang tersisa dari audit v1.9: `beltscale-b12/e23/e45.html` (sudah punya Fitur O, ditambah Fitur R), `coal_feeder_calibration.html` (2 galeri berbagi 1 crop modal, ditambah Fitur R sekali), `form_o2_report.html` (sumber asli Fitur O/P/Q, di-backport Fitur R), `mark_vie_inspection.html` (Fitur R saja — **Fitur O TIDAK relevan**: `mvRowEvidence[i]` didesain khusus maksimal 1 foto per baris, bukan array multi-foto, jadi tidak ada yang bisa ditukar posisi), `material-warehouse.html` (Fitur R saja — **Fitur O TIDAK relevan**: setiap aset cuma punya SATU foto/`image_data` string tunggal, bukan array/galeri sama sekali; user secara eksplisit mengonfirmasi boleh menambah Fitur R meski ada catatan v1.11 soal file ini — Fitur R aman diterapkan karena cuma memutar pixel SUMBER sebelum crop, tidak menyentuh arsitektur penyimpanan `image_data` yang sudah ada). <br><br>**Rekap akhir seluruh 18 file bersistem crop preset:** Fitur R (Rotasi) ada di SEMUA 18 file. Fitur O (Urutkan Foto) ada di 15 file yang punya galeri multi-foto; TIDAK ADA (by design, bukan belum-dikerjakan) di 3 file dengan galeri maks-1-foto-per-slot: `generator_stator_leak_monitoring.html`, `mark_vie_inspection.html`, `material-warehouse.html`. |
 | v1.11 | 2026-08-16 | **Audit penuh bug widthCm/heightCm/offsetX terbuang** (lanjutan v1.8/v1.10) ke SEMUA 18 file yang punya sistem crop preset. Hasil: **16 file sudah AMAN** (save & restore sudah menyertakan `widthCm`/`heightCm`/`offsetX` dengan benar, kadang lewat literal object langsung, kadang lewat statement `if` terpisah setelah literal — dua pola ini SAMA-SAMA valid, jangan disangka bug hanya karena field-nya tidak ada di dalam literal `{}`-nya): `beltscale-b12.html`, `beltscale-e23.html`, `beltscale-e45.html`, `cems_calibration.html` (evidence diteruskan sebagai object utuh, tidak di-strip sama sekali), `coal-silo-level.html`, `dcs-hmi-inspection.html`, `fegt.html`, `form_o2_report.html`, `generator_stator_leak_monitoring.html` (evidenceItems diteruskan utuh), `maintenance_report_form.html` (sections diteruskan utuh), `mark_vie_inspection.html`, `opacity.html`, `ph-analyzer.html`, `so2.html` (so2Photos diteruskan utuh). **3 file yang genuinely bug sudah diperbaiki di v1.8/v1.10**: `coal_feeder_calibration.html`, `flow-meter-fgd.html`, `pm-hg-analyzer.html`. **`material-warehouse.html` SENGAJA DIABAIKAN** dari fix ini atas keputusan user — foto di file ini disimpan sebagai string dataUrl polos ke kolom `image_data` (bukan object dengan metadata crop), `currentImageMeta.widthCm/heightCm/offsetX` memang tidak pernah dikirim ke database sejak awal (bukan 'dibuang', tapi arsitekturnya beda), dan fungsi `iePhotoDrawSize()` yang sudah dibuat untuk itu tidak pernah dipanggil di manapun (dead code). **PENTING kalau nanti ada permintaan terkait foto/PDF di file ini: JANGAN otomatis 'benerin' kode mati ini tanpa nanya dulu ke user apakah memang mau fitur itu diaktifkan** — sudah pernah ditanya dan user bilang abaikan. |
@@ -520,14 +521,139 @@ function updateSizeLabel() {
         : 'Ukuran cetak: '+w+' cm × '+h+' cm (bebas, maks '+MANUAL_MAX_CM+'×'+MANUAL_MAX_CM+'cm)';
 }
 
-// openCropModal, cropReset, closeCropModal, cropAndSave, reshapeCropBoxToRatio → kode LENGKAP
-// dan terbaru (termasuk kompresi adaptif total-cap 1MB) sudah ada utuh di dump Fitur J
-// di bawah (sumber: fegt.html / form_o2_report.html) — salin dari situ, bukan dari sini.
-
 // INIT (panggil di DOMContentLoaded):
 // renderPresetButtons();
 // initCropDrag(); // lihat fitur E
+
+function reshapeCropBoxToRatio() {
+    var box = document.getElementById('cropBox');
+    var img = document.getElementById('cropImg');
+    if (!box || !img || !cropModal._cropWcm || !cropModal._cropHcm) return;
+    var ratio = cropModal._cropWcm / cropModal._cropHcm;
+    var iL=parseInt(img.style.left)||0, iT=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    var bL=parseInt(box.style.left)||0, bT=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var cx=bL+bW/2, cy=bT+bH/2;
+    var newW=bW, newH=bW/ratio;
+    if (newH>bH*1.6||newH<bH*0.6) { newH=bH; newW=bH*ratio; }
+    newW = Math.min(newW, iW); newH = Math.min(newH, iH);
+    if (newW/newH > ratio) newW = newH*ratio; else newH = newW/ratio;
+    var nl = clampNum(cx-newW/2, iL, iL+iW-newW);
+    var nt = clampNum(cy-newH/2, iT, iT+iH-newH);
+    box.style.left=nl+'px'; box.style.top=nt+'px'; box.style.width=newW+'px'; box.style.height=newH+'px';
+}
+
+function closeCropModal() {
+    cropModal.classList.remove('show');
+    cropModal._pending = null;
+}
+function cropReset() {
+    var img = document.getElementById('cropImg');
+    var p = cropModal._pending;
+    if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
+}
+function skipCrop() { closeCropModal(); }
+
+// ── Fitur R: Rotasi gambar 90° kiri/kanan di dalam modal crop ──
+// dir: -1 = kiri (CCW), 1 = kanan (CW). Gambar SUMBER diputar lewat canvas,
+// hasilnya dipasang balik ke #cropImg (memicu ulang img.onload yang menyesuaikan
+// posisi/ukuran + rasio terkunci). cropAndSave() menggambar dari #cropImg
+// langsung, jadi hasil akhir crop otomatis ikut gambar yang sudah diputar.
+function rotateCropImage(dir) {
+    var img = document.getElementById('cropImg');
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(dir * 90 * Math.PI/180);
+    ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+    var rotatedUrl = canvas.toDataURL('image/jpeg', 0.95);
+    img.src = rotatedUrl;
+    if (cropModal._pending) cropModal._pending.dataUrl = rotatedUrl;
+}
+
+// ── cropAndSave(): potong gambar sesuai crop box, KOMPRESI ADAPTIF
+// (budget total ~1MB per galeri: kualitas JPEG turun bertahap 0.9→0.25,
+// fallback downsize dimensi kalau masih kebesaran di q=0.25), simpan entry
+// (in-place replace kalau re-crop — lihat Fitur C), upload ke Drive. ──
+function cropAndSave() {
+    var img = document.getElementById('cropImg');
+    var box = document.getElementById('cropBox');
+    var p = cropModal._pending;
+    if (!p) { alert('Target upload tidak ditemukan. Coba upload ulang.'); closeCropModal(); return; }
+
+    var iLeft=parseInt(img.style.left)||0, iTop=parseInt(img.style.top)||0;
+    var iW=img.offsetWidth, iH=img.offsetHeight;
+    if (!img.naturalWidth || !img.naturalHeight || !iW || !iH) { alert('Gambar belum siap diproses. Coba tunggu sebentar lalu simpan lagi.'); return; }
+    var bLeft=parseInt(box.style.left)||0, bTop=parseInt(box.style.top)||0;
+    var bW=box.offsetWidth, bH=box.offsetHeight;
+    var scale = img.naturalWidth / iW;
+    var sx=Math.max(0,(bLeft-iLeft)*scale), sy=Math.max(0,(bTop-iTop)*scale);
+    var sw=Math.min(img.naturalWidth-sx, bW*scale), sh=Math.min(img.naturalHeight-sy, bH*scale);
+
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
+    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+    var imgArr = p.imgArr;
+    var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
+    var caption = existing ? (existing.caption||'') : '';
+    var offsetX = existing ? (existing.offsetX||0) : 0;
+    // ⚠️ Budget MAX itu TOTAL per galeri (imgArr), bukan per foto -- makanya
+    // entry yang SEDANG diganti (i===p.replaceIdx) dikecualikan dari
+    // otherTotal, supaya re-crop tidak dihitung dobel (ukuran lama + baru).
+    var MAX = 1*1024*1024;
+    var otherTotal = imgArr.reduce(function(a,im,i){ return a+((existing && i===p.replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0)); }, 0);
+    var dataUrl;
+    for (var q=0.9; q>=0.25; q-=0.1) {
+        dataUrl = canvas.toDataURL('image/jpeg', q);
+        var newSize = dataUrl.length*0.75;
+        if (otherTotal+newSize <= MAX) break;
+        if (q<=0.25) {
+            var factor = Math.sqrt(MAX/(otherTotal+newSize));
+            var c2 = document.createElement('canvas');
+            c2.width = Math.max(50, Math.floor(canvas.width*factor));
+            c2.height = Math.max(50, Math.floor(canvas.height*factor));
+            c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+            dataUrl = c2.toDataURL('image/jpeg', 0.7);
+            break;
+        }
+    }
+
+    var entry = {name:(p.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl: dataUrl, type:'image/jpeg', caption: caption};
+    if (offsetX) entry.offsetX = offsetX;
+    if (cropModal._cropWcm && cropModal._cropHcm) { entry.widthCm = cropModal._cropWcm; entry.heightCm = cropModal._cropHcm; }
+    // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama
+    // (Fitur C) -- bukan dihapus lalu push ke akhir array.
+    if (existing) {
+      imgArr.splice(p.replaceIdx, 1, entry);
+    } else {
+      imgArr.push(entry);
+    }
+    // Foto lama yang diganti (crop-ulang) dihapus dari Drive lewat fileId pasti.
+    // ⚠️ BUG DANGLING-ELSE yang pernah ditemukan & diperbaiki: kalau `if
+    // (existing && existing.driveFileId)` ditulis dengan `else` yang salah
+    // nempel (mis. ke kondisi `driveFileId` doang, bukan ke keseluruhan
+    // `existing`), foto yang di-crop-ulang tapi BELUM sempat punya
+    // `driveFileId` (mis. upload sebelumnya masih pending) ke-splice DAN
+    // ke-push sekaligus -> foto dobel muncul di galeri. Pastikan struktur
+    // if-nya persis seperti di bawah (tanpa else sama sekali di sini).
+    if (existing && existing.driveFileId) deleteFotoDariGDrive(existing.driveFileId);
+
+    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '', entry);
+
+    closeCropModal();
+    // panggil render callback modul terkait -- generik lewat window[modulePrefix+'RenderPreviews']
+    // (lihat catatan Fitur J soal ini), BUKAN daftar if/else manual per modul seperti contoh di atas.
+    if (typeof window[p.modulePrefix + 'RenderPreviews'] === 'function') window[p.modulePrefix + 'RenderPreviews'](p.side);
+}
 ```
+
+**Sumber kode di atas:** `form_o2_report.html` (per 2026-08-29) — dianggap versi paling lengkap/terkini (kompresi adaptif 1MB, in-place replace, fix dangling-else driveFileId, render callback generik). **Sebelumnya bagian ini cuma berupa referensi "salin dari dump Fitur J di bawah" TANPA kode aslinya benar-benar ada di dokumen ini** — kalau ada versi lama dokumen ini ter-cache/ter-download di tempat lain, ganti dengan versi ini.
 
 **Butuh dari user saat integrasi:**
 - Apakah file tujuan MASIH pakai crop engine lama shared.js (`imgOpenCropper`)? Kalau iya, semua pemanggilnya perlu diarahkan ulang ke `openCropModal()`.
@@ -580,6 +706,8 @@ function reEditCrop(type, idx, imgIdx) {
 
 **⚠️ WAJIB DIPERHATIKAN saat implementasi `cropAndSave()` (bukan cuma `reEditCrop`):** ketika `p.replaceIdx >= 0` (artinya user sedang re-crop foto lama, bukan upload baru), entry hasil crop yang baru **HARUS mengganti entry lama tepat di index yang sama** — pakai `imgArr.splice(p.replaceIdx, 1, entry)` — **JANGAN** pola lama `imgArr.splice(p.replaceIdx,1)` (hapus) lalu `imgArr.push(entry)` (tambah di akhir). Pola lama itu bikin foto pindah ke posisi PALING KANAN/AKHIR galeri setiap kali di-crop ulang, sementara keterangan (`caption`) yang di-sync ulang dari input DOM berdasarkan index (lihat `cf4kSyncCaptions`/`cfSyncCaptions` sebelum render) jadi tertukar dengan foto lain karena urutan array sudah berubah duluan sebelum DOM-nya. Bug ini pernah ditemukan di 14 file HTML + `shared.js` (Agustus 2026) — lihat Riwayat Revisi v1.1 di atas.
 Efek samping lain yang perlu ikut disesuaikan: kalau ada penghitungan budget ukuran total foto (mis. loop kompresi `for (var q=0.9; ...)` yang menjumlahkan `imgArr.reduce(...)` untuk cek batas 1MB), pastikan entry yang SEDANG diganti (`i === p.replaceIdx`) dikecualikan dari total tersebut — supaya tidak dihitung dobel (ukuran lama + ukuran baru sekaligus).
+
+**⚠️ Bug dangling-else terkait (ditemukan di `cropAndSave()`, sudah diperbaiki di `form_o2_report.html`):** blok penghapusan foto lama di Drive (`if (existing && existing.driveFileId) deleteFotoDariGDrive(existing.driveFileId);`) HARUS ditulis tanpa `else` menempel padanya. Versi lama pernah salah taruh `else` yang secara sintaksis menempel ke kondisi `driveFileId` saja (bukan ke keseluruhan `existing`) — akibatnya foto yang di-crop-ulang tapi BELUM sempat punya `driveFileId` (upload sebelumnya masih pending) ke-`splice` (ganti) DAN ke-`push` (tambah) sekaligus di baris kode setelahnya, jadi foto itu muncul DOBEL di galeri. Cek struktur if/else di titik ini kalau nemu bug "foto ganda setelah crop ulang" yang BUKAN soal urutan (beda dari bug utama Fitur C di atas).
 
 ---
 
