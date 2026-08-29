@@ -2678,7 +2678,15 @@ function raSubmitReportAuto() {
   // "pm_records_submit_authenticated" cuma izinkan transisi DARI DRAFT,
   // jadi re-update status SUBMITTED->SUBMITTED bakal ditolak RLS (0 baris
   // ke-update, raUpdateRecord gagal). Cukup kirim ulang PDF-nya saja.
-  supaFetch('GET', SUPA_TABLE + '?id=eq.' + window._editingId + '&select=id,modul,tanggal,pic,work_order,status&limit=1')
+  // 🆕 firebase_checksheet_id WAJIB ikut di-select -- tanpa ini, retry lewat
+  // jalur "sudah SUBMITTED" di bawah selalu kirim record dengan
+  // firebase_checksheet_id kosong ke raSendFinalPdfToFirebaseDashboard(),
+  // walau di database sebenarnya sudah ada ID dari percobaan sebelumnya.
+  // Akibatnya reuse-logic di raSendFinalPdfToFirebaseDashboard (cek
+  // record.firebase_checksheet_id) tidak pernah aktif untuk jalur retry ini
+  // -- tiap retry tetap bikin dokumen Firestore checksheet BARU (ini
+  // penyebab pasti kasus "O2 Inlet" dobel terus meski sudah ada fix reuse).
+  supaFetch('GET', SUPA_TABLE + '?id=eq.' + window._editingId + '&select=id,modul,tanggal,pic,work_order,status,firebase_checksheet_id&limit=1')
     .then(function(rows) {
       var rec = rows && rows[0];
       if (rec && String(rec.status || '').toUpperCase() === 'SUBMITTED') {
