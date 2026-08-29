@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Form O2 Report</title>
+<title>Weekly Calibration O2 Outlet</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -140,7 +140,7 @@
   <div class="topbar-sep"></div>
   <div class="topbar-logo">O2</div>
   <div class="topbar-sep"></div>
-  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Oxygen Analyzer Maintenance</div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Weekly Calibration O2 Outlet</div>
   <div class="topbar-right">
     <div class="live-dot"></div>
     <div class="topbar-time" id="clock">--:--:--</div>
@@ -151,11 +151,11 @@
 
   <div class="page-header">
     <div>
-      <div class="page-header-sub">Oxygen Analyzer</div>
-      <div class="page-header-title">Form <span>O2</span> Report</div>
+      <div class="page-header-sub">Oxygen Analyzer — Weekly</div>
+      <div class="page-header-title">Weekly Calibration <span>O2 Outlet</span></div>
     </div>
     <div style="margin-bottom:8px">
-      <span class="badge">8 CHANNEL</span>
+      <span class="badge">6 CHANNEL — OUTLET</span>
     </div>
   </div>
 
@@ -164,22 +164,26 @@
     <div class="section-label">📋 Informasi Pekerjaan</div>
     <div class="o2-job-title">
       <div class="o2-job-title-label">Nama Pekerjaan</div>
-      <div class="o2-job-title-text">Preventive Maintenance of Oxygen Analyzer<br><span>(Cleaning Probe &amp; Recalibration)</span></div>
+      <div class="o2-job-title-text">Weekly Calibration of Oxygen Analyzer<br><span>(Outlet — 6 Channel)</span></div>
     </div>
+    <datalist id="o2TechList">
+      <option value="Zaini Nur Hidayat">
+      <option value="Isyana Ray Sasongko">
+    </datalist>
     <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
       <div class="meta-field"><label>Work Order</label><input type="text" id="o2Workorder" placeholder="No. Workorder..."></div>
       <div class="meta-field"><label>Tanggal</label><input type="date" id="o2Tanggal"></div>
       <div class="meta-field"><label>Asset</label><input type="text" id="o2Asset" placeholder="Nama / kode asset..."></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="o2Pic" placeholder="Nama PIC..."></div>
-      <div class="meta-field"><label>Checked By - Technician</label>
-        <select id="o2CheckedBy">
-          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-        </select>
-      </div>
+    </div>
+    <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:14px">
+      <div class="meta-field"><label>Technician 1</label><input type="text" id="o2Tech1" list="o2TechList" placeholder="Nama teknisi..."></div>
+      <div class="meta-field"><label>Technician 2</label><input type="text" id="o2Tech2" list="o2TechList" placeholder="Nama teknisi..."></div>
+      <div class="meta-field"><label>Technician 3</label><input type="text" id="o2Tech3" list="o2TechList" placeholder="Nama teknisi..."></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
       <div class="meta-field"><label>Asset Description</label><textarea id="o2AssetDesc" rows="2" placeholder="Deskripsi asset..."></textarea></div>
+      <div class="meta-field"><label>Remarks</label><textarea id="o2Remarks" rows="2" placeholder="Catatan umum kalibrasi..."></textarea></div>
     </div>
     <div class="meta-field" style="margin-top:14px">
       <label>Frequency Maintenance <span style="font-weight:400;text-transform:none;color:var(--text3,#8a97a8)">— pilih satu / lebih, otomatis mengisi Work To Be Done</span></label>
@@ -192,43 +196,42 @@
 
   <!-- DOKUMENTASI PER CHANNEL -->
   <div class="panel">
-    <div class="section-label">🔬 Dokumentasi Per Channel</div>
-    <div class="o2-session-tabs">
-      <button type="button" class="o2-session-tab active" id="o2TabInlet" onclick="o2SwitchSession('inlet')">🔵 Inlet (8 Channel)</button>
-      <button type="button" class="o2-session-tab" id="o2TabOutlet" onclick="o2SwitchSession('outlet')">🟢 Outlet (6 Channel)</button>
+    <div class="section-label">🔬 Dokumentasi Per Channel — Outlet</div>
+
+    <!-- Channel Tags (dipakai bersama semua section di bawah) -->
+    <div class="o2-readings-wrap">
+      <div class="o2-readings-title">🏷️ Channel Tags</div>
+      <div id="o2TagGrid" style="display:flex;flex-direction:column;gap:8px"><!-- built by JS: buildO2TagGrid() --></div>
     </div>
-    <div id="o2OutletReadingsWrap" style="display:none">
-      <div class="o2-readings-wrap">
-        <div class="o2-readings-title">📊 Channel Readings</div>
-        <div style="overflow-x:auto">
-          <table class="o2-readings-table" id="o2ReadingsTable">
-            <thead><tr>
-              <th>Channel</th><th>O2 (%)<br>Before</th><th>O2 (%)<br>After</th>
-              <th>Voltage (mV)</th><th>Temp (°C)</th><th>Lifetime (months)</th><th>Resistance (Ohm)</th>
-            </tr></thead>
-            <tbody><!-- built by JS: buildO2ReadingsTables() --></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="o2-readings-wrap">
-        <div class="o2-readings-title">📈 Average O2 Readings</div>
-        <div style="overflow-x:auto">
-          <table class="o2-avg-table" id="o2AvgTable">
-            <thead><tr><th>Channel Group</th><th>Average O2 (%)<br>Before</th><th>Average O2 (%)<br>After</th></tr></thead>
-            <tbody><!-- built by JS: buildO2ReadingsTables() --></tbody>
-          </table>
-        </div>
+
+    <!-- Section 1: Calibration Gas Pressure (Session Level) -->
+    <div class="o2-channel-card" style="margin-bottom:18px">
+      <div class="o2-readings-title">📊 Calibration Gas Pressure (Session Level)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+        <div class="meta-field"><label>Zero Bottle Pressure (psi)</label><input type="number" inputmode="decimal" step="any" id="o2ZeroBottlePressure" placeholder="0.0"></div>
+        <div class="meta-field"><label>Zero Regulator Pressure (psi)</label><input type="number" inputmode="decimal" step="any" id="o2ZeroRegulatorPressure" placeholder="0.0"></div>
       </div>
     </div>
-    <div id="o2ChannelGrid" style="display:flex;flex-direction:column;gap:16px"></div>
-    <div id="o2ChannelGridOutlet" style="display:none;flex-direction:column;gap:16px"></div>
+
+    <!-- Section 2: O2 Reading -->
+    <div class="o2-readings-wrap">
+      <div class="o2-readings-title">📊 O2 Reading</div>
+      <div style="overflow-x:auto"><table class="o2-readings-table" id="o2ReadingsTable"><thead><tr><th>Channel</th><th>O2 Reading (%)</th></tr></thead><tbody></tbody></table></div>
+      <div id="o2ReadingEvidenceGrid" style="display:flex;flex-direction:column;gap:16px;margin-top:14px"></div>
+    </div>
+
+    <!-- Section 3: Cell Measurements -->
+    <div class="o2-readings-wrap">
+      <div class="o2-readings-title">⚙️ Cell Measurements</div>
+      <div id="o2CellMeasGrid" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div>
   </div>
 
   <!-- BUTTONS -->
   <div class="panel">
     <div class="btn-row" style="margin-top:0">
       <button class="btn btn-pdf" id="btnPdf" onclick="downloadPdf()">🖨️ Print Preview</button>
-      <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('O2')">💾 Simpan ke Database</button>
+      <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('PM_O2_WEEKLY_OUTLET')">💾 Simpan ke Database</button>
       <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=downloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
       <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
     </div>
@@ -1574,24 +1577,15 @@ function closePdfPreview() {
 /* ─── FEGT DATA ─── */
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MODUL O2 — Form O2 Report (Monthly Maintenance Oxygen Analyzer)
-   Tidak ada tabel input data (bukan seperti FEGT) — hanya Informasi
-   Pekerjaan + dokumentasi foto (Evidence / Before / After) per 8 channel.
+   MODUL PM_O2_WEEKLY_OUTLET — Weekly Calibration O2 Outlet
+   Dipisah dari form_o2_report.html (Monthly) -- hanya sesi Outlet (6 channel),
+   dengan tabel Channel Readings sesuai skema kv_store_e669e2e2 eksternal
+   (wvictafepzzrchiywxpk.supabase.co, key outlet-session:outlet-<ts>) supaya
+   migrasi nanti tinggal petakan field 1:1 -- lihat memory
+   project_o2_inlet_outlet_new_html.
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ─── DATA CHANNEL ─── */
-var O2_CHANNELS = [
-  {id:1, tag:'7BG-AE-562 — SECONDARY AIR HEATER 7A GAS INLET - OXYGEN ANALYZER ELEMENT 1'},
-  {id:2, tag:'7BG-AE-563 — SECONDARY AIR HEATER 7A GAS INLET - OXYGEN ANALYZER ELEMENT 2'},
-  {id:3, tag:'7BG-AE-564 — SECONDARY AIR HEATER 7A GAS INLET - OXYGEN ANALYZER ELEMENT 3'},
-  {id:4, tag:'7BG-AE-565 — SECONDARY AIR HEATER 7B GAS INLET - OXYGEN ANALYZER ELEMENT 4'},
-  {id:5, tag:'7BG-AE-566 — SECONDARY AIR HEATER 7B GAS INLET - OXYGEN ANALYZER ELEMENT 5'},
-  {id:6, tag:'7BG-AE-567 — SECONDARY AIR HEATER 7B GAS INLET - OXYGEN ANALYZER ELEMENT 6'},
-  {id:7, tag:'7BG-AE-568 — PRIMARY AIR HEATER 7 GAS INLET - OXYGEN ANALYZER ELEMENT 7'},
-  {id:8, tag:'7BG-AE-569 — PRIMARY AIR HEATER 7 GAS INLET - OXYGEN ANALYZER ELEMENT 8'}
-];
-
-// Channel sesi Outlet — daftar tag sesuai referensi terbaru (bisa diedit manual per channel)
 var O2_OUTLET_CHANNELS = [
   {id:1, tag:'7BG-AI-570A - SECONDARY AIR HEATER 7A GAS OUT O2 ANALYZER 1'},
   {id:2, tag:'7BG-AI-571A - SECONDARY AIR HEATER 7B GAS OUT O2 ANALYZER 1'},
@@ -1601,17 +1595,14 @@ var O2_OUTLET_CHANNELS = [
   {id:6, tag:'7BG-AI-571B - SECONDARY AIR HEATER 7B GAS OUT O2 ANALYZER 2'}
 ];
 
-// o2Readings['och'+id] = {before:'', after:'', voltage:'', temp:'', lifetime:'', resistance:''}
-// Hanya dipakai untuk sesi Outlet (2 tabel di atas dokumentasi per channel).
-var o2Readings = {};
-O2_OUTLET_CHANNELS.forEach(function(c){ o2Readings['och'+c.id] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''}; });
-
-// Pengelompokan untuk tabel "Average O2 Readings" — id merujuk ke O2_OUTLET_CHANNELS.id
-var O2_OUTLET_AVG_GROUPS = [
-  {label:'Secondary A (570A + 571A)', ids:[1,2]},
-  {label:'Primary (572 + 573)', ids:[3,4]},
-  {label:'Secondary B (570B + 571B)', ids:[5,6]}
-];
+// Field-field di bawah PERSIS sama nama key-nya dengan field channels[] di
+// kv_store_e669e2e2 (outlet-session:outlet-<ts>) supaya migrasi ke pm_records
+// trivial.
+function o2EmptyChannelData() {
+  return { o2Reading:'', voltage:'', temperature:'', lifetime:'', resistance:'' };
+}
+var o2ChannelData = {};
+O2_OUTLET_CHANNELS.forEach(function(c){ o2ChannelData['och'+c.id] = o2EmptyChannelData(); });
 
 function o2ReadingsChannelCode(tag) {
   var raw = String(tag||'').trim();
@@ -1619,61 +1610,20 @@ function o2ReadingsChannelCode(tag) {
   return sep ? raw.substring(0, raw.indexOf(sep)).trim() : raw;
 }
 
-function buildO2ReadingsTables() {
-  var tbody = document.querySelector('#o2ReadingsTable tbody');
-  if (!tbody || tbody.children.length > 0) return;
-  tbody.innerHTML = O2_OUTLET_CHANNELS.map(function(c){
-    var ck = 'och'+c.id;
-    var code = o2ReadingsChannelCode(c.tag);
-    return '<tr>'+
-      '<td>'+code+'</td>'+
-      '<td><input type="number" step="0.01" id="o2rd_'+ck+'_before" oninput="o2UpdateReading(\''+ck+'\',\'before\',this.value)"></td>'+
-      '<td><input type="number" step="0.01" id="o2rd_'+ck+'_after" oninput="o2UpdateReading(\''+ck+'\',\'after\',this.value)"></td>'+
-      '<td><input type="number" step="0.1" id="o2rd_'+ck+'_voltage" oninput="o2UpdateReading(\''+ck+'\',\'voltage\',this.value)"></td>'+
-      '<td><input type="number" step="1" id="o2rd_'+ck+'_temp" oninput="o2UpdateReading(\''+ck+'\',\'temp\',this.value)"></td>'+
-      '<td><input type="number" step="1" id="o2rd_'+ck+'_lifetime" oninput="o2UpdateReading(\''+ck+'\',\'lifetime\',this.value)"></td>'+
-      '<td><input type="number" step="1" id="o2rd_'+ck+'_resistance" oninput="o2UpdateReading(\''+ck+'\',\'resistance\',this.value)"></td>'+
-    '</tr>';
-  }).join('');
-
-  var avgBody = document.querySelector('#o2AvgTable tbody');
-  if (avgBody && avgBody.children.length === 0) {
-    avgBody.innerHTML = O2_OUTLET_AVG_GROUPS.map(function(g,i){
-      return '<tr><td>'+g.label+'</td><td class="o2-avg-val" id="o2avg_'+i+'_before">—</td><td class="o2-avg-val" id="o2avg_'+i+'_after">—</td></tr>';
-    }).join('');
-  }
+function o2UpdateChannelField(ck, field, val) {
+  if (!o2ChannelData[ck]) o2ChannelData[ck] = o2EmptyChannelData();
+  o2ChannelData[ck][field] = val;
 }
 
-function o2UpdateReading(ck, field, val) {
-  if (!o2Readings[ck]) o2Readings[ck] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''};
-  o2Readings[ck][field] = val;
-  if (field === 'before' || field === 'after') o2RecalcAvg();
-}
-
-function o2RecalcAvg() {
-  O2_OUTLET_AVG_GROUPS.forEach(function(g, i){
-    ['before','after'].forEach(function(field){
-      var vals = g.ids.map(function(id){ var r = o2Readings['och'+id]; var v = r ? parseFloat(r[field]) : NaN; return v; }).filter(function(v){ return !isNaN(v); });
-      var el = document.getElementById('o2avg_'+i+'_'+field);
-      if (!el) return;
-      el.textContent = vals.length ? (vals.reduce(function(a,b){return a+b;},0) / g.ids.length).toFixed(2) : '—';
-    });
-  });
-}
-
-
-// Inlet pakai prefix 'ch', Outlet pakai prefix 'och' (supaya tidak bentrok)
+// Galeri foto: 'reading_och'+id = evidence per channel (Section 2 -- SATU-
+// satunya section yang punya evidence di form Outlet ini). Cuma 1 phase
+// 'evidence' -- infrastruktur upload/crop/reorder di bawah (imgOpenCropper/
+// o2RenderPreviews/dll) dipakai apa adanya.
 var o2Images = {};
-O2_CHANNELS.forEach(function(c){ o2Images['ch'+c.id] = {evidence:[], before:[], after:[]}; });
-O2_OUTLET_CHANNELS.forEach(function(c){ o2Images['och'+c.id] = {evidence:[], before:[], after:[]}; });
+O2_OUTLET_CHANNELS.forEach(function(c){ o2Images['reading_och'+c.id] = {evidence:[]}; });
 
 // Status mode "Urutkan Foto" per galeri (key: chKey_phase) -> {active:bool, selectedIdx:number|null}
 var o2ReorderState = {};
-
-// Status centang tiap channel (buka/tutup section + menentukan ikut PDF & auto-isi Asset)
-var o2ChannelEnabled = {};
-O2_CHANNELS.forEach(function(c){ o2ChannelEnabled['ch'+c.id] = false; });
-O2_OUTLET_CHANNELS.forEach(function(c){ o2ChannelEnabled['och'+c.id] = false; });
 
 /* ── Frequency Maintenance — pilih 1/lebih, otomatis isi Work To Be Done ── */
 var O2_FREQ_OPTIONS = ['Monthly Maintenance','3Monthly Maintenance','6Monthly Maintenance','1Yearly Maintenance','2Yearly Maintenance','3Yearly Maintenance'];
@@ -1703,110 +1653,106 @@ function o2SetSelectedFreq(list) {
   });
 }
 
-/* ── Pindah tab sesi Inlet / Outlet (hanya ganti grid mana yang tampil, desain kartu channel tidak berubah) ── */
-function o2SwitchSession(session) {
-  var gridIn = document.getElementById('o2ChannelGrid');
-  var gridOut = document.getElementById('o2ChannelGridOutlet');
-  var readingsWrap = document.getElementById('o2OutletReadingsWrap');
-  var tabIn = document.getElementById('o2TabInlet');
-  var tabOut = document.getElementById('o2TabOutlet');
-  if (session === 'outlet') {
-    gridIn.style.display = 'none'; gridOut.style.display = 'flex';
-    if (readingsWrap) readingsWrap.style.display = 'block';
-    tabIn.classList.remove('active'); tabOut.classList.add('active');
-  } else {
-    gridOut.style.display = 'none'; gridIn.style.display = 'flex';
-    if (readingsWrap) readingsWrap.style.display = 'none';
-    tabOut.classList.remove('active'); tabIn.classList.add('active');
-  }
-}
-
-function buildO2ChannelGrid() {
-  buildO2ChannelGridInto(O2_CHANNELS, 'o2ChannelGrid', 'ch');
-  buildO2ChannelGridInto(O2_OUTLET_CHANNELS, 'o2ChannelGridOutlet', 'och');
-}
-function buildO2ChannelGridInto(channelList, gridElId, prefix) {
-  var grid = document.getElementById(gridElId);
+function buildO2TagGrid() {
+  var grid = document.getElementById('o2TagGrid');
   if (!grid || grid.children.length > 0) return;
-  channelList.forEach(function(c) {
-    var ck = prefix+c.id;
+  O2_OUTLET_CHANNELS.forEach(function(c) {
+    var ck = 'och'+c.id;
     var tagSafe = String(c.tag||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     var row = document.createElement('div');
-    row.className = 'o2-channel-card';
-    row.style.padding = '0';
-    row.style.overflow = 'hidden';
-    row.id = 'o2row_'+ck;
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
     row.innerHTML =
-      '<div class="o2-channel-head" id="o2hdr_'+ck+'" style="padding:12px 14px;margin:0;border-bottom:1px solid transparent">'+
-        '<input type="checkbox" id="o2chk_'+ck+'" onchange="o2ToggleChannel(\''+ck+'\',this.checked)" style="width:17px;height:17px;cursor:pointer;accent-color:var(--ok,#39ae60);flex:none">'+
-        '<label for="o2chk_'+ck+'" class="o2-channel-head-num" style="cursor:pointer">&#128270; Channel '+c.id+'</label>'+
-        '<input type="text" class="o2-channel-tag-input" id="o2tag_'+ck+'" placeholder="Nama / tag channel ini (opsional)" value="'+tagSafe+'" oninput="o2UpdateAssetFromChannels()">'+
-        '<span id="o2badge_'+ck+'" style="font-size:11px;color:var(--text3);white-space:nowrap;flex:none">&mdash; tidak dipilih</span>'+
-      '</div>'+
-      '<div id="o2body_'+ck+'" style="display:none;padding:14px">'+
-        '<div style="margin-bottom:12px">'+
-          '<label class="o2-catatan-label">&#128221; Catatan</label>'+
-          '<textarea id="o2cat_'+ck+'" rows="2" class="o2-catatan-textarea" placeholder="Catatan kondisi / hasil pekerjaan channel ini..."></textarea>'+
-        '</div>'+
-        '<div class="o2-photo-grid">'+
-          buildO2PhotoSlot(ck,'before','Before Cleaning','#b45309')+
-          buildO2PhotoSlot(ck,'after','After Cleaning','#0f766e')+
-          buildO2PhotoSlot(ck,'evidence','Evidence','#2563eb')+
-        '</div>'+
-      '</div>';
+      '<span style="font-size:13px;font-weight:700;color:var(--steel);white-space:nowrap;min-width:78px">&#128270; Channel '+c.id+'</span>'+
+      '<input type="text" class="o2-channel-tag-input" id="o2tag_'+ck+'" style="flex:1;min-width:180px" value="'+tagSafe+'" oninput="o2UpdateAssetFromChannels();o2RefreshChannelLabels()">';
     grid.appendChild(row);
   });
 }
 
-/* ── Centang channel = buka/tutup section-nya (persis pola Leak Detection di FEGT) ── */
-function o2ToggleChannel(ck, checked) {
-  o2ChannelEnabled[ck] = checked;
-  var body = document.getElementById('o2body_'+ck);
-  var badge = document.getElementById('o2badge_'+ck);
-  var hdr = document.getElementById('o2hdr_'+ck);
-  if (checked) {
-    body.style.display = 'block';
-    badge.innerHTML = '&#10003; dipilih';
-    badge.style.color = 'var(--ok,#39ae60)';
-    hdr.style.borderBottomColor = 'var(--border)';
-  } else {
-    body.style.display = 'none';
-    badge.innerHTML = '&mdash; tidak dipilih';
-    badge.style.color = 'var(--text3)';
-    hdr.style.borderBottomColor = 'transparent';
-  }
-  o2UpdateAssetFromChannels();
+function o2ChannelTag(id) {
+  var el = document.getElementById('o2tag_och'+id);
+  var fallback = O2_OUTLET_CHANNELS.filter(function(c){ return c.id===id; })[0];
+  return (el && el.value) ? el.value : (fallback ? fallback.tag : '');
+}
+
+function buildO2ReadingTable() {
+  var tbody = document.querySelector('#o2ReadingsTable tbody');
+  if (!tbody || tbody.children.length > 0) return;
+  tbody.innerHTML = O2_OUTLET_CHANNELS.map(function(c){
+    var ck = 'och'+c.id;
+    return '<tr><td class="o2chlabel-'+ck+'">'+o2ReadingsChannelCode(c.tag)+'</td>'+
+      '<td><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_o2Reading" oninput="o2UpdateChannelField(\''+ck+'\',\'o2Reading\',this.value)"></td></tr>';
+  }).join('');
+}
+
+function buildO2ReadingEvidenceGrid() {
+  var grid = document.getElementById('o2ReadingEvidenceGrid');
+  if (!grid || grid.children.length > 0) return;
+  O2_OUTLET_CHANNELS.forEach(function(c) {
+    var ck = 'och'+c.id;
+    var card = document.createElement('div');
+    card.className = 'o2-channel-card';
+    card.innerHTML =
+      '<div style="margin-bottom:10px;font-size:13px;font-weight:700;color:var(--steel)">&#128247; Evidence — <span class="o2chlabel-'+ck+'">'+o2ReadingsChannelCode(c.tag)+'</span></div>'+
+      '<div style="margin-bottom:12px"><label class="o2-catatan-label">&#128221; Keterangan</label><textarea id="o2cat_reading_'+ck+'" rows="2" class="o2-catatan-textarea" placeholder="Keterangan channel ini..."></textarea></div>'+
+      '<div class="o2-photo-grid" style="grid-template-columns:1fr" id="o2PhotoWrap_reading_'+ck+'"></div>';
+    grid.appendChild(card);
+    document.getElementById('o2PhotoWrap_reading_'+ck).innerHTML = buildO2PhotoSlot('reading_'+ck,'evidence','Evidence','#2563eb');
+  });
+}
+
+function buildO2CellMeasGrid() {
+  var grid = document.getElementById('o2CellMeasGrid');
+  if (!grid || grid.children.length > 0) return;
+  O2_OUTLET_CHANNELS.forEach(function(c) {
+    var ck = 'och'+c.id;
+    var card = document.createElement('div');
+    card.className = 'o2-channel-card';
+    card.innerHTML =
+      '<div class="o2-channel-head-num o2chlabel-'+ck+'" style="margin-bottom:10px">'+o2ReadingsChannelCode(c.tag)+'</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+
+        '<div class="meta-field"><label>Voltage (mV)</label><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_voltage" oninput="o2UpdateChannelField(\''+ck+'\',\'voltage\',this.value)"></div>'+
+        '<div class="meta-field"><label>Temp (°C)</label><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_temperature" oninput="o2UpdateChannelField(\''+ck+'\',\'temperature\',this.value)"></div>'+
+        '<div class="meta-field"><label>Lifetime (mo)</label><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_lifetime" oninput="o2UpdateChannelField(\''+ck+'\',\'lifetime\',this.value)"></div>'+
+        '<div class="meta-field"><label>Resistance (Ω)</label><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_resistance" oninput="o2UpdateChannelField(\''+ck+'\',\'resistance\',this.value)"></div>'+
+      '</div>';
+    grid.appendChild(card);
+  });
 }
 
 /* ── Asset & Asset Description di "Informasi Pekerjaan" otomatis terisi dari
-      channel yang dicentang, berurutan kecil ke besar (Channel 1 → 8) ── */
+      SEMUA channel -- form Weekly ini tidak punya toggle enable/disable
+      seperti Monthly, 6 channel selalu didata tiap sesi (lihat referensi
+      ahpm.figma.site: semua channel selalu tampil, tidak ada checkbox). ── */
 function o2UpdateAssetFromChannels() {
   var codes = [], descs = [];
-  function collect(channelList, prefix) {
-    channelList.forEach(function(c) {
-      var ck = prefix+c.id;
-      if (!o2ChannelEnabled[ck]) return;
-      var tagEl = document.getElementById('o2tag_'+ck);
-      var raw = (tagEl ? tagEl.value : c.tag || '').trim();
-      if (!raw) return;
-      var sep = raw.indexOf('—') >= 0 ? '—' : (raw.indexOf(' - ') >= 0 ? ' - ' : null);
-      if (sep) {
-        var idx = raw.indexOf(sep);
-        var code = raw.substring(0, idx).trim();
-        var desc = raw.substring(idx + sep.length).trim();
-        if (code) codes.push(code);
-        if (desc) descs.push(desc);
-      } else {
-        codes.push(raw);
-      }
-    });
-  }
-  collect(O2_CHANNELS, 'ch');
-  collect(O2_OUTLET_CHANNELS, 'och');
+  O2_OUTLET_CHANNELS.forEach(function(c) {
+    var raw = o2ChannelTag(c.id).trim();
+    if (!raw) return;
+    var sep = raw.indexOf('—') >= 0 ? '—' : (raw.indexOf(' - ') >= 0 ? ' - ' : null);
+    if (sep) {
+      var idx = raw.indexOf(sep);
+      var code = raw.substring(0, idx).trim();
+      var desc = raw.substring(idx + sep.length).trim();
+      if (code) codes.push(code);
+      if (desc) descs.push(desc);
+    } else {
+      codes.push(raw);
+    }
+  });
   var assetEl = document.getElementById('o2Asset');
   var descEl = document.getElementById('o2AssetDesc');
   if (assetEl) assetEl.value = codes.join(', ');
   if (descEl) descEl.value = descs.join('\n');
+}
+
+/* Label channel (kode tag) dipakai di Section 2/3 -- disinkronkan ulang
+   setiap kali tag di Section "Channel Tags" diedit. */
+function o2RefreshChannelLabels() {
+  O2_OUTLET_CHANNELS.forEach(function(c){
+    var ck = 'och'+c.id;
+    var code = o2ReadingsChannelCode(o2ChannelTag(c.id));
+    document.querySelectorAll('.o2chlabel-'+ck).forEach(function(el){ el.textContent = code; });
+  });
 }
 
 function buildO2PhotoSlot(chKey, phase, label, color) {
@@ -2017,13 +1963,9 @@ function iePhotoDrawSize(entry, maxW, maxH) {
 
 /* ─── GENERATE PDF ─── */
 function downloadPdf(){
-  var anyEnabled = O2_CHANNELS.some(function(c){ return o2ChannelEnabled['ch'+c.id]; }) ||
-                    O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelEnabled['och'+c.id]; });
-  if (!anyEnabled) { alert('Belum ada Channel yang dicentang. Centang minimal 1 channel (Inlet atau Outlet) di bagian "Dokumentasi Per Channel" sebelum membuat PDF.'); return; }
   o2SyncAllCaptions();
   var totalImgs = 0;
-  O2_CHANNELS.forEach(function(c){ var ck='ch'+c.id; if(!o2ChannelEnabled[ck])return; totalImgs += o2Images[ck].evidence.length + o2Images[ck].before.length + o2Images[ck].after.length; });
-  O2_OUTLET_CHANNELS.forEach(function(c){ var ck='och'+c.id; if(!o2ChannelEnabled[ck])return; totalImgs += o2Images[ck].evidence.length + o2Images[ck].before.length + o2Images[ck].after.length; });
+  O2_OUTLET_CHANNELS.forEach(function(c){ totalImgs += o2Images['reading_och'+c.id].evidence.length; });
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   ensureO2Background(function() {
@@ -2074,11 +2016,15 @@ function downloadPdf(){
       var assetDesc = document.getElementById('o2AssetDesc').value || '—';
       var workToBeDone = document.getElementById('o2WorkToBeDone').value || '—';
       var pic = document.getElementById('o2Pic').value || '—';
+      var tech1 = document.getElementById('o2Tech1').value || '—';
+      var tech2 = document.getElementById('o2Tech2').value || '—';
+      var tech3 = document.getElementById('o2Tech3').value || '—';
+      var remarks = document.getElementById('o2Remarks').value || '—';
 
       // ─────── HALAMAN 1 ───────
       drawBg(doc, pw, ph);
 
-      secHeader('MONTHLY MAINTENANCE OF OXYGEN ANALYZER (CLEANING PROBE & RECALIBRATION)');
+      secHeader('WEEKLY CALIBRATION OF OXYGEN ANALYZER — OUTLET');
 
       // ═══ INFORMASI PEKERJAAN — tabel grid satu kolom (Label | Value) ═══
       // Setiap field jadi satu baris penuh selebar halaman, dengan kolom
@@ -2096,7 +2042,11 @@ function downloadPdf(){
         ['Asset', safe(asset)],
         ['Dicetak', safe(nowStr)],
         ['Asset Description', safe(assetDesc)],
-        ['Work To Be Done', safe(workToBeDone)]
+        ['Work To Be Done', safe(workToBeDone)],
+        ['Technician 1', safe(tech1)],
+        ['Technician 2', safe(tech2)],
+        ['Technician 3', safe(tech3)],
+        ['Remarks', safe(remarks)]
       ];
 
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
@@ -2130,131 +2080,94 @@ function downloadPdf(){
 
       // ─────── DOKUMENTASI PER CHANNEL ───────
       var evGap = 6, evColW = (contentW - evGap) / 2, maxPhotoH = 90;
-      var bfGap = 6, bfColW = (contentW - bfGap) / 2;
+      var imgFilter = function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); };
 
-      function printChannelGroup(channelList, prefix, sectionTitle) {
-        var anyInGroup = channelList.some(function(c){ return o2ChannelEnabled[prefix+c.id]; });
-        if (!anyInGroup) return;
-        secHeader(sectionTitle);
+      function printEvidenceGallery(imgArr) {
+        if (!imgArr || !imgArr.length) return;
+        var firstE1 = imgArr[0] ? iePhotoDrawSize(imgArr[0], evColW, maxPhotoH) : null;
+        var firstE2 = imgArr[1] ? iePhotoDrawSize(imgArr[1], evColW, maxPhotoH) : null;
+        var firstEvRowH = Math.max(firstE1?firstE1.h:0, firstE2?firstE2.h:0, 20);
+        var firstEvBlockH = 5 + firstEvRowH + 9;
+        if (firstEvBlockH <= (ph - marginTop - marginBottom) && (y + firstEvBlockH > ph - marginBottom)) {
+          doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
+        } else { checkPage(7); }
+        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(37,99,235);
+        doc.text('EVIDENCE', marginX+3, y);
+        y += 5;
+        for (var ei=0; ei<imgArr.length; ei+=2) {
+          var e1 = imgArr[ei], e2 = imgArr[ei+1] || null;
+          var d1 = iePhotoDrawSize(e1, evColW, maxPhotoH);
+          var d2 = e2 ? iePhotoDrawSize(e2, evColW, maxPhotoH) : null;
+          var rowH = Math.max(d1.h, d2 ? d2.h : 0, 20);
+          if (y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+          var x1 = Math.max(marginX, Math.min(marginX+2 + (evColW - d1.w)/2 + ((e1.offsetX||0)*10), pw - marginX - d1.w));
+          try { doc.addImage(e1.dataUrl, 'JPEG', x1, y, d1.w, d1.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x1,y,d1.w,d1.h,'S'); }
+          if (e1.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e1.caption), d1.w), x1, y+d1.h+2.5); }
+          if (e2) {
+            var x2 = Math.max(marginX, Math.min(marginX + evColW + evGap + (evColW - d2.w)/2 + ((e2.offsetX||0)*10), pw - marginX - d2.w));
+            try { doc.addImage(e2.dataUrl, 'JPEG', x2, y, d2.w, d2.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x2,y,d2.w,d2.h,'S'); }
+            if (e2.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e2.caption), d2.w), x2, y+d2.h+2.5); }
+          }
+          y += rowH + 9;
+        }
+      }
 
-        channelList.forEach(function(c) {
-          var ck = prefix+c.id;
-          var tagEl = document.getElementById('o2tag_'+ck);
-          var tag = tagEl && tagEl.value ? tagEl.value : '';
-          var catEl = document.getElementById('o2cat_'+ck);
+      function printCatatan(label, text) {
+        if (!text) return;
+        checkPage(8);
+        doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(60,80,60);
+        var lines = doc.splitTextToSize(label+': '+safe(text), contentW-4);
+        doc.text(lines, marginX+2, y+3);
+        y += lines.length*4 + 5;
+      }
+
+      // Section 1: Calibration Gas Pressure (Session Level)
+      var zeroBottlePressure = document.getElementById('o2ZeroBottlePressure').value;
+      var zeroRegulatorPressure = document.getElementById('o2ZeroRegulatorPressure').value;
+      if (zeroBottlePressure || zeroRegulatorPressure) {
+        checkPage(16);
+        secHeader('CALIBRATION GAS PRESSURE (SESSION LEVEL)');
+        doc.autoTable({
+          startY: y, theme: 'grid', styles: { fontSize: 8, cellPadding: 2.2, halign:'center' },
+          margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
+          headStyles: { fillColor: [21,153,87], textColor:[255,255,255], fontStyle:'bold', fontSize:7 },
+          head: [['Zero Bottle Pressure (psi)','Zero Regulator Pressure (psi)']],
+          body: [[safe(zeroBottlePressure||'—'), safe(zeroRegulatorPressure||'—')]],
+          willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+      }
+
+      // Section 2: O2 Reading (per channel, evidence & keterangan sendiri-sendiri)
+      var anyReading = O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelData['och'+c.id].o2Reading || o2Images['reading_och'+c.id].evidence.length; });
+      if (anyReading) {
+        checkPage(16);
+        secHeader('O2 READING');
+        doc.autoTable({
+          startY: y, theme: 'grid', styles: { fontSize: 7.5, cellPadding: 1.8, halign:'center' },
+          margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
+          headStyles: { fillColor: [21,153,87], textColor:[255,255,255], fontStyle:'bold', fontSize:7.5 },
+          columnStyles: { 0: { halign:'left', fontStyle:'bold' } },
+          head: [['Channel','O2 Reading (%)']],
+          body: O2_OUTLET_CHANNELS.map(function(c){ var v=o2ChannelData['och'+c.id].o2Reading; return [safe(o2ReadingsChannelCode(c.tag)), v?safe(v):'—']; }),
+          willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+
+        O2_OUTLET_CHANNELS.forEach(function(c) {
+          var ck = 'och'+c.id;
+          var catEl = document.getElementById('o2cat_reading_'+ck);
           var catatan = catEl ? catEl.value : '';
-
-          if (!o2ChannelEnabled[ck]) return; // hanya channel yang dicentang yang masuk PDF
-
-          var evImgs = o2Images[ck].evidence.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
-          var befImgs = o2Images[ck].before.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
-          var aftImgs = o2Images[ck].after.filter(function(f){ return f.dataUrl && f.type && f.type.startsWith('image/'); });
-
-          // Estimasi tinggi header + catatan (dihitung dulu, tanpa digambar) supaya
-          // bisa dipakai untuk cek "header + konten pertama tidak boleh terpisah halaman".
-          var catLinesPre = catatan ? doc.splitTextToSize('Catatan: '+safe(catatan), contentW-4) : null;
-          var headerBlockH = 10 + (catLinesPre ? (catLinesPre.length*4 + 5) : 0);
-
-          // Konten pertama yang menempel langsung di bawah header: BEFORE/AFTER
-          // (kalau ada) atau EVIDENCE (kalau before/after kosong tapi evidence ada).
-          var firstContentH = 0;
-          if (befImgs.length || aftImgs.length) {
-            var firstB0 = befImgs[0] ? iePhotoDrawSize(befImgs[0], bfColW, maxPhotoH) : null;
-            var firstA0 = aftImgs[0] ? iePhotoDrawSize(aftImgs[0], bfColW, maxPhotoH) : null;
-            firstContentH = 5 + Math.max(firstB0?firstB0.h:0, firstA0?firstA0.h:0, 20) + 9;
-          } else if (evImgs.length) {
-            var firstE10 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
-            var firstE20 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
-            firstContentH = 5 + Math.max(firstE10?firstE10.h:0, firstE20?firstE20.h:0, 20) + 9;
-          }
-
-          // Header (+catatan) + konten pertama harus 1 paket (tidak terpisah halaman).
-          // Kalau memang tidak muat walau di halaman baru sekalipun, biarkan alur
-          // normal (checkPage per-baris) yang menangani — jangan maksa loop tak berujung.
-          var firstBlockH = headerBlockH + firstContentH;
-          if (firstBlockH <= (ph - marginTop - marginBottom) && (y + firstBlockH > ph - marginBottom)) {
-            doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
-          } else {
-            checkPage(14);
-          }
+          var evImgs = o2Images['reading_'+ck].evidence.filter(imgFilter);
+          if (!catatan && !evImgs.length) return;
+          checkPage(14);
           doc.setFillColor(60, 90, 70);
           doc.rect(marginX, y, contentW, 7, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
-          doc.text('Channel '+c.id + (tag ? '  |  '+tag : ''), marginX+4, y+5);
+          doc.text('Channel '+c.id + '  |  ' + safe(o2ReadingsChannelCode(c.tag)), marginX+4, y+5);
           y += 10;
-
-          if (catatan) {
-            doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(60,80,60);
-            var catLines = catLinesPre;
-            doc.text(catLines, marginX+2, y+3);
-            y += catLines.length*4 + 5;
-          }
-
-          // BEFORE / AFTER — sejajar kiri-kanan, 1 foto per baris
-          if (befImgs.length || aftImgs.length) {
-            checkPage(7);
-            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160, 90, 20);
-            doc.text('BEFORE CLEANING', marginX+3, y);
-            doc.setTextColor(15, 110, 90);
-            doc.text('AFTER CLEANING', marginX + bfColW + bfGap + 3, y);
-            y += 5;
-            var xBef = marginX + 2, xAft = marginX + bfColW + bfGap;
-            var maxImgs = Math.max(befImgs.length, aftImgs.length);
-            for (var ii=0; ii<maxImgs; ii++) {
-              var bImg = befImgs[ii] || null, aImg = aftImgs[ii] || null;
-              var bDim = bImg ? iePhotoDrawSize(bImg, bfColW, maxPhotoH) : null;
-              var aDim = aImg ? iePhotoDrawSize(aImg, bfColW, maxPhotoH) : null;
-              var rowH2 = Math.max(bDim?bDim.h:0, aDim?aDim.h:0, 20);
-              if (y + rowH2 + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
-              if (bImg) {
-                var dxb = Math.max(marginX, Math.min(xBef + (bfColW - bDim.w)/2 + ((bImg.offsetX||0)*10), pw - marginX - bDim.w));
-                try { doc.addImage(bImg.dataUrl, 'JPEG', dxb, y, bDim.w, bDim.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(dxb,y,bDim.w,bDim.h,'S'); }
-                if (bImg.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(bImg.caption), bDim.w), dxb, y+bDim.h+2.5); }
-              }
-              if (aImg) {
-                var dxa = Math.max(marginX, Math.min(xAft + (bfColW - aDim.w)/2 + ((aImg.offsetX||0)*10), pw - marginX - aDim.w));
-                try { doc.addImage(aImg.dataUrl, 'JPEG', dxa, y, aDim.w, aDim.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(dxa,y,aDim.w,aDim.h,'S'); }
-                if (aImg.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(aImg.caption), aDim.w), dxa, y+aDim.h+2.5); }
-              }
-              y += rowH2 + 9;
-            }
-          }
-
-          // EVIDENCE — 2 foto per baris
-          if (evImgs.length) {
-            // Label EVIDENCE + baris foto pertama juga tidak boleh terpisah halaman
-            // (dicek terpisah dari header Channel, karena bisa saja mulai di halaman lain
-            // kalau BEFORE/AFTER sudah menghabiskan banyak tempat).
-            var firstE1 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
-            var firstE2 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
-            var firstEvRowH = Math.max(firstE1?firstE1.h:0, firstE2?firstE2.h:0, 20);
-            var firstEvBlockH = 5 + firstEvRowH + 9;
-            if (firstEvBlockH <= (ph - marginTop - marginBottom) && (y + firstEvBlockH > ph - marginBottom)) {
-              doc.addPage(); drawBg(doc, pw, ph); y = marginTop;
-            } else {
-              checkPage(7);
-            }
-            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(37,99,235);
-            doc.text('EVIDENCE', marginX+3, y);
-            y += 5;
-            for (var ei=0; ei<evImgs.length; ei+=2) {
-              var e1 = evImgs[ei], e2 = evImgs[ei+1] || null;
-              var d1 = iePhotoDrawSize(e1, evColW, maxPhotoH);
-              var d2 = e2 ? iePhotoDrawSize(e2, evColW, maxPhotoH) : null;
-              var rowH = Math.max(d1.h, d2 ? d2.h : 0, 20);
-              if (y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
-              var x1 = Math.max(marginX, Math.min(marginX+2 + (evColW - d1.w)/2 + ((e1.offsetX||0)*10), pw - marginX - d1.w));
-              try { doc.addImage(e1.dataUrl, 'JPEG', x1, y, d1.w, d1.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x1,y,d1.w,d1.h,'S'); }
-              if (e1.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e1.caption), d1.w), x1, y+d1.h+2.5); }
-              if (e2) {
-                var x2 = Math.max(marginX, Math.min(marginX + evColW + evGap + (evColW - d2.w)/2 + ((e2.offsetX||0)*10), pw - marginX - d2.w));
-                try { doc.addImage(e2.dataUrl, 'JPEG', x2, y, d2.w, d2.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x2,y,d2.w,d2.h,'S'); }
-                if (e2.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e2.caption), d2.w), x2, y+d2.h+2.5); }
-              }
-              y += rowH + 9;
-            }
-          }
-
+          printCatatan('Keterangan', catatan);
+          printEvidenceGallery(evImgs);
           checkPage(5);
           doc.setDrawColor(180, 210, 185); doc.setLineWidth(0.3);
           doc.line(marginX, y, marginX + contentW, y);
@@ -2262,65 +2175,31 @@ function downloadPdf(){
         });
       }
 
-      printChannelGroup(O2_CHANNELS, 'ch', 'DOKUMENTASI PER CHANNEL — INLET (8 CHANNEL)');
-
-      // Tabel Channel Readings & Average O2 Readings (Outlet) — tampil sebelum
-      // dokumentasi per channel Outlet (evidence/before/after), sama urutannya
-      // seperti di layar form.
-      var anyOutletReading = O2_OUTLET_CHANNELS.some(function(c){
-        var r = o2Readings['och'+c.id];
-        return r && (r.before || r.after || r.voltage || r.temp || r.lifetime || r.resistance);
-      });
-      if (anyOutletReading) {
+      // Section 3: Cell Measurements (tanpa evidence/keterangan)
+      var anyCellMeas = O2_OUTLET_CHANNELS.some(function(c){ var d=o2ChannelData['och'+c.id]; return d.voltage||d.temperature||d.lifetime||d.resistance; });
+      if (anyCellMeas) {
         checkPage(16);
-        secHeader('CHANNEL READINGS — OUTLET');
+        secHeader('CELL MEASUREMENTS');
         doc.autoTable({
-          startY: y, theme: 'grid', styles: { fontSize: 8, cellPadding: 2, halign: 'center' },
+          startY: y, theme: 'grid', styles: { fontSize: 7, cellPadding: 1.8, halign:'center' },
           margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
-          headStyles: { fillColor: [21, 153, 87], textColor: [255,255,255], fontStyle: 'bold' },
-          columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
-          head: [['Channel','O2 (%)\nBefore','O2 (%)\nAfter','Voltage (mV)','Temp (°C)','Lifetime (months)','Resistance (Ohm)']],
+          headStyles: { fillColor: [21,153,87], textColor:[255,255,255], fontStyle:'bold', fontSize:7 },
+          columnStyles: { 0: { halign:'left', fontStyle:'bold' } },
+          head: [['Channel','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ω)']],
           body: O2_OUTLET_CHANNELS.map(function(c){
-            var r = o2Readings['och'+c.id] || {};
-            var dash = function(v){ return (v===undefined||v===null||v==='') ? '—' : safe(v); };
-            return [safe(o2ReadingsChannelCode(c.tag)), dash(r.before), dash(r.after), dash(r.voltage), dash(r.temp), dash(r.lifetime), dash(r.resistance)];
-          }),
-          willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
-        });
-        y = doc.lastAutoTable.finalY + 8;
-
-        checkPage(16);
-        secHeader('AVERAGE O2 READINGS — OUTLET');
-        doc.autoTable({
-          startY: y, theme: 'grid', styles: { fontSize: 8.5, cellPadding: 2.5, halign: 'center' },
-          margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
-          headStyles: { fillColor: [99, 102, 241], textColor: [255,255,255], fontStyle: 'bold' },
-          columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
-          head: [['Channel Group','Average O2 (%) Before','Average O2 (%) After']],
-          body: O2_OUTLET_AVG_GROUPS.map(function(g,i){
-            var read = function(field){
-              var vals = g.ids.map(function(id){ var r=o2Readings['och'+id]; var v=r?parseFloat(r[field]):NaN; return v; }).filter(function(v){return !isNaN(v);});
-              return vals.length ? (vals.reduce(function(a,b){return a+b;},0)/g.ids.length).toFixed(2) : '—';
-            };
-            return [safe(g.label), read('before'), read('after')];
+            var d=o2ChannelData['och'+c.id];
+            var dash=function(v){return v?safe(v):'—';};
+            return [safe(o2ReadingsChannelCode(c.tag)), dash(d.voltage), dash(d.temperature), dash(d.lifetime), dash(d.resistance)];
           }),
           willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
         });
         y = doc.lastAutoTable.finalY + 8;
       }
 
-      // Khusus report Outlet: "Dokumentasi Per Channel" (Before/After/Evidence per
-      // channel) selalu dimulai di halaman baru, terpisah dari header/info dan
-      // 2 tabel Channel Readings + Average O2 Readings di atasnya — bukan cuma
-      // pindah halaman kalau kepenuhan (checkPage), tapi dipaksa page break.
-      var anyOutletEnabled = O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelEnabled['och'+c.id]; });
-      if (anyOutletEnabled) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
-      printChannelGroup(O2_OUTLET_CHANNELS, 'och', 'DOKUMENTASI PER CHANNEL — OUTLET (6 CHANNEL)');
-
       if (typeof hideImgLoading === 'function') hideImgLoading();
 
       dbShowSavingOverlay(false);
-      showPdfPreview(doc, 'O2_Report_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
+      showPdfPreview(doc, 'O2_Weekly_Outlet_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
     } catch(e) {
       if (typeof hideImgLoading === 'function') hideImgLoading();
       dbShowSavingOverlay(false);
@@ -2331,19 +2210,12 @@ function downloadPdf(){
 }
 
 function o2SyncAllCaptions() {
-  O2_CHANNELS.forEach(function(c){
-    var ck = 'ch'+c.id;
-    ['evidence','before','after'].forEach(function(phase){ o2SyncCaptions(ck, phase); });
-  });
-  O2_OUTLET_CHANNELS.forEach(function(c){
-    var ck = 'och'+c.id;
-    ['evidence','before','after'].forEach(function(phase){ o2SyncCaptions(ck, phase); });
-  });
+  O2_OUTLET_CHANNELS.forEach(function(c){ o2SyncCaptions('reading_och'+c.id, 'evidence'); });
 }
 
 /* ─── SIMPAN / MUAT DATA ─── */
 function dbCollectData(modul) {
-  if (modul !== 'O2') return null;
+  if (modul !== 'PM_O2_WEEKLY_OUTLET') return null;
   var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   var rawDate = document.getElementById('o2Tanggal').value;
   var tanggalStr = '—';
@@ -2356,7 +2228,12 @@ function dbCollectData(modul) {
     workToBeDone: document.getElementById('o2WorkToBeDone').value || '—',
     frequency: o2SelectedFreq.slice(),
     pic: document.getElementById('o2Pic').value || '—',
-    checkedBy: document.getElementById('o2CheckedBy').value || ''
+    technician1: document.getElementById('o2Tech1').value || '',
+    technician2: document.getElementById('o2Tech2').value || '',
+    technician3: document.getElementById('o2Tech3').value || '',
+    zeroBottlePressure: document.getElementById('o2ZeroBottlePressure').value || '',
+    zeroRegulatorPressure: document.getElementById('o2ZeroRegulatorPressure').value || '',
+    remarks: document.getElementById('o2Remarks').value || ''
   };
   o2SyncAllCaptions();
   var ki = function(img){
@@ -2367,40 +2244,34 @@ function dbCollectData(modul) {
     return o;
   };
   var channels = {};
-  function collectChannelData(channelList, prefix) {
-    channelList.forEach(function(c){
-      var ck = prefix+c.id;
-      var tagEl = document.getElementById('o2tag_'+ck);
-      var catEl = document.getElementById('o2cat_'+ck);
-      channels[ck] = {
-        enabled: !!o2ChannelEnabled[ck],
-        tag: tagEl ? tagEl.value||'' : '',
-        catatan: catEl ? catEl.value||'' : '',
-        evidence: o2Images[ck].evidence.map(ki),
-        before: o2Images[ck].before.map(ki),
-        after: o2Images[ck].after.map(ki)
-      };
-    });
-  }
-  collectChannelData(O2_CHANNELS, 'ch');
-  collectChannelData(O2_OUTLET_CHANNELS, 'och');
-  var anyInletEnabled = O2_CHANNELS.some(function(c){ return o2ChannelEnabled['ch'+c.id]; });
-  var anyOutletEnabled = O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelEnabled['och'+c.id]; });
-  var modulName = 'PM_O2_MONTHLY_CLEANING';
-  if (anyInletEnabled && anyOutletEnabled) modulName = 'PM_O2_MONTHLY_CLEANING_INLET_DAN_OUTLET';
-  else if (anyInletEnabled) modulName = 'PM_O2_MONTHLY_CLEANING_INLET';
-  else if (anyOutletEnabled) modulName = 'PM_O2_MONTHLY_CLEANING_OUTLET';
+  var images = {};
+  O2_OUTLET_CHANNELS.forEach(function(c){
+    var ck = 'och'+c.id;
+    var tagEl = document.getElementById('o2tag_'+ck);
+    var catEl = document.getElementById('o2cat_reading_'+ck);
+    var d = o2ChannelData[ck];
+    channels[ck] = {
+      tag: tagEl ? tagEl.value||'' : '',
+      o2Reading: d.o2Reading,
+      readingCatatan: catEl ? catEl.value||'' : '',
+      voltage: d.voltage,
+      temperature: d.temperature,
+      lifetime: d.lifetime,
+      resistance: d.resistance
+    };
+    images['reading_'+ck] = { evidence: o2Images['reading_'+ck].evidence.map(ki) };
+  });
   return {
-    modul: modulName,
+    modul: 'PM_O2_WEEKLY_OUTLET',
     tanggal: header.tanggal,
     pic: header.pic,
     work_order: (header.workorder && header.workorder !== '—') ? header.workorder : '',
     unit: 'Unit 7',
-    data: { header: header, channels: channels, outletReadings: o2Readings }
+    data: { header: header, channels: channels, images: images }
   };
 }
 
-window.CURRENT_MODUL = 'O2'; // HARUS sama persis dengan check di dbCollectData(modul)
+window.CURRENT_MODUL = 'PM_O2_WEEKLY_OUTLET'; // HARUS sama persis dengan check di dbCollectData(modul)
 
 function applyRecordToForm(rec, editingId) {
   var data = rec.data || {};
@@ -2428,49 +2299,43 @@ function applyRecordToForm(rec, editingId) {
   var wdEl = document.getElementById('o2WorkToBeDone'); if (wdEl && header.workToBeDone && header.workToBeDone !== '—') wdEl.value = header.workToBeDone;
   var pcEl = document.getElementById('o2Pic'); var picVal = rec.pic || header.pic || '';
   if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
-  var cbEl = document.getElementById('o2CheckedBy'); if (cbEl && header.checkedBy) cbEl.value = header.checkedBy;
+  var t1El = document.getElementById('o2Tech1'); if (t1El && header.technician1) t1El.value = header.technician1;
+  var t2El = document.getElementById('o2Tech2'); if (t2El && header.technician2) t2El.value = header.technician2;
+  var t3El = document.getElementById('o2Tech3'); if (t3El && header.technician3) t3El.value = header.technician3;
+  var zbEl = document.getElementById('o2ZeroBottlePressure'); if (zbEl && header.zeroBottlePressure) zbEl.value = header.zeroBottlePressure;
+  var zrEl = document.getElementById('o2ZeroRegulatorPressure'); if (zrEl && header.zeroRegulatorPressure) zrEl.value = header.zeroRegulatorPressure;
+  var rmEl = document.getElementById('o2Remarks'); if (rmEl && header.remarks) rmEl.value = header.remarks;
 
   if (data.channels) {
-    function restoreChannelData(channelList, prefix) {
-      channelList.forEach(function(c){
-        var ck = prefix+c.id;
-        var chData = data.channels[ck];
-        if (!chData) return;
-        var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = chData.tag || c.tag || '';
-        var catEl = document.getElementById('o2cat_'+ck); if (catEl) catEl.value = chData.catatan || '';
-        var chkEl = document.getElementById('o2chk_'+ck);
-        if (chkEl) { chkEl.checked = !!chData.enabled; o2ToggleChannel(ck, !!chData.enabled); }
-        ['evidence','before','after'].forEach(function(phase){
-          if (chData[phase]) {
-            o2Images[ck][phase] = (chData[phase]||[]).map(function(img){
-              var o = {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};
-              if (img.offsetX) o.offsetX = img.offsetX;
-              if (img.widthCm) o.widthCm = img.widthCm;
-              if (img.heightCm) o.heightCm = img.heightCm;
-              return o;
-            });
-            o2RenderPreviews(ck, phase);
-          }
-        });
-      });
-    }
-    restoreChannelData(O2_CHANNELS, 'ch');
-    restoreChannelData(O2_OUTLET_CHANNELS, 'och');
-    o2UpdateAssetFromChannels();
-  }
-
-  if (data.outletReadings) {
     O2_OUTLET_CHANNELS.forEach(function(c){
       var ck = 'och'+c.id;
-      var r = data.outletReadings[ck];
-      if (!r) return;
-      o2Readings[ck] = {before:r.before||'',after:r.after||'',voltage:r.voltage||'',temp:r.temp||'',lifetime:r.lifetime||'',resistance:r.resistance||''};
-      ['before','after','voltage','temp','lifetime','resistance'].forEach(function(field){
-        var el = document.getElementById('o2rd_'+ck+'_'+field);
-        if (el) el.value = o2Readings[ck][field];
+      var chData = data.channels[ck];
+      if (!chData) return;
+      var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = chData.tag || c.tag || '';
+      var catEl = document.getElementById('o2cat_reading_'+ck); if (catEl) catEl.value = chData.readingCatatan || '';
+      o2ChannelData[ck] = o2EmptyChannelData();
+      ['o2Reading','voltage','temperature','lifetime','resistance'].forEach(function(field){
+        o2ChannelData[ck][field] = chData[field] || '';
+        var el = document.getElementById('o2fld_'+ck+'_'+field);
+        if (el) el.value = o2ChannelData[ck][field];
       });
     });
-    o2RecalcAvg();
+    o2UpdateAssetFromChannels();
+    o2RefreshChannelLabels();
+  }
+
+  if (data.images) {
+    Object.keys(data.images).forEach(function(key){
+      if (!o2Images[key]) o2Images[key] = {evidence:[]};
+      o2Images[key].evidence = (data.images[key].evidence||[]).map(function(img){
+        var o = {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};
+        if (img.offsetX) o.offsetX = img.offsetX;
+        if (img.widthCm) o.widthCm = img.widthCm;
+        if (img.heightCm) o.heightCm = img.heightCm;
+        return o;
+      });
+      o2RenderPreviews(key, 'evidence');
+    });
   }
 }
 
@@ -2492,31 +2357,28 @@ function resetAll() {
   document.getElementById('o2WorkToBeDone').value = '';
   o2SetSelectedFreq([]);
   document.getElementById('o2Pic').value = '';
-  function resetChannelList(channelList, prefix) {
-    channelList.forEach(function(c){
-      var ck = prefix+c.id;
-      var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = c.tag || '';
-      var catEl = document.getElementById('o2cat_'+ck); if (catEl) catEl.value = '';
-      var chkEl = document.getElementById('o2chk_'+ck); if (chkEl) chkEl.checked = false;
-      o2ToggleChannel(ck, false);
-      o2Images[ck] = {evidence:[], before:[], after:[]};
-      ['evidence','before','after'].forEach(function(phase){
-        var uid = 'o2_'+ck+'_'+phase;
-        var pv = document.getElementById(uid+'_preview'); if (pv) pv.innerHTML = '';
-        var sz = document.getElementById(uid+'_size'); if (sz) sz.textContent = '0 KB / 1024 KB';
-      });
-    });
-  }
-  resetChannelList(O2_CHANNELS, 'ch');
-  resetChannelList(O2_OUTLET_CHANNELS, 'och');
+  document.getElementById('o2Tech1').value = '';
+  document.getElementById('o2Tech2').value = '';
+  document.getElementById('o2Tech3').value = '';
+  document.getElementById('o2ZeroBottlePressure').value = '';
+  document.getElementById('o2ZeroRegulatorPressure').value = '';
+  document.getElementById('o2Remarks').value = '';
+
   O2_OUTLET_CHANNELS.forEach(function(c){
     var ck = 'och'+c.id;
-    o2Readings[ck] = {before:'',after:'',voltage:'',temp:'',lifetime:'',resistance:''};
-    ['before','after','voltage','temp','lifetime','resistance'].forEach(function(field){
-      var el = document.getElementById('o2rd_'+ck+'_'+field); if (el) el.value = '';
+    var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = c.tag || '';
+    var catEl = document.getElementById('o2cat_reading_'+ck); if (catEl) catEl.value = '';
+    o2ChannelData[ck] = o2EmptyChannelData();
+    ['o2Reading','voltage','temperature','lifetime','resistance'].forEach(function(field){
+      var el = document.getElementById('o2fld_'+ck+'_'+field); if (el) el.value = '';
     });
+    o2Images['reading_'+ck] = {evidence:[]};
+    var uid = 'o2_reading_'+ck+'_evidence';
+    var pv = document.getElementById(uid+'_preview'); if (pv) pv.innerHTML = '';
+    var sz = document.getElementById(uid+'_size'); if (sz) sz.textContent = '0 KB / 1024 KB';
   });
-  o2RecalcAvg();
+  o2RefreshChannelLabels();
+  o2UpdateAssetFromChannels();
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
@@ -2534,8 +2396,10 @@ function resetAll() {
 
 /* ── INIT ── */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
-buildO2ChannelGrid();
-buildO2ReadingsTables();
+buildO2TagGrid();
+buildO2ReadingTable();
+buildO2ReadingEvidenceGrid();
+buildO2CellMeasGrid();
 o2BuildFreqChips();
 initO2Background();
 renderPresetButtons();

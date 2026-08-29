@@ -1419,6 +1419,13 @@ function normalizeModul(name) {
   // (jatuh ke fallback `return n` di paling bawah) -- history.html
   // jadinya gak tahu mesti buka file mana buat modul ini.
   if (n.indexOf('MARK VI')>=0) return 'MARK_VIE';
+  // HARUS sebelum cek O2 generik di bawah -- modul dari
+  // weekly_calibration_o2_inlet.html/_outlet.html juga mengandung substring
+  // 'O2' (PM_O2_WEEKLY_INLET/OUTLET), jadi kalau urutan dibalik record ini
+  // ke-normalize salah jadi 'O2' lalu kebuka lewat form_o2_report.html
+  // (file Monthly, struktur data beda) alih-alih file weekly aslinya.
+  if (n.indexOf('WEEKLY_INLET')>=0 || n.indexOf('WEEKLY INLET')>=0) return 'O2_WEEKLY_INLET';
+  if (n.indexOf('WEEKLY_OUTLET')>=0 || n.indexOf('WEEKLY OUTLET')>=0) return 'O2_WEEKLY_OUTLET';
   if (n.indexOf('O2')>=0) return 'O2';
   if (n.indexOf('OPACITY')>=0) return 'OPACITY';
   if (n.indexOf('CEMS')>=0) return 'CEMS_CALIBRATION';
@@ -1462,6 +1469,8 @@ function raModulToUrl(modul, id) {
   if (norm === 'FLOWMETER_FGD')      return 'flow-meter-fgd.html?id=' + id;
   if (norm === 'PM_HG_ANALYZER')     return 'pm-hg-analyzer.html?id=' + id;
   if (norm === 'O2')                 return 'form_o2_report.html?id=' + id;
+  if (norm === 'O2_WEEKLY_INLET')    return 'weekly_calibration_o2_inlet.html?id=' + id;
+  if (norm === 'O2_WEEKLY_OUTLET')   return 'weekly_calibration_o2_outlet.html?id=' + id;
   if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
   if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
   return 'index.html';
@@ -2395,7 +2404,7 @@ var RA_ASSET_LABEL = {
    supaya cuma ada SATU kosakata area di seluruh repo, tidak nyimpang kalau
    salah satu diubah nanti. */
 var RA_MODUL_AREA = {
-  FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
+  FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
   COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler',
   BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common',
   'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp',

@@ -1403,11 +1403,19 @@
                 <div class="pm-popup-sub">Pilih jenis form yang ingin dibuka</div>
             </div>
             <div class="pm-popup-body">
-                <div class="pm-popup-option" onclick="window.open('https://ahpm.figma.site/','_blank')">
+                <div class="pm-popup-option" onclick="window.location.href='weekly_calibration_o2_inlet.html'">
                     <div class="pm-popup-option-icon">📅</div>
                     <div class="pm-popup-option-text">
-                        <div class="pm-popup-option-title">PM O2 Inlet & Outlet Weekly</div>
-                        <div class="pm-popup-option-desc">Form mingguan (link lama) — pemeriksaan rutin sensor O₂ inlet & outlet.</div>
+                        <div class="pm-popup-option-title">PM O2 Inlet Weekly</div>
+                        <div class="pm-popup-option-desc">Form mingguan — pemeriksaan rutin sensor O₂ inlet.</div>
+                    </div>
+                    <div class="pm-popup-option-arrow">↗</div>
+                </div>
+                <div class="pm-popup-option" onclick="window.location.href='weekly_calibration_o2_outlet.html'">
+                    <div class="pm-popup-option-icon">📆</div>
+                    <div class="pm-popup-option-text">
+                        <div class="pm-popup-option-title">PM O2 Outlet Weekly</div>
+                        <div class="pm-popup-option-desc">Form mingguan — pemeriksaan rutin sensor O₂ outlet.</div>
                     </div>
                     <div class="pm-popup-option-arrow">↗</div>
                 </div>
@@ -1430,7 +1438,7 @@
     </footer>
 
     <script>
-        // Popup MOD-01 (PM O2 Inlet & Outlet): pilih Weekly (link lama) atau Report Monthly (form_o2_report.html)
+        // Popup MOD-01 (PM O2 Inlet & Outlet): pilih Weekly Inlet, Weekly Outlet, atau Report Monthly (form_o2_report.html)
         function openO2Popup() {
             document.getElementById('o2PopupOverlay').classList.add('show');
         }
