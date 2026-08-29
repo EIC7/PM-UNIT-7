@@ -2505,34 +2505,73 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
     ]);
   }
   window._raPdfCapture = function(doc) {
-    raWithTimeout(DB.save({
-      assetTag: modKey,
-      assetName: label,
-      woNumber: record.work_order || '',
-      executionDate: record.tanggal || '',
-      checkedBy: record.pic || ''
-    }), 30000, 'Menyimpan checksheet ke Firestore').then(function(checksheetId) {
+    // 🆕 Kalau record ini SUDAH pernah punya firebase_checksheet_id (dari
+    // percobaan submit/retry sebelumnya -- baik yang sukses penuh maupun
+    // yang gagal di tengah jalan SETELAH DB.save() sempat berhasil), REUSE
+    // dokumen checksheet itu (DB.update, bukan DB.save/.add()) -- supaya
+    // retry (otomatis lewat raRetryPendingFirebaseSyncs, ATAU manual lewat
+    // tombol Resubmit) tidak pernah bikin dokumen Firestore checksheet BARU
+    // lagi. SEBELUM fix ini, dbSave() dipanggil TANPA SYARAT di sini setiap
+    // kali fungsi ini jalan -- akibatnya 1 laporan yang di-retry beberapa
+    // kali (mis. karena upload PDF sempat gagal) bisa muncul BERKALI-KALI
+    // sebagai entri terpisah di Review Approval Dashboard, kadang dengan
+    // status review yang beda-beda (bingung mana yang "asli").
+    var checksheetSavePromise = record.firebase_checksheet_id
+      ? raWithTimeout(DB.update(record.firebase_checksheet_id, {
+          assetTag: modKey, assetName: label, woNumber: record.work_order || '',
+          executionDate: record.tanggal || '', checkedBy: record.pic || ''
+        }), 30000, 'Memperbarui checksheet di Firestore').then(function(){ return record.firebase_checksheet_id; })
+      : raWithTimeout(DB.save({
+          assetTag: modKey,
+          assetName: label,
+          woNumber: record.work_order || '',
+          executionDate: record.tanggal || '',
+          checkedBy: record.pic || ''
+        }), 30000, 'Menyimpan checksheet ke Firestore');
+
+    checksheetSavePromise.then(function(checksheetId) {
       _raLastChecksheetId = checksheetId;
-      return raWithTimeout(Approvals.submitWithFiles(checksheetId, {
-        photos: null,
-        pdfBuilder: function() { return Promise.resolve(doc); },
-        assetTag: modKey,
-        assetName: label,
-        checksheetFile: location.pathname.split('/').pop(),
-        submittedBy: effectiveSubmittedBy,
-        // Routing eksplisit (lihat catatan RA_MODUL_AREA) -- undefined
-        // untuk modul yang belum dipetakan, supaya Firestore-nya tidak
-        // punya key ini sama sekali dan scopeOfApproval() fallback ke
-        // name-match seperti biasa.
-        team: areaKey ? 'C7' : undefined,
-        area: areaKey ? RA_AREA_LABEL_C7[areaKey] : undefined,
-        src: 'PM Unit 7'
-      // 3 menit (bukan cuma 45 detik) -- PDF checksheet dengan banyak foto
-      // (mis. Coal Feeder + 4000 Hours Mill) hasil PDF-nya besar, upload
-      // base64-nya ke Apps Script Drive proxy bisa genuinely butuh lebih
-      // dari 1 menit. Timeout terlalu pendek justru bikin upload yang
-      // sebenarnya BAKAL SUKSES (cuma lambat) malah dianggap gagal duluan.
-      }), 180000, 'Upload PDF ke Google Drive (Review Approval Dashboard)');
+      // 🆕 Simpan checksheetId ke Supabase SEGERA begitu didapat -- JANGAN
+      // tunggu sampai submitWithFiles() (upload PDF) juga sukses. Sebelumnya
+      // ini cuma disimpan di dalam finish(true, ...) (lihat bawah), jadi
+      // kalau DB.save()/DB.update() berhasil tapi upload PDF-nya GAGAL,
+      // checksheetId itu tidak pernah nyampe ke Supabase -- retry berikutnya
+      // (record.firebase_checksheet_id masih null) tetap bikin dokumen
+      // checksheet baru lagi, reuse-logic di atas jadi percuma untuk kasus
+      // "checksheet sukses tapi upload PDF gagal" ini.
+      if (!record.firebase_checksheet_id) {
+        _pmPatchRecordWithRetry(record.id, { firebase_checksheet_id: checksheetId });
+      }
+      // Sama seperti di atas -- cari approvals doc yang SUDAH ada buat
+      // checksheetId ini (kalau checksheetId-nya reuse, bukan baru) supaya
+      // submitWithFiles() meng-update doc itu di tempat (existingApprovalId),
+      // bukan bikin approvals doc baru lagi juga.
+      var existingApprovalPromise = record.firebase_checksheet_id
+        ? Approvals.getByChecksheetId(checksheetId).then(function(appr){ return appr ? appr.id : null; }).catch(function(){ return null; })
+        : Promise.resolve(null);
+      return existingApprovalPromise.then(function(existingApprovalId) {
+        return raWithTimeout(Approvals.submitWithFiles(checksheetId, {
+          photos: null,
+          pdfBuilder: function() { return Promise.resolve(doc); },
+          assetTag: modKey,
+          assetName: label,
+          checksheetFile: location.pathname.split('/').pop(),
+          submittedBy: effectiveSubmittedBy,
+          existingApprovalId: existingApprovalId,
+          // Routing eksplisit (lihat catatan RA_MODUL_AREA) -- undefined
+          // untuk modul yang belum dipetakan, supaya Firestore-nya tidak
+          // punya key ini sama sekali dan scopeOfApproval() fallback ke
+          // name-match seperti biasa.
+          team: areaKey ? 'C7' : undefined,
+          area: areaKey ? RA_AREA_LABEL_C7[areaKey] : undefined,
+          src: 'PM Unit 7'
+        // 3 menit (bukan cuma 45 detik) -- PDF checksheet dengan banyak foto
+        // (mis. Coal Feeder + 4000 Hours Mill) hasil PDF-nya besar, upload
+        // base64-nya ke Apps Script Drive proxy bisa genuinely butuh lebih
+        // dari 1 menit. Timeout terlalu pendek justru bikin upload yang
+        // sebenarnya BAKAL SUKSES (cuma lambat) malah dianggap gagal duluan.
+        }), 180000, 'Upload PDF ke Google Drive (Review Approval Dashboard)');
+      });
     }).then(function(ok) {
       if (ok) { dbShowToast('✓ PDF terkirim ke Review Approval Dashboard'); finish(true, null); }
       else { console.warn('[raSendFinalPdfToFirebaseDashboard] Approvals.submitWithFiles gagal, lihat console.'); finish(false, 'Approvals.submitWithFiles mengembalikan gagal.'); }
