@@ -2425,9 +2425,38 @@ function _pmPatchRecordWithRetry(id, patch, attempt) {
   });
 }
 
+// 🩺 DIAGNOSIS: sumber pemicu percobaan kirim ini -- 'manual' kalau user
+// yang sengaja menekan tombol (Submit di form, ATAU Resubmit di history.html
+// yang buka tab lewat window.open dengan &autoclose=1), 'auto' kalau dipicu
+// sendiri di latar belakang tanpa user menekan apa pun (raRetryPendingFirebaseSyncs
+// via iframe tersembunyi, TIDAK pernah pakai &autoclose=1 -- lihat
+// _raProcessSyncQueue). Dipakai _pmLogSyncAttempt() supaya tab Diagnosis di
+// history.html bisa membedakan "user sendiri yang klik berkali-kali" (bukan
+// bug, jangan ditampilkan) dari "sistem yang diam-diam kirim ulang sendiri"
+// (bug, WAJIB ditampilkan).
+function _pmSyncTriggerSource() {
+  var params = new URLSearchParams(location.search);
+  if (params.get('autosubmit') !== '1') return 'manual'; // submit langsung dari form (tombol Submit biasa), bukan lewat reload halaman
+  return params.get('autoclose') === '1' ? 'manual' : 'auto';
+}
+// Catat SETIAP percobaan kirim (sukses maupun gagal) ke pm_sync_log --
+// fire-and-forget, kegagalan logging TIDAK BOLEH mengganggu alur submit
+// sungguhan. Lihat tabel pm_sync_log (dibuat manual lewat SQL Editor).
+function _pmLogSyncAttempt(recordId, ok, err, checksheetId) {
+  if (!recordId) return;
+  supaFetch('POST', 'pm_sync_log', {
+    record_id: recordId,
+    ok: !!ok,
+    error: err ? String((err && err.message) || err).slice(0, 500) : null,
+    checksheet_id: checksheetId || null,
+    trigger_source: _pmSyncTriggerSource()
+  }).catch(function(){});
+}
+
 function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   var _raLastChecksheetId = null; // diisi begitu DB.save() sukses, lihat window._raPdfCapture di bawah
   function finish(ok, err) {
+    _pmLogSyncAttempt(record && record.id, ok, err, _raLastChecksheetId);
     if (ok) {
       // Tandai "sudah nyampe" -- dicek oleh raRetryPendingFirebaseSyncs()
       // supaya record ini tidak dicoba kirim ulang lagi di kunjungan

@@ -21,7 +21,29 @@
   <div class="topbar-logo">RIWAYAT</div>
   <div class="topbar-sep"></div>
   <div class="topbar-sub">Riwayat Preventive Maintenance — Unit 7</div>
-  <div class="topbar-right"><div class="live-dot"></div></div>
+  <div class="topbar-right">
+    <button id="pmDiagBtn" onclick="pmShowDiagnosisModal(true)" style="position:relative;padding:6px 12px;font-size:12px;font-weight:700;border:none;border-radius:6px;background:#243228;color:#7fd9a4;cursor:pointer;margin-right:10px">
+      🩺 Diagnosis
+      <span id="pmDiagBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center"></span>
+    </button>
+    <div class="live-dot"></div>
+  </div>
+</div>
+
+<!-- 🩺 Modal Diagnosis: cek apakah ada laporan yang terkirim berulang TANPA
+     ditekan user (auto-retry di latar belakang) -- lihat pmCheckSyncDiagnosis()
+     di bawah. Laporan yang cuma di-resubmit manual berkali-kali oleh user
+     sendiri (trigger_source selalu 'manual') SENGAJA tidak ditampilkan di
+     sini, sesuai permintaan -- itu bukan bug, itu user yang sengaja coba lagi. -->
+<div id="pmDiagModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#16211c;border:1px solid #23362c;border-radius:12px;width:min(96vw,640px);max-height:85vh;overflow-y:auto;padding:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:16px;font-weight:700;color:#e6f2ec">🩺 Diagnosis Pengiriman</div>
+      <button onclick="pmShowDiagnosisModal(false)" style="background:none;border:none;color:#8fae9d;font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="font-size:11.5px;color:#8fae9d;margin-bottom:14px">Menampilkan laporan yang pernah terkirim ulang ke Review Approval Dashboard TANPA ditekan user (otomatis di latar belakang) — bukan yang kamu resubmit manual sendiri.</div>
+    <div id="pmDiagContent">Memeriksa...</div>
+  </div>
 </div>
 
 <div class="wrapper">
@@ -328,6 +350,100 @@ function historySubmitDone(id, ok, err) {
 window.addEventListener('message', function(e) {
   if (!e.data || e.data.type !== 'raAutosubmitDone') return;
   historySubmitDone(e.data.id, !!e.data.ok, e.data.error);
+});
+
+/* ── 🩺 DIAGNOSIS: deteksi laporan yang terkirim ulang TANPA ditekan user ──
+   Baca pm_sync_log (dicatat shared.js setiap kali raSendFinalPdfToFirebaseDashboard
+   selesai, sukses maupun gagal, lihat _pmLogSyncAttempt). Sebuah record HANYA
+   dianggap "bermasalah" kalau punya minimal 1 baris log dengan
+   trigger_source='auto' -- itu satu-satunya cara sistem mengirim ulang tanpa
+   user menekan apa pun (lihat _pmSyncTriggerSource di shared.js: 'manual'
+   untuk tombol Submit/Resubmit yang ditekan langsung, 'auto' HANYA untuk
+   retry latar belakang lewat iframe tersembunyi). Record yang cuma pernah
+   di-resubmit manual berkali-kali oleh user sendiri TIDAK PERNAH masuk sini,
+   sesuai permintaan -- itu bukan bug. */
+function pmCheckSyncDiagnosis(callback) {
+  supaFetch('GET', 'pm_sync_log?select=record_id,ok,error,checksheet_id,trigger_source,attempted_at&order=attempted_at.asc&limit=1000')
+    .then(function(rows) {
+      var byRecord = {};
+      (rows || []).forEach(function(r) {
+        if (!byRecord[r.record_id]) byRecord[r.record_id] = [];
+        byRecord[r.record_id].push(r);
+      });
+      var problemIds = Object.keys(byRecord).filter(function(id) {
+        return byRecord[id].some(function(e) { return e.trigger_source === 'auto'; });
+      });
+      if (!problemIds.length) { callback([]); return; }
+      supaFetch('GET', SUPA_TABLE + '?id=in.(' + problemIds.join(',') + ')&select=id,modul,work_order')
+        .then(function(recs) {
+          var recMap = {};
+          (recs || []).forEach(function(r) { recMap[r.id] = r; });
+          var problems = problemIds.map(function(id) {
+            var entries = byRecord[id];
+            var checksheetIds = [];
+            entries.forEach(function(e) { if (e.checksheet_id && checksheetIds.indexOf(e.checksheet_id) === -1) checksheetIds.push(e.checksheet_id); });
+            var lastError = entries.slice().reverse().find(function(e){ return e.error; });
+            return {
+              recordId: id,
+              modul: (recMap[id] && recMap[id].modul) || '(record terhapus)',
+              workOrder: (recMap[id] && recMap[id].work_order) || '-',
+              attemptCount: entries.length,
+              autoCount: entries.filter(function(e){ return e.trigger_source === 'auto'; }).length,
+              checksheetIds: checksheetIds,
+              lastError: lastError ? lastError.error : null,
+              lastAttemptAt: entries[entries.length - 1].attempted_at
+            };
+          });
+          callback(problems);
+        })
+        .catch(function(){ callback([]); });
+    })
+    .catch(function(){ callback([]); });
+}
+
+function pmRenderDiagnosis(problems) {
+  var el = document.getElementById('pmDiagContent');
+  if (!problems.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:#7fd9a4;font-size:13px">✓ Tidak ada laporan yang terkirim ulang otomatis tanpa sepengetahuanmu. Aman.</div>';
+    return;
+  }
+  var html = '';
+  problems.forEach(function(p) {
+    var dup = p.checksheetIds.length > 1;
+    html += '<div style="border:1px solid ' + (dup ? '#7a3030' : '#3a4f42') + ';background:' + (dup ? 'rgba(231,76,60,0.08)' : '#1a221e') + ';border-radius:8px;padding:12px;margin-bottom:10px">' +
+      '<div style="font-weight:700;color:#e6f2ec;font-size:13px">' + p.modul + '</div>' +
+      '<div style="font-size:11px;color:#8fae9d;margin-top:2px">WO: ' + p.workOrder + ' &middot; ' + p.attemptCount + 'x percobaan (' + p.autoCount + 'x otomatis) &middot; terakhir ' + dbFmtLocalDateTime(p.lastAttemptAt) + '</div>';
+    if (dup) {
+      html += '<div style="font-size:11.5px;color:#ff9d9d;margin-top:6px">⚠️ Kemungkinan DOBEL di Review Approval Dashboard — checksheetId berubah-ubah: <code style="font-size:10.5px">' + p.checksheetIds.join(' → ') + '</code></div>';
+    }
+    if (p.lastError) {
+      html += '<div style="font-size:11px;color:#8fae9d;margin-top:4px">Error terakhir: ' + p.lastError + '</div>';
+    }
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function pmShowDiagnosisModal(show) {
+  document.getElementById('pmDiagModal').style.display = show ? 'flex' : 'none';
+  if (show) {
+    document.getElementById('pmDiagContent').textContent = 'Memeriksa...';
+    pmCheckSyncDiagnosis(pmRenderDiagnosis);
+  }
+}
+
+// Cek diam-diam tiap kali halaman ini dibuka/refresh -- popup HANYA muncul
+// sendiri kalau ketemu masalah (auto-retry diam-diam), badge angka di tombol
+// Diagnosis tetap muncul walau modalnya tidak dibuka otomatis, supaya tidak
+// mengganggu kalau user cuma mau lihat riwayat biasa.
+pmCheckSyncDiagnosis(function(problems) {
+  var badge = document.getElementById('pmDiagBadge');
+  if (problems.length) {
+    badge.textContent = problems.length;
+    badge.style.display = 'block';
+    pmRenderDiagnosis(problems);
+    pmShowDiagnosisModal(true);
+  }
 });
 
 /* Auto-load all on open */
