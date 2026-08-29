@@ -95,10 +95,10 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   gagal terisi SELAMANYA dan `raRetryPendingFirebaseSyncs()` (jalan otomatis 3 detik
   setelah halaman apa pun dibuka) terus mengira laporan "belum sukses" lalu submit ulang
   dari nol tiap kunjungan — bikin dokumen duplikat di Review Approval Dashboard.
-- Kompresi foto adaptif (budget ~1MB per galeri, kualitas JPEG turun bertahap
-  0.9→0.25, fallback downsize dimensi) **sudah ada** di sistem crop — lihat
-  `FITUR_REUSABLE_REFERENCE.md` Fitur J. Tidak perlu ditambah lagi kalau modul baru
-  sudah pakai crop modal standar dari `shared.js`.
+- Kompresi foto adaptif (budget **500KB per galeri** — lihat catatan revisi budget di
+  bawah, kualitas JPEG turun bertahap 0.9→0.25, fallback downsize dimensi) **sudah ada**
+  di sistem crop — lihat `FITUR_REUSABLE_REFERENCE.md` Fitur J. Tidak perlu ditambah lagi
+  kalau modul baru sudah pakai crop modal standar dari `shared.js`.
 
 ## Duplikat di Review Approval Dashboard (diperbaiki 2026-08-29)
 
@@ -140,3 +140,61 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   `firebase_synced_at` masih kosong (belum sync). Record yang cuma di-resubmit manual
   berkali-kali oleh user sendiri, atau yang sudah sync sukses, TIDAK ditampilkan —
   sengaja, itu bukan bug yang perlu diberitahukan.
+
+## ⚠️ Budget kompresi foto (500KB) TIDAK terpusat — harus diubah di SETIAP file (diperbaiki 2026-08-29)
+
+- `shared.js` punya fungsi generik `imgCompressAndStore()` dengan budget **500KB per
+  galeri** (`MAX_TOTAL = 500 * 1024`) — TAPI **hampir tidak ada file modul yang benar-benar
+  memanggil fungsi ini**. Alih-alih, setiap file modul (`so2.html`, `opacity.html`, semua
+  `beltscale-*.html`, `form_o2_report.html`, `weekly_calibration_o2_*.html`, dst.) punya
+  **salinan kode kompresi sendiri-sendiri** (fungsi lokal `cropAndSave()` dan
+  `puCompressFullImage()`/sejenisnya, masing-masing dengan variabel lokal `var MAX = ...`).
+- Akibatnya: waktu budget diturunkan dari 1MB ke 500KB, perubahan itu **cuma pernah
+  diterapkan ke fungsi shared-nya**, dan seluruh 20 file modul yang ada saat itu tetap
+  diam-diam di 1MB — tidak ketahuan sampai diperiksa manual satu per satu. Sudah diperbaiki
+  (semua 20 file disamakan ke `500*1024`), tapi **akar masalahnya (duplikasi kode, bukan
+  panggil fungsi shared) belum dibenahi**.
+- **Kalau budget ini perlu diubah lagi di masa depan**: JANGAN cuma ubah
+  `imgCompressAndStore()` di `shared.js` — itu tidak akan berefek ke modul manapun. Harus
+  cari SEMUA kemunculan `var MAX = ` (ada 1-2 per file, satu di jalur crop-save satu lagi
+  di jalur multi-upload langsung) di seluruh file `.html` dan ubah satu-satu, atau — lebih
+  baik — migrasikan semua file supaya benar-benar memanggil `imgCompressAndStore()` dari
+  `shared.js` (belum pernah dilakukan, ini technical debt yang masih ada).
+
+## Restrukturisasi modul O2: popup Inlet/Outlet Weekly + rename modul (2026-08-29)
+
+- Popup O2 di `index.html` (dipicu klik card MOD-01) sekarang punya 3 opsi, bukan 2:
+  **PM O2 Inlet Weekly** → `weekly_calibration_o2_inlet.html`, **PM O2 Outlet Weekly** →
+  `weekly_calibration_o2_outlet.html`, dan **Report PM Monthly O2 Inlet & Outlet** (tetap
+  `form_o2_report.html`, filename tidak berubah).
+- Modul yang dikirim `form_o2_report.html` (Monthly) ke `history`/Review Approval Dashboard
+  diganti dari `"O2 Inlet"`/`"O2 Outlet"`/`"O2 Inlet & Outlet"` jadi
+  `PM_O2_MONTHLY_CLEANING` dengan suffix dinamis berdasarkan channel yang benar-benar
+  diisi (`o2ChannelEnabled`) saat submit: `_INLET`, `_OUTLET`, atau
+  `_INLET_DAN_OUTLET` (lihat `dbCollectData()` di file itu).
+- 2 file baru `weekly_calibration_o2_inlet.html`/`_outlet.html` mengirim modul tetap
+  (tidak dinamis): `PM_O2_WEEKLY_INLET` / `PM_O2_WEEKLY_OUTLET`.
+- `normalizeModul()` di `shared.js` **HARUS** cek substring `WEEKLY_INLET`/`WEEKLY_OUTLET`
+  **SEBELUM** cek substring generik `'O2'` (pola yang sama seperti proteksi
+  GENERATOR/STATOR vs FEGT yang sudah ada duluan) — kalau tidak, modul Weekly ikut
+  ke-normalize jadi `'O2'` biasa dan `raModulToUrl()` salah membuka `form_o2_report.html`
+  (file Monthly, struktur data beda total) alih-alih file Weekly aslinya. `RA_MODUL_AREA`
+  dan filter tombol baru "O2 Weekly Inlet"/"O2 Weekly Outlet" di `history.html` juga sudah
+  ditambahkan.
+- Struktur "Dokumentasi Per Channel" di 2 file Weekly baru **BEDA** dari
+  `form_o2_report.html` — bukan satu galeri per channel, tapi dipecah jadi beberapa
+  section (Calibration Gas Pressure session-level, O2 Readings Before/After, Gas Ratios
+  Before, Calibration Readings, Cell Measurements) dengan aturan evidence/keterangan yang
+  BEDA per section (ada yang gabungan 1 di bawah tabel, ada yang per-channel, ada yang
+  sama sekali tanpa evidence) — mengikuti desain referensi `ahpm.figma.site` sesuai
+  instruksi user. Field-field ini SENGAJA disamakan namanya persis dengan skema database
+  `kv_store_e669e2e2` milik situs referensi itu (`cellVoltage`, `calibrationO2Span`,
+  `gasRatioSpanBefore`, `voltage`, `o2Reading`, dst.) supaya data lama & data baru punya
+  bentuk JSON yang identik.
+- **64 data historis** (34 sesi Inlet + 30 sesi Outlet) dari database eksternal itu
+  (`wvictafepzzrchiywxpk.supabase.co`, tabel `kv_store_e669e2e2`, butuh `service_role` key
+  karena `anon` di-lock) sudah dimigrasikan ke `pm_records` sebagai `status: 'draft'`
+  (sengaja draft, BUKAN `'SUBMITTED'`, supaya tidak memicu notifikasi Telegram atau submit
+  otomatis ke Review Approval Dashboard) dengan `created_at`/`updated_at` di-backdate ke
+  timestamp kerja asli. Field yang tidak ada di sumber (Work Order, Asset, foto evidence)
+  dibiarkan kosong.
