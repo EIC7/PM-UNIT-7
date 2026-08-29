@@ -1364,7 +1364,7 @@ function dbList(modul, callback) {
   // status review/approval sungguhan di historyUpgradeStatusBadges), kalau
   // gagal (migration belum jalan) baru ulang tanpa kolom itu -- supaya
   // Riwayat tidak ikut rusak total gara-gara 1 kolom baru belum ada.
-  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id&order=updated_at.desc&limit=100')
+  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status&order=updated_at.desc&limit=100')
     .then(finishWith)
     .catch(function() {
       supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + '&order=updated_at.desc&limit=100')

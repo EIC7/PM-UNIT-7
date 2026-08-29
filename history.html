@@ -189,12 +189,52 @@ function historyUpgradeStatusBadges(rows) {
         if (!appr) return;
         var cell = document.getElementById('histStatusCell-' + r.id);
         if (cell) cell.innerHTML = historyRaStatusBadge(appr.status);
+        if (appr.status && appr.status !== r.ra_notified_status) raSendTelegramNotif(r, appr);
       }).catch(function(){}); // gagal query 1 baris tidak boleh ganggu baris lain
     };
   });
   if (!tasks.length) return;
   if (typeof _pmRunPool === 'function') _pmRunPool(tasks, 6);
   else tasks.forEach(function(t){ t(); });
+}
+
+/* ── NOTIF TELEGRAM: status review/approval berubah ──
+   Dikirim dari SINI (browser), bukan dari server -- project Firebase Review
+   Approval Dashboard bukan milik kita, tidak ada akses Console untuk pasang
+   Cloud Function di sana. Baca status Firestore-nya memang sudah terjadi di
+   browser lewat historyUpgradeStatusBadges() di atas, jadi notif Telegram
+   ditumpangkan di titik yang sama.
+   Konsekuensi: notif baru terkirim kalau ADA yang membuka history.html
+   (bukan real-time begitu di-approve). Kolom ra_notified_status (pm_records,
+   Supabase) menyimpan status terakhir yang SUDAH terkirim, supaya status
+   yang sama tidak dikirim ulang tiap kali halaman ini dibuka/refresh oleh
+   siapa pun. Ditandai terkirim HANYA setelah fetch ke Telegram beneran
+   sukses -- kalau gagal (jaringan putus dsb), percobaan berikutnya (buka
+   history.html lagi) akan otomatis coba kirim ulang. */
+var RA_TELEGRAM_TOKEN = 'ISI_BOT_TOKEN_DISINI';
+var RA_TELEGRAM_CHAT_ID = '-5307120643';
+var RA_NOTIF_LABELS = {
+  reviewed: '📝 Direview',
+  approved: '✅ Disetujui',
+  returned_to_technician: '↩️ Dikembalikan ke Teknisi'
+};
+
+function raSendTelegramNotif(r, appr) {
+  var label = RA_NOTIF_LABELS[appr.status];
+  if (!label) return; // status lain (mis. balik ke 'submitted') -- tidak perlu notif
+  var pesan = label + '\n' +
+    'Modul: ' + (r.modul || '-') + '\n' +
+    'PIC: ' + (r.pic || '-') + '\n' +
+    'WO: ' + (r.work_order || '-');
+  fetch('https://api.telegram.org/bot' + RA_TELEGRAM_TOKEN + '/sendMessage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: RA_TELEGRAM_CHAT_ID, text: pesan })
+  }).then(function() {
+    return supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + r.id, { ra_notified_status: appr.status });
+  }).catch(function(err) {
+    console.error('Gagal kirim notif Telegram review/approval:', err);
+  });
 }
 /* 4 tahap: Draft (kuning, historyStatusBadge) -> Submitted (biru) ->
    Reviewed (kuning) -> Approved (hijau). "returned_to_technician" bukan
