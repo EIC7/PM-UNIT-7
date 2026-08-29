@@ -199,39 +199,21 @@ function historyUpgradeStatusBadges(rows) {
 }
 
 /* ── NOTIF TELEGRAM: status review/approval berubah ──
-   Dikirim dari SINI (browser), bukan dari server -- project Firebase Review
-   Approval Dashboard bukan milik kita, tidak ada akses Console untuk pasang
-   Cloud Function di sana. Baca status Firestore-nya memang sudah terjadi di
-   browser lewat historyUpgradeStatusBadges() di atas, jadi notif Telegram
-   ditumpangkan di titik yang sama.
-   Konsekuensi: notif baru terkirim kalau ADA yang membuka history.html
-   (bukan real-time begitu di-approve). Kolom ra_notified_status (pm_records,
-   Supabase) menyimpan status terakhir yang SUDAH terkirim, supaya status
-   yang sama tidak dikirim ulang tiap kali halaman ini dibuka/refresh oleh
-   siapa pun. Ditandai terkirim HANYA setelah fetch ke Telegram beneran
-   sukses -- kalau gagal (jaringan putus dsb), percobaan berikutnya (buka
-   history.html lagi) akan otomatis coba kirim ulang. */
-var RA_TELEGRAM_TOKEN = 'ISI_BOT_TOKEN_DISINI';
-var RA_TELEGRAM_CHAT_ID = '-5307120643';
-var RA_NOTIF_LABELS = {
-  reviewed: '📝 Direview',
-  approved: '✅ Disetujui',
-  returned_to_technician: '↩️ Dikembalikan ke Teknisi'
-};
-
+   Dipicu dari SINI (browser) karena baca status Firestore-nya memang
+   terjadi di browser lewat historyUpgradeStatusBadges() di atas -- tapi
+   pengiriman ke Telegram-nya sendiri didelegasikan ke fungsi Supabase
+   (notify_telegram_review_status, dipanggil lewat RPC) supaya TOKEN BOT
+   TIDAK PERNAH ada di kode client sama sekali (dulu sempat bocor ke Git
+   publik karena ditempel langsung di sini -- lihat riwayat commit). Fungsi
+   Supabase itu juga yang menandai ra_notified_status setelah sukses kirim,
+   supaya status yang sama tidak dikirim ulang tiap kali halaman ini
+   dibuka/refresh oleh siapa pun. */
 function raSendTelegramNotif(r, appr) {
-  var label = RA_NOTIF_LABELS[appr.status];
-  if (!label) return; // status lain (mis. balik ke 'submitted') -- tidak perlu notif
-  var pesan = label + '\n' +
-    'Modul: ' + (r.modul || '-') + '\n' +
-    'PIC: ' + (r.pic || '-') + '\n' +
-    'WO: ' + (r.work_order || '-');
-  fetch('https://api.telegram.org/bot' + RA_TELEGRAM_TOKEN + '/sendMessage', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: RA_TELEGRAM_CHAT_ID, text: pesan })
-  }).then(function() {
-    return supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + r.id, { ra_notified_status: appr.status });
+  var validStatuses = ['reviewed', 'approved', 'returned_to_technician'];
+  if (validStatuses.indexOf(appr.status) === -1) return; // status lain (mis. balik ke 'submitted') -- tidak perlu notif
+  supaFetch('POST', 'rpc/notify_telegram_review_status', {
+    p_row_id: r.id, p_status: appr.status,
+    p_modul: r.modul || '', p_pic: r.pic || '', p_wo: r.work_order || ''
   }).catch(function(err) {
     console.error('Gagal kirim notif Telegram review/approval:', err);
   });

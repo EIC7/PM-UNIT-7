@@ -1328,7 +1328,23 @@ function raResaveInPlace(modul, callback) {
 
   window._dbSaving = true;
   dbShowSavingOverlay(true, 'Menyimpan perubahan, mohon tunggu...', 'Mengupload banyak gambar membutuhkan waktu yang lama');
+  // Sama seperti dbSave() -- upload ke Drive WAJIB berhasil dulu sebelum
+  // perubahan boleh disimpan, supaya edit-in-place tidak bisa jadi jalur
+  // belakang yang bikin base64 nyangkut lagi di Supabase (lihat catatan
+  // panjang di _pmEnsureAllPhotosOnDrive/dbSave di atas -- sebelumnya
+  // fungsi ini SKIP proteksi itu sama sekali).
   waitForPendingDriveUploads().then(function() {
+    return _pmEnsureAllPhotosOnDrive(rec.data, modul);
+  }).then(function(stillFailed) {
+    if (stillFailed.length) {
+      window._dbSaving = false;
+      dbShowSavingOverlayError(
+        'Gagal upload ' + stillFailed.length + ' foto ke Google Drive.',
+        'Perubahan BELUM disimpan supaya foto tidak nyangkut/hilang. Cek koneksi internet, lalu coba lagi. Foto: ' + stillFailed.slice(0, 3).join(', ') + (stillFailed.length > 3 ? ', dll.' : ''),
+        function(){ raResaveInPlace(modul, callback); }
+      );
+      return;
+    }
     _pmStripBase64ForSave(rec.data);
     var patch = {
       data: rec.data, tanggal: rec.tanggal, pic: rec.pic, work_order: rec.work_order,
@@ -1964,7 +1980,19 @@ function dbSaveSilent(modul) {
   rec.updated_at = new Date().toISOString();
   var existingId = window._editingId || null;
   window._dbSaving = true;
+  // Autosave TIDAK BOLEH blok/ganggu user kalau upload foto gagal (beda dari
+  // dbSave()/raResaveInPlace() yang menolak simpan) -- tapi tetap WAJIB coba
+  // upload dulu (bukan cuma strip yang SUDAH punya driveUrl) supaya tiap
+  // siklus autosave punya kesempatan nyata membereskan foto yang gagal, alih-
+  // alih diam-diam nyimpen base64 mentah selamanya sampai tidak pernah
+  // ketahuan (ini akar penyebab laporan-laporan lama jadi puluhan MB). Gagal
+  // setelah retry cuma di-log, TIDAK menghentikan autosave -- draft tetap
+  // tersimpan (base64 apa adanya untuk foto yang masih gagal), user tidak
+  // boleh kehilangan pekerjaan cuma karena 1 foto lambat ke Drive.
   waitForPendingDriveUploads().then(function() {
+    return _pmEnsureAllPhotosOnDrive(rec.data, modul);
+  }).then(function(stillFailed) {
+    if (stillFailed.length) console.warn('[autosave-server] ' + stillFailed.length + ' foto masih gagal ke Drive, akan dicoba lagi siklus autosave berikutnya:', stillFailed);
     _pmStripBase64ForSave(rec.data);
     rec.payload_size = _dbByteLength(JSON.stringify(rec));
     var path = existingId ? (SUPA_TABLE + '?id=eq.' + existingId) : SUPA_TABLE;
