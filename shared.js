@@ -2400,19 +2400,43 @@ var RA_AREA_LABEL_C7 = {
   wwtp: 'Common (WWTP-Ashdisposal)'
 };
 
+// PATCH dengan retry (3x, backoff bertahap) -- KHUSUS untuk PATCH by-id yang
+// idempoten (menulis ulang nilai yang sama tidak punya efek samping buruk,
+// beda dari POST yang bisa bikin data duplikat kalau diulang). Dipakai
+// raSendFinalPdfToFirebaseDashboard() menandai firebase_synced_at: sebelumnya
+// PATCH ini fire-and-forget (gagal 1x = diam-diam gagal selamanya), jadi
+// kalau Supabase lagi bermasalah sesaat pas PATCH ini jalan, kolom itu TIDAK
+// PERNAH terisi walau PDF-nya sendiri sudah beneran sukses terkirim ke
+// Firebase -- akibatnya raRetryPendingFirebaseSyncs() (jalan otomatis 3 detik
+// setelah SETIAP halaman dibuka, termasuk history.html) terus mengira
+// laporan itu "belum sukses" dan mengirim ulang SELURUH proses submit
+// (termasuk bikin dokumen Firestore BARU tiap kali -- itu penyebab satu
+// laporan bisa muncul berkali-kali di Review Approval Dashboard). Retry di
+// sini menutup celah paling umum (gangguan jaringan/Supabase sesaat).
+function _pmPatchRecordWithRetry(id, patch, attempt) {
+  attempt = attempt || 1;
+  return supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + id, patch).catch(function(err) {
+    if (attempt >= 3) {
+      console.error('[raSendFinalPdfToFirebaseDashboard] gagal menandai sync setelah 3x percobaan (akan dicoba lagi otomatis di kunjungan berikutnya, TAPI berisiko bikin submission Firestore duplikat -- lihat catatan di atas):', id, patch, err);
+      return;
+    }
+    return new Promise(function(resolve) { setTimeout(resolve, attempt * 1500); })
+      .then(function() { return _pmPatchRecordWithRetry(id, patch, attempt + 1); });
+  });
+}
+
 function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   var _raLastChecksheetId = null; // diisi begitu DB.save() sukses, lihat window._raPdfCapture di bawah
   function finish(ok, err) {
     if (ok) {
       // Tandai "sudah nyampe" -- dicek oleh raRetryPendingFirebaseSyncs()
       // supaya record ini tidak dicoba kirim ulang lagi di kunjungan
-      // berikutnya. Fire-and-forget (RLS 009 mengizinkan ini untuk record
-      // yang statusnya SUBMITTED) -- gagal nulis kolom ini TIDAK dianggap
-      // gagal kirim (PDF-nya sendiri sudah beneran sampai di Firebase),
-      // paling buruk cuma dicoba kirim ulang (duplikat) lain kali.
-      supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
+      // berikutnya. Dengan retry (lihat _pmPatchRecordWithRetry) supaya
+      // gangguan jaringan/Supabase sesaat tidak bikin kolom ini gagal
+      // terisi SELAMANYA walau PDF-nya sendiri sudah sukses terkirim.
+      _pmPatchRecordWithRetry(record.id, {
         firebase_synced_at: new Date().toISOString(), firebase_sync_error: null
-      }).catch(function(){});
+      });
       // firebase_checksheet_id disimpan TERPISAH (bukan digabung ke PATCH di
       // atas) SENGAJA -- kolom ini baru ada setelah migration 010 dijalankan;
       // kalau digabung jadi satu request dan kolomnya belum ada, PostgREST
@@ -2425,9 +2449,7 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
       // sebelum ini checksheetId cuma dipakai sekali pakai di memory lalu
       // dibuang, history.html cuma pernah tahu "sudah terkirim".
       if (_raLastChecksheetId) {
-        supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
-          firebase_checksheet_id: _raLastChecksheetId
-        }).catch(function(){});
+        _pmPatchRecordWithRetry(record.id, { firebase_checksheet_id: _raLastChecksheetId });
       }
     } else if (record && record.id) {
       supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
