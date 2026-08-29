@@ -46,3 +46,48 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   jadi tertukar.
 - Lihat juga `FITUR_REUSABLE_REFERENCE.md` di root repo ini untuk daftar fitur reusable
   (kategori A–I) yang sudah distandardisasi lintas file.
+
+## Notifikasi Telegram (ditambahkan 2026-08-29)
+
+- Bot: **PMUnit7NotifBot**. Grup notifikasi aktif saat ini: **"Submit Report EIC7"**
+  (chat_id `-5393795985`). Grup lama "PM Unit 7 Notif Bot" (`-5307120643`) **rusak** —
+  API selalu balas sukses tapi pesan tidak pernah benar-benar muncul di klien Telegram
+  manapun (sudah diverifikasi lewat DM langsung ke bot vs ke grup itu). Kalau notifikasi
+  berhenti masuk lagi dan grup baru ini juga bermasalah, curigai hal yang sama — solusinya
+  buat grup baru lagi, bukan debug grup yang sudah "rusak".
+- Dua jalur notifikasi, keduanya lewat fungsi Postgres (`security definer`, token BOT
+  disimpan di server — **jangan pernah** ditempel langsung ke file HTML/JS, itu pernah
+  bocor ke commit GitHub publik):
+  - `notify_telegram_submission()` — trigger `AFTER INSERT/UPDATE` di `pm_records`,
+    jalan saat `status` berubah jadi `SUBMITTED`.
+  - `notify_telegram_review_status(p_row_id text, p_status text, p_modul text, p_pic
+    text, p_wo text)` — RPC, dipanggil dari `history.html` (`raSendTelegramNotif`) saat
+    status Firestore (reviewed/approved/returned_to_technician) berubah. **`p_row_id`
+    harus di-cast `::uuid`** sebelum dibandingkan ke kolom `id` (pernah error type
+    mismatch `uuid = text`). Kolom `ra_notified_status` di `pm_records` mencegah kirim
+    ulang untuk status yang sama.
+  - Setelah `create or replace function` di SQL Editor, kalau RPC balas `PGRST202`
+    (function not found di schema cache), jalankan `NOTIFY pgrst, 'reload schema';`.
+  - Kalau RPC balas `permission denied`/tidak ketemu meski fungsinya ada: jalankan ulang
+    `grant execute on function notify_telegram_review_status(text,text,text,text,text)
+    to anon;` — grant tidak otomatis ikut kalau signature fungsi berubah sedikit saja.
+
+## Jaminan foto SELALU sampai ke Google Drive (ditambahkan 2026-08-29)
+
+- **Semua** jalur yang menulis kolom `data` di `pm_records` WAJIB memanggil
+  `_pmEnsureAllPhotosOnDrive(rec.data, modul)` (retry upload ke Drive sampai 3x) SEBELUM
+  `_pmStripBase64ForSave(rec.data)`. Tiga jalur yang ada sekarang — `dbSave()`,
+  `dbSaveSilent()` (autosave), `raResaveInPlace()` (edit-in-place) — sudah konsisten
+  begini. **Kalau menambah jalur simpan baru, pola ini WAJIB diikuti** — pernah ada
+  ratusan foto (~190MB) nyangkut sebagai base64 mentah di Supabase gara-gara
+  `dbSaveSilent()`/`raResaveInPlace()` skip langkah ini (lihat riwayat perbaikan).
+- PATCH yang menandai `firebase_synced_at` (di `raSendFinalPdfToFirebaseDashboard`)
+  sekarang pakai retry (`_pmPatchRecordWithRetry`, 3x dengan backoff) — sebelumnya
+  fire-and-forget, kalau gagal sekali akibat gangguan jaringan/Supabase sesaat, kolom itu
+  gagal terisi SELAMANYA dan `raRetryPendingFirebaseSyncs()` (jalan otomatis 3 detik
+  setelah halaman apa pun dibuka) terus mengira laporan "belum sukses" lalu submit ulang
+  dari nol tiap kunjungan — bikin dokumen duplikat di Review Approval Dashboard.
+- Kompresi foto adaptif (budget ~1MB per galeri, kualitas JPEG turun bertahap
+  0.9→0.25, fallback downsize dimensi) **sudah ada** di sistem crop — lihat
+  `FITUR_REUSABLE_REFERENCE.md` Fitur J. Tidak perlu ditambah lagi kalau modul baru
+  sudah pakai crop modal standar dari `shared.js`.
