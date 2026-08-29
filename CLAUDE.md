@@ -50,11 +50,19 @@ Supabase sebagai backend, jsPDF untuk export PDF).
 ## Notifikasi Telegram (ditambahkan 2026-08-29)
 
 - Bot: **PMUnit7NotifBot**. Grup notifikasi aktif saat ini: **"Submit Report EIC7"**
-  (chat_id `-5393795985`). Grup lama "PM Unit 7 Notif Bot" (`-5307120643`) **rusak** —
-  API selalu balas sukses tapi pesan tidak pernah benar-benar muncul di klien Telegram
-  manapun (sudah diverifikasi lewat DM langsung ke bot vs ke grup itu). Kalau notifikasi
-  berhenti masuk lagi dan grup baru ini juga bermasalah, curigai hal yang sama — solusinya
-  buat grup baru lagi, bukan debug grup yang sudah "rusak".
+  (chat_id **`-1004351464598`**, tipe `supergroup`). Grup lama "PM Unit 7 Notif Bot"
+  (`-5307120643`) **rusak** — API selalu balas sukses tapi pesan tidak pernah benar-benar
+  muncul di klien Telegram manapun (sudah diverifikasi lewat DM langsung ke bot vs ke grup
+  itu). Kalau notifikasi berhenti masuk lagi dan grup baru ini juga bermasalah, curigai
+  hal yang sama — solusinya buat grup baru lagi, bukan debug grup yang sudah "rusak".
+- ⚠️ **Grup Telegram biasa (basic group) bisa "naik level" jadi supergroup KAPAN SAJA**
+  (dipicu Telegram sendiri, bukan sesuatu yang kita kontrol) — begitu itu terjadi,
+  **chat_id LAMA langsung tidak berlaku SELAMANYA**, `sendMessage` balas error 400 "group
+  chat was upgraded to a supergroup chat" beserta `migrate_to_chat_id` (chat_id baru,
+  format `-100xxxxxxxxxx`). Ini penyebab paling mungkin kalau notifikasi yang tadinya
+  jalan normal tiba-tiba berhenti total tanpa perubahan kode apa pun — cek dengan test
+  `sendMessage` manual ke chat_id yang tersimpan, baca field `migrate_to_chat_id` di
+  error-nya kalau ada, lalu update chat_id di KEDUA fungsi Postgres di bawah.
 - Dua jalur notifikasi, keduanya lewat fungsi Postgres (`security definer`, token BOT
   disimpan di server — **jangan pernah** ditempel langsung ke file HTML/JS, itu pernah
   bocor ke commit GitHub publik):
@@ -91,3 +99,44 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   0.9→0.25, fallback downsize dimensi) **sudah ada** di sistem crop — lihat
   `FITUR_REUSABLE_REFERENCE.md` Fitur J. Tidak perlu ditambah lagi kalau modul baru
   sudah pakai crop modal standar dari `shared.js`.
+
+## Duplikat di Review Approval Dashboard (diperbaiki 2026-08-29)
+
+- **Akar masalah sebenarnya (2 lapis, keduanya sudah diperbaiki):**
+  1. `raSendFinalPdfToFirebaseDashboard()`/`window._raPdfCapture` dulu SELALU panggil
+     `DB.save()` (Firestore `.add()`, bikin dokumen baru) tanpa cek dulu apakah record ini
+     sudah punya `firebase_checksheet_id` dari percobaan sebelumnya. Sekarang: kalau sudah
+     ada, pakai `DB.update()` (reuse dokumen yang sama) + `Approvals.getByChecksheetId()`
+     buat reuse `approvals` doc juga (`existingApprovalId`). `firebase_checksheet_id`
+     sekarang disimpan ke Supabase SEGERA setelah didapat (bukan nunggu seluruh proses
+     submit sukses) supaya reuse ini tetap jalan walau upload PDF-nya gagal di tengah.
+  2. `raSubmitReportAuto()` (dipanggil tiap retry, baik otomatis maupun tombol Resubmit)
+     sempat SELECT record dari Supabase TANPA kolom `firebase_checksheet_id` — jadi
+     reuse-logic di poin 1 tidak pernah aktif untuk jalur retry walau kodenya sudah benar.
+     **Kalau nambah query serupa (ambil record by id buat proses submit/retry), WAJIB
+     sertakan `firebase_checksheet_id` di `select=`.**
+- **Bug race-condition terpisah** (juga sudah diperbaiki): `finish()` di
+  `raSendFinalPdfToFirebaseDashboard` dulu fire-and-forget PATCH `firebase_synced_at` lalu
+  LANGSUNG lapor "selesai" ke parent/opener — yang lalu buru-buru menutup tab/iframe
+  SEBELUM PATCH-nya benar-benar sampai ke server, request-nya ikut terputus. Sekarang
+  `finish()` **menunggu** (`.then()`) semua PATCH penting selesai dulu sebelum panggil
+  `onDone()`. **Kalau menambah langkah baru di `finish()`/alur submit, WAJIB tetap
+  di-`await`/`.then()`, jangan fire-and-forget** — itu penyebab pasti laporan yang secara
+  logis sudah sukses tapi status tetap "Menunggu Feedback" selamanya.
+
+## Tabel `pm_sync_log` + tab Diagnosis (ditambahkan 2026-08-29)
+
+- Tabel `pm_sync_log` (RLS **disabled**) mencatat SETIAP percobaan kirim ke Review
+  Approval Dashboard (sukses/gagal), lewat `_pmLogSyncAttempt()` di `shared.js` — dipanggil
+  dari `finish()` (kasus normal) DAN dari `window._raAutosubmitReport` (jaring pengaman
+  kasus macet total sebelum sempat sampai ke `finish()` — JS error, promise gagal,
+  watchdog 4.5 menit). Auto-dedupe per page-load lewat `window._pmSyncLoggedThisAttempt`.
+- Kolom `trigger_source` (`'auto'` vs `'manual'`) dibedakan dari ada/tidaknya
+  `&autoclose=1` di URL `?autosubmit=1` — cuma tombol Resubmit manual yang pakai
+  `autoclose=1`, retry otomatis latar belakang (iframe tersembunyi) tidak pernah.
+- `history.html` punya tombol **"🩺 Diagnosis"** (+ popup otomatis kalau ketemu masalah
+  saat halaman dibuka) yang baca tabel ini — HANYA menampilkan record yang punya minimal
+  1 baris log `trigger_source='auto'` (dikirim ulang TANPA user menekan apa pun) DAN
+  `firebase_synced_at` masih kosong (belum sync). Record yang cuma di-resubmit manual
+  berkali-kali oleh user sendiri, atau yang sudah sync sukses, TIDAK ditampilkan —
+  sengaja, itu bukan bug yang perlu diberitahukan.
