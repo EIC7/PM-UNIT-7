@@ -374,10 +374,20 @@ function pmCheckSyncDiagnosis(callback) {
         return byRecord[id].some(function(e) { return e.trigger_source === 'auto'; });
       });
       if (!problemIds.length) { callback([]); return; }
-      supaFetch('GET', SUPA_TABLE + '?id=in.(' + problemIds.join(',') + ')&select=id,modul,work_order')
+      supaFetch('GET', SUPA_TABLE + '?id=in.(' + problemIds.join(',') + ')&select=id,modul,work_order,firebase_synced_at')
         .then(function(recs) {
           var recMap = {};
           (recs || []).forEach(function(r) { recMap[r.id] = r; });
+          // Sudah beres (berhasil sync ATAU recordnya sudah dihapus) --
+          // jangan tampilkan lagi di Diagnosis walau dulu sempat auto-retry
+          // bermasalah. Diagnosis ini soal "ada apa SEKARANG", bukan riwayat
+          // selamanya -- begitu firebase_synced_at terisi, laporan itu sudah
+          // benar-benar tuntas, tidak perlu terus mengingatkan.
+          problemIds = problemIds.filter(function(id) {
+            var rec = recMap[id];
+            return rec && !rec.firebase_synced_at;
+          });
+          if (!problemIds.length) { callback([]); return; }
           var problems = problemIds.map(function(id) {
             var entries = byRecord[id];
             var checksheetIds = [];
