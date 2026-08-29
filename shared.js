@@ -921,6 +921,18 @@ pmInitGate();
   window._raAutosubmitReport = function(ok, err) {
     if (reported) return;
     reported = true;
+    // 🩺 Jaring pengaman logging: kalau proses macet SEBELUM sempat masuk
+    // raSendFinalPdfToFirebaseDashboard() (mis. dbLoad()/pemulihan foto
+    // hang, JS error tak tertangkap, promise gagal tak tertangani, atau
+    // watchdog 4.5 menit di bawah ini) -- finish() di dalam fungsi itu
+    // TIDAK PERNAH sempat jalan, jadi _pmLogSyncAttempt() di sana juga
+    // tidak pernah kepanggil. _pmLogSyncAttempt sendiri sudah dedupe
+    // (window._pmSyncLoggedThisAttempt) -- kalau finish() SUDAH sempat
+    // mencatat duluan (kasus normal), panggilan di sini otomatis di-skip,
+    // tidak dobel.
+    if (typeof _pmLogSyncAttempt === 'function') {
+      _pmLogSyncAttempt(window._editingId || params.get('id'), ok, err, null);
+    }
     try {
       var target = window.opener || ((window.parent && window.parent !== window) ? window.parent : null);
       if (target) {
@@ -2444,6 +2456,13 @@ function _pmSyncTriggerSource() {
 // sungguhan. Lihat tabel pm_sync_log (dibuat manual lewat SQL Editor).
 function _pmLogSyncAttempt(recordId, ok, err, checksheetId) {
   if (!recordId) return;
+  // Dedupe -- dipanggil dari 2 titik (finish() di raSendFinalPdfToFirebaseDashboard
+  // UNTUK kasus normal, DAN window._raAutosubmitReport UNTUK jaring pengaman
+  // kasus macet/error sebelum sempat sampai situ). Siapa pun yang panggil
+  // duluan yang tercatat -- window per page-load = 1 attempt, aman di-reset
+  // otomatis tiap iframe/tab autosubmit dibuka fresh.
+  if (window._pmSyncLoggedThisAttempt) return;
+  window._pmSyncLoggedThisAttempt = true;
   supaFetch('POST', 'pm_sync_log', {
     record_id: recordId,
     ok: !!ok,
