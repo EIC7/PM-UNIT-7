@@ -2451,19 +2451,23 @@ function _pmSyncTriggerSource() {
   if (params.get('autosubmit') !== '1') return 'manual'; // submit langsung dari form (tombol Submit biasa), bukan lewat reload halaman
   return params.get('autoclose') === '1' ? 'manual' : 'auto';
 }
-// Catat SETIAP percobaan kirim (sukses maupun gagal) ke pm_sync_log --
-// fire-and-forget, kegagalan logging TIDAK BOLEH mengganggu alur submit
-// sungguhan. Lihat tabel pm_sync_log (dibuat manual lewat SQL Editor).
+// Catat SETIAP percobaan kirim (sukses maupun gagal) ke pm_sync_log.
+// MENGEMBALIKAN PROMISE (penting -- lihat finish() di bawah: pemanggil WAJIB
+// nunggu ini selesai sebelum lapor "selesai" ke parent/opener, supaya
+// tab/iframe tidak ditutup duluan sebelum request-nya benar-benar sampai ke
+// server). Kegagalan logging sendiri TIDAK BOLEH mengganggu alur submit
+// sungguhan -- makanya di-catch jadi resolve biasa, bukan reject. Lihat
+// tabel pm_sync_log (dibuat manual lewat SQL Editor).
 function _pmLogSyncAttempt(recordId, ok, err, checksheetId) {
-  if (!recordId) return;
+  if (!recordId) return Promise.resolve();
   // Dedupe -- dipanggil dari 2 titik (finish() di raSendFinalPdfToFirebaseDashboard
   // UNTUK kasus normal, DAN window._raAutosubmitReport UNTUK jaring pengaman
   // kasus macet/error sebelum sempat sampai situ). Siapa pun yang panggil
   // duluan yang tercatat -- window per page-load = 1 attempt, aman di-reset
   // otomatis tiap iframe/tab autosubmit dibuka fresh.
-  if (window._pmSyncLoggedThisAttempt) return;
+  if (window._pmSyncLoggedThisAttempt) return Promise.resolve();
   window._pmSyncLoggedThisAttempt = true;
-  supaFetch('POST', 'pm_sync_log', {
+  return supaFetch('POST', 'pm_sync_log', {
     record_id: recordId,
     ok: !!ok,
     error: err ? String((err && err.message) || err).slice(0, 500) : null,
@@ -2474,37 +2478,52 @@ function _pmLogSyncAttempt(recordId, ok, err, checksheetId) {
 
 function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   var _raLastChecksheetId = null; // diisi begitu DB.save() sukses, lihat window._raPdfCapture di bawah
+  // 🆕 finish() SEKARANG MENUNGGU (bukan fire-and-forget) semua penulisan
+  // penting ke Supabase selesai SEBELUM memanggil onDone(). SEBELUM fix ini,
+  // PATCH firebase_synced_at/firebase_checksheet_id ditembak tanpa ditunggu,
+  // lalu onDone() langsung dipanggil -- itu memicu postMessage ke
+  // parent/opener yang lalu BURU-BURU menutup tab/iframe (lihat autoclose di
+  // window._raAutosubmitReport dan historySubmitDone di history.html).
+  // Kalau penutupan itu terjadi SEBELUM fetch PATCH-nya benar-benar sampai
+  // ke server, request itu ikut terputus di tengah jalan -- record tetap
+  // "SUBMITTED tapi belum sync" WALAUPUN prosesnya sebenarnya sudah sukses
+  // total (dikonfirmasi lewat pm_sync_log yang justru mencatat ok:true).
+  // Ini penyebab pasti laporan "Menunggu Feedback" yang tidak kunjung
+  // berubah walau sudah berkali-kali retry sukses di baliknya.
   function finish(ok, err) {
-    _pmLogSyncAttempt(record && record.id, ok, err, _raLastChecksheetId);
-    if (ok) {
-      // Tandai "sudah nyampe" -- dicek oleh raRetryPendingFirebaseSyncs()
-      // supaya record ini tidak dicoba kirim ulang lagi di kunjungan
-      // berikutnya. Dengan retry (lihat _pmPatchRecordWithRetry) supaya
-      // gangguan jaringan/Supabase sesaat tidak bikin kolom ini gagal
-      // terisi SELAMANYA walau PDF-nya sendiri sudah sukses terkirim.
-      _pmPatchRecordWithRetry(record.id, {
-        firebase_synced_at: new Date().toISOString(), firebase_sync_error: null
-      });
-      // firebase_checksheet_id disimpan TERPISAH (bukan digabung ke PATCH di
-      // atas) SENGAJA -- kolom ini baru ada setelah migration 010 dijalankan;
-      // kalau digabung jadi satu request dan kolomnya belum ada, PostgREST
-      // menolak SELURUH PATCH (termasuk firebase_synced_at yang sudah lama
-      // jalan) karena satu kolom tak dikenal, bukan cuma mengabaikan field
-      // itu. Dipisah supaya migration 010 yang telat dijalankan tidak
-      // meregresi fitur sync-tracking yang sudah ada. history.html
-      // (historyUpgradeStatusBadges) pakai kolom ini buat baca balik status
-      // review/approval SUNGGUHAN lewat Approvals.getByChecksheetId() --
-      // sebelum ini checksheetId cuma dipakai sekali pakai di memory lalu
-      // dibuang, history.html cuma pernah tahu "sudah terkirim".
-      if (_raLastChecksheetId) {
-        _pmPatchRecordWithRetry(record.id, { firebase_checksheet_id: _raLastChecksheetId });
+    _pmLogSyncAttempt(record && record.id, ok, err, _raLastChecksheetId).then(function() {
+      if (ok) {
+        // Tandai "sudah nyampe" -- dicek oleh raRetryPendingFirebaseSyncs()
+        // supaya record ini tidak dicoba kirim ulang lagi di kunjungan
+        // berikutnya. Dengan retry (lihat _pmPatchRecordWithRetry) supaya
+        // gangguan jaringan/Supabase sesaat tidak bikin kolom ini gagal
+        // terisi SELAMANYA walau PDF-nya sendiri sudah sukses terkirim.
+        var p1 = _pmPatchRecordWithRetry(record.id, {
+          firebase_synced_at: new Date().toISOString(), firebase_sync_error: null
+        });
+        // firebase_checksheet_id disimpan TERPISAH (bukan digabung ke PATCH di
+        // atas) SENGAJA -- kolom ini baru ada setelah migration 010 dijalankan;
+        // kalau digabung jadi satu request dan kolomnya belum ada, PostgREST
+        // menolak SELURUH PATCH (termasuk firebase_synced_at yang sudah lama
+        // jalan) karena satu kolom tak dikenal, bukan cuma mengabaikan field
+        // itu. Dipisah supaya migration 010 yang telat dijalankan tidak
+        // meregresi fitur sync-tracking yang sudah ada. history.html
+        // (historyUpgradeStatusBadges) pakai kolom ini buat baca balik status
+        // review/approval SUNGGUHAN lewat Approvals.getByChecksheetId() --
+        // sebelum ini checksheetId cuma dipakai sekali pakai di memory lalu
+        // dibuang, history.html cuma pernah tahu "sudah terkirim".
+        var p2 = _raLastChecksheetId
+          ? _pmPatchRecordWithRetry(record.id, { firebase_checksheet_id: _raLastChecksheetId })
+          : Promise.resolve();
+        return Promise.all([p1, p2]);
+      } else if (record && record.id) {
+        return supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
+          firebase_sync_error: String((err && err.message) || err || 'gagal tidak diketahui').slice(0, 500)
+        }).catch(function(){});
       }
-    } else if (record && record.id) {
-      supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + record.id, {
-        firebase_sync_error: String((err && err.message) || err || 'gagal tidak diketahui').slice(0, 500)
-      }).catch(function(){});
-    }
-    if (onDone) onDone(ok, err);
+    }).then(function() {
+      if (onDone) onDone(ok, err);
+    });
   }
   if (typeof window._raBuildPdf !== 'function') {
     console.warn('[raSendFinalPdfToFirebaseDashboard] window._raBuildPdf belum di-set modul ini, skip kirim ke Review Approval Dashboard.');
