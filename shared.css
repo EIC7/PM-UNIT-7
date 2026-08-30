@@ -44,8 +44,16 @@ body {
   white-space:nowrap;
 }
 .topbar-back:hover { color:#a8c4e8; border-color:#2563eb; background:rgba(37,99,235,0.1); }
-.live-dot    { width:8px; height:8px; border-radius:50%; background:var(--ok); animation:blink 2s ease-in-out infinite; flex-shrink:0; }
+.live-dot    { width:8px; height:8px; border-radius:50%; background:var(--ok); animation:blink 2s ease-in-out infinite; flex-shrink:0; cursor:default; }
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+/* ── Status kesehatan Supabase -- dicek dari browser tiap 60 detik oleh
+   pmCheckSupabaseHealth() di shared.js, hasilnya dipasang ke SEMUA
+   elemen .live-dot yang ada di halaman (topbar). Sehat tetap berkedip
+   (kesan "hidup"); bermasalah/berhenti berhenti berkedip supaya beda
+   secara visual, bukan cuma beda warna. ── */
+.live-dot.pm-health-ok    { background:#22c55e; animation:blink 2s ease-in-out infinite; }
+.live-dot.pm-health-warn  { background:#f59e0b; animation:none; opacity:1; }
+.live-dot.pm-health-down  { background:#ef4444; animation:none; opacity:1; }
 .topbar-time { font-family:'Courier New','Share Tech Mono',monospace; font-size:clamp(9px,1.1vw,13px); color:#7a9aca; }
 @media(max-width:600px){.topbar-sub,.topbar-sep{display:none !important;}}
 

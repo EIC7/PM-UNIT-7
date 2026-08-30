@@ -3269,3 +3269,53 @@ function pmNumpadPress(k) {
   pmNumpadActiveEl.value = v;
   pmNumpadActiveEl.dispatchEvent(new Event('input', { bubbles: true }));
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   STATUS KESEHATAN SUPABASE -- ditarik ke elemen .live-dot yang sudah ada
+   di topbar HAMPIR SEMUA halaman (dulu cuma dekorasi, selalu blink biru).
+   Dicek dari BROWSER yang lagi buka halaman (bukan server eksternal), jadi
+   BUKAN pengganti monitoring uptime beneran (mis. UptimeRobot) -- kalau
+   hasilnya bermasalah/tidak terhubung, bisa jadi Supabase-nya yang down,
+   BISA JUGA cuma koneksi internet device itu sendiri yang jelek; dari sisi
+   ini tidak bisa dibedakan 100%. Endpoint /auth/v1/health WAJIB disertai
+   header apikey -- tanpa itu selalu balas 401 walau Supabase sehat.
+   ══════════════════════════════════════════════════════════════════════════ */
+function pmUpdateHealthDots(state, title) {
+  document.querySelectorAll('.live-dot').forEach(function(el) {
+    el.classList.remove('pm-health-ok', 'pm-health-warn', 'pm-health-down');
+    el.classList.add('pm-health-' + state);
+    el.title = title || '';
+  });
+}
+
+function pmCheckSupabaseHealth() {
+  if (typeof SUPA_URL === 'undefined' || typeof SUPA_KEY === 'undefined') return;
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 8000) : null;
+  fetch(SUPA_URL + '/auth/v1/health', {
+    headers: { apikey: SUPA_KEY },
+    signal: ctrl ? ctrl.signal : undefined
+  }).then(function (res) {
+    if (timer) clearTimeout(timer);
+    if (res.status === 200) {
+      pmUpdateHealthDots('ok', 'Database Supabase: Sehat');
+      return;
+    }
+    return res.text().then(function (body) {
+      var paused = /paused/i.test(body || '');
+      if (paused || res.status === 503) {
+        pmUpdateHealthDots('down', 'Database Supabase: Berhenti / di-pause (status ' + res.status + ')');
+      } else {
+        pmUpdateHealthDots('warn', 'Database Supabase: Bermasalah (status ' + res.status + ')');
+      }
+    });
+  }).catch(function () {
+    if (timer) clearTimeout(timer);
+    pmUpdateHealthDots('down', 'Database Supabase: Tidak dapat dihubungi (bisa juga koneksi internet Anda yang bermasalah)');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  pmCheckSupabaseHealth();
+  setInterval(pmCheckSupabaseHealth, 60000);
+});
