@@ -35,7 +35,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const FIREBASE_PROJECT_ID = 'pomi-checksheet-e7';
 const FIREBASE_API_KEY = 'AIzaSyB2c5ZFYRH8rKRcYlza175wTM36O8jwDGw';
 
-const VALID_STATUSES = ['reviewed', 'approved', 'returned_to_technician'];
+const VALID_STATUSES = ['reviewed', 'approved', 'returned_to_technician', 'revision_resubmitted'];
 
 // ── Alert LANGSUNG kalau Supabase sendiri down/unhealthy ──────────────────
 // SENGAJA tidak lewat RPC notify_telegram_review_status (fungsi Postgres --
@@ -151,8 +151,16 @@ async function fetchRecentApprovals() {
     if (!row.document || !row.document.fields) continue;
     const f = row.document.fields;
     const checksheetId = f.checksheetId && f.checksheetId.stringValue;
-    const status = f.status && f.status.stringValue;
-    if (!checksheetId || !status) continue;
+    const rawStatus = f.status && f.status.stringValue;
+    if (!checksheetId || !rawStatus) continue;
+    // Sama seperti historyDeriveStatus() di history.html -- Firestore cuma
+    // punya 'submitted' mentah buat DUA kejadian beda (submit pertama kali
+    // vs returned_to_technician yang direvisi+disubmit ulang, yang mana
+    // submitWithFiles() reset status ke 'submitted' tapi returnedNote TIDAK
+    // ikut terhapus, cuma di-merge). Field returnedNote yang masih nempel
+    // itu satu-satunya penanda buat bedakan keduanya.
+    const hasReturnedNote = !!(f.returnedNote && f.returnedNote.mapValue);
+    const status = (rawStatus === 'submitted' && hasReturnedNote) ? 'revision_resubmitted' : rawStatus;
     byChecksheetId[checksheetId] = status;
   }
   return byChecksheetId;

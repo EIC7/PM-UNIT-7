@@ -401,3 +401,35 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   `pmMaybeEnterRevisionMode(rec);` di blok "LOAD FROM HISTORY" masing-masing file (pola
   sama persis, lihat 2 file di atas sebagai referensi) — mekanismenya sendiri sudah
   generik di `shared.js`, tidak perlu diubah.
+- **Terverifikasi langsung dari source Review Approval Dashboard** (dibaca read-only dari
+  `github.com/EenPutra/CHECK-SHEET-POMI-ELEKTRIK-ONLINE`, TIDAK diubah): `status:
+  'submitted'` yang dikirim `submitWithFiles()` saat resubmit (lihat poin sebelumnya)
+  MEMANG persis status yang mereka harapkan untuk menandai "laporan baru, timpa yang
+  lama" — komentar asli mereka: *"status is deliberately reset to 'submitted' here
+  regardless of what it already was, since an overwrite always means the technician has
+  new data for you to look at."* Field `returnedNote` (dari kejadian returned
+  sebelumnya) **TIDAK ikut dihapus** saat resubmit — cuma di-`.set(...,{merge:true})`,
+  jadi field lain yang tidak disebutkan eksplisit (termasuk `returnedNote`) tetap apa
+  adanya. Ini justru dimanfaatkan sebagai penanda "revisi" (lihat poin berikutnya).
+
+## Badge & notifikasi "🔁 Revisi Submitted" (2026-08-30)
+
+- Firestore cuma punya status mentah `'submitted'` untuk DUA kejadian yang beda-beda:
+  submit pertama kali, ATAU laporan `returned_to_technician` yang sudah direvisi+disubmit
+  ulang (status di-reset ke `'submitted'` oleh `submitWithFiles()`, lihat poin di atas).
+  Client TIDAK BISA membedakan keduanya dari `status` saja — pembedanya: field
+  `returnedNote` (dari kejadian returned sebelumnya) **tetap nempel** di dokumen karena
+  update-nya `merge:true`, bukan replace penuh.
+- `historyDeriveStatus(appr)` (`history.html`, dan versi Node-nya
+  `fetchRecentApprovals()` di `scripts/notify-ra-status-poll.js`) — kalau
+  `appr.status === 'submitted' && appr.returnedNote` ada isinya, derive jadi status
+  sintetis **`'revision_resubmitted'`** (BUKAN dari Firestore, murni buatan sisi kita).
+  Dipakai KONSISTEN untuk badge (`historyRaStatusBadge`, label "🔁 Revisi Submitted",
+  ungu, beda dari "Submitted" biru biasa) DAN untuk status yang dikirim ke RPC notify —
+  **WAJIB selalu lewat fungsi derive ini, jangan baca `appr.status` mentah langsung** di
+  tempat lain yang perlu bedakan submit-pertama vs revisi-resubmit, supaya badge & notif
+  tetap sinkron.
+- `notify_telegram_review_status` (fungsi Postgres) juga punya case `'revision_resubmitted'`
+  → label `'🔁 Direvisi & Disubmit Ulang'`. **Ini status SINTETIS, bukan nilai asli
+  Firestore** — kalau baca ulang fungsi ini di masa depan dan bingung kenapa ada case
+  yang "tidak match status Firestore mana pun", ingat ini alasannya.

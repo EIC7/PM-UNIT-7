@@ -293,10 +293,11 @@ function historyUpgradeStatusBadges(rows) {
         if (!appr) return;
         var cell = document.getElementById('histStatusCell-' + r.id);
         if (cell) cell.innerHTML = historyRaStatusBadge(appr);
-        var key = r.id + ':' + appr.status;
-        if (appr.status && appr.status !== r.ra_notified_status && !pmNotifAttempted[key]) {
+        var displayStatus = historyDeriveStatus(appr);
+        var key = r.id + ':' + displayStatus;
+        if (displayStatus && displayStatus !== r.ra_notified_status && !pmNotifAttempted[key]) {
           pmNotifAttempted[key] = true;
-          raSendTelegramNotif(r, appr);
+          raSendTelegramNotif(r, { status: displayStatus });
         }
         // Laporan yang DIKEMBALIKAN ke teknisi -- tombol "Revisi" (BUKAN
         // Resubmit, itu khusus laporan yang submit pertamanya gagal) buka
@@ -333,8 +334,8 @@ function historyUpgradeStatusBadges(rows) {
    supaya status yang sama tidak dikirim ulang tiap kali halaman ini
    dibuka/refresh oleh siapa pun. */
 function raSendTelegramNotif(r, appr) {
-  var validStatuses = ['reviewed', 'approved', 'returned_to_technician'];
-  if (validStatuses.indexOf(appr.status) === -1) return; // status lain (mis. balik ke 'submitted') -- tidak perlu notif
+  var validStatuses = ['reviewed', 'approved', 'returned_to_technician', 'revision_resubmitted'];
+  if (validStatuses.indexOf(appr.status) === -1) return; // status lain (mis. submitted pertama kali) -- tidak perlu notif
   supaFetch('POST', 'rpc/notify_telegram_review_status', {
     p_row_id: r.id, p_status: appr.status,
     p_modul: r.modul || '', p_pic: r.pic || '', p_wo: r.work_order || ''
@@ -353,22 +354,41 @@ function pmFmtDDMMYYYYHHMM(iso) {
   return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
 }
 
+/* Firestore cuma punya status mentah 'submitted' buat DUA kejadian beda:
+   submit pertama kali, DAN laporan yang tadinya returned_to_technician
+   lalu direvisi+disubmit ulang (submitWithFiles() dengan existingApprovalId
+   SENGAJA reset status ke 'submitted' lagi -- lihat CLAUDE.md/pesan revisi
+   -- tapi field returnedNote-nya TIDAK ikut dihapus, cuma di-merge, jadi
+   tetap ada dari kejadian returned sebelumnya). Field returnedNote yang
+   masih nempel itu jadi penanda satu-satunya buat bedakan keduanya. Dipakai
+   konsisten buat badge DAN buat status yang dikirim ke RPC notify supaya
+   dua-duanya selalu sinkron. */
+function historyDeriveStatus(appr) {
+  if (!appr) return null;
+  if (appr.status === 'submitted' && appr.returnedNote) return 'revision_resubmitted';
+  return appr.status;
+}
+
 /* 4 tahap: Draft (kuning, historyStatusBadge) -> Submitted (biru) ->
    Reviewed (kuning) -> Approved (hijau). "returned_to_technician" bukan
    salah satu dari 4 tahap itu (laporan dikembalikan, bukan maju ke tahap
    berikutnya) -- tetap ditandai terpisah (merah) supaya tidak disangka
-   masih di tahap Reviewed biasa. Terima objek `appr` utuh (bukan cuma
-   string status) supaya jam kejadian status (review.reviewedAt /
-   approval.approvedAt / returnedNote.returnedAt / createdAt -- field-field
-   ini sudah ada di dokumen `approvals` Firestore, lihat approval-helper.js)
-   bisa ditampilkan di bawah badge-nya. */
+   masih di tahap Reviewed biasa. "revision_resubmitted" (lihat
+   historyDeriveStatus) juga ditandai terpisah (ungu) dari "Submitted" biasa
+   supaya kelihatan ini laporan yang sudah pernah dikembalikan lalu
+   direvisi, bukan submission baru pertama kali. Terima objek `appr` utuh
+   (bukan cuma string status) supaya jam kejadian status (review.reviewedAt
+   / approval.approvedAt / returnedNote.returnedAt / updatedAt / createdAt
+   -- field-field ini sudah ada di dokumen `approvals` Firestore, lihat
+   approval-helper.js) bisa ditampilkan di bawah badge-nya. */
 function historyRaStatusBadge(appr) {
-  var raStatus = appr && appr.status;
+  var raStatus = historyDeriveStatus(appr);
   var map = {
     submitted: { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' },
     reviewed: { label: 'Reviewed', bg: '#fef3c7', fg: '#92400e' },
     approved: { label: 'Approved', bg: '#dcfce7', fg: '#166534' },
-    returned_to_technician: { label: '↩ Dikembalikan ke Teknisi', bg: '#fee2e2', fg: '#991b1b' }
+    returned_to_technician: { label: '↩ Dikembalikan ke Teknisi', bg: '#fee2e2', fg: '#991b1b' },
+    revision_resubmitted: { label: '🔁 Revisi Submitted', bg: '#ede9fe', fg: '#6d28d9' }
   };
   var s = map[raStatus] || { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' };
   var ts = '';
@@ -376,6 +396,7 @@ function historyRaStatusBadge(appr) {
     if (raStatus === 'approved' && appr.approval) ts = appr.approval.approvedAt;
     else if (raStatus === 'reviewed' && appr.review) ts = appr.review.reviewedAt;
     else if (raStatus === 'returned_to_technician' && appr.returnedNote) ts = appr.returnedNote.returnedAt;
+    else if (raStatus === 'revision_resubmitted') ts = appr.updatedAt;
     else ts = appr.createdAt;
   }
   var tsStr = pmFmtDDMMYYYYHHMM(ts);

@@ -3328,12 +3328,24 @@ function pmDismissHealthAlert() {
   pmHideHealthAlert();
 }
 
+// Titik di topbar boleh langsung berubah warna sekali gagal (indikator
+// pasif, kecil, tidak mengganggu) -- tapi BANNER BESAR baru muncul kalau
+// gagal 2x BERTURUT-TURUT (~60 detik+ terus bermasalah), supaya blip
+// jaringan sesaat (pernah kejadian, terbukti Supabase-nya sehat lagi begitu
+// dicek ulang manual) tidak bikin banner "teriak serigala" tiap kali ada
+// hiccup sedetik.
+var pmHealthFailStreak = 0;
+
 function pmHandleHealthResult(state, title) {
   pmUpdateHealthDots(state, title);
   if (state === 'ok') {
+    pmHealthFailStreak = 0;
     pmLS('remove', PM_HEALTH_DISMISS_KEY); // reset -- episode berikutnya boleh tampil lagi
     pmHideHealthAlert();
-  } else if (pmLS('get', PM_HEALTH_DISMISS_KEY) !== '1') {
+    return;
+  }
+  pmHealthFailStreak++;
+  if (pmHealthFailStreak >= 2 && pmLS('get', PM_HEALTH_DISMISS_KEY) !== '1') {
     pmShowHealthAlert();
   }
 }
