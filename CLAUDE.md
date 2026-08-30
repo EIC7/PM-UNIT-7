@@ -531,3 +531,75 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   tombol "← DASHBOARD UTAMA") sudah benar dari sebelumnya, tidak perlu diubah.
 - 2 kartu baru ditambahkan di hub (`O2 WEEKLY INLET` aksen `#0e8f7a`, `O2 WEEKLY OUTLET`
   aksen `#c07a12`), `.hub-stats` diupdate dari 3 modul/43 tag jadi 5 modul/57 tag.
+
+## 9 modul trend baru dari survei "semua HTML yang berpotensi" (2026-08-30)
+
+- User minta cek SEMUA 31 file HTML modul di root, tambahkan `trend_....html` untuk yang
+  "berpotensi bisa dijadikan trend". Dari 26 file yang belum punya trend (5 sudah:
+  SO2/FEGT/CEMS/O2 Weekly Inlet/Outlet), disurvei satu-satu (baca `dbCollectData()` tiap
+  file, BUKAN cuma tebak dari judul/nama file) — **9 berhasil dibangun, 2 dikecualikan,
+  sisanya dikecualikan lebih dulu di tahap survei awal** (workflow/admin: `outage-*.html`
+  ×5, `checksheet-level-switch.html`, `device-admin.html`, `history.html`, `index.html`;
+  bukan tag tetap: `maintenance_report_form.html`, `material-warehouse.html`).
+- **Dikecualikan setelah baca isi lengkap** (kelihatannya modul analyzer tapi ternyata
+  checklist murni, TIDAK ADA bacaan angka sama sekali):
+  - `pm-hg-analyzer.html` — cuma `check`/`sparepart`/`done` boolean per step, tidak ada
+    nilai konsentrasi Hg atau kalibrasi gas.
+  - `opacity.html` — cuma 11 item checklist boolean (PTW, cleaning, sealing, dst per sisi
+    7A/7B), meski file-nya jadi referensi pola PDF bareng `so2.html` di bagian atas
+    dokumen ini, struktur DATA-nya beda total, bukan DCS-vs-Local reading.
+  - **Pelajaran**: nama modul yang terdengar seperti instrumen ("Analyzer", "Monitor")
+    TIDAK menjamin ada data numerik tersimpan — WAJIB baca `dbCollectData()`/struktur
+    `data` yang benar-benar disimpan sebelum bikin trend, jangan asumsi dari judul.
+  - `checksheet-temperature.html` **JUGA dikecualikan** (beda dari 2 di atas) — bukan
+    karena datanya checklist, tapi karena filenya SAMA SEKALI TIDAK PAKAI `pm_records`
+    (`function dbCollectData(modul){ return null; }` sengaja dikosongkan) — dia simpan ke
+    tabel Supabase terpisah `ts_checksheet` lewat REST call sendiri (`TS_SUPA_URL`/
+    `TS_TABLE` lokal di file itu). Arsitektur trend SEKARANG selalu query `pm_records`
+    lewat `SupabaseAdapter.fetchByModulAndRange()` (dipanggil generik oleh
+    `historical-manager.js` untuk SEMUA adapter terdaftar, tidak ada jalur per-adapter ke
+    tabel lain) — dukung modul ini butuh ubah `historical-manager.js`/
+    `supabase-adapter.js` supaya adapter bisa declare tabel sendiri, BELUM dikerjakan,
+    di luar scope "tambah modul baru" yang biasa.
+  - `beltscale.html` (390 baris, beda dari `beltscale-b12/e23/e45.html` yang masing-masing
+    2000+ baris) **BUKAN modul terpisah** — dia cuma UI unified yang pakai
+    `?type=b12/e23/e45` buat pilih salah satu dari 3 modul yang SAMA (`dbSave('beltscale')`
+    dengan `modul` dihitung dinamis jadi salah satu dari `BELT CONVEYOR B1-B2`/`E2-E3`/
+    `E4-E5`) — jadi datanya SUDAH otomatis kebaca oleh 3 trend belt scale di bawah, tidak
+    perlu trend keempat.
+- **9 modul yang berhasil dibangun** (pola sama: adapter di `js/adapters/`, tag di
+  `config/default-tags-*.js`, config modul di `config/modules/*.config.js`, halaman di
+  `trend_*.html`, key registrasi `DCS_ADAPTERS`/`DCS_MODULES` = literal string
+  `pm_records.modul` milik modul itu atau substring aman darinya):
+  - `Flow Meter FGD` (dari `Flow Meter FGD Inlet & Quencher`) — 4 tag (FM-101/103/201/203),
+    Before/After Cleaning-Correction + Insertion/Profile Factor.
+  - `Analyzer Indicator Transmitter (pH)` — 6 tag (CWT-AIT-502/503/507/512/513/936), DCS
+    vs Local pH + kalibrasi buffer 4/7/10.
+  - `GENERATOR_STATOR_LEAK` — 7 tag/parameter (Flow Rate, Purge Air, IA Pressure, Bottle
+    Pressure, DO Probe Life, H2/DO Reading), Before/After per PM.
+  - `Coal Feeder Calibration` — **1 tag agregat** (`COAL-FEEDER-CAL`) karena nama feeder
+    di form-nya free-text, bukan channel tetap seperti modul lain — deviasi kalibrasi 2
+    metode + demand test 100%.
+  - `PM_O2_MONTHLY_CLEANING` (dari `form_o2_report.html`, BEDA dari 2 modul Weekly O2 yang
+    sudah ada duluan — source file & struktur data beda total) — key ini SENGAJA cuma
+    prefix, supaya `ilike.*PM_O2_MONTHLY_CLEANING*` menangkap ketiga varian suffix
+    (`_INLET`/`_OUTLET`/`_INLET_DAN_OUTLET`) sekaligus. **Cuma 6 tag sisi Outlet** — sisi
+    Inlet di file ini cuma simpan foto before/after cleaning, tidak ada angka O2%
+    tersimpan sama sekali (beda dari `weekly_calibration_o2_inlet.html` yang punya
+    before/after O2% numerik).
+  - `Coal Silo Level Transmitter` — 6 tag (BF-LI-500A–F), DCS Reading As Found vs As Left.
+  - `BELT CONVEYOR B1-B2` — 2 tag (Conveyor 100A/100B), 11 series/tag (Zero Cal
+    bulanan + Zero/Span Error, Diagnostic Load/Pulse 3-bulanan, dst).
+  - `BELT CONVEYOR E2-E3` — 2 tag (Conveyor 200A/200B), pola serupa B1-B2.
+  - `BELT CONVEYOR E4-E5` — 2 tag (Conveyor E-4/E-5), lebih sederhana — 3 series/tag
+    (Error Zero Calibration %, New/Old Zero Change Value) + 1 deviationPair.
+- Hub `index_trend.html`: `.hub-stats` diupdate dari 5 modul/57 tag jadi **14 modul/93
+  tag**, 9 kartu baru ditambahkan (aksen warna beda-beda, belum pernah dipakai modul lain:
+  `#a35c1f` O2 Monthly, `#1f5c8a` pH, `#1f8a7a` Flow Meter FGD, `#a31e3f` Generator Stator
+  Leak, `#3d3d8a` Coal Feeder, `#6b4a2f` Coal Silo Level, `#2f7a3d`/`#7a8a1f`/`#a37a1a`
+  untuk 3 Belt Scale).
+- Proses build 9 modul ini dikerjakan PARALEL lewat 9 subagent terpisah (masing-masing
+  cuma boleh bikin 4 file baru miliknya sendiri, dilarang sentuh `index_trend.html`/CSS/
+  JS core bersama supaya tidak ada race/conflict antar subagent) — hub card + `.hub-stats`
+  baru dirangkai manual SEKALI di akhir setelah semua subagent selesai, supaya tidak ada
+  banyak edit bertumpuk ke file yang sama.

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DCS TREND — O2 Monthly Cleaning</title>
+<link rel="stylesheet" href="css/style.css?v=20260827d">
+<link rel="stylesheet" href="css/dcs-theme.css?v=20260830b">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-title"><a href="index_trend.html" class="topbar-home-link" title="Kembali ke daftar modul">DCS TREND</a> — O2 MONTHLY CLEANING</div>
+    <div class="topbar-status"><span class="dot"></span>HISTORICAL</div>
+    <div class="topbar-clock" id="clockValue">--</div>
+  </div>
+
+  <!-- MODE BAR -->
+  <div class="modebar">
+    <span class="modebar-label">MODE:</span>
+    <button class="mode-btn" id="modeLiveBtn">LIVE TREND</button>
+    <button class="mode-btn" id="modeHistBtn">HISTORICAL TREND</button>
+  </div>
+
+  <!-- MODULE TAB BAR (1 tab per modul checksheet, lihat js/module-view.js) -->
+  <div class="module-tab-bar" id="moduleTabBar"></div>
+
+  <!-- MAIN GRID — urutan sumber sengaja mobile-first: 1. chart (tampilan
+       trend) → 2. historical (rentang waktu sampai 90D/1-3 TAHUN + LOAD
+       DATA) → 3. tags (pilihan tag) → 4. values (data tag yang dipilih)
+       → 5. kpi & extra (sisanya: KPI cards + deviasi + log). Desktop
+       menata ulang jadi 3 kolom klasik lewat grid-template-areas (lihat
+       css/style.css) — urutan baris di kolom tengah desktop tidak perlu
+       sama dengan urutan sumber mobile ini. -->
+  <div class="main-grid">
+
+    <!-- 1. CHART: grafik trend + toolbar export -->
+    <div class="panel-chart">
+
+      <div class="chart-toolbar">
+        <div class="chart-title" id="chartTitle">TREND GRAPH</div>
+        <div class="chart-toolbar-spacer"></div>
+        <span class="loading-indicator" id="loadingIndicator">MEMUAT DATA...</span>
+        <button class="icon-btn" id="autoScaleBtn">AUTO SCALE</button>
+        <button class="icon-btn" id="clearPinsBtn" title="Hapus semua readout box yang di-pin">CLEAR PINS</button>
+        <button class="icon-btn" id="exportCsvBtn">EXPORT CSV</button>
+        <button class="icon-btn" id="exportJsonBtn">EXPORT JSON</button>
+        <button class="icon-btn" id="exportImgBtn">EXPORT IMAGE</button>
+      </div>
+
+      <div class="live-notice" id="liveModeNotice">
+        LIVE TREND belum aktif pada phase ini.<br>
+        Prioritas saat ini: HISTORICAL TREND dengan data nyata dari Supabase (pm_records).<br>
+        Arsitektur Live Trend Engine + Simulator sudah disiapkan di js/live-trend-engine.js dan js/simulator.js.
+      </div>
+
+      <div class="chart-wrap">
+        <div id="trendChart"></div>
+      </div>
+
+    </div>
+
+    <!-- 2. HISTORICAL: rentang waktu (quick range s/d 90D, 1-3 TAHUN, custom) + LOAD DATA -->
+    <div class="panel-historical">
+      <div class="historical-panel" id="historicalPanel">
+        <div class="range-bar" id="quickRangeBar"></div>
+        <div class="custom-range-row">
+          <span>Start:</span>
+          <input type="date" id="startDate"><input type="time" id="startTime" value="00:00">
+          <span>End:</span>
+          <input type="date" id="endDate"><input type="time" id="endTime" value="23:59">
+        </div>
+        <div>
+          <button class="load-btn" id="loadDataBtn">LOAD DATA</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. TAG LIST: pilihan tag yang ditampilkan di grafik -->
+    <div class="panel-tags">
+      <div class="panel-header">TAG LIST</div>
+      <div class="tag-search-wrap"><input type="text" id="tagSearch" placeholder="Search tag..."></div>
+      <div class="tag-list-body" id="tagListBody"></div>
+    </div>
+
+    <!-- 4. VALUES: nilai tiap series dari tag yang dicentang, ikut cursor di grafik -->
+    <div class="panel-details">
+      <div class="panel-header">VALUES</div>
+      <div class="cursor-readout" id="cursorReadout"></div>
+      <div id="valuesPanelBody"></div>
+    </div>
+
+    <!-- 5a. MODULE KPI CARDS (otomatis dari config/modules/<modul>.config.js) -->
+    <div class="module-kpi-bar" id="moduleKpiBar"></div>
+
+    <!-- 5b. EXTRA: panel deviasi + tabel log record -->
+    <div class="panel-extra">
+
+      <div class="module-deviation-area" id="moduleDeviationArea"></div>
+
+      <div class="module-log-wrap" id="moduleLogTable"></div>
+
+    </div>
+
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar" id="statusBar"></div>
+
+</div>
+
+<!-- ===================== CONFIG ===================== -->
+<!-- ?v= cache-busting: browser (terutama Chrome mobile) suka nyimpen file
+     .js/.css dari GitHub Pages cukup lama, jadi fix baru kadang belum
+     kepakai walau file di repo sudah ter-update. Naikkan angka ini tiap
+     kali ada perubahan berarti di file-file di bawah / css/*.css. -->
+<script src="config/system-config.js?v=20260827a"></script>
+<script src="config/default-tags-o2-monthly.js?v=20260830a"></script>
+<script src="config/modules/o2-monthly.config.js?v=20260830a"></script>
+
+<!-- ===================== CORE MODULES ================ -->
+<script src="js/storage-manager.js?v=20260827a"></script>
+<script src="js/supabase-adapter.js?v=20260827c"></script>
+<script src="js/adapters/o2-monthly-adapter.js?v=20260830a"></script>
+<script src="js/tag-manager.js?v=20260827a"></script>
+<script src="js/historical-manager.js?v=20260827a"></script>
+<script src="js/chart-manager.js?v=20260827e"></script>
+<script src="js/communication-manager.js?v=20260827a"></script>
+<script src="js/export-manager.js?v=20260827a"></script>
+<script src="js/live-trend-engine.js?v=20260827a"></script>
+<script src="js/simulator.js?v=20260827a"></script>
+<script src="js/ui-manager.js?v=20260827a"></script>
+<script src="js/module-view.js?v=20260827a"></script>
+<script src="js/app.js?v=20260827a"></script>
+
+</body>
+</html>
