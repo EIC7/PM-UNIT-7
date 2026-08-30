@@ -213,7 +213,16 @@ function cfUpdateToggleLabel(type, on) {
   <div class="panel">
     <div class="section-label">Informasi Pekerjaan</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
-      <div class="meta-field"><label>Feeder No.</label><input type="text" id="cfFeederNo" value="UNIT 7A" placeholder="Feeder No..."></div>
+      <div class="meta-field"><label>Feeder No.</label>
+        <select id="cfFeederNo">
+          <option value="7BF-PVR-500A (PULVERIZER 7A)">7BF-PVR-500A (PULVERIZER 7A)</option>
+          <option value="7BF-PVR-500B (PULVERIZER 7B)">7BF-PVR-500B (PULVERIZER 7B)</option>
+          <option value="7BF-PVR-500C (PULVERIZER 7C)">7BF-PVR-500C (PULVERIZER 7C)</option>
+          <option value="7BF-PVR-500D (PULVERIZER 7D)">7BF-PVR-500D (PULVERIZER 7D)</option>
+          <option value="7BF-PVR-500E (PULVERIZER 7E)">7BF-PVR-500E (PULVERIZER 7E)</option>
+          <option value="7BF-PVR-500F (PULVERIZER 7F)">7BF-PVR-500F (PULVERIZER 7F)</option>
+        </select>
+      </div>
       <div class="meta-field"><label>Reference</label><input type="text" id="cfRef" value="PI-10-01-175-F01"></div>
       <div class="meta-field"><label>Date</label><input type="date" id="cfDate"></div>
       <div class="meta-field"><label>Reported By</label><input type="text" id="cfPIC" placeholder="Nama PIC..."></div>
@@ -2465,7 +2474,7 @@ function cfReset() {
     'td_ai3_0','td_ao1_0','td_ao2_0','td_fr_act_0','td_sp_0','td_rpm_0','td_freq_0','td_load_0','td_volt_0','td_curr_0','td_blt_0'
   ];
   allIds.forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
-  document.getElementById('cfFeederNo').value = 'UNIT 7A';
+  document.getElementById('cfFeederNo').value = '7BF-PVR-500A (PULVERIZER 7A)';
   document.getElementById('cfRef').value = 'PI-10-01-175-F01';
   cfImages = [];
   var p = document.getElementById('cfImgPreview'); if(p) p.innerHTML='';
@@ -2506,8 +2515,25 @@ function dbCollectData(modul) {
     demandRows[p] = {};
     dfields.forEach(function(f){ demandRows[p][f] = gv('td_'+f+'_'+p); });
   });
+  // Nama modul dikirim ke history.html/Review Approval Dashboard SEKARANG
+  // dinamis, mengikuti feeder yang dipilih di dropdown Feeder No. -- pola
+  // penentuannya SAMA PERSIS dengan penamaan file PDF (cfDownloadPdf()):
+  // kalau "4000 HR PM Pulverizer Instrumentation" dicentang, itu yang
+  // menentukan nama (tidak peduli Feeder Calibration/Test Demand Signal ikut
+  // dicentang atau tidak -- di dalam 4000HR sendiri sudah ada tabel Feeder
+  // Calibration). Kalau 4000HR TIDAK dicentang, pakai "Feeder Calibration
+  // <feeder>" polos. Kedua varian sengaja SAMA-SAMA mengandung substring
+  // "Feeder Calibration" supaya normalizeModul() (cek FEEDER/COAL) di
+  // shared.js tetap konsisten me-routing balik ke file ini dari
+  // history.html, dan supaya trend adapter Coal Feeder Calibration (key
+  // ilike "Feeder Calibration") tetap menangkap SEMUA varian penamaan ini.
+  var cfHr4000Chk = document.getElementById('chk-4000hr');
+  var cfFeederNoVal = gv('cfFeederNo') || 'FeederNo';
+  var cfModulName = (cfHr4000Chk && cfHr4000Chk.checked)
+    ? ('4000 Hr and Feeder Calibration ' + cfFeederNoVal)
+    : ('Feeder Calibration ' + cfFeederNoVal);
   return {
-    modul: 'Coal Feeder Calibration',
+    modul: cfModulName,
     tanggal: gv('cfDate'),
     pic: gv('cfPIC'),
     work_order: gv('cfWO'),

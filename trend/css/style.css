@@ -208,8 +208,10 @@ html, body {
 .chart-wrap {
   /* Chart tetap besar & jelas (referensi: PI ProcessBook trend display),
      tinggi mengikuti viewport dengan batas wajar — TAPI sekarang halaman
-     boleh discroll, jadi ini tidak perlu memaksa sisa layar habis. */
-  height: clamp(380px, 55vh, 620px);
+     boleh discroll, jadi ini tidak perlu memaksa sisa layar habis.
+     2026-08-30: dinaikkan 2x lipat dari clamp(380px,55vh,620px) sebelumnya
+     supaya garis trend lebih detail/rapat titik datanya (permintaan user). */
+  height: clamp(760px, 110vh, 1240px);
   position: relative;
   padding: 4px 12px 12px;
 }
@@ -367,7 +369,7 @@ html, body {
     position: static;
   }
 
-  .chart-wrap { height: 300px; padding: 4px 8px 10px; }
+  .chart-wrap { height: 600px; padding: 4px 8px 10px; }
 
   /* Toolbar jadi 1 baris yang discroll horizontal, bukan wrap ke bawah
      (dulu chart-toolbar-spacer dipaksa flex-basis:100% supaya tombol
@@ -396,5 +398,5 @@ html, body {
   html, body { font-size: 12px; }
   .panel-tags { max-height: 220px; }
   .panel-details { max-height: 260px; }
-  .chart-wrap { height: 260px; }
+  .chart-wrap { height: 520px; }
 }

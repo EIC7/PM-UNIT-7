@@ -699,3 +699,48 @@ Supabase sebagai backend, jsPDF untuk export PDF).
 - **Kalau nambah field/state baru buat overlay ini** (mis. teks berubah pas gagal sebelum
   auto-close 6 detik), edit langsung string HTML di `document.write()` itu — jangan bikin
   elemen terpisah, biar tetap satu blok `document.write()` sinkron seperti pola gate akses.
+
+## Chart trend 2x lebih tinggi + Coal Feeder Calibration jadi 6 feeder tetap (2026-08-30)
+
+- **Tinggi grafik trend dinaikkan 2x lipat** di `trend/css/style.css` (`.chart-wrap`) —
+  desktop `clamp(380px,55vh,620px)` → `clamp(760px,110vh,1240px)`, breakpoint ≤900px
+  `300px`→`600px`, ≤480px `260px`→`520px` — biar garis trend lebih detail/rapat titik
+  datanya (request user). `?v=` `style.css` dinaikkan ke `20260830c` di SEMUA 15 halaman
+  trend (jangan lupa lagi kalau ubah `style.css`/`dcs-theme.css` lagi — sudah 2x kejadian
+  lupa cache-bust sesi ini).
+- **`coal_feeder_calibration.html`**: field **Feeder No.** (`#cfFeederNo`) diubah dari
+  `<input type="text">` bebas jadi `<select>` TETAP 6 opsi: `7BF-PVR-500A (PULVERIZER 7A)`
+  s/d `...500F (PULVERIZER 7F)`. **`modul` yang dikirim ke `dbCollectData()` sekarang
+  dinamis**, pola SAMA PERSIS dengan penamaan file PDF yang sudah ada (`cfDownloadPdf()`):
+  - `chk-4000hr` DICENTANG → `'4000 Hr and Feeder Calibration ' + <feeder yang dipilih>`
+    (menang TIDAK PEDULI Feeder Calibration/Test Demand Signal ikut dicentang atau tidak —
+    di dalam 4000HR sendiri sudah ada tabel Feeder Calibration).
+  - `chk-4000hr` TIDAK dicentang → `'Feeder Calibration ' + <feeder yang dipilih>`.
+  - Kedua varian SENGAJA sama-sama mengandung substring **"Feeder Calibration"** (persis
+    itu, spasi & kapitalisasi sama) — dipakai sebagai kunci `ilike` di adapter trend (lihat
+    poin berikutnya) DAN tetap ke-normalize benar oleh `normalizeModul()` di `shared.js`
+    (cek `FEEDER`/`COAL`, tidak diubah — string baru ini tetap mengandung `FEEDER`) supaya
+    tombol filter "Coal Feeder" di `history.html` dan routing "Buka"/"Revisi" balik ke
+    file ini tetap jalan tanpa perlu disentuh.
+- **Trend Coal Feeder Calibration di-rombak dari 1 tag agregat jadi 6 tag terpisah**
+  (`COAL-FEEDER-A`..`F`, satu per feeder) — konsekuensi langsung dari Feeder No. yang
+  sekarang punya daftar tetap:
+  - `trend/js/adapters/coal-feeder-calibration-adapter.js`: `modulKey` registrasi diganti
+    dari `'Coal Feeder Calibration'` jadi **`'Feeder Calibration'`** (substring yang ADA DI
+    SEMUA varian modul di atas, TERMASUK data lama yang masih `'Coal Feeder Calibration'`
+    polos — "Feeder Calibration" tetap substring di situ juga, jadi data lama tidak hilang
+    dari query, cuma tidak bisa dipetakan ke feeder spesifik — lihat poin berikutnya).
+    `extractFeederLetter(s)` menarik huruf A-F dari `r.modul` (utama) atau `r.data.feeder_no`
+    (fallback data lama) lewat regex `500([A-F])` / `PULVERIZER 7([A-F])` — baris yang
+    huruf feeder-nya TIDAK ketemu di keduanya (mis. data lama free-text sebelum perubahan
+    ini) **dilewati** (tidak dipetakan ke feeder mana pun), bukan error.
+  - `trend/config/default-tags-coal-feeder-calibration.js`: 6 tag, warna pasangan
+    Cal1/Cal2 beda-beda per feeder, series `Demand100FlowRate` pakai `#33505c` (BUKAN warna
+    pudar `#5a6b76` — lihat pelajaran kontras teks di bagian atas dokumen ini, jangan
+    ulangi lagi di modul baru manapun).
+  - `trend/config/modules/coal-feeder-calibration.config.js`: `key`/`adapterKey` ikut jadi
+    `'Feeder Calibration'`, `tagIds` jadi array 6 elemen.
+  - Hub `index_trend.html`: kartu Coal Feeder Calibration diupdate jadi "6 tag" (dari "1
+    tag"), `.hub-stats` total tag naik dari 93 jadi **98**.
+  - `?v=` config/adapter file-file di atas dinaikkan ke `20260830c` di
+    `trend_coal-feeder-calibration.html`.
