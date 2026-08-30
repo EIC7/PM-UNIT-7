@@ -274,6 +274,15 @@ function historyAreaLabel(modul) {
    nunggu). Laporan lama yang belum punya firebase_checksheet_id (disubmit
    SEBELUM migration 010) tetap nampilkan "✓ Tersubmit" apa adanya -- tidak
    ada cara mundur mencari tahu checksheetId-nya. */
+/* Lapis pengaman KEDUA (yang utama ada di database -- lihat klaim atomik
+   di notify_telegram_review_status) supaya dalam satu sesi tab yang sama,
+   pasangan (id, status) yang sama tidak sampai dicoba kirim berkali-kali
+   cuma karena beberapa siklus refresh/loadHistory jalan berdekatan sebelum
+   server sempat jawab. Key-nya sengaja termasuk status, bukan cuma id --
+   kalau statusnya BERUBAH lagi nanti (mis. reviewed -> approved) tetap
+   boleh notif lagi. */
+var pmNotifAttempted = {};
+
 function historyUpgradeStatusBadges(rows) {
   if (typeof Approvals === 'undefined' || typeof db === 'undefined') return; // firebase-config.js/approval-helper.js belum termuat
   var tasks = rows.filter(function(r) {
@@ -283,8 +292,12 @@ function historyUpgradeStatusBadges(rows) {
       return Approvals.getByChecksheetId(r.firebase_checksheet_id).then(function(appr) {
         if (!appr) return;
         var cell = document.getElementById('histStatusCell-' + r.id);
-        if (cell) cell.innerHTML = historyRaStatusBadge(appr.status);
-        if (appr.status && appr.status !== r.ra_notified_status) raSendTelegramNotif(r, appr);
+        if (cell) cell.innerHTML = historyRaStatusBadge(appr);
+        var key = r.id + ':' + appr.status;
+        if (appr.status && appr.status !== r.ra_notified_status && !pmNotifAttempted[key]) {
+          pmNotifAttempted[key] = true;
+          raSendTelegramNotif(r, appr);
+        }
       }).catch(function(){}); // gagal query 1 baris tidak boleh ganggu baris lain
     };
   });
@@ -313,12 +326,28 @@ function raSendTelegramNotif(r, appr) {
     console.error('Gagal kirim notif Telegram review/approval:', err);
   });
 }
+/* Format "DD/MM/YYYY HH:MM" (lokal browser), dipakai untuk jam kejadian
+   status (kapan direview/disetujui/dikembalikan) supaya gampang dicocokkan
+   dengan jam notif Telegram seharusnya masuk. */
+function pmFmtDDMMYYYYHHMM(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  var pad = function(n){ return String(n).padStart(2,'0'); };
+  return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
 /* 4 tahap: Draft (kuning, historyStatusBadge) -> Submitted (biru) ->
    Reviewed (kuning) -> Approved (hijau). "returned_to_technician" bukan
    salah satu dari 4 tahap itu (laporan dikembalikan, bukan maju ke tahap
    berikutnya) -- tetap ditandai terpisah (merah) supaya tidak disangka
-   masih di tahap Reviewed biasa. */
-function historyRaStatusBadge(raStatus) {
+   masih di tahap Reviewed biasa. Terima objek `appr` utuh (bukan cuma
+   string status) supaya jam kejadian status (review.reviewedAt /
+   approval.approvedAt / returnedNote.returnedAt / createdAt -- field-field
+   ini sudah ada di dokumen `approvals` Firestore, lihat approval-helper.js)
+   bisa ditampilkan di bawah badge-nya. */
+function historyRaStatusBadge(appr) {
+  var raStatus = appr && appr.status;
   var map = {
     submitted: { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' },
     reviewed: { label: 'Reviewed', bg: '#fef3c7', fg: '#92400e' },
@@ -326,7 +355,16 @@ function historyRaStatusBadge(raStatus) {
     returned_to_technician: { label: '↩ Dikembalikan ke Teknisi', bg: '#fee2e2', fg: '#991b1b' }
   };
   var s = map[raStatus] || { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' };
-  return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'" title="Status sungguhan dari Review Approval Dashboard.">'+s.label+'</span>';
+  var ts = '';
+  if (appr) {
+    if (raStatus === 'approved' && appr.approval) ts = appr.approval.approvedAt;
+    else if (raStatus === 'reviewed' && appr.review) ts = appr.review.reviewedAt;
+    else if (raStatus === 'returned_to_technician' && appr.returnedNote) ts = appr.returnedNote.returnedAt;
+    else ts = appr.createdAt;
+  }
+  var tsStr = pmFmtDDMMYYYYHHMM(ts);
+  var tsHtml = tsStr ? '<div style="font-size:9px;font-weight:600;color:'+s.fg+';opacity:0.8;margin-top:2px;white-space:nowrap">'+tsStr+'</div>' : '';
+  return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'" title="Status sungguhan dari Review Approval Dashboard.">'+s.label+'</span>'+tsHtml;
 }
 
 function historyDelete(id) {
