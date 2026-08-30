@@ -332,3 +332,38 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   history.html" (bisa berjam-jam), tapi bukan real-time. Kalau butuh lebih cepat dari 5
   menit, GitHub Actions cron tidak bisa — perlu pendekatan lain (mis. Supabase pg_cron +
   Firestore REST query langsung dari Postgres, jauh lebih kompleks, belum dibuat).
+
+## Alert kesehatan Supabase lewat script poller yang sama (ditambahkan 2026-08-30)
+
+- Awalnya mau pakai **UptimeRobot** (monitoring uptime eksternal, ping `/auth/v1/health`)
+  supaya ada yang tahu kalau Supabase down walau tidak ada yang buka aplikasi sama sekali
+  — **dibatalkan**, ternyata integrasi Telegram-nya fitur **berbayar** di paket free
+  UptimeRobot ("Available only in Solo, Team and Scale"). Jangan disarankan lagi ke user
+  kecuali mereka memang mau upgrade paket berbayar itu.
+- **Solusi yang dipakai**: `checkAndAlertSupabaseHealth()` di
+  `scripts/notify-ra-status-poll.js` (script poller GitHub Actions yang sama dengan di
+  atas) — ngecek `/auth/v1/health` (butuh header/query `apikey`, TANPA itu selalu balas
+  401 walau sehat, lihat bagian Notifikasi Telegram) tiap kali script jalan (~5 menit),
+  kirim Telegram **LANGSUNG** ke `api.telegram.org` (BUKAN lewat RPC
+  `notify_telegram_review_status`) kalau status berubah jadi unhealthy/stopped — sengaja
+  begitu karena kalau Supabase-nya sendiri yang down, RPC yang notify_telegram_review_status
+  (jalan DI DALAM Supabase) ikut tidak bisa dipanggil, jadi tidak bisa dipakai buat
+  "memberi tahu Supabase sedang down". `main()` langsung `return` kalau Supabase down
+  (skip proses cek notifikasi RA di bawahnya, pasti gagal juga).
+- **Token bot di script ini WAJIB dari GitHub Secret** (`TELEGRAM_BOT_TOKEN`, dibaca lewat
+  `process.env`), **JANGAN PERNAH** ditulis langsung di file — repo ini **PUBLIC**
+  (`private: false`, sudah diverifikasi lewat GitHub API), dan sudah pernah ada insiden
+  token bocor ke commit publik gara-gara ditempel langsung (lihat bagian paling atas soal
+  Notifikasi Telegram). Set lewat GitHub web: Settings → Secrets and variables → Actions →
+  New repository secret. Tanpa secret ini, bagian alert-kesehatan cuma nge-log error ke
+  Actions log (tidak crash), bagian notifikasi reviewed/approved yang lewat RPC tetap
+  jalan normal (itu tidak butuh token di sini sama sekali).
+- **Anti-spam episode** pakai file `.health-state.json`, dipersist lintas run lewat
+  `actions/cache@v4` dengan pola `key: health-state-${{ github.run_id }}` +
+  `restore-keys: health-state-` (key SELALU unik per run supaya SELALU tersimpan ulang di
+  akhir job — cache biasa cuma nyimpen sekali per key exact-match, tidak overwrite; ini
+  pola standar buat "mutable state" via GitHub Actions cache). Alert down cuma sekali per
+  episode (dari pertama kali down sampai balik ok), plus kirim pesan "sudah kembali
+  normal" begitu pulih — **mirror** persis logika banner `pmHandleHealthResult()` di
+  `shared.js` (in-app), cuma bedanya ini persisten lewat cache file, yang di browser lewat
+  `pmLS`/localStorage.

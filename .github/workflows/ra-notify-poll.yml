@@ -4,7 +4,15 @@ name: RA Status Notify Poll
 # tiap 5 menit TANPA butuh siapa pun buka history.html. Aman dijalankan
 # berbarengan dengan browser yang lagi buka history.html; keduanya manggil
 # RPC Supabase yang sama, yang sudah pakai klaim atomik supaya tidak ada
-# notif dobel. Lihat scripts/notify-ra-status-poll.js.
+# notif dobel. SEKALIGUS ngecek kesehatan Supabase & kirim alert Telegram
+# langsung (bypass Supabase) kalau down/unhealthy -- lihat
+# scripts/notify-ra-status-poll.js.
+#
+# Butuh GitHub Secret TELEGRAM_BOT_TOKEN (Settings -> Secrets and variables
+# -> Actions -> New repository secret) supaya bagian alert-kesehatan-nya
+# bisa kirim -- TANPA secret itu bagian itu cuma nge-log error, bagian
+# notifikasi reviewed/approved tetap jalan normal (itu lewat RPC Supabase,
+# tidak butuh token di sini).
 on:
   schedule:
     - cron: '*/5 * * * *'
@@ -18,4 +26,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # State "sudah dialert atau belum" buat episode down Supabase saat ini
+      # -- key selalu unik per run (pakai run_id) supaya SELALU tersimpan
+      # ulang di akhir job, restore-keys ambil versi terakhir yang ada.
+      # Pola standar buat "mutable state" di GitHub Actions cache (cache
+      # normal cuma nyimpen sekali per key, tidak overwrite).
+      - uses: actions/cache@v4
+        with:
+          path: .health-state.json
+          key: health-state-${{ github.run_id }}
+          restore-keys: |
+            health-state-
       - run: node scripts/notify-ra-status-poll.js
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

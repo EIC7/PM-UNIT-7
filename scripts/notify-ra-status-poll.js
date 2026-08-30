@@ -18,7 +18,16 @@
 //  sampai akan "mengunci" duluan, yang satu lagi otomatis berhenti tanpa
 //  ikut kirim. Tidak ada logika anti-dobel tambahan yang perlu ditulis di
 //  sini, cukup andalkan RPC-nya.
+//
+//  SEKALIGUS jadi alert kesehatan Supabase (checkAndAlertSupabaseHealth) --
+//  ngecek /auth/v1/health tiap jalan, kirim Telegram LANGSUNG (bypass RPC,
+//  karena kalau Supabase down RPC-nya juga ikut tidak bisa dipanggil) kalau
+//  status berubah jadi unhealthy/stopped. Butuh GitHub Secret
+//  TELEGRAM_BOT_TOKEN di-set dulu (Settings -> Secrets and variables ->
+//  Actions), TANPA itu bagian alert-nya cuma nge-log error, bukan crash.
 // ============================================================
+
+const fs = require('fs');
 
 const SUPA_URL = 'https://ruvvximnnacpvvoogbzs.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
@@ -27,6 +36,89 @@ const FIREBASE_PROJECT_ID = 'pomi-checksheet-e7';
 const FIREBASE_API_KEY = 'AIzaSyB2c5ZFYRH8rKRcYlza175wTM36O8jwDGw';
 
 const VALID_STATUSES = ['reviewed', 'approved', 'returned_to_technician'];
+
+// ── Alert LANGSUNG kalau Supabase sendiri down/unhealthy ──────────────────
+// SENGAJA tidak lewat RPC notify_telegram_review_status (fungsi Postgres --
+// kalau Supabase-nya yang down, fungsi itu ikut tidak bisa dipanggil, jadi
+// tidak bisa dipakai buat "memberi tahu Supabase sedang down"). Token bot
+// di sini WAJIB dari GitHub Secret (env var), JANGAN PERNAH ditulis
+// langsung di file ini -- repo ini PUBLIC, pernah ada insiden token bocor
+// ke commit publik gara-gara ditempel langsung (lihat CLAUDE.md).
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_ALERT_CHAT_ID = '-1004351464598'; // grup "Submit Report EIC7" -- chat id, bukan rahasia
+const HEALTH_STATE_FILE = '.health-state.json';
+
+async function sendTelegramDirect(text) {
+  if (!TELEGRAM_BOT_TOKEN) {
+    console.error('TELEGRAM_BOT_TOKEN belum di-set sebagai GitHub Secret -- tidak bisa kirim alert kesehatan Supabase.');
+    return;
+  }
+  try {
+    await fetch('https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TELEGRAM_ALERT_CHAT_ID, text: text })
+    });
+  } catch (e) {
+    console.error('Gagal kirim alert Telegram langsung:', e);
+  }
+}
+
+async function checkSupabaseHealth() {
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 10000) : null;
+  try {
+    const res = await fetch(SUPA_URL + '/auth/v1/health', {
+      headers: { apikey: SUPA_KEY },
+      signal: ctrl ? ctrl.signal : undefined
+    });
+    if (timer) clearTimeout(timer);
+    if (res.status === 200) return 'ok';
+    const body = await res.text().catch(function () { return ''; });
+    if (/paused/i.test(body) || res.status === 503) return 'down';
+    return 'warn';
+  } catch (e) {
+    if (timer) clearTimeout(timer);
+    return 'down';
+  }
+}
+
+function readPrevHealthState() {
+  try { return JSON.parse(fs.readFileSync(HEALTH_STATE_FILE, 'utf8')).state; } catch (e) { return 'ok'; }
+}
+
+function writeHealthState(state) {
+  try { fs.writeFileSync(HEALTH_STATE_FILE, JSON.stringify({ state: state, updatedAt: new Date().toISOString() })); } catch (e) {}
+}
+
+// true kalau Supabase down -- caller HARUS berhenti, sisa proses (query
+// pm_records dkk) pasti gagal juga kalau Supabase-nya sendiri tidak sehat.
+async function checkAndAlertSupabaseHealth() {
+  const health = await checkSupabaseHealth();
+  const prev = readPrevHealthState();
+
+  if (health !== 'ok') {
+    if (prev === 'ok') {
+      await sendTelegramDirect(
+        '⚠️ PERINGATAN\nSupabase Unhealthy / Stopped\n\n' +
+        'Database pm_records (Supabase) tidak bisa diakses saat ini. ' +
+        'Cek dashboard Supabase untuk detail.'
+      );
+      console.log('Alert Supabase down terkirim (episode baru).');
+    } else {
+      console.log('Supabase masih bermasalah, sudah pernah dialert -- skip supaya tidak spam.');
+    }
+    writeHealthState('down');
+    return true;
+  }
+
+  if (prev === 'down') {
+    await sendTelegramDirect('✅ Supabase sudah kembali normal.');
+    console.log('Alert pemulihan Supabase terkirim.');
+  }
+  writeHealthState('ok');
+  return false;
+}
 
 async function fetchRecentRecords() {
   const url = SUPA_URL + '/rest/v1/pm_records?select=id,modul,pic,work_order,firebase_checksheet_id,ra_notified_status'
@@ -87,6 +179,12 @@ async function notify(record, status) {
 }
 
 async function main() {
+  const supabaseDown = await checkAndAlertSupabaseHealth();
+  if (supabaseDown) {
+    console.log('Supabase tidak sehat -- lewati proses cek notifikasi RA (pasti gagal juga).');
+    return;
+  }
+
   const [records, approvalsByChecksheetId] = await Promise.all([
     fetchRecentRecords(),
     fetchRecentApprovals()
