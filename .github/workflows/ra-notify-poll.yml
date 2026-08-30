@@ -1,0 +1,21 @@
+name: RA Status Notify Poll
+
+# Jaring pengaman notifikasi Telegram reviewed/approved -- jalan otomatis
+# tiap 5 menit TANPA butuh siapa pun buka history.html. Aman dijalankan
+# berbarengan dengan browser yang lagi buka history.html; keduanya manggil
+# RPC Supabase yang sama, yang sudah pakai klaim atomik supaya tidak ada
+# notif dobel. Lihat scripts/notify-ra-status-poll.js.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/notify-ra-status-poll.js

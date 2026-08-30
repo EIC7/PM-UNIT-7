@@ -69,11 +69,41 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   - `notify_telegram_submission()` — trigger `AFTER INSERT/UPDATE` di `pm_records`,
     jalan saat `status` berubah jadi `SUBMITTED`.
   - `notify_telegram_review_status(p_row_id text, p_status text, p_modul text, p_pic
-    text, p_wo text)` — RPC, dipanggil dari `history.html` (`raSendTelegramNotif`) saat
-    status Firestore (reviewed/approved/returned_to_technician) berubah. **`p_row_id`
-    harus di-cast `::uuid`** sebelum dibandingkan ke kolom `id` (pernah error type
-    mismatch `uuid = text`). Kolom `ra_notified_status` di `pm_records` mencegah kirim
-    ulang untuk status yang sama.
+    text, p_wo text)` — RPC, dipanggil dari `history.html` (`raSendTelegramNotif`) DAN
+    dari `scripts/notify-ra-status-poll.js` (lihat bagian "Poller notifikasi RA" di
+    bawah) saat status Firestore (reviewed/approved/returned_to_technician) berubah.
+    **`p_row_id` harus di-cast `::uuid`** sebelum dibandingkan ke kolom `id` (pernah
+    error type mismatch `uuid = text`).
+    - **Klaim ATOMIK sebelum kirim** (`update pm_records set ra_notified_status = p_status
+      where id = ...::uuid and ra_notified_status is distinct from p_status returning id`)
+      — WAJIB tetap begini, JANGAN diubah jadi "kirim dulu baru tandai belakangan". Dua
+      pemanggil (browser + poller GitHub Actions) bisa jalan bersamaan buat baris yang
+      sama; klaim atomik ini yang memastikan cuma SATU yang benar-benar kirim ke
+      Telegram, yang lain otomatis berhenti di baris `if claimed_id is null then return`.
+      Pernah kejadian tanpa ini: 6 notif Telegram identik terkirim sekaligus (lihat
+      insiden 2026-08-30 di bawah).
+    - **SENGAJA fire-and-forget** (`perform net.http_post(...)`, tidak menunggu/mengecek
+      `net._http_response`) — pernah dicoba pakai loop `pg_sleep` buat nunggu konfirmasi
+      sukses sebelum menandai `ra_notified_status` (biar ada retry kalau gagal), tapi ini
+      menahan koneksi database sampai beberapa detik per panggilan dan waktu kejadian
+      duplikat di atas (6 panggilan bersamaan × beberapa detik masing-masing) memicu
+      peringatan "exhausting multiple resources" dari Supabase. **JANGAN tambahkan lagi
+      pola tunggu/`pg_sleep` di fungsi ini** — kalau butuh jaminan retry, taruh di
+      `scripts/notify-ra-status-poll.js` (jalan di GitHub Actions, tidak menahan koneksi
+      Supabase sama sekali) bukan di dalam fungsi Postgres-nya.
+    - **Pernah rusak total** (2026-08-30): literal JSON header di `net.http_post`
+      ketulis `'{""Content-Type"": ""application/json""}'::jsonb` (tanda kutip dobel,
+      bukan `""` artifact copy-paste — itu memang isi asli fungsinya) → `::jsonb` selalu
+      gagal cast → fungsi crash SEBELUM sempat kirim HTTP apa pun DAN sebelum sempat
+      update `ra_notified_status` → status reviewed/approved sama sekali tidak pernah
+      terkirim, tanpa ada baris error yang kelihatan dari sisi client (cuma `.catch()`
+      diam-diam). Ketahuan lewat `select pg_get_functiondef(oid) from pg_proc where
+      proname=...` lalu tes langsung RPC-nya (dapat error 400 `invalid input syntax for
+      type json`). Kalau notifikasi reviewed/approved berhenti total lagi tanpa sebab
+      jelas, cek dulu apakah literal JSON di fungsi ini utuh (`'{"Content-Type": ...}'`,
+      SATU tanda kutip, bukan dobel) sebelum curiga hal lain.
+    - Kolom `ra_notified_status` di `pm_records` mencegah kirim ulang untuk status yang
+      sama (dan sekarang JUGA berfungsi sebagai "kunci" klaim atomik di atas).
   - Setelah `create or replace function` di SQL Editor, kalau RPC balas `PGRST202`
     (function not found di schema cache), jalankan `NOTIFY pgrst, 'reload schema';`.
   - Kalau RPC balas `permission denied`/tidak ketemu meski fungsinya ada: jalankan ulang
@@ -198,3 +228,107 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   otomatis ke Review Approval Dashboard) dengan `created_at`/`updated_at` di-backdate ke
   timestamp kerja asli. Field yang tidak ada di sumber (Work Order, Asset, foto evidence)
   dibiarkan kosong.
+
+## Revisi Weekly O2 Inlet/Outlet + Numpad Custom (2026-08-30)
+
+- **Technician 1/2/3 dihapus** dari `weekly_calibration_o2_inlet.html` &
+  `_outlet.html` — cukup field **PIC** (sekarang pakai `list="o2TechList"`, datalist yang
+  tadinya buat technician dipakai ulang buat PIC).
+- **Asset & Asset Description otomatis terisi** (readonly) dari tag channel statis
+  (`O2_CHANNELS`/`O2_OUTLET_CHANNELS`) lewat `o2UpdateAssetFromChannels()` — dipanggil
+  sekali saat init, BUKAN lagi lewat `oninput` di kolom tag (kolom tag editable-nya sudah
+  dihapus dari UI, lihat poin berikutnya).
+- **Section "Channel Tags" (editable) dihapus dari tampilan** — `buildO2TagGrid()` dan
+  elemen `#o2TagGrid` sudah tidak ada. Data tag tag tetap dipakai secara internal dari
+  array statis `O2_CHANNELS`/`O2_OUTLET_CHANNELS` (`o2ChannelTag()` sekarang selalu
+  fallback ke tag statis, tidak baca DOM lagi).
+- **Frequency Maintenance chips dihapus** — `Work To Be Done` sekarang **fixed/readonly**,
+  otomatis diisi konstanta `O2_WORK_TO_BE_DONE` (`"Weekly Calibration of Oxygen Analyzer
+  (Inlet — 8 Channel)"` / `"(Outlet — 6 Channel)"`) saat init & saat `resetAll()`.
+- **Label channel** di semua tabel/kartu sekarang pakai helper `o2ChLabel(c)` (bukan
+  `o2ReadingsChannelCode(c.tag)` langsung) — hasilnya `"<kode tag> (Channel N)"`. Dipakai
+  konsisten di UI (`o2-channel-head-num`, `<td>` tabel) DAN di PDF (`safe(o2ChLabel(c))`).
+  **Kalau nambah tabel/kartu channel baru di file ini, WAJIB pakai `o2ChLabel(c)`**, jangan
+  balik ke `o2ReadingsChannelCode(c.tag)` polos — user secara eksplisit minta nomor
+  channel selalu kelihatan supaya tidak ambigu dengan kode tag yang mirip-mirip.
+- **Khusus Outlet**: Section "O2 Reading" + "Cell Measurements" yang tadinya terpisah
+  (2 section beda, evidence cuma di O2 Reading) sekarang **digabung jadi satu kartu per
+  channel** (`buildO2ChannelCards()`, ganti `buildO2ReadingTable()` +
+  `buildO2ReadingEvidenceGrid()` + `buildO2CellMeasGrid()`) — field O2 Reading + Voltage +
+  Temp + Lifetime + Resistance + Keterangan + Evidence semuanya dalam 1
+  `.o2-channel-card`. ID field & key galeri foto (`reading_och{id}`) TETAP SAMA seperti
+  sebelumnya supaya data lama tetap kompatibel. Section "Calibration Gas Pressure (Session
+  Level)" di Outlet yang tadinya TANPA Keterangan/Evidence sekarang punya keduanya (galeri
+  baru, key `pressure`, sama polanya seperti di Inlet yang sudah lebih dulu punya ini —
+  **wajib** tambahkan `o2SyncCaptions('pressure', 'evidence')` di `o2SyncAllCaptions()`
+  kalau bikin galeri baru serupa, gampang kelewat.
+- **Numpad custom** (`pmNumpadInit()`/`pmNumpadOpen()`/`pmNumpadPress()` di `shared.js`,
+  styling di `shared.css` — cari `NUMPAD CUSTOM`) menggantikan keypad angka bawaan HP yang
+  tidak punya tombol minus (keypad OS tidak bisa diubah dari kode web sama sekali, ini
+  sengaja dibuat sebagai pengganti, bukan modifikasi keypad bawaan). Field yang mau pakai
+  ini: ganti `type="number" inputmode="decimal" step="any"` jadi `type="text"
+  inputmode="none" readonly class="pm-num-input"` (oninput= bawaan tetap jalan karena
+  `pmNumpadPress()` dispatch event `'input'` manual), lalu panggil `pmNumpadInit()` sekali
+  di init halaman. Tombol "Next →" pindah ke field `.pm-num-input` berikutnya yang
+  kelihatan di DOM (urutan render halaman, BUKAN urutan tab index), berubah jadi
+  "✓ Selesai" otomatis kalau sudah di field terakhir. `pmNumpadOpen()` auto-scroll layar
+  (`pmNumpadEnsureVisible()`) kalau field aktif bakal ketutup numpad yang muncul dari
+  bawah — hitungannya pakai posisi AKHIR numpad (`window.innerHeight - pad.offsetHeight`),
+  bukan posisi live saat animasi slide-up masih jalan, supaya perhitungannya akurat.
+  Sudah dipasang di kedua file Weekly O2 (semua kolom angka). **Belum** dipasang di
+  file modul lain — kalau mau dipasang di file lain, pola konversinya sama persis, tinggal
+  ganti atributnya + panggil `pmNumpadInit()`.
+
+## history.html: auto-refresh, jam status, & debug notifikasi RA (2026-08-30)
+
+- **Tombol Refresh manual + auto-refresh tiap 20 detik** (`pmHistRefresh()`,
+  `setInterval(...,20000)`, berhenti kalau `document.hidden`) — REFRESH DATA SAJA
+  (`container.innerHTML` diganti langsung), bukan `location.reload()`. `loadHistory(modul)`
+  (dipanggil pas ganti filter) beda dari `pmHistRefresh()` (dipanggil tombol/timer, filter
+  ikut `pmHistCurrentFilter` yang terakhir dipakai) — keduanya berbagi
+  `historyRowsToTableHtml(rows)` supaya tidak duplikasi kode render tabel.
+- Tombol Refresh & Diagnosis di topbar jadi **icon-only di layar <600px** (teks
+  `.pm-hist-btn-label` & label waktu `.pm-hist-refresh-label` disembunyikan) — sebelumnya
+  full teks + label waktu bikin baris topbar overflow sampai `.live-dot` di ujung kanan
+  kepotong invisible (topbar `display:flex` tidak wrap, tidak ada overflow handling).
+  **Kalau nambah tombol lagi di topbar-right halaman mana pun**, cek dulu di viewport
+  sempit (<400px) supaya tidak kejadian sama.
+- `historyRaStatusBadge()` sekarang terima objek `appr` UTUH (bukan cuma string status)
+  supaya bisa tampilkan jam kejadian status di bawah badge (`review.reviewedAt` /
+  `approval.approvedAt` / `returnedNote.returnedAt` dari dokumen `approvals` Firestore,
+  format `DD/MM/YYYY HH:MM` lewat `pmFmtDDMMYYYYHHMM()`).
+- `pmNotifAttempted` (in-memory, key `id+':'+status`) di `historyUpgradeStatusBadges()`
+  — lapis pengaman KEDUA (yang utama ada di database, lihat klaim atomik
+  `notify_telegram_review_status` di atas) supaya dalam satu sesi tab yang sama, pasangan
+  (id, status) yang sama tidak dicoba kirim berkali-kali gara-gara beberapa siklus
+  refresh/loadHistory jalan berdekatan.
+
+## Poller notifikasi RA (GitHub Actions) — lapis kedua tanpa perlu buka history.html (2026-08-30)
+
+- **Masalah**: notifikasi Telegram reviewed/approved/returned_to_technician SEPENUHNYA
+  bergantung ada browser yang buka `history.html` (baik manual maupun auto-refresh 20
+  detik di atas) — status review/approval ada di **Firestore** (Review Approval
+  Dashboard, repo terpisah, TIDAK boleh diubah — lihat instruksi user), Supabase tidak
+  otomatis tahu kalau ada perubahan di sana. Kalau tidak ada satu pun tab yang terbuka,
+  notifnya menggantung tanpa batas waktu sampai ada yang buka.
+- **Solusi**: `scripts/notify-ra-status-poll.js` (Node, tanpa dependency npm — pakai
+  `fetch` bawaan Node 20+) dijadwalkan lewat `.github/workflows/ra-notify-poll.yml`
+  (`cron: '*/5 * * * *'`, tiap 5 menit, + `workflow_dispatch` buat trigger manual). Jalan
+  di server GitHub, BUKAN nambah beban compute Supabase — ambil `pm_records` yang punya
+  `firebase_checksheet_id`, query koleksi `approvals` Firestore langsung lewat REST API
+  (**koleksi ini ternyata bisa dibaca publik tanpa auth** — sudah diverifikasi lewat curl
+  langsung pakai `apiKey` dari `firebase-config.js` saja, TANPA Firebase ID token/service
+  account; kalau suatu saat security rules Firestore-nya diperketat jadi butuh auth,
+  script ini akan mulai gagal dan perlu pendekatan lain), lalu panggil RPC
+  `notify_telegram_review_status` yang sama persis dipakai `history.html`.
+- **Aman dijalankan bersamaan dengan `history.html`** — TIDAK perlu logika "kalau ada yang
+  buka history, poller ini skip" atau semacamnya. Keduanya ujung-ujungnya manggil RPC yang
+  sama, dan klaim atomik di RPC itu (lihat bagian Notifikasi Telegram di atas) yang
+  menjamin siapa pun yang lebih dulu sampai akan mengunci duluan, yang satunya otomatis
+  berhenti tanpa kirim ulang — TIDAK ada dedup logic tambahan yang perlu ditulis di script
+  ini.
+- Trade-off: delay sampai ~5 menit (minimum granularity cron GitHub Actions, kadang lebih
+  lama lagi kalau runner sedang antre) — jauh lebih baik daripada "sampai ada yang buka
+  history.html" (bisa berjam-jam), tapi bukan real-time. Kalau butuh lebih cepat dari 5
+  menit, GitHub Actions cron tidak bisa — perlu pendekatan lain (mis. Supabase pg_cron +
+  Firestore REST query langsung dari Postgres, jauh lebih kompleks, belum dibuat).
