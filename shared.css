@@ -54,6 +54,26 @@ body {
 .live-dot.pm-health-ok    { background:#22c55e; animation:blink 2s ease-in-out infinite; }
 .live-dot.pm-health-warn  { background:#f59e0b; animation:none; opacity:1; }
 .live-dot.pm-health-down  { background:#ef4444; animation:none; opacity:1; }
+
+/* Banner peringatan besar (buat user awam yang mungkin tidak lihat titik
+   kecil di topbar) -- ditulis JS ke elemen #pmHealthAlert, disisipkan
+   sebagai elemen PALING ATAS body (di atas topbar). Sengaja BUKAN
+   position:fixed/sticky -- ikut scroll normal, tidak menutupi topbar
+   (termasuk live-dot yang teksnya sendiri minta orang lihat ke situ). */
+#pmHealthAlert{
+  display:none; align-items:flex-start; gap:14px;
+  background:linear-gradient(90deg,#b91c1c 0%,#dc2626 100%); color:#fff;
+  padding:14px 16px; font-family:Arial,'Barlow',sans-serif;
+}
+#pmHealthAlert.show{ display:flex; }
+.pm-health-alert-title{ font-weight:800; font-size:12.5px; letter-spacing:0.5px; text-transform:uppercase; opacity:0.95; }
+.pm-health-alert-msg{ font-weight:800; font-size:16px; margin-top:3px; }
+.pm-health-alert-sub{ font-size:12px; opacity:0.92; margin-top:4px; }
+.pm-health-alert-close{
+  background:rgba(255,255,255,0.2); border:none; color:#fff; width:30px; height:30px;
+  border-radius:7px; font-size:19px; line-height:1; cursor:pointer; flex-shrink:0;
+}
+.pm-health-alert-close:active{ background:rgba(255,255,255,0.35); }
 .topbar-time { font-family:'Courier New','Share Tech Mono',monospace; font-size:clamp(9px,1.1vw,13px); color:#7a9aca; }
 @media(max-width:600px){.topbar-sub,.topbar-sep{display:none !important;}}
 

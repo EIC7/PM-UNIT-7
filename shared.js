@@ -3288,6 +3288,55 @@ function pmUpdateHealthDots(state, title) {
   });
 }
 
+/* Banner besar buat user awam yang mungkin tidak sadar ada titik kecil di
+   topbar -- muncul CUMA SEKALI per "episode" bermasalah (dari saat pertama
+   terdeteksi warn/down sampai balik ok lagi). Ditutup manual -> disimpan ke
+   localStorage (pmLS) supaya tidak muncul lagi walau di-refresh/ganti
+   halaman (sama origin), sampai statusnya sempat balik 'ok' dulu -- itu
+   yang me-reset flag-nya supaya episode BERIKUTNYA tetap kebagian tampil. */
+var PM_HEALTH_DISMISS_KEY = 'pm_health_alert_dismissed_v1';
+
+function pmEnsureHealthAlertEl() {
+  var el = document.getElementById('pmHealthAlert');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'pmHealthAlert';
+  el.innerHTML =
+    '<div style="flex:1">' +
+      '<div class="pm-health-alert-title">&#9888;&#65039; Peringatan</div>' +
+      '<div class="pm-health-alert-msg">Supabase Unhealthy / Stopped</div>' +
+      '<div class="pm-health-alert-sub">Pantau status di pojok kanan atas untuk status update Supabase.</div>' +
+    '</div>' +
+    '<button type="button" class="pm-health-alert-close" onclick="pmDismissHealthAlert()" aria-label="Tutup">&times;</button>';
+  if (document.body.firstChild) document.body.insertBefore(el, document.body.firstChild);
+  else document.body.appendChild(el);
+  return el;
+}
+
+function pmShowHealthAlert() {
+  pmEnsureHealthAlertEl().classList.add('show');
+}
+
+function pmHideHealthAlert() {
+  var el = document.getElementById('pmHealthAlert');
+  if (el) el.classList.remove('show');
+}
+
+function pmDismissHealthAlert() {
+  pmLS('set', PM_HEALTH_DISMISS_KEY, '1');
+  pmHideHealthAlert();
+}
+
+function pmHandleHealthResult(state, title) {
+  pmUpdateHealthDots(state, title);
+  if (state === 'ok') {
+    pmLS('remove', PM_HEALTH_DISMISS_KEY); // reset -- episode berikutnya boleh tampil lagi
+    pmHideHealthAlert();
+  } else if (pmLS('get', PM_HEALTH_DISMISS_KEY) !== '1') {
+    pmShowHealthAlert();
+  }
+}
+
 function pmCheckSupabaseHealth() {
   if (typeof SUPA_URL === 'undefined' || typeof SUPA_KEY === 'undefined') return;
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -3298,20 +3347,20 @@ function pmCheckSupabaseHealth() {
   }).then(function (res) {
     if (timer) clearTimeout(timer);
     if (res.status === 200) {
-      pmUpdateHealthDots('ok', 'Database Supabase: Sehat');
+      pmHandleHealthResult('ok', 'Database Supabase: Sehat');
       return;
     }
     return res.text().then(function (body) {
       var paused = /paused/i.test(body || '');
       if (paused || res.status === 503) {
-        pmUpdateHealthDots('down', 'Database Supabase: Berhenti / di-pause (status ' + res.status + ')');
+        pmHandleHealthResult('down', 'Database Supabase: Berhenti / di-pause (status ' + res.status + ')');
       } else {
-        pmUpdateHealthDots('warn', 'Database Supabase: Bermasalah (status ' + res.status + ')');
+        pmHandleHealthResult('warn', 'Database Supabase: Bermasalah (status ' + res.status + ')');
       }
     });
   }).catch(function () {
     if (timer) clearTimeout(timer);
-    pmUpdateHealthDots('down', 'Database Supabase: Tidak dapat dihubungi (bisa juga koneksi internet Anda yang bermasalah)');
+    pmHandleHealthResult('down', 'Database Supabase: Tidak dapat dihubungi (bisa juga koneksi internet Anda yang bermasalah)');
   });
 }
 
