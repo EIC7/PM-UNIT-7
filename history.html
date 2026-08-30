@@ -21,13 +21,13 @@
   <div class="topbar-logo">RIWAYAT</div>
   <div class="topbar-sep"></div>
   <div class="topbar-sub">Riwayat Preventive Maintenance — Unit 7</div>
-  <div class="topbar-right">
-    <span id="pmHistRefreshLabel" style="font-size:10.5px;color:#7a8a9a;margin-right:8px;white-space:nowrap"></span>
-    <button id="pmHistRefreshBtn" onclick="pmHistRefresh()" title="Refresh data (tanpa reload halaman)" style="padding:6px 10px;font-size:12px;font-weight:700;border:none;border-radius:6px;background:#243228;color:#7fd9a4;cursor:pointer;margin-right:10px;display:flex;align-items:center;gap:5px">
-      <span class="pm-hist-refresh-icon">🔄</span> Refresh
+  <div class="topbar-right" id="pmHistTopbarRight">
+    <span id="pmHistRefreshLabel" class="pm-hist-refresh-label"></span>
+    <button id="pmHistRefreshBtn" class="pm-hist-icon-btn" onclick="pmHistRefresh()" title="Refresh data (tanpa reload halaman)">
+      <span class="pm-hist-refresh-icon">🔄</span><span class="pm-hist-btn-label">Refresh</span>
     </button>
-    <button id="pmDiagBtn" onclick="pmShowDiagnosisModal(true)" style="position:relative;padding:6px 12px;font-size:12px;font-weight:700;border:none;border-radius:6px;background:#243228;color:#7fd9a4;cursor:pointer;margin-right:10px">
-      🩺 Diagnosis
+    <button id="pmDiagBtn" class="pm-hist-icon-btn" onclick="pmShowDiagnosisModal(true)">
+      🩺<span class="pm-hist-btn-label">Diagnosis</span>
       <span id="pmDiagBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center"></span>
     </button>
     <div class="live-dot"></div>
@@ -36,6 +36,22 @@
 <style>
 @keyframes pmHistSpin { to { transform: rotate(360deg); } }
 #pmHistRefreshBtn.pm-spin .pm-hist-refresh-icon { display:inline-block; animation: pmHistSpin 0.7s linear infinite; }
+#pmHistTopbarRight { gap:8px; }
+.pm-hist-icon-btn {
+  position:relative; display:flex; align-items:center; gap:5px;
+  padding:6px 12px; font-size:12px; font-weight:700; border:none; border-radius:6px;
+  background:#243228; color:#7fd9a4; cursor:pointer; white-space:nowrap;
+}
+.pm-hist-refresh-label { font-size:10.5px; color:#7a8a9a; white-space:nowrap; }
+/* Mobile sempit: label waktu & teks tombol disembunyikan, sisakan ikon
+   supaya baris topbar tidak melebihi lebar layar (dulu kepotong sampai
+   live-dot ikut hilang di ujung kanan). */
+@media(max-width:600px){
+  .pm-hist-refresh-label { display:none; }
+  .pm-hist-btn-label { display:none; }
+  .pm-hist-icon-btn { padding:6px 9px; }
+  #pmHistTopbarRight { gap:6px; }
+}
 </style>
 
 <!-- 🩺 Modal Diagnosis: cek apakah ada laporan yang terkirim berulang TANPA

@@ -3218,6 +3218,26 @@ function pmNumpadOpen(el) {
   document.getElementById('pmNumpad').classList.add('open');
   document.getElementById('pmNumpadBackdrop').classList.add('open');
   pmNumpadUpdateNextLabel();
+  pmNumpadEnsureVisible(el);
+}
+
+// Field aktif (juga dipakai tombol "Next") bisa ketutup numpad yang muncul
+// dari bawah -- geser layar naik secukupnya supaya field-nya tetap
+// kelihatan di atas numpad. Tinggi numpad diambil dari offsetHeight (posisi
+// akhirnya sebagai position:fixed;bottom:0), BUKAN dari getBoundingClientRect
+// saat itu juga -- animasi slide-up-nya (.pm-numpad transform transition)
+// belum tentu selesai di frame ini, jadi posisi live-nya belum akurat.
+function pmNumpadEnsureVisible(el) {
+  var pad = document.getElementById('pmNumpad');
+  if (!pad || !el) return;
+  requestAnimationFrame(function() {
+    var margin = 16;
+    var padTopFinal = window.innerHeight - pad.offsetHeight;
+    var fieldRect = el.getBoundingClientRect();
+    if (fieldRect.bottom > padTopFinal - margin) {
+      window.scrollBy({ top: fieldRect.bottom - (padTopFinal - margin), behavior: 'smooth' });
+    }
+  });
 }
 
 function pmNumpadClose() {
