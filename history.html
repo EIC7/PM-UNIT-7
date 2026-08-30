@@ -365,6 +365,18 @@ function pmFmtDDMMYYYYHHMM(iso) {
    dua-duanya selalu sinkron. */
 function historyDeriveStatus(appr) {
   if (!appr) return null;
+  // 2026-08-30: Review Approval Dashboard nambah status ASLI 'revised' (lihat
+  // approval-helper.js submitWithFiles() versi terbaru mereka) -- resubmit
+  // sesudah dikembalikan sekarang status-nya langsung 'revised' dan
+  // returnedNote DIKOSONGKAN (dipindah ke array returnedHistory[]), BUKAN
+  // lagi 'submitted'+returnedNote nempel seperti sebelumnya. Baris di bawah
+  // ini WAJIB tetap ada -- tanpanya deteksi revisi kita berhenti bekerja
+  // total untuk resubmit baru (returnedNote sudah kosong, jadi cek lama
+  // sendirian tidak akan pernah cocok lagi).
+  if (appr.status === 'revised') return 'revision_resubmitted';
+  // Fallback buat dokumen LAMA (dibuat sebelum perubahan di atas) yang masih
+  // punya bentuk status='submitted'+returnedNote nempel -- jangan dihapus,
+  // masih ada data historis dalam bentuk ini.
   if (appr.status === 'submitted' && appr.returnedNote) return 'revision_resubmitted';
   return appr.status;
 }
@@ -396,7 +408,7 @@ function historyRaStatusBadge(appr) {
     if (raStatus === 'approved' && appr.approval) ts = appr.approval.approvedAt;
     else if (raStatus === 'reviewed' && appr.review) ts = appr.review.reviewedAt;
     else if (raStatus === 'returned_to_technician' && appr.returnedNote) ts = appr.returnedNote.returnedAt;
-    else if (raStatus === 'revision_resubmitted') ts = appr.updatedAt;
+    else if (raStatus === 'revision_resubmitted') ts = appr.revisedAt || appr.updatedAt;
     else ts = appr.createdAt;
   }
   var tsStr = pmFmtDDMMYYYYHHMM(ts);

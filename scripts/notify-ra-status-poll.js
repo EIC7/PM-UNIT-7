@@ -153,14 +153,16 @@ async function fetchRecentApprovals() {
     const checksheetId = f.checksheetId && f.checksheetId.stringValue;
     const rawStatus = f.status && f.status.stringValue;
     if (!checksheetId || !rawStatus) continue;
-    // Sama seperti historyDeriveStatus() di history.html -- Firestore cuma
-    // punya 'submitted' mentah buat DUA kejadian beda (submit pertama kali
-    // vs returned_to_technician yang direvisi+disubmit ulang, yang mana
-    // submitWithFiles() reset status ke 'submitted' tapi returnedNote TIDAK
-    // ikut terhapus, cuma di-merge). Field returnedNote yang masih nempel
-    // itu satu-satunya penanda buat bedakan keduanya.
+    // Sama seperti historyDeriveStatus() di history.html.
+    // 2026-08-30: Review Approval Dashboard nambah status ASLI 'revised' --
+    // resubmit sesudah dikembalikan sekarang status-nya langsung 'revised'
+    // dan returnedNote DIKOSONGKAN (dipindah ke array returnedHistory[]),
+    // BUKAN lagi 'submitted'+returnedNote nempel. Cek 'revised' ini WAJIB
+    // ada duluan -- tanpanya deteksi revisi berhenti total untuk resubmit
+    // baru. Fallback returnedNote di bawah cuma buat dokumen lama.
     const hasReturnedNote = !!(f.returnedNote && f.returnedNote.mapValue);
-    const status = (rawStatus === 'submitted' && hasReturnedNote) ? 'revision_resubmitted' : rawStatus;
+    const status = rawStatus === 'revised' ? 'revision_resubmitted'
+      : (rawStatus === 'submitted' && hasReturnedNote) ? 'revision_resubmitted' : rawStatus;
     byChecksheetId[checksheetId] = status;
   }
   return byChecksheetId;

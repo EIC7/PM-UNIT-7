@@ -603,3 +603,40 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   JS core bersama supaya tidak ada race/conflict antar subagent) — hub card + `.hub-stats`
   baru dirangkai manual SEKALI di akhir setelah semua subagent selesai, supaya tidak ada
   banyak edit bertumpuk ke file yang sama.
+
+## Review Approval Dashboard nambah status ASLI `'revised'` — fix deteksi revisi kita (2026-08-30)
+
+- Dicek ulang (read-only, clone sementara ke `/c/radash_ro` lalu dihapus lagi, TIDAK pernah
+  diubah/push — sesuai instruksi user) `github.com/EenPutra/CHECK-SHEET-POMI-ELEKTRIK-ONLINE`
+  atas permintaan user yang curiga ada status baru di sana. **Benar** — commit mereka jam
+  16:56 (`a0280cd`, "Review dashboard: admin 'Hapus PERMANEN'...") ternyata membawa rollout
+  status `'revised'` (label "Direvisi") yang JAUH lebih besar dari sekadar commit itu:
+  `Approvals.submitWithFiles()` sekarang, kalau approval yang di-resubmit sebelumnya berstatus
+  `returned_to_technician`, set `status: 'revised'` (bukan lagi `'submitted'`), **mengosongkan**
+  `returnedNote` (dipindah ke array baru `returnedHistory[]`, entry lama di-push ke situ), dan
+  menambah `revisedAt`/`revisionCount`. `STATUS_LABELS`, badge CSS, dropdown filter,
+  `STATUS_ORDER`, `Approvals.isPendingReview()` (`=== 'submitted' || === 'revised'`), dan
+  `renderDetail()`'s "Riwayat Revisi" section di sisi mereka semua sudah tahu status ini —
+  detail lengkap ada di CLAUDE.md mereka sendiri (`git log`/baris ~1319-1345 versi commit
+  `a0280cd`, kalau perlu dicek ulang di masa depan).
+- **Ini MEMATAHKAN deteksi revisi kita sendiri** (`historyDeriveStatus()` di `history.html`
+  dan `fetchRecentApprovals()` di `scripts/notify-ra-status-poll.js`) — keduanya sebelumnya
+  cuma cek `status==='submitted' && returnedNote ada isinya` buat menyimpulkan status sintetis
+  `'revision_resubmitted'` kita. Karena `returnedNote` sekarang DIKOSONGKAN pada resubmit
+  (dipindah ke `returnedHistory[]`), cek lama itu **tidak akan pernah cocok lagi** untuk
+  revisi baru sejak commit itu — badge "🔁 Revisi Submitted" dan notifikasi Telegram-nya akan
+  diam-diam berhenti muncul (fallback ke badge "Submitted"/"Menunggu Review" biasa) tanpa
+  error yang kelihatan sama sekali.
+- **Fix**: kedua fungsi derive itu sekarang cek `appr.status === 'revised'` (real value
+  Firestore mereka) LEBIH DULU, baru fallback ke cek `returnedNote` lama (buat dokumen lama
+  yang dibuat SEBELUM commit `a0280cd`, yang masih berbentuk `submitted`+`returnedNote`
+  nempel). String sintetis internal kita (`'revision_resubmitted'`) SENGAJA TIDAK diganti
+  jadi `'revised'` biar RPC Postgres `notify_telegram_review_status` (case-nya masih
+  `'revision_resubmitted'`) dan `validStatuses` array TIDAK perlu ikut diubah — cukup
+  perlebar deteksinya saja. `historyRaStatusBadge()`'s timestamp juga diupdate: pakai
+  `appr.revisedAt` dulu (field baru mereka) baru fallback `appr.updatedAt`.
+- **Kalau di masa depan ketemu lagi field/status baru serupa di dashboard mereka** yang
+  memengaruhi cara kita membaca `approvals` (dari `history.html` ATAU dari poller GitHub
+  Actions) — pola fix-nya sama: WIDEN deteksi (tambah kondisi baru), JANGAN ganti/hapus
+  fallback lama, karena dokumen historis lama tetap dalam bentuk lama selamanya (Firestore
+  tidak migrasi data retroaktif, cuma tulisan BARU yang ikut format baru).
