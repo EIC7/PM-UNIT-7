@@ -10,8 +10,14 @@
  */
 :root {
   --bg-main: #ffffff;
-  --bg-panel: #f7f9fb;
-  --bg-panel-alt: #eef1f5;
+  /* --bg-page: warna di belakang seluruh app-shell (body/html) — sengaja
+     DIBEDAKAN dari --bg-main. --bg-main tetap putih murni dan dipakai KHUSUS
+     untuk permukaan konten (panel-chart/panel grafik, kartu KPI, input,
+     tombol) supaya area grafik trend tetap putih bersih sesuai permintaan
+     user — warna cuma ditambahkan di lapisan background & tab di belakangnya. */
+  --bg-page: #dfedf5;
+  --bg-panel: #eef6fb;
+  --bg-panel-alt: #d3e6f0;
   --border-soft: #e2e7ec;
   --border-strong: #c7d0d9;
   --text-primary: #16212b;
@@ -34,7 +40,7 @@
   --shadow-card-hover: 0 2px 4px rgba(22, 33, 43, 0.06), 0 10px 28px rgba(22, 33, 43, 0.08);
 }
 
-body { background: var(--bg-main); }
+html, body { background: var(--bg-page); }
 
 .topbar {
   background: linear-gradient(180deg, #ffffff 0%, var(--bg-panel) 100%);
@@ -103,6 +109,8 @@ body { background: var(--bg-main); }
 .tag-meta { color: var(--text-dim); }
 .tag-empty, .details-empty { color: var(--text-dim); }
 
+/* .panel-chart TETAP --bg-main (putih) sesuai permintaan user — cuma
+   background halaman & tab yang dikasih warna, bukan area grafik. */
 .panel-chart, .panel-historical, .panel-extra { background: var(--bg-main); }
 
 .chart-toolbar { border-bottom: 1px solid var(--border-soft); }

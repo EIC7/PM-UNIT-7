@@ -14,10 +14,10 @@
   /* Halaman hub tidak butuh app-shell (itu punya trend_*.html) — layout sendiri, ringan */
   html, body { min-height: 100vh; }
   body {
-    /* Polos — sempat pakai pola garis grid teknik, tapi itu bikin halaman
-       kelihatan "berisik"/jelek alih-alih premium. Background bersih saja,
-       kedalaman cukup dari shadow kartu + brand bar di atas. */
-    background: var(--bg-main);
+    /* Sedikit warna (bukan pola garis lagi — itu kelihatan "berisik") lewat
+       --bg-page (soft tint biru), sementara kartu/panel tetap pakai
+       --bg-main putih supaya kontras & tetap terasa "premium", bukan datar. */
+    background: var(--bg-page);
   }
 
   /* ── SLIM BRAND BAR ─────────────────────────────────────────────────
