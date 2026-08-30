@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DCS TREND — CEMS Calibration</title>
+<title>DCS TREND — O2 Weekly Inlet</title>
 <link rel="stylesheet" href="css/style.css?v=20260827d">
 <link rel="stylesheet" href="css/dcs-theme.css?v=20260827d">
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
@@ -14,7 +14,7 @@
 
   <!-- TOP BAR -->
   <div class="topbar">
-    <div class="topbar-title"><a href="index_trend.html" class="topbar-home-link" title="Kembali ke daftar modul">DCS TREND</a> — CEMS CALIBRATION</div>
+    <div class="topbar-title"><a href="index_trend.html" class="topbar-home-link" title="Kembali ke daftar modul">DCS TREND</a> — O2 WEEKLY INLET</div>
     <div class="topbar-status"><span class="dot"></span>HISTORICAL</div>
     <div class="topbar-clock" id="clockValue">--</div>
   </div>
@@ -77,13 +77,6 @@
         <div>
           <button class="load-btn" id="loadDataBtn">LOAD DATA</button>
         </div>
-        <!-- PANEL DIAGNOSTIK: buat cek langsung dari HP tanpa DevTools --
-             tampil setelah LOAD DATA diklik, per record CEMS yang ketemu:
-             tanggal, status, frequency (info saja -- semua frequency
-             digabung jadi 1 trend), dan berapa nilai (dari maks 20) yang
-             berhasil ke-parse -- biar ketahuan kalau ada record draft yang
-             belum lengkap diisi (bukan bug parser). -->
-        <div id="dcsDiagPanel" style="display:none;margin-top:10px;padding:10px;background:#f7f9fb;border:1px solid #c7d0d9;border-radius:4px;font-size:11px;font-family:'Consolas','Courier New',monospace;color:#16212b;max-height:220px;overflow:auto"></div>
       </div>
     </div>
 
@@ -120,59 +113,19 @@
 
 </div>
 
-<script>
-  // Diagnostik ringan -- dengerin event yang sudah ada (dcsHistoricalLoadEnd)
-  // + window.CemsAdapter.lastParseDebug (diisi cems-adapter.js tiap parse),
-  // tulis ringkasan per record ke panel di atas. Lihat §20 Trend Fitur.MD.
-  window.addEventListener('dcsHistoricalLoadEnd', function (ev) {
-    var panel = document.getElementById('dcsDiagPanel');
-    if (!panel) return;
-    var diag = (ev.detail && ev.detail.diagnostics) || [];
-    var lines = ['=== DIAGNOSTIK LOAD DATA ==='];
-    diag.forEach(function (d) {
-      lines.push('');
-      lines.push('Modul key: ' + d.modulKey);
-      lines.push('  Baris ditemukan di Supabase: ' + d.rowCount);
-      if (d.error) lines.push('  ERROR: ' + d.error);
-    });
-
-    var debugRows = (window.CemsAdapter && window.CemsAdapter.lastParseDebug) || [];
-    if (debugRows.length) {
-      lines.push('');
-      lines.push('=== PER RECORD CEMS ===');
-      debugRows.forEach(function (d) {
-        lines.push('- ' + (d.tanggal || '(tanpa tanggal)') + ' | status: ' + (d.status || '-') +
-          ' | frequency: "' + d.frequency + '" (info saja, semua frequency digabung 1 trend)' +
-          ' | nilai terisi: ' + d.filledCount + '/' + d.maxCount);
-      });
-    } else {
-      lines.push('');
-      lines.push('(Tidak ada record CEMS dalam rentang tanggal ini)');
-    }
-
-    var totalTagsWithData = Object.keys(ev.detail.series || {}).filter(function (k) {
-      return Object.keys(ev.detail.series[k]).some(function (sk) { return ev.detail.series[k][sk].length > 0; });
-    }).length;
-    lines.push('');
-    lines.push('Total tag yang punya titik data setelah di-parse: ' + totalTagsWithData);
-    panel.textContent = lines.join('\n');
-    panel.style.display = 'block';
-  });
-</script>
-
 <!-- ===================== CONFIG ===================== -->
 <!-- ?v= cache-busting: browser (terutama Chrome mobile) suka nyimpen file
      .js/.css dari GitHub Pages cukup lama, jadi fix baru kadang belum
      kepakai walau file di repo sudah ter-update. Naikkan angka ini tiap
      kali ada perubahan berarti di file-file di bawah / css/*.css. -->
 <script src="config/system-config.js?v=20260827a"></script>
-<script src="config/default-tags-cems.js?v=20260827c"></script>
-<script src="config/modules/cems.config.js?v=20260827b"></script>
+<script src="config/default-tags-o2-inlet.js?v=20260830a"></script>
+<script src="config/modules/o2-inlet.config.js?v=20260830a"></script>
 
 <!-- ===================== CORE MODULES ================ -->
 <script src="js/storage-manager.js?v=20260827a"></script>
 <script src="js/supabase-adapter.js?v=20260827c"></script>
-<script src="js/adapters/cems-adapter.js?v=20260827b"></script>
+<script src="js/adapters/o2-inlet-adapter.js?v=20260830a"></script>
 <script src="js/tag-manager.js?v=20260827a"></script>
 <script src="js/historical-manager.js?v=20260827a"></script>
 <script src="js/chart-manager.js?v=20260827e"></script>

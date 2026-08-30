@@ -504,3 +504,30 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   serupa (titik status pakai `::before`) di file lain di masa depan, WAJIB dikonversi ke
   elemen sungguhan dulu sebelum bisa ikut kebagian indikator ini** — pseudo-element tidak
   pernah bisa di-`querySelectorAll` dari JavaScript.
+
+## Modul trend baru: O2 Weekly Inlet & Outlet + rename hub `trend/index.html` (2026-08-30)
+
+- 2 halaman trend baru mengikuti arsitektur modular yang didokumentasikan di
+  `trend/Trend Fitur.MD`: `trend/trend_weekly_o2_inlet.html` (adapter
+  `trend/js/adapters/o2-inlet-adapter.js`, tag `trend/config/default-tags-o2-inlet.js` — 8
+  channel `O2-INLET-CH1..8`, config modul `trend/config/modules/o2-inlet.config.js`, key
+  `O2_WEEKLY_INLET`, `deviationPairs` beforeVsAfter sama pola `so2.config.js`) dan
+  `trend/trend_weekly_o2_outlet.html` (adapter `o2-outlet-adapter.js`, tag
+  `default-tags-o2-outlet.js` — 6 channel `O2-OUTLET-CH1..6`, config `o2-outlet.config.js`,
+  key `O2_WEEKLY_OUTLET`, **`deviationPairs: []` sengaja kosong** karena form Outlet cuma
+  punya 1 pembacaan `O2Reading` per channel, tidak ada before/after — `module-view.js`
+  sudah aman menangani array kosong ini, panel deviasi otomatis tidak dirender).
+  `js/historical-manager.js`/`js/module-view.js` TIDAK disentuh (generik by design).
+- Hub `trend/index.html` **di-rename jadi `trend/index_trend.html`** (biar tidak
+  membingungkan dengan `index.html` dashboard utama di root) via `git mv` supaya histori
+  tetap terjaga. Semua yang mereferensikannya WAJIB ikut diupdate — kalau menambah modul
+  trend baru lagi di masa depan, cek 2 tempat ini:
+  1. Topbar "DCS TREND" link (`<a href="index_trend.html" class="topbar-home-link">`) di
+     SETIAP `trend/trend_*.html` (bukan cuma yang baru dibuat — semua file lama juga harus
+     ikut diupdate kalau nama hub berubah lagi nanti).
+  2. Kartu "Historical & Live Trend" di root `index.html` (`onclick`) yang mengarah ke
+     `trend/index_trend.html`.
+  Link balik dari hub ke dashboard utama (`trend/index_trend.html` → `../index.html`,
+  tombol "← DASHBOARD UTAMA") sudah benar dari sebelumnya, tidak perlu diubah.
+- 2 kartu baru ditambahkan di hub (`O2 WEEKLY INLET` aksen `#0e8f7a`, `O2 WEEKLY OUTLET`
+  aksen `#c07a12`), `.hub-stats` diupdate dari 3 modul/43 tag jadi 5 modul/57 tag.
