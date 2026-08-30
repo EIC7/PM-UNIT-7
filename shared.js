@@ -917,10 +917,34 @@ pmInitGate();
 (function() {
   var params = new URLSearchParams(location.search);
   if (params.get('autosubmit') !== '1') return; // cuma aktif di halaman yang memang dibuka buat submit otomatis
+
+  // Overlay visual "SEDANG MENSUBMIT" -- biar user yang klik Submit/Resubmit
+  // dari history.html (dibuka lewat window.open dengan &autoclose=1, TAB
+  // TERLIHAT) tidak bingung lihat form checksheet mentah kebuka sekilas
+  // sebelum auto-submit & auto-close jalan. document.write() aman di sini
+  // (alasan sama dengan gate akses #pmAuthGate di atas -- shared.js masih
+  // di tengah proses parsing <head>, document.body belum tentu ada).
+  // Harmless kalau ini jalan di iframe TERSEMBUNYI (retry background,
+  // autosubmit=1 TANPA autoclose=1) -- iframe-nya display:none, overlay ini
+  // tidak pernah kelihatan siapa pun.
+  document.write(
+    '<style id="pmAutosubmitOverlayStyle">@keyframes pmAutosubmitSpin{to{transform:rotate(360deg)}}</style>' +
+    '<div id="pmAutosubmitOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:rgba(10,16,28,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">' +
+      '<div style="width:52px;height:52px;border:4px solid rgba(255,255,255,.22);border-top-color:#38bdf8;border-radius:50%;animation:pmAutosubmitSpin .8s linear infinite"></div>' +
+      '<div style="color:#fff;font-size:17px;font-weight:800;letter-spacing:.4px">SEDANG MENSUBMIT</div>' +
+      '<div style="color:#cbd5e1;font-size:13px;max-width:340px;line-height:1.55">Sistem sedang mensubmit otomatis, halaman akan kembali ke riwayat otomatis setelah submit berhasil.</div>' +
+    '</div>'
+  );
+
   var reported = false;
   window._raAutosubmitReport = function(ok, err) {
     if (reported) return;
     reported = true;
+    // Safety net: kalau window.close() di bawah gagal/tidak berlaku (bukan
+    // dibuka lewat window.open, atau window.opener sudah hilang), overlay
+    // ini tidak boleh nyangkut permanen menutupi halaman -- lepas sekarang.
+    var pmAsOv = document.getElementById('pmAutosubmitOverlay');
+    if (pmAsOv) pmAsOv.remove();
     // 🩺 Jaring pengaman logging: kalau proses macet SEBELUM sempat masuk
     // raSendFinalPdfToFirebaseDashboard() (mis. dbLoad()/pemulihan foto
     // hang, JS error tak tertangkap, promise gagal tak tertangani, atau

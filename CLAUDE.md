@@ -673,3 +673,29 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   juga vendored dan basi — WAJIB verifikasi file vendored-nya dulu SEBELUM percaya hasil baca
   behavior dari kode kita, karena kode kita bisa saja membaca versi lama yang tidak pernah
   memproduksi field/status baru itu sama sekali.
+
+## Overlay "SEDANG MENSUBMIT" untuk halaman autosubmit (2026-08-30)
+
+- Klik "Submit"/"Resubmit" di `history.html` membuka file modul terkait di tab BARU
+  (`window.open`, dengan `?autosubmit=1&autoclose=1` di URL) yang otomatis menjalankan
+  proses submit lalu menutup diri sendiri — sebelumnya tab itu sempat menampilkan form
+  checksheet mentah selama proses berlangsung, bikin user bingung ("kenapa halaman form
+  kebuka sendiri").
+- `shared.js` sekarang `document.write()` overlay full-screen (`#pmAutosubmitOverlay`,
+  z-index `2147483000`, di bawah z-index gate akses `#pmAuthGate` yang `2147483647` supaya
+  gate tetap menang kalau device belum trusted) — spinner CSS-animasi + teks "SEDANG
+  MENSUBMIT" + penjelasan "Sistem sedang mensubmit otomatis, halaman akan kembali ke
+  riwayat otomatis setelah submit berhasil". Ditulis di IIFE `?autosubmit=1` yang SUDAH ADA
+  (jaring pengaman `window._raAutosubmitReport`, lihat bagian atas dokumen ini) — SEBELUM
+  early-return-nya lolos, `document.write()` di sini aman karena posisinya sama seperti
+  gate akses (`shared.js` masih di tengah parsing `<head>`, `document.body` belum tentu ada).
+- Overlay ini otomatis kepakai juga di jalur iframe TERSEMBUNYI (retry background,
+  `autosubmit=1` TANPA `autoclose=1`) — harmless, iframe-nya `display:none` jadi tidak
+  pernah kelihatan siapa pun, tidak perlu dikecualikan.
+- Ada safety-net eksplisit: `window._raAutosubmitReport` (dipanggil pas sukses/gagal/error/
+  watchdog) sekarang juga `.remove()` overlay ini duluan sebelum lanjut logic lain — supaya
+  kalau `window.close()` gagal/tidak berlaku (mis. dibuka bukan lewat `window.open`, atau
+  `window.opener` sudah hilang), overlay TIDAK nyangkut permanen menutupi halaman.
+- **Kalau nambah field/state baru buat overlay ini** (mis. teks berubah pas gagal sebelum
+  auto-close 6 detik), edit langsung string HTML di `document.write()` itu — jangan bikin
+  elemen terpisah, biar tetap satu blok `document.write()` sinkron seperti pola gate akses.
