@@ -281,5 +281,31 @@ input[type=text], input[type=number], input[type=date], textarea, select {
 input[type=text]::placeholder, input[type=number]::placeholder, textarea::placeholder { color: #aaa !important; }
 input[type=checkbox], input[type=radio] { background: initial !important; color: initial !important; }
 
+/* ── NUMPAD CUSTOM (pengganti keypad angka bawaan HP -- lihat CLAUDE.md
+   "Numpad custom dengan tombol minus", 2026-08-30). Field yang mau pakai ini
+   cukup diberi class="pm-num-input" + readonly + inputmode="none", lalu
+   panggil pmNumpadInit() sekali di init halaman -- sisanya (buka/tutup,
+   tombol Next pindah field, dispatch event 'input' supaya oninput= bawaan
+   tetap jalan) ditangani otomatis oleh shared.js. Dark & fixed secara
+   sengaja, meniru keyboard OS asli yang juga selalu gelap. ── */
+.pm-num-input{ cursor:pointer; caret-color:transparent; }
+.pm-num-input.pm-num-active{ border-color:#159957 !important; box-shadow:0 0 0 3px rgba(21,153,87,0.15); }
+#pmNumpad{
+  position:fixed; left:0; right:0; bottom:0; z-index:10010;
+  background:#151619; border-radius:14px 14px 0 0; padding:10px 10px calc(12px + env(safe-area-inset-bottom));
+  box-shadow:0 -8px 30px rgba(0,0,0,0.35); transform:translateY(105%); transition:transform .22s ease;
+  max-width:520px; margin:0 auto;
+}
+#pmNumpad.open{ transform:translateY(0); }
+#pmNumpad .pm-numpad-hint{ font-family:'Arial Narrow','Rajdhani',sans-serif; font-size:10px; font-weight:600; letter-spacing:1.5px; color:#6b7280; text-transform:uppercase; text-align:center; margin-bottom:8px; }
+#pmNumpad .pm-numpad-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+#pmNumpad button{ background:#26272b; color:#f1f1f3; border:none; border-radius:8px; padding:14px 0; font-family:'Courier New',monospace; font-size:17px; font-weight:600; -webkit-tap-highlight-color:transparent; cursor:pointer; }
+#pmNumpad button:active{ background:#3a3b40; }
+#pmNumpad button.pm-op{ font-family:'Arial Narrow','Rajdhani',sans-serif; font-weight:700; font-size:12.5px; color:#5b9bf5; letter-spacing:0.5px; }
+#pmNumpad button.pm-empty{ background:transparent; pointer-events:none; }
+#pmNumpad button.pm-minus{ background:#12351f; color:#3ddc84; box-shadow:0 0 0 1.5px #22c55e inset; font-size:20px; }
+#pmNumpadBackdrop{ position:fixed; inset:0; z-index:10005; background:transparent; display:none; }
+#pmNumpadBackdrop.open{ display:block; }
+
 /* ANIMATIONS */
 @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }

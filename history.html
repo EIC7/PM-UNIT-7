@@ -22,6 +22,10 @@
   <div class="topbar-sep"></div>
   <div class="topbar-sub">Riwayat Preventive Maintenance — Unit 7</div>
   <div class="topbar-right">
+    <span id="pmHistRefreshLabel" style="font-size:10.5px;color:#7a8a9a;margin-right:8px;white-space:nowrap"></span>
+    <button id="pmHistRefreshBtn" onclick="pmHistRefresh()" title="Refresh data (tanpa reload halaman)" style="padding:6px 10px;font-size:12px;font-weight:700;border:none;border-radius:6px;background:#243228;color:#7fd9a4;cursor:pointer;margin-right:10px;display:flex;align-items:center;gap:5px">
+      <span class="pm-hist-refresh-icon">🔄</span> Refresh
+    </button>
     <button id="pmDiagBtn" onclick="pmShowDiagnosisModal(true)" style="position:relative;padding:6px 12px;font-size:12px;font-weight:700;border:none;border-radius:6px;background:#243228;color:#7fd9a4;cursor:pointer;margin-right:10px">
       🩺 Diagnosis
       <span id="pmDiagBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center"></span>
@@ -29,6 +33,10 @@
     <div class="live-dot"></div>
   </div>
 </div>
+<style>
+@keyframes pmHistSpin { to { transform: rotate(360deg); } }
+#pmHistRefreshBtn.pm-spin .pm-hist-refresh-icon { display:inline-block; animation: pmHistSpin 0.7s linear infinite; }
+</style>
 
 <!-- 🩺 Modal Diagnosis: cek apakah ada laporan yang terkirim berulang TANPA
      ditekan user (auto-retry di latar belakang) -- lihat pmCheckSyncDiagnosis()
@@ -122,60 +130,107 @@ function historyStatusBadge(status, firebaseSyncedAt) {
   return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'" title="'+s.title+'">'+s.label+'</span>';
 }
 
+function historyRowsToTableHtml(rows) {
+  var html = '<table class="manual-table" style="width:100%;font-size:12px">'+
+    '<thead><tr><th>Modul</th><th>Tanggal</th><th>PIC</th><th>Work Order</th><th>Status</th><th>Area</th><th>Disimpan</th><th>Aksi</th></tr></thead><tbody>';
+  rows.forEach(function(r) {
+    var saved = dbFmtLocalDateTime(r.updated_at);
+    var openUrl = modulToUrl(r.modul, r.id);
+    var printUrl = modulToPrintUrl(r.modul, r.id);
+    var delBtn = '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>';
+    // Tombol Submit buat laporan yang masih DRAFT. Tombol Resubmit (beda
+    // warna, oranye) khusus laporan yang SUDAH SUBMITTED tapi BELUM
+    // sukses nyampe ke Review Approval Dashboard (firebase_synced_at
+    // masih kosong -- lihat historyStatusBadge "⏳ Submitted — Menunggu
+    // Feedback") -- raRetryPendingFirebaseSyncs() (shared.js) sudah
+    // otomatis coba kirim ulang di background tiap halaman dibuka,
+    // tombol ini cuma buat user yang mau langsung memicu percobaan tanpa
+    // nunggu. Begitu sudah sukses (badge jadi "✓ Tersubmit"), tombol ini
+    // otomatis hilang lagi.
+    // id tombol dipakai historySubmit() buat update tulisan/nonaktifkan
+    // tombol ini sendiri begitu proses (di iframe tersembunyi) selesai.
+    var submitBtnId = 'histSubmitBtn-' + r.id;
+    var statusUp = (r.status || 'DRAFT').toUpperCase();
+    var submitBtn = '';
+    if (statusUp === 'DRAFT') {
+      submitBtn = '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128274; Submit</button>';
+    } else if (statusUp === 'SUBMITTED' && !r.firebase_synced_at) {
+      submitBtn = '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#f59e0b;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128260; Resubmit</button>';
+    }
+    html += '<tr>'+
+      '<td><span class="path-label">'+r.modul+'</span></td>'+
+      '<td>'+(r.tanggal||'-')+'</td>'+
+      '<td>'+(r.pic||'-')+'</td>'+
+      '<td>'+(r.work_order||'-')+'</td>'+
+      '<td id="histStatusCell-'+r.id+'">'+historyStatusBadge(r.status, r.firebase_synced_at)+'</td>'+
+      '<td>'+historyAreaLabel(r.modul)+'</td>'+
+      '<td style="font-size:10px;color:var(--text3)">'+saved+'</td>'+
+      '<td style="white-space:nowrap;text-align:right">'+
+        submitBtn+
+        '<button onclick="window.location.href=\''+openUrl+'\'" style="padding:4px 10px;font-size:11px;background:var(--ok);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#9998; Buka</button>'+
+        '<button onclick="window.open(\''+printUrl+'\',\'_blank\')" style="padding:4px 10px;font-size:11px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128438; Print</button>'+
+        delBtn+
+      '</td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+/* ── Refresh data (bukan reload tab) + auto-refresh 20 detik ──
+   loadHistory(modul) dipakai saat GANTI FILTER (tampilkan "Memuat..." dulu,
+   wajar karena isi tabel memang beda total). pmHistRefresh() dipakai untuk
+   REFRESH DATA di filter yang sama -- baik lewat tombol 🔄 maupun timer
+   otomatis -- tabel diganti langsung tanpa interstitial "Memuat...", jadi
+   tidak "berkedip" dan posisi scroll halaman tidak ikut lompat. Auto-refresh
+   ini juga yang bikin historyUpgradeStatusBadges() (pengirim notif Telegram
+   reviewed/approved) ikut jalan ulang tiap 20 detik tanpa user perlu buka
+   ulang halaman. */
+var pmHistCurrentFilter = '';
+var pmHistLastRefreshed = null;
+
 function loadHistory(modul) {
+  pmHistCurrentFilter = modul;
   var container = document.getElementById('historyList');
   container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)">Memuat...</div>';
   dbList(modul, function(rows) {
+    pmHistLastRefreshed = new Date();
+    pmHistUpdateRefreshLabel();
     if (!rows.length) {
       container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">Belum ada data tersimpan.</div>';
       return;
     }
-    var html = '<table class="manual-table" style="width:100%;font-size:12px">'+
-      '<thead><tr><th>Modul</th><th>Tanggal</th><th>PIC</th><th>Work Order</th><th>Status</th><th>Area</th><th>Disimpan</th><th>Aksi</th></tr></thead><tbody>';
-    rows.forEach(function(r) {
-      var saved = dbFmtLocalDateTime(r.updated_at);
-      var openUrl = modulToUrl(r.modul, r.id);
-      var printUrl = modulToPrintUrl(r.modul, r.id);
-      var delBtn = '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>';
-      // Tombol Submit buat laporan yang masih DRAFT. Tombol Resubmit (beda
-      // warna, oranye) khusus laporan yang SUDAH SUBMITTED tapi BELUM
-      // sukses nyampe ke Review Approval Dashboard (firebase_synced_at
-      // masih kosong -- lihat historyStatusBadge "⏳ Submitted — Menunggu
-      // Feedback") -- raRetryPendingFirebaseSyncs() (shared.js) sudah
-      // otomatis coba kirim ulang di background tiap halaman dibuka,
-      // tombol ini cuma buat user yang mau langsung memicu percobaan tanpa
-      // nunggu. Begitu sudah sukses (badge jadi "✓ Tersubmit"), tombol ini
-      // otomatis hilang lagi.
-      // id tombol dipakai historySubmit() buat update tulisan/nonaktifkan
-      // tombol ini sendiri begitu proses (di iframe tersembunyi) selesai.
-      var submitBtnId = 'histSubmitBtn-' + r.id;
-      var statusUp = (r.status || 'DRAFT').toUpperCase();
-      var submitBtn = '';
-      if (statusUp === 'DRAFT') {
-        submitBtn = '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128274; Submit</button>';
-      } else if (statusUp === 'SUBMITTED' && !r.firebase_synced_at) {
-        submitBtn = '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#f59e0b;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128260; Resubmit</button>';
-      }
-      html += '<tr>'+
-        '<td><span class="path-label">'+r.modul+'</span></td>'+
-        '<td>'+(r.tanggal||'-')+'</td>'+
-        '<td>'+(r.pic||'-')+'</td>'+
-        '<td>'+(r.work_order||'-')+'</td>'+
-        '<td id="histStatusCell-'+r.id+'">'+historyStatusBadge(r.status, r.firebase_synced_at)+'</td>'+
-        '<td>'+historyAreaLabel(r.modul)+'</td>'+
-        '<td style="font-size:10px;color:var(--text3)">'+saved+'</td>'+
-        '<td style="white-space:nowrap;text-align:right">'+
-          submitBtn+
-          '<button onclick="window.location.href=\''+openUrl+'\'" style="padding:4px 10px;font-size:11px;background:var(--ok);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#9998; Buka</button>'+
-          '<button onclick="window.open(\''+printUrl+'\',\'_blank\')" style="padding:4px 10px;font-size:11px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128438; Print</button>'+
-          delBtn+
-        '</td></tr>';
-    });
-    html += '</tbody></table>';
-    container.innerHTML = html;
+    container.innerHTML = historyRowsToTableHtml(rows);
     historyUpgradeStatusBadges(rows);
   });
 }
+
+function pmHistRefresh() {
+  var btn = document.getElementById('pmHistRefreshBtn');
+  if (btn) btn.classList.add('pm-spin');
+  dbList(pmHistCurrentFilter, function(rows) {
+    if (btn) btn.classList.remove('pm-spin');
+    pmHistLastRefreshed = new Date();
+    pmHistUpdateRefreshLabel();
+    var container = document.getElementById('historyList');
+    if (!rows.length) {
+      container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">Belum ada data tersimpan.</div>';
+      return;
+    }
+    container.innerHTML = historyRowsToTableHtml(rows);
+    historyUpgradeStatusBadges(rows);
+  });
+}
+
+function pmHistUpdateRefreshLabel() {
+  var el = document.getElementById('pmHistRefreshLabel');
+  if (!el || !pmHistLastRefreshed) return;
+  el.textContent = 'Terakhir diperbarui: ' + pmHistLastRefreshed.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+setInterval(function(){
+  if (document.hidden) return; // hemat request kalau tab sedang tidak aktif
+  pmHistRefresh();
+}, 20000);
 
 /* Label Area per baris riwayat -- kosakata SAMA persis dengan <option>
    filter Area di index.html (bukan label Firestore-nya RA_AREA_LABEL_C7,

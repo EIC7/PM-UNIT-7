@@ -127,9 +127,6 @@
 .o2-session-tabs{display:flex;gap:8px;margin-bottom:16px}
 .o2-session-tab{padding:10px 16px;border-radius:8px;border:2px solid var(--panel-border);background:#fff;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;flex:1;text-align:center;transition:all .15s}
 .o2-session-tab.active{background:var(--steel);border-color:var(--steel);color:#fff}
-.o2-freq-chip{padding:8px 14px;border-radius:20px;border:1.5px solid var(--border,#d5dde5);background:#fff;color:var(--text2,#5a6a7a);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
-.o2-freq-chip:active{transform:scale(0.97)}
-.o2-freq-chip.active{background:var(--ok,#39ae60);border-color:var(--ok,#39ae60);color:#fff}
 </style>
 </head>
 <body>
@@ -173,24 +170,15 @@
     <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
       <div class="meta-field"><label>Work Order</label><input type="text" id="o2Workorder" placeholder="No. Workorder..."></div>
       <div class="meta-field"><label>Tanggal</label><input type="date" id="o2Tanggal"></div>
-      <div class="meta-field"><label>Asset</label><input type="text" id="o2Asset" placeholder="Nama / kode asset..."></div>
-      <div class="meta-field"><label>PIC</label><input type="text" id="o2Pic" placeholder="Nama PIC..."></div>
-    </div>
-    <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:14px">
-      <div class="meta-field"><label>Technician 1</label><input type="text" id="o2Tech1" list="o2TechList" placeholder="Nama teknisi..."></div>
-      <div class="meta-field"><label>Technician 2</label><input type="text" id="o2Tech2" list="o2TechList" placeholder="Nama teknisi..."></div>
-      <div class="meta-field"><label>Technician 3</label><input type="text" id="o2Tech3" list="o2TechList" placeholder="Nama teknisi..."></div>
+      <div class="meta-field"><label>Asset</label><input type="text" id="o2Asset" readonly></div>
+      <div class="meta-field"><label>PIC</label><input type="text" id="o2Pic" list="o2TechList" placeholder="Nama PIC..."></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
-      <div class="meta-field"><label>Asset Description</label><textarea id="o2AssetDesc" rows="2" placeholder="Deskripsi asset..."></textarea></div>
+      <div class="meta-field"><label>Asset Description</label><textarea id="o2AssetDesc" rows="2" placeholder="Deskripsi asset..." readonly></textarea></div>
       <div class="meta-field"><label>Remarks</label><textarea id="o2Remarks" rows="2" placeholder="Catatan umum kalibrasi..."></textarea></div>
     </div>
-    <div class="meta-field" style="margin-top:14px">
-      <label>Frequency Maintenance <span style="font-weight:400;text-transform:none;color:var(--text3,#8a97a8)">— pilih satu / lebih, otomatis mengisi Work To Be Done</span></label>
-      <div id="o2FreqChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"><!-- built by JS --></div>
-    </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
-      <div class="meta-field"><label>Work To Be Done</label><textarea id="o2WorkToBeDone" rows="2" placeholder="Pekerjaan yang akan dilakukan..."></textarea></div>
+      <div class="meta-field"><label>Work To Be Done</label><textarea id="o2WorkToBeDone" rows="2" readonly></textarea></div>
     </div>
   </div>
 
@@ -198,32 +186,21 @@
   <div class="panel">
     <div class="section-label">🔬 Dokumentasi Per Channel — Outlet</div>
 
-    <!-- Channel Tags (dipakai bersama semua section di bawah) -->
-    <div class="o2-readings-wrap">
-      <div class="o2-readings-title">🏷️ Channel Tags</div>
-      <div id="o2TagGrid" style="display:flex;flex-direction:column;gap:8px"><!-- built by JS: buildO2TagGrid() --></div>
-    </div>
-
     <!-- Section 1: Calibration Gas Pressure (Session Level) -->
     <div class="o2-channel-card" style="margin-bottom:18px">
       <div class="o2-readings-title">📊 Calibration Gas Pressure (Session Level)</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
-        <div class="meta-field"><label>Zero Bottle Pressure (psi)</label><input type="number" inputmode="decimal" step="any" id="o2ZeroBottlePressure" placeholder="0.0"></div>
-        <div class="meta-field"><label>Zero Regulator Pressure (psi)</label><input type="number" inputmode="decimal" step="any" id="o2ZeroRegulatorPressure" placeholder="0.0"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px">
+        <div class="meta-field"><label>Zero Bottle Pressure (psi)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2ZeroBottlePressure" placeholder="0.0"></div>
+        <div class="meta-field"><label>Zero Regulator Pressure (psi)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2ZeroRegulatorPressure" placeholder="0.0"></div>
       </div>
+      <div style="margin-bottom:12px"><label class="o2-catatan-label">📝 Keterangan</label><textarea id="o2PressCatatan" rows="2" class="o2-catatan-textarea" placeholder="Keterangan tekanan gas kalibrasi (mewakili sesi ini)..."></textarea></div>
+      <div class="o2-photo-grid" style="grid-template-columns:1fr" id="o2PressPhotoWrap"></div>
     </div>
 
-    <!-- Section 2: O2 Reading -->
+    <!-- Section 2: O2 Reading + Cell Measurements (digabung per channel) -->
     <div class="o2-readings-wrap">
-      <div class="o2-readings-title">📊 O2 Reading</div>
-      <div style="overflow-x:auto"><table class="o2-readings-table" id="o2ReadingsTable"><thead><tr><th>Channel</th><th>O2 Reading (%)</th></tr></thead><tbody></tbody></table></div>
-      <div id="o2ReadingEvidenceGrid" style="display:flex;flex-direction:column;gap:16px;margin-top:14px"></div>
-    </div>
-
-    <!-- Section 3: Cell Measurements -->
-    <div class="o2-readings-wrap">
-      <div class="o2-readings-title">⚙️ Cell Measurements</div>
-      <div id="o2CellMeasGrid" style="display:flex;flex-direction:column;gap:12px"></div>
+      <div class="o2-readings-title">📊 O2 Reading &amp; Cell Measurements</div>
+      <div id="o2ChannelCardsGrid" style="display:flex;flex-direction:column;gap:16px"></div>
     </div>
   </div>
 
@@ -1610,112 +1587,59 @@ function o2ReadingsChannelCode(tag) {
   return sep ? raw.substring(0, raw.indexOf(sep)).trim() : raw;
 }
 
+// Label tabel/kartu per channel: kode tag + "(Channel N)" -- lihat CLAUDE.md
+// poin revisi Weekly O2 (2026-08-30).
+function o2ChLabel(c) {
+  return o2ReadingsChannelCode(c.tag) + ' (Channel ' + c.id + ')';
+}
+
 function o2UpdateChannelField(ck, field, val) {
   if (!o2ChannelData[ck]) o2ChannelData[ck] = o2EmptyChannelData();
   o2ChannelData[ck][field] = val;
 }
 
-// Galeri foto: 'reading_och'+id = evidence per channel (Section 2 -- SATU-
-// satunya section yang punya evidence di form Outlet ini). Cuma 1 phase
-// 'evidence' -- infrastruktur upload/crop/reorder di bawah (imgOpenCropper/
-// o2RenderPreviews/dll) dipakai apa adanya.
-var o2Images = {};
+// Galeri foto: 'pressure' = evidence sesi Calibration Gas Pressure (session
+// level), 'reading_och'+id = evidence per channel (O2 Reading & Cell
+// Measurements). Cuma 1 phase 'evidence' per galeri -- infrastruktur
+// upload/crop/reorder di bawah (imgOpenCropper/o2RenderPreviews/dll)
+// dipakai apa adanya.
+var o2Images = { pressure:{evidence:[]} };
 O2_OUTLET_CHANNELS.forEach(function(c){ o2Images['reading_och'+c.id] = {evidence:[]}; });
 
 // Status mode "Urutkan Foto" per galeri (key: chKey_phase) -> {active:bool, selectedIdx:number|null}
 var o2ReorderState = {};
 
-/* ── Frequency Maintenance — pilih 1/lebih, otomatis isi Work To Be Done ── */
-var O2_FREQ_OPTIONS = ['Monthly Maintenance','3Monthly Maintenance','6Monthly Maintenance','1Yearly Maintenance','2Yearly Maintenance','3Yearly Maintenance'];
-var o2SelectedFreq = [];
-
-function o2BuildFreqChips() {
-  var wrap = document.getElementById('o2FreqChips');
-  if (!wrap) return;
-  wrap.innerHTML = O2_FREQ_OPTIONS.map(function(label){
-    return '<button type="button" class="o2-freq-chip" data-freq="'+label+'" onclick="o2ToggleFreq(this,\''+label+'\')">'+label+'</button>';
-  }).join('');
-}
-
-function o2ToggleFreq(btn, label) {
-  var idx = o2SelectedFreq.indexOf(label);
-  if (idx === -1) { o2SelectedFreq.push(label); btn.classList.add('active'); }
-  else { o2SelectedFreq.splice(idx, 1); btn.classList.remove('active'); }
-  document.getElementById('o2WorkToBeDone').value = o2SelectedFreq.join(', ');
-}
-
-/* Dipakai saat restore data (dari Simpan Database / Autosave draft) supaya
-   chip yang sebelumnya dipilih ikut ke-highlight lagi. */
-function o2SetSelectedFreq(list) {
-  o2SelectedFreq = Array.isArray(list) ? list.slice() : [];
-  document.querySelectorAll('.o2-freq-chip').forEach(function(btn){
-    btn.classList.toggle('active', o2SelectedFreq.indexOf(btn.getAttribute('data-freq')) !== -1);
-  });
-}
-
-function buildO2TagGrid() {
-  var grid = document.getElementById('o2TagGrid');
-  if (!grid || grid.children.length > 0) return;
-  O2_OUTLET_CHANNELS.forEach(function(c) {
-    var ck = 'och'+c.id;
-    var tagSafe = String(c.tag||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    var row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap';
-    row.innerHTML =
-      '<span style="font-size:13px;font-weight:700;color:var(--steel);white-space:nowrap;min-width:78px">&#128270; Channel '+c.id+'</span>'+
-      '<input type="text" class="o2-channel-tag-input" id="o2tag_'+ck+'" style="flex:1;min-width:180px" value="'+tagSafe+'" oninput="o2UpdateAssetFromChannels();o2RefreshChannelLabels()">';
-    grid.appendChild(row);
-  });
-}
+/* ── Work To Be Done — tetap (fixed) sesuai nama modul, tidak dipilih manual ── */
+var O2_WORK_TO_BE_DONE = 'Weekly Calibration of Oxygen Analyzer (Outlet — 6 Channel)';
 
 function o2ChannelTag(id) {
-  var el = document.getElementById('o2tag_och'+id);
   var fallback = O2_OUTLET_CHANNELS.filter(function(c){ return c.id===id; })[0];
-  return (el && el.value) ? el.value : (fallback ? fallback.tag : '');
+  return fallback ? fallback.tag : '';
 }
 
-function buildO2ReadingTable() {
-  var tbody = document.querySelector('#o2ReadingsTable tbody');
-  if (!tbody || tbody.children.length > 0) return;
-  tbody.innerHTML = O2_OUTLET_CHANNELS.map(function(c){
-    var ck = 'och'+c.id;
-    return '<tr><td class="o2chlabel-'+ck+'">'+o2ReadingsChannelCode(c.tag)+'</td>'+
-      '<td><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_o2Reading" oninput="o2UpdateChannelField(\''+ck+'\',\'o2Reading\',this.value)"></td></tr>';
-  }).join('');
-}
-
-function buildO2ReadingEvidenceGrid() {
-  var grid = document.getElementById('o2ReadingEvidenceGrid');
+/* O2 Reading + Cell Measurements digabung jadi satu kartu per channel --
+   lihat CLAUDE.md poin revisi Weekly O2 Outlet (2026-08-30): evidence &
+   keterangan ikut per channel, di bawah field angkanya langsung. */
+function buildO2ChannelCards() {
+  var grid = document.getElementById('o2ChannelCardsGrid');
   if (!grid || grid.children.length > 0) return;
   O2_OUTLET_CHANNELS.forEach(function(c) {
     var ck = 'och'+c.id;
     var card = document.createElement('div');
     card.className = 'o2-channel-card';
     card.innerHTML =
-      '<div style="margin-bottom:10px;font-size:13px;font-weight:700;color:var(--steel)">&#128247; Evidence — <span class="o2chlabel-'+ck+'">'+o2ReadingsChannelCode(c.tag)+'</span></div>'+
+      '<div class="o2-channel-head-num o2chlabel-'+ck+'" style="margin-bottom:10px">'+o2ChLabel(c)+'</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:12px">'+
+        '<div class="meta-field"><label>O2 Reading (%)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_o2Reading" oninput="o2UpdateChannelField(\''+ck+'\',\'o2Reading\',this.value)"></div>'+
+        '<div class="meta-field"><label>Voltage (mV)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_voltage" oninput="o2UpdateChannelField(\''+ck+'\',\'voltage\',this.value)"></div>'+
+        '<div class="meta-field"><label>Temp (°C)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_temperature" oninput="o2UpdateChannelField(\''+ck+'\',\'temperature\',this.value)"></div>'+
+        '<div class="meta-field"><label>Lifetime (mo)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_lifetime" oninput="o2UpdateChannelField(\''+ck+'\',\'lifetime\',this.value)"></div>'+
+        '<div class="meta-field"><label>Resistance (Ω)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_resistance" oninput="o2UpdateChannelField(\''+ck+'\',\'resistance\',this.value)"></div>'+
+      '</div>'+
       '<div style="margin-bottom:12px"><label class="o2-catatan-label">&#128221; Keterangan</label><textarea id="o2cat_reading_'+ck+'" rows="2" class="o2-catatan-textarea" placeholder="Keterangan channel ini..."></textarea></div>'+
       '<div class="o2-photo-grid" style="grid-template-columns:1fr" id="o2PhotoWrap_reading_'+ck+'"></div>';
     grid.appendChild(card);
     document.getElementById('o2PhotoWrap_reading_'+ck).innerHTML = buildO2PhotoSlot('reading_'+ck,'evidence','Evidence','#2563eb');
-  });
-}
-
-function buildO2CellMeasGrid() {
-  var grid = document.getElementById('o2CellMeasGrid');
-  if (!grid || grid.children.length > 0) return;
-  O2_OUTLET_CHANNELS.forEach(function(c) {
-    var ck = 'och'+c.id;
-    var card = document.createElement('div');
-    card.className = 'o2-channel-card';
-    card.innerHTML =
-      '<div class="o2-channel-head-num o2chlabel-'+ck+'" style="margin-bottom:10px">'+o2ReadingsChannelCode(c.tag)+'</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">'+
-        '<div class="meta-field"><label>Voltage (mV)</label><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_voltage" oninput="o2UpdateChannelField(\''+ck+'\',\'voltage\',this.value)"></div>'+
-        '<div class="meta-field"><label>Temp (°C)</label><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_temperature" oninput="o2UpdateChannelField(\''+ck+'\',\'temperature\',this.value)"></div>'+
-        '<div class="meta-field"><label>Lifetime (mo)</label><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_lifetime" oninput="o2UpdateChannelField(\''+ck+'\',\'lifetime\',this.value)"></div>'+
-        '<div class="meta-field"><label>Resistance (Ω)</label><input type="number" inputmode="decimal" step="any" id="o2fld_'+ck+'_resistance" oninput="o2UpdateChannelField(\''+ck+'\',\'resistance\',this.value)"></div>'+
-      '</div>';
-    grid.appendChild(card);
   });
 }
 
@@ -1745,13 +1669,10 @@ function o2UpdateAssetFromChannels() {
   if (descEl) descEl.value = descs.join('\n');
 }
 
-/* Label channel (kode tag) dipakai di Section 2/3 -- disinkronkan ulang
-   setiap kali tag di Section "Channel Tags" diedit. */
 function o2RefreshChannelLabels() {
   O2_OUTLET_CHANNELS.forEach(function(c){
     var ck = 'och'+c.id;
-    var code = o2ReadingsChannelCode(o2ChannelTag(c.id));
-    document.querySelectorAll('.o2chlabel-'+ck).forEach(function(el){ el.textContent = code; });
+    document.querySelectorAll('.o2chlabel-'+ck).forEach(function(el){ el.textContent = o2ChLabel(c); });
   });
 }
 
@@ -1964,7 +1885,7 @@ function iePhotoDrawSize(entry, maxW, maxH) {
 /* ─── GENERATE PDF ─── */
 function downloadPdf(){
   o2SyncAllCaptions();
-  var totalImgs = 0;
+  var totalImgs = o2Images.pressure.evidence.length;
   O2_OUTLET_CHANNELS.forEach(function(c){ totalImgs += o2Images['reading_och'+c.id].evidence.length; });
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
@@ -2016,9 +1937,6 @@ function downloadPdf(){
       var assetDesc = document.getElementById('o2AssetDesc').value || '—';
       var workToBeDone = document.getElementById('o2WorkToBeDone').value || '—';
       var pic = document.getElementById('o2Pic').value || '—';
-      var tech1 = document.getElementById('o2Tech1').value || '—';
-      var tech2 = document.getElementById('o2Tech2').value || '—';
-      var tech3 = document.getElementById('o2Tech3').value || '—';
       var remarks = document.getElementById('o2Remarks').value || '—';
 
       // ─────── HALAMAN 1 ───────
@@ -2043,9 +1961,6 @@ function downloadPdf(){
         ['Dicetak', safe(nowStr)],
         ['Asset Description', safe(assetDesc)],
         ['Work To Be Done', safe(workToBeDone)],
-        ['Technician 1', safe(tech1)],
-        ['Technician 2', safe(tech2)],
-        ['Technician 3', safe(tech3)],
         ['Remarks', safe(remarks)]
       ];
 
@@ -2124,7 +2039,8 @@ function downloadPdf(){
       // Section 1: Calibration Gas Pressure (Session Level)
       var zeroBottlePressure = document.getElementById('o2ZeroBottlePressure').value;
       var zeroRegulatorPressure = document.getElementById('o2ZeroRegulatorPressure').value;
-      if (zeroBottlePressure || zeroRegulatorPressure) {
+      var pressCatatan = document.getElementById('o2PressCatatan').value;
+      if (zeroBottlePressure || zeroRegulatorPressure || pressCatatan || o2Images.pressure.evidence.length) {
         checkPage(16);
         secHeader('CALIBRATION GAS PRESSURE (SESSION LEVEL)');
         doc.autoTable({
@@ -2135,21 +2051,30 @@ function downloadPdf(){
           body: [[safe(zeroBottlePressure||'—'), safe(zeroRegulatorPressure||'—')]],
           willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
         });
-        y = doc.lastAutoTable.finalY + 8;
+        y = doc.lastAutoTable.finalY + 6;
+        printCatatan('Keterangan', pressCatatan);
+        printEvidenceGallery(o2Images.pressure.evidence.filter(imgFilter));
       }
 
-      // Section 2: O2 Reading (per channel, evidence & keterangan sendiri-sendiri)
-      var anyReading = O2_OUTLET_CHANNELS.some(function(c){ return o2ChannelData['och'+c.id].o2Reading || o2Images['reading_och'+c.id].evidence.length; });
-      if (anyReading) {
+      // Section 2: O2 Reading + Cell Measurements (digabung per channel, evidence & keterangan sendiri-sendiri)
+      var anyChannel = O2_OUTLET_CHANNELS.some(function(c){
+        var d = o2ChannelData['och'+c.id];
+        return d.o2Reading || d.voltage || d.temperature || d.lifetime || d.resistance || o2Images['reading_och'+c.id].evidence.length;
+      });
+      if (anyChannel) {
         checkPage(16);
-        secHeader('O2 READING');
+        secHeader('O2 READING & CELL MEASUREMENTS');
         doc.autoTable({
-          startY: y, theme: 'grid', styles: { fontSize: 7.5, cellPadding: 1.8, halign:'center' },
+          startY: y, theme: 'grid', styles: { fontSize: 7, cellPadding: 1.8, halign:'center' },
           margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
-          headStyles: { fillColor: [21,153,87], textColor:[255,255,255], fontStyle:'bold', fontSize:7.5 },
+          headStyles: { fillColor: [21,153,87], textColor:[255,255,255], fontStyle:'bold', fontSize:7 },
           columnStyles: { 0: { halign:'left', fontStyle:'bold' } },
-          head: [['Channel','O2 Reading (%)']],
-          body: O2_OUTLET_CHANNELS.map(function(c){ var v=o2ChannelData['och'+c.id].o2Reading; return [safe(o2ReadingsChannelCode(c.tag)), v?safe(v):'—']; }),
+          head: [['Channel','O2 Reading (%)','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ω)']],
+          body: O2_OUTLET_CHANNELS.map(function(c){
+            var d=o2ChannelData['och'+c.id];
+            var dash=function(v){return v?safe(v):'—';};
+            return [safe(o2ChLabel(c)), dash(d.o2Reading), dash(d.voltage), dash(d.temperature), dash(d.lifetime), dash(d.resistance)];
+          }),
           willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
         });
         y = doc.lastAutoTable.finalY + 6;
@@ -2164,7 +2089,7 @@ function downloadPdf(){
           doc.setFillColor(60, 90, 70);
           doc.rect(marginX, y, contentW, 7, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
-          doc.text('Channel '+c.id + '  |  ' + safe(o2ReadingsChannelCode(c.tag)), marginX+4, y+5);
+          doc.text(safe(o2ChLabel(c)), marginX+4, y+5);
           y += 10;
           printCatatan('Keterangan', catatan);
           printEvidenceGallery(evImgs);
@@ -2173,27 +2098,6 @@ function downloadPdf(){
           doc.line(marginX, y, marginX + contentW, y);
           y += 5;
         });
-      }
-
-      // Section 3: Cell Measurements (tanpa evidence/keterangan)
-      var anyCellMeas = O2_OUTLET_CHANNELS.some(function(c){ var d=o2ChannelData['och'+c.id]; return d.voltage||d.temperature||d.lifetime||d.resistance; });
-      if (anyCellMeas) {
-        checkPage(16);
-        secHeader('CELL MEASUREMENTS');
-        doc.autoTable({
-          startY: y, theme: 'grid', styles: { fontSize: 7, cellPadding: 1.8, halign:'center' },
-          margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
-          headStyles: { fillColor: [21,153,87], textColor:[255,255,255], fontStyle:'bold', fontSize:7 },
-          columnStyles: { 0: { halign:'left', fontStyle:'bold' } },
-          head: [['Channel','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ω)']],
-          body: O2_OUTLET_CHANNELS.map(function(c){
-            var d=o2ChannelData['och'+c.id];
-            var dash=function(v){return v?safe(v):'—';};
-            return [safe(o2ReadingsChannelCode(c.tag)), dash(d.voltage), dash(d.temperature), dash(d.lifetime), dash(d.resistance)];
-          }),
-          willDrawPage: function(d){ if (d.pageNumber>1) drawBg(doc, pw, ph); }
-        });
-        y = doc.lastAutoTable.finalY + 8;
       }
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
@@ -2210,6 +2114,7 @@ function downloadPdf(){
 }
 
 function o2SyncAllCaptions() {
+  o2SyncCaptions('pressure', 'evidence');
   O2_OUTLET_CHANNELS.forEach(function(c){ o2SyncCaptions('reading_och'+c.id, 'evidence'); });
 }
 
@@ -2226,13 +2131,10 @@ function dbCollectData(modul) {
     asset: document.getElementById('o2Asset').value || '—',
     assetDesc: document.getElementById('o2AssetDesc').value || '—',
     workToBeDone: document.getElementById('o2WorkToBeDone').value || '—',
-    frequency: o2SelectedFreq.slice(),
     pic: document.getElementById('o2Pic').value || '—',
-    technician1: document.getElementById('o2Tech1').value || '',
-    technician2: document.getElementById('o2Tech2').value || '',
-    technician3: document.getElementById('o2Tech3').value || '',
     zeroBottlePressure: document.getElementById('o2ZeroBottlePressure').value || '',
     zeroRegulatorPressure: document.getElementById('o2ZeroRegulatorPressure').value || '',
+    pressureCatatan: document.getElementById('o2PressCatatan').value || '',
     remarks: document.getElementById('o2Remarks').value || ''
   };
   o2SyncAllCaptions();
@@ -2244,14 +2146,13 @@ function dbCollectData(modul) {
     return o;
   };
   var channels = {};
-  var images = {};
+  var images = { pressure: { evidence: o2Images.pressure.evidence.map(ki) } };
   O2_OUTLET_CHANNELS.forEach(function(c){
     var ck = 'och'+c.id;
-    var tagEl = document.getElementById('o2tag_'+ck);
     var catEl = document.getElementById('o2cat_reading_'+ck);
     var d = o2ChannelData[ck];
     channels[ck] = {
-      tag: tagEl ? tagEl.value||'' : '',
+      tag: c.tag,
       o2Reading: d.o2Reading,
       readingCatatan: catEl ? catEl.value||'' : '',
       voltage: d.voltage,
@@ -2295,15 +2196,11 @@ function applyRecordToForm(rec, editingId) {
   if (woEl && woVal && woVal !== '—') woEl.value = woVal;
   var asEl = document.getElementById('o2Asset'); if (asEl && header.asset && header.asset !== '—') asEl.value = header.asset;
   var adEl = document.getElementById('o2AssetDesc'); if (adEl && header.assetDesc && header.assetDesc !== '—') adEl.value = header.assetDesc;
-  o2SetSelectedFreq(header.frequency || []);
-  var wdEl = document.getElementById('o2WorkToBeDone'); if (wdEl && header.workToBeDone && header.workToBeDone !== '—') wdEl.value = header.workToBeDone;
   var pcEl = document.getElementById('o2Pic'); var picVal = rec.pic || header.pic || '';
   if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
-  var t1El = document.getElementById('o2Tech1'); if (t1El && header.technician1) t1El.value = header.technician1;
-  var t2El = document.getElementById('o2Tech2'); if (t2El && header.technician2) t2El.value = header.technician2;
-  var t3El = document.getElementById('o2Tech3'); if (t3El && header.technician3) t3El.value = header.technician3;
   var zbEl = document.getElementById('o2ZeroBottlePressure'); if (zbEl && header.zeroBottlePressure) zbEl.value = header.zeroBottlePressure;
   var zrEl = document.getElementById('o2ZeroRegulatorPressure'); if (zrEl && header.zeroRegulatorPressure) zrEl.value = header.zeroRegulatorPressure;
+  var pcEl2 = document.getElementById('o2PressCatatan'); if (pcEl2 && header.pressureCatatan) pcEl2.value = header.pressureCatatan;
   var rmEl = document.getElementById('o2Remarks'); if (rmEl && header.remarks) rmEl.value = header.remarks;
 
   if (data.channels) {
@@ -2311,7 +2208,6 @@ function applyRecordToForm(rec, editingId) {
       var ck = 'och'+c.id;
       var chData = data.channels[ck];
       if (!chData) return;
-      var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = chData.tag || c.tag || '';
       var catEl = document.getElementById('o2cat_reading_'+ck); if (catEl) catEl.value = chData.readingCatatan || '';
       o2ChannelData[ck] = o2EmptyChannelData();
       ['o2Reading','voltage','temperature','lifetime','resistance'].forEach(function(field){
@@ -2352,21 +2248,14 @@ function resetAll() {
   if (!confirm('Reset semua isian form? Data yang belum disimpan akan hilang.')) return;
   document.getElementById('o2Workorder').value = '';
   document.getElementById('o2Tanggal').value = '';
-  document.getElementById('o2Asset').value = '';
-  document.getElementById('o2AssetDesc').value = '';
-  document.getElementById('o2WorkToBeDone').value = '';
-  o2SetSelectedFreq([]);
   document.getElementById('o2Pic').value = '';
-  document.getElementById('o2Tech1').value = '';
-  document.getElementById('o2Tech2').value = '';
-  document.getElementById('o2Tech3').value = '';
   document.getElementById('o2ZeroBottlePressure').value = '';
   document.getElementById('o2ZeroRegulatorPressure').value = '';
+  document.getElementById('o2PressCatatan').value = '';
   document.getElementById('o2Remarks').value = '';
 
   O2_OUTLET_CHANNELS.forEach(function(c){
     var ck = 'och'+c.id;
-    var tagEl = document.getElementById('o2tag_'+ck); if (tagEl) tagEl.value = c.tag || '';
     var catEl = document.getElementById('o2cat_reading_'+ck); if (catEl) catEl.value = '';
     o2ChannelData[ck] = o2EmptyChannelData();
     ['o2Reading','voltage','temperature','lifetime','resistance'].forEach(function(field){
@@ -2377,8 +2266,15 @@ function resetAll() {
     var pv = document.getElementById(uid+'_preview'); if (pv) pv.innerHTML = '';
     var sz = document.getElementById(uid+'_size'); if (sz) sz.textContent = '0 KB / 1024 KB';
   });
+  o2Images.pressure = {evidence:[]};
+  (function(){
+    var uid = 'o2_pressure_evidence';
+    var pv = document.getElementById(uid+'_preview'); if (pv) pv.innerHTML = '';
+    var sz = document.getElementById(uid+'_size'); if (sz) sz.textContent = '0 KB / 1024 KB';
+  })();
   o2RefreshChannelLabels();
   o2UpdateAssetFromChannels();
+  document.getElementById('o2WorkToBeDone').value = O2_WORK_TO_BE_DONE;
   window._editingId = null;
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
@@ -2396,14 +2292,14 @@ function resetAll() {
 
 /* ── INIT ── */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
-buildO2TagGrid();
-buildO2ReadingTable();
-buildO2ReadingEvidenceGrid();
-buildO2CellMeasGrid();
-o2BuildFreqChips();
+document.getElementById('o2PressPhotoWrap').innerHTML = buildO2PhotoSlot('pressure','evidence','Evidence','#2563eb');
+buildO2ChannelCards();
+o2UpdateAssetFromChannels();
+document.getElementById('o2WorkToBeDone').value = O2_WORK_TO_BE_DONE;
 initO2Background();
 renderPresetButtons();
 initCropDrag();
+pmNumpadInit();
 (function(){
   var today=new Date();
   var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');

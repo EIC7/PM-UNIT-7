@@ -3143,3 +3143,109 @@ function raRenderSessionWidget(profile) {
 // Fungsi ini & fungsi raXxx pendukungnya TETAP dipakai oleh raRequireLogin
 // (modal login khusus di alur Submit Laporan checker/SPV, terpisah dari
 // gerbang situs), jadi sengaja tidak dihapus.
+
+/* ══════════════════════════════════════════════════════════════════════════
+   NUMPAD CUSTOM -- pengganti keypad angka bawaan HP yang tidak punya tombol
+   minus (lihat CLAUDE.md "Numpad custom dengan tombol minus", 2026-08-30).
+   Keyboard OS tidak bisa diubah dari kode web, jadi field yang butuh input
+   negatif dibuat readonly + dibukakan bottom-sheet keypad buatan sendiri ini.
+   Cara pakai di file modul: kasih input class="pm-num-input" readonly
+   inputmode="none" (oninput= bawaan tetap jalan, event 'input' di-dispatch
+   manual di sini), lalu panggil pmNumpadInit() sekali saat load halaman.
+   Urutan tombol "Next" mengikuti urutan DOM elemen .pm-num-input yang
+   sedang terlihat (offsetParent !== null) -- otomatis skip yang tersembunyi.
+   ══════════════════════════════════════════════════════════════════════════ */
+var pmNumpadActiveEl = null;
+
+function pmNumpadInit() {
+  if (document.getElementById('pmNumpad')) return; // idempotent
+  var backdrop = document.createElement('div');
+  backdrop.id = 'pmNumpadBackdrop';
+  backdrop.onclick = pmNumpadClose;
+  document.body.appendChild(backdrop);
+
+  var pad = document.createElement('div');
+  pad.id = 'pmNumpad';
+  pad.innerHTML =
+    '<div class="pm-numpad-hint" id="pmNumpadHint">Next &rarr; pindah ke kolom berikutnya</div>' +
+    '<div class="pm-numpad-grid">' +
+      '<button type="button" onclick="pmNumpadPress(\'1\')">1</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'2\')">2</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'3\')">3</button>' +
+      '<button type="button" class="pm-op" onclick="pmNumpadPress(\'back\')">&#9003;</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'4\')">4</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'5\')">5</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'6\')">6</button>' +
+      '<button type="button" class="pm-op" id="pmNumpadNext" onclick="pmNumpadPress(\'next\')">Next &rarr;</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'7\')">7</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'8\')">8</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'9\')">9</button>' +
+      '<button type="button" onclick="pmNumpadPress(\'.\')">.</button>' +
+      '<button type="button" class="pm-empty" tabindex="-1"></button>' +
+      '<button type="button" onclick="pmNumpadPress(\'0\')">0</button>' +
+      '<button type="button" class="pm-empty" tabindex="-1"></button>' +
+      '<button type="button" class="pm-minus" onclick="pmNumpadPress(\'-\')">&minus;</button>' +
+    '</div>';
+  document.body.appendChild(pad);
+
+  document.addEventListener('click', function(e) {
+    var t = e.target.closest ? e.target.closest('.pm-num-input') : null;
+    if (t) { pmNumpadOpen(t); }
+  });
+}
+
+function pmNumpadFieldList() {
+  return Array.prototype.slice.call(document.querySelectorAll('.pm-num-input')).filter(function(el) {
+    return el.offsetParent !== null;
+  });
+}
+
+function pmNumpadUpdateNextLabel() {
+  var list = pmNumpadFieldList();
+  var idx = list.indexOf(pmNumpadActiveEl);
+  var isLast = idx === -1 || idx === list.length - 1;
+  var btn = document.getElementById('pmNumpadNext');
+  var hint = document.getElementById('pmNumpadHint');
+  if (btn) btn.textContent = isLast ? '✓ Selesai' : 'Next →';
+  if (hint) hint.textContent = isLast ? 'Kolom terakhir — tekan ✓ untuk selesai' : 'Next → pindah ke kolom berikutnya';
+}
+
+function pmNumpadOpen(el) {
+  pmNumpadActiveEl = el;
+  document.querySelectorAll('.pm-num-input').forEach(function(i) {
+    i.classList.toggle('pm-num-active', i === el);
+  });
+  document.getElementById('pmNumpad').classList.add('open');
+  document.getElementById('pmNumpadBackdrop').classList.add('open');
+  pmNumpadUpdateNextLabel();
+}
+
+function pmNumpadClose() {
+  if (!pmNumpadActiveEl) return;
+  document.getElementById('pmNumpad').classList.remove('open');
+  document.getElementById('pmNumpadBackdrop').classList.remove('open');
+  document.querySelectorAll('.pm-num-input').forEach(function(i) { i.classList.remove('pm-num-active'); });
+  pmNumpadActiveEl = null;
+}
+
+function pmNumpadPress(k) {
+  if (!pmNumpadActiveEl) return;
+  var v = pmNumpadActiveEl.value || '';
+  if (k === 'back') {
+    v = v.slice(0, -1);
+  } else if (k === 'next') {
+    var list = pmNumpadFieldList();
+    var idx = list.indexOf(pmNumpadActiveEl);
+    if (idx === -1 || idx === list.length - 1) { pmNumpadClose(); return; }
+    pmNumpadOpen(list[idx + 1]);
+    return;
+  } else if (k === '-') {
+    v = v.charAt(0) === '-' ? v.slice(1) : ('-' + v);
+  } else if (k === '.') {
+    if (v.indexOf('.') === -1) v += (v === '' || v === '-') ? '0.' : '.';
+  } else {
+    v += k;
+  }
+  pmNumpadActiveEl.value = v;
+  pmNumpadActiveEl.dispatchEvent(new Event('input', { bubbles: true }));
+}
