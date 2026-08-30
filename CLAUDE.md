@@ -777,3 +777,43 @@ Supabase sebagai backend, jsPDF untuk export PDF).
     baru "tidak baca data" padahal user yakin datanya ada, WAJIB curigai kemungkinan ini
     duluan — cek `dbCollectData()` sumbernya SECARA LENGKAP (cari semua ID field yang
     mirip/reused), jangan cuma percaya 1 lokasi yang paling jelas kelihatan.
+
+## CEMS Y-max CO Span jadi 800 + Belt Scale dipecah jadi 3 tab trend (2026-08-30)
+
+- `trend/config/default-tags-cems.js`: tag `CEMS-CO-SPAN1` (CO Span1) `engineeringHigh`/
+  `max`/`chartMax` diturunkan dari `1000`/`1000`/`1100` jadi **`800`/`800`/`800`** — user
+  konfirmasi cuma tag ini yang dimaksud (bukan seluruh 10 tag CEMS, yang rentang alaminya
+  jauh beda-beda: SO2/NOx 0-500, CO2 0-20, O2 0-25 — dipaksa 800 semua bakal bikin
+  sebagian besar flat/tak terbaca). `?v=` `default-tags-cems.js` naik ke `20260830a`.
+- **Ketiga modul Belt Scale (B1-B2, E2-E3, E4-E5) dipecah dari 1 tab (2 tag campur banyak
+  series) jadi 3 TAB TERPISAH** ("Error Zero", "Beltscale A Value", "Beltscale B Value") —
+  pola SAMA PERSIS dengan FEGT+LD (1 adapter dipakai bersama beberapa `DCS_MODULES` entry,
+  tiap entry cuma nunjuk subset `tagIds`-nya sendiri, `module-view.js`'s `getModules()`
+  otomatis me-render SATU tab per entry `DCS_MODULES` — generik, TIDAK disentuh). Konsekuensi
+  langsung: tiap adapter & default-tags file dipecah dari 2 tag jadi **4 tag sempit**
+  (1 tag = 1 series-group per tab, BUKAN 1 tag = 1 titik fisik seperti sebelumnya) supaya
+  TAG LIST tiap tab cuma nampilin yang relevan ke tab itu, bukan semua series campur.
+  - **E4-E5** (sumber field paling sederhana, cuma 3 series total): tag baru
+    `BELTSCALE-E45-{A,B}-ERRORZERO` (series: ErrorZeroCal) & `BELTSCALE-E45-{A,B}-VALUE`
+    (series: NewZeroChange, OldZeroChange). Modul `BELT_E45_ERRORZERO`/`_A_VALUE`/`_B_VALUE`.
+  - **B1-B2** (11 series/tag sebelumnya): tag baru `BELTB12-{A,B}-ERRORZERO` (series:
+    ZeroCalibration [Monthly] + ZeroError [3-Monthly]) & `BELTB12-{A,B}-VALUE` (series:
+    SpanError + 8 diagnostik: DiagLoadZero/Span, PulsePass1-3, PulsePerMeter,
+    ZeroCheckUnloaded, TestLoadCheck). Modul `BELT_B12_ERRORZERO`/`_A_VALUE`/`_B_VALUE`.
+  - **E2-E3** (11 series/tag sebelumnya, penamaan field beda dari B1-B2 walau konsepnya
+    sama): tag baru `CCH-SCAL-200{A,B}-ERRORZERO` (series: ZeroError + QuickZeroCheck,
+    label "Error Zero Calibration (%)" — ekuivalen `ZeroCalibration` di B1-B2, cuma nama
+    field-nya beda) & `CCH-SCAL-200{A,B}-VALUE` (series: SpanError + 8 diagnostik:
+    LoadZero/Span, Pass1-3, AvgPulseLength, ZeroCheckUnloaded, TestLoadCheck). Modul
+    `BELT_E23_ERRORZERO`/`_A_VALUE`/`_B_VALUE`.
+  - ⚠️ **B1-B2/E2-E3 TIDAK PUNYA field "old zero"/"new zero" sama sekali** — sudah dicek
+    langsung ke source (`grep -i "old zero\|new zero"` cuma nyantol di `beltscale-e45.html`,
+    nihil di 2 file lain) — pemetaan "Error Zero = 2 series zero; A/B Value = sisanya"
+    di atas untuk B1-B2/E2-E3 adalah HASIL KONFIRMASI EKSPLISIT user (bukan tebakan),
+    karena field aslinya memang beda struktur dari E4-E5 — jangan disamakan lagi ke "old
+    zero/new zero" literal kalau nanti direvisi ulang, itu cuma ada di E4-E5.
+  - `?v=` config/adapter/tags file di atas dinaikkan ke `20260830b` di ketiga
+    `trend_beltscale-*.html`.
+  - Hub `index_trend.html`: 3 kartu Belt Scale diupdate jadi "4 tag · 3 tab" (dari "2 tag"),
+    deskripsi disesuaikan. `.hub-stats` total tag naik dari 98 jadi **104**
+    (net +6: 2→4 tag × 3 modul).

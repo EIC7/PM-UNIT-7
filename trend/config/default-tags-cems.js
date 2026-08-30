@@ -119,7 +119,7 @@ window.DCS_DEFAULT_TAGS = [
     name: 'CEMS CO Span1',
     description: 'CO Span1 -- pembacaan CEMS (Actual) vs reference gas kalibrasi (Expected), semua kejadian kalibrasi',
     unit: 'ppm',
-    engineeringLow: 0, engineeringHigh: 1000, min: 0, max: 1000, chartMax: 1100,
+    engineeringLow: 0, engineeringHigh: 800, min: 0, max: 800, chartMax: 800,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
     visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'CEMS Calibration', updateInterval: null,

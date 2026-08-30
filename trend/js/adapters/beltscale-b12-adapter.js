@@ -8,9 +8,17 @@
  * Struktur data di record (lihat beltscale-b12.html, dbCollectData()):
  *   data.checks['6a'] = {a, b}                -- Monthly, Error Zero Calibration (%)
  *   data.threeMonthlyValues['bs3m<A|B>_<n>']   -- 3 Monthly, angka mentah string
- * 2 titik ukur = 2 tag: A = CCH-SCAL-100A (Conveyor 100A), B = CCH-SCAL-100B
+ * 2 titik ukur: A = CCH-SCAL-100A (Conveyor 100A), B = CCH-SCAL-100B
  * (Conveyor 100B) — kode/nama diambil dari BS_CFG di beltscale-b12.html.
- * Tidak ada pasangan before/after alami (semua bacaan independen), jadi
+ *
+ * 2026-08-30: dipecah dari 2 tag (A/B, tiap tag 11 series campur) jadi 4 tag
+ * SEMPIT supaya bisa dikelompokkan jadi 3 tab trend terpisah lewat
+ * config/modules/beltscale-b12.config.js:
+ *   - "Error Zero": ZeroCalibration (Monthly) + ZeroError (3-Monthly)
+ *   - "Beltscale A/B Value": SpanError + 8 series diagnostik lain
+ *     (DiagLoadZero/Span, PulsePass1-3, PulsePerMeter, ZeroCheckUnloaded,
+ *     TestLoadCheck), per sisi.
+ * Tidak ada pasangan before/after alami, jadi
  * config/modules/beltscale-b12.config.js sengaja deviationPairs:[] (kosong).
  * ==========================================================================
  */
@@ -22,13 +30,6 @@
     var n = Number(v);
     return isNaN(n) ? null : n;
   }
-
-  var SERIES_KEYS = [
-    'ZeroCalibration', 'ZeroError', 'SpanError',
-    'DiagLoadZero', 'DiagLoadSpan',
-    'PulsePass1', 'PulsePass2', 'PulsePass3', 'PulsePerMeter',
-    'ZeroCheckUnloaded', 'TestLoadCheck'
-  ];
 
   // key -> [threeMonthlyValues suffix] (null = ambil dari data.checks['6a'] bukan threeMonthlyValues)
   var TM_FIELD_MAP = {
@@ -45,17 +46,22 @@
     TestLoadCheck: '7'
   };
 
-  var POINTS = [
-    { id: 'BELTB12-A', side: 'a' },
-    { id: 'BELTB12-B', side: 'b' }
-  ];
+  var SERIES_KEYS = Object.keys(TM_FIELD_MAP);
+
+  // tag ID sempit -> {side, seriesKeys yang masuk tag itu}
+  var TAG_MAP = {
+    'BELTB12-A-ERRORZERO': { side: 'a', series: ['ZeroCalibration', 'ZeroError'] },
+    'BELTB12-B-ERRORZERO': { side: 'b', series: ['ZeroCalibration', 'ZeroError'] },
+    'BELTB12-A-VALUE':     { side: 'a', series: ['SpanError', 'DiagLoadZero', 'DiagLoadSpan', 'PulsePass1', 'PulsePass2', 'PulsePass3', 'PulsePerMeter', 'ZeroCheckUnloaded', 'TestLoadCheck'] },
+    'BELTB12-B-VALUE':     { side: 'b', series: ['SpanError', 'DiagLoadZero', 'DiagLoadSpan', 'PulsePass1', 'PulsePass2', 'PulsePass3', 'PulsePerMeter', 'ZeroCheckUnloaded', 'TestLoadCheck'] }
+  };
 
   function makeEmptyResult() {
     var result = {};
-    POINTS.forEach(function (p) {
+    Object.keys(TAG_MAP).forEach(function (tagId) {
       var obj = {};
-      SERIES_KEYS.forEach(function (k) { obj[k] = []; });
-      result[p.id] = obj;
+      TAG_MAP[tagId].series.forEach(function (k) { obj[k] = []; });
+      result[tagId] = obj;
     });
     return result;
   }
@@ -70,14 +76,15 @@
       var zeroCal = (data.checks && data.checks['6a']) || {};
       var tmVals = data.threeMonthlyValues || {};
 
-      POINTS.forEach(function (p) {
-        SERIES_KEYS.forEach(function (sk) {
+      Object.keys(TAG_MAP).forEach(function (tagId) {
+        var cfg = TAG_MAP[tagId];
+        cfg.series.forEach(function (sk) {
           var suffix = TM_FIELD_MAP[sk];
           var raw = suffix === null
-            ? zeroCal[p.side]
-            : tmVals['bs3m' + p.side.toUpperCase() + '_' + suffix];
+            ? zeroCal[cfg.side]
+            : tmVals['bs3m' + cfg.side.toUpperCase() + '_' + suffix];
           var val = toNum(raw);
-          if (val !== null) result[p.id][sk].push({ time: t, value: val, recordId: r.id, pic: r.pic });
+          if (val !== null) result[tagId][sk].push({ time: t, value: val, recordId: r.id, pic: r.pic });
         });
       });
     });

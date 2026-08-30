@@ -13,6 +13,14 @@
  * side 'a' = Conveyor E-4 (tag CCH-SCAL-800A, Panel E4), side 'b' =
  * Conveyor E-5 (tag CCH-SCAL-800B, Panel E5) — lihat objek BS_KEY di
  * source (a:{code:'CCH-SCAL-800A',name:'CONVEYOR E-4'}, b:{code:'CCH-SCAL-800B',...}).
+ *
+ * 2026-08-30: dipecah dari 2 tag (A/B, tiap tag 3 series campur) jadi 4 tag
+ * SEMPIT (A-ERRORZERO/B-ERRORZERO/A-VALUE/B-VALUE) supaya bisa dikelompokkan
+ * jadi 3 tab trend terpisah ("Error Zero", "Beltscale A Value", "Beltscale
+ * B Value" — lihat config/modules/beltscale-e45.config.js) — pola yang sama
+ * dipakai FEGT+LD (1 adapter, banyak DCS_MODULES entry berbagi pool tag yang
+ * sama). Nilai mentah & field mapping TIDAK berubah, cuma dipetakan ke tag
+ * ID yang lebih sempit.
  * ==========================================================================
  */
 (function () {
@@ -26,26 +34,34 @@
     return isNaN(n) ? null : n;
   }
 
-  var SERIES_KEYS = ['ErrorZeroCal', 'NewZeroChange', 'OldZeroChange'];
   var FIELD_IDX = { ErrorZeroCal: '6', NewZeroChange: '7', OldZeroChange: '8' };
-  var SIDE_MAP = { 'BELTSCALE-E45-A': 'a', 'BELTSCALE-E45-B': 'b' };
+  // tag ID sempit -> {side, seriesKeys yang masuk tag itu}
+  var TAG_MAP = {
+    'BELTSCALE-E45-A-ERRORZERO': { side: 'a', series: ['ErrorZeroCal'] },
+    'BELTSCALE-E45-B-ERRORZERO': { side: 'b', series: ['ErrorZeroCal'] },
+    'BELTSCALE-E45-A-VALUE':     { side: 'a', series: ['NewZeroChange', 'OldZeroChange'] },
+    'BELTSCALE-E45-B-VALUE':     { side: 'b', series: ['NewZeroChange', 'OldZeroChange'] }
+  };
+  var SERIES_KEYS = ['ErrorZeroCal', 'NewZeroChange', 'OldZeroChange'];
 
   function parseRecords(rows) {
-    var result = {
-      'BELTSCALE-E45-A': { ErrorZeroCal: [], NewZeroChange: [], OldZeroChange: [] },
-      'BELTSCALE-E45-B': { ErrorZeroCal: [], NewZeroChange: [], OldZeroChange: [] }
-    };
+    var result = {};
+    Object.keys(TAG_MAP).forEach(function (tagId) {
+      var obj = {};
+      TAG_MAP[tagId].series.forEach(function (sk) { obj[sk] = []; });
+      result[tagId] = obj;
+    });
 
     (rows || []).forEach(function (r) {
       var checks = (r.data && r.data.checks) || {};
       var t = window.SupabaseAdapter.recordTimestamp(r);
       if (t === null) return;
 
-      Object.keys(SIDE_MAP).forEach(function (tagId) {
-        var side = SIDE_MAP[tagId];
-        SERIES_KEYS.forEach(function (sk) {
+      Object.keys(TAG_MAP).forEach(function (tagId) {
+        var cfg = TAG_MAP[tagId];
+        cfg.series.forEach(function (sk) {
           var entry = checks[FIELD_IDX[sk]];
-          var raw = entry ? entry[side] : null;
+          var raw = entry ? entry[cfg.side] : null;
           var val = toNumber(raw);
           if (val !== null) {
             result[tagId][sk].push({ time: t, value: val, recordId: r.id, pic: r.pic });
