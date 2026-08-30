@@ -41,10 +41,10 @@ O2_OUTLET_CHANNELS.forEach(function (c, idx) {
     source: 'supabase:pm_records', sourceModul: 'PM_O2_WEEKLY_OUTLET', updateInterval: null,
     series: [
       { key: 'O2Reading',   label: 'O2 Reading (%)',     color: color },
-      { key: 'Voltage',     label: 'Voltage (mV)',       color: '#7a8a99', defaultVisible: false },
-      { key: 'Temperature', label: 'Temperature (°C)',   color: '#99847a', defaultVisible: false },
-      { key: 'Lifetime',    label: 'Lifetime (mo)',      color: '#8a7a99', defaultVisible: false },
-      { key: 'Resistance',  label: 'Resistance (Ω)',     color: '#5a6b76', defaultVisible: false }
+      { key: 'Voltage',     label: 'Voltage (mV)',       color: '#3d5a70', defaultVisible: false },
+      { key: 'Temperature', label: 'Temperature (°C)',   color: '#7a5730', defaultVisible: false },
+      { key: 'Lifetime',    label: 'Lifetime (mo)',      color: '#5e4680', defaultVisible: false },
+      { key: 'Resistance',  label: 'Resistance (Ω)',     color: '#33505c', defaultVisible: false }
     ]
   });
 });

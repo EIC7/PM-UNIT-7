@@ -50,10 +50,10 @@ O2_INLET_CHANNELS.forEach(function (c, idx) {
     series: [
       { key: 'Before', label: 'Before Kalibrasi', color: pair[0] },
       { key: 'After',  label: 'After Kalibrasi',  color: pair[1] },
-      { key: 'CellVoltage',     label: 'Cell Voltage (mV)',    color: '#7a8a99', defaultVisible: false },
-      { key: 'CellTemperature', label: 'Cell Temperature (°C)', color: '#99847a', defaultVisible: false },
-      { key: 'CellLifetime',    label: 'Cell Lifetime (mo)',   color: '#8a7a99', defaultVisible: false },
-      { key: 'CellResistance',  label: 'Cell Resistance (Ω)',  color: '#5a6b76', defaultVisible: false }
+      { key: 'CellVoltage',     label: 'Cell Voltage (mV)',    color: '#3d5a70', defaultVisible: false },
+      { key: 'CellTemperature', label: 'Cell Temperature (°C)', color: '#7a5730', defaultVisible: false },
+      { key: 'CellLifetime',    label: 'Cell Lifetime (mo)',   color: '#5e4680', defaultVisible: false },
+      { key: 'CellResistance',  label: 'Cell Resistance (Ω)',  color: '#33505c', defaultVisible: false }
     ]
   });
 });
