@@ -817,3 +817,47 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   - Hub `index_trend.html`: 3 kartu Belt Scale diupdate jadi "4 tag · 3 tab" (dari "2 tag"),
     deskripsi disesuaikan. `.hub-stats` total tag naik dari 98 jadi **104**
     (net +6: 2→4 tag × 3 modul).
+
+## 🔴 BUG BESAR: data 4 bulan (Mei/Agustus/Oktober/Desember) hilang diam-diam dari SEMUA trend (2026-08-30)
+
+- User lapor trend FEGT berhenti di 29 Juli padahal data Agustus ada, minta diaudit modul
+  lain juga. **Ternyata bug SATU FUNGSI yang dipakai SEMUA 14 file adapter** (dikonfirmasi
+  `grep -L "recordTimestamp" *.js` di `trend/js/adapters/` — kosong, semua 14 file pakai),
+  jadi mempengaruhi SELURUH modul trend, bukan cuma FEGT.
+- **Akar masalah**: `recordTimestamp(r)` di `trend/js/supabase-adapter.js` (fungsi TUNGGAL
+  tempat semua adapter mengubah `r.tanggal`/`updated_at`/`created_at` jadi angka waktu)
+  dulu langsung `new Date(r.tanggal).getTime()`. Field `tanggal` itu string Indonesia "DD
+  NamaBulan YYYY" (mis. "27 Agustus 2026") — parser bawaan JS (V8) TERNYATA punya
+  heuristik longgar yang cuma KEBETULAN cocok untuk 8 dari 12 nama bulan Indonesia yang
+  3-huruf awalnya sama dengan Inggris (Januari→Jan, Maret→Mar, April→Apr, Juni→Jun,
+  Juli→Jul, September→Sep, November→Nov, + Februari→Feb) — **TAPI GAGAL TOTAL (Invalid
+  Date/NaN) untuk 4 bulan yang prefix-nya BEDA dari Inggris**: **Mei** (May), **Agustus**
+  (August), **Oktober** (October), **Desember** (December). Dibuktikan langsung:
+  `new Date('15 Agustus 2026')` = Invalid Date, sementara `new Date('15 Juli 2026')` valid.
+- **Efek berantai**: `recordTimestamp()` return `null` untuk record apa pun dengan tanggal
+  kejadian di 4 bulan itu → `fetchByModulAndRange()` (`if (t === null) return false;`)
+  MEMBUANG baris itu SEPENUHNYA dari hasil query → record itu tidak pernah muncul di
+  chart, KPI (lastValue/daysSinceLastRecord), deviation panel, ATAU log table di MANA PUN
+  — **tanpa error atau warning yang kelihatan sama sekali**, kelihatannya cuma "trend
+  berhenti di titik terakhir yang kebetulan masih bulan yang valid" (persis yang dilaporkan
+  user: berhenti di 29 Juli, karena laporan Agustus berikutnya semua ke-drop diam-diam).
+  Ini SUDAH berlangsung sejak modul trend pertama dibuat (bukan regresi baru) — baru
+  ketahuan sekarang karena baru masuk musim bulan-bulan yang kena bug (Agustus 2026).
+- **Fix**: `recordTimestamp()` sekarang parse manual format "DD NamaBulan YYYY" pakai peta
+  eksplisit nama bulan Indonesia → index bulan (`ID_MONTHS`), BUKAN mengandalkan heuristik
+  `Date()` bawaan sama sekali untuk field `tanggal` — baru fallback ke `new Date(raw)`
+  polos kalau formatnya BUKAN pola itu (mis. `updated_at`/`created_at` yang memang ISO
+  8601, parser bawaan aman dipakai untuk itu). Diverifikasi: ke-12 nama bulan Indonesia
+  (termasuk 4 yang tadinya Invalid Date) sekarang semua parse benar, fallback ISO tetap
+  jalan normal.
+  - `?v=` `supabase-adapter.js` dinaikkan ke `20260830a` di SEMUA 14 halaman
+    `trend_*.html` (bukan cuma FEGT — file ini dipakai bersama oleh semua modul).
+- **Kalau nambah adapter modul baru di masa depan**: JANGAN PERNAH parse `r.tanggal` (atau
+  field tanggal Indonesia manapun) pakai `new Date(string)` polos secara langsung di
+  adapter manapun — SELALU lewat `window.SupabaseAdapter.recordTimestamp(r)` yang sudah
+  benar.
+- Sudah dicek juga `shared.js`/`history.html` (`grep` untuk `new Date(` yang menyentuh
+  `.tanggal`) — **TIDAK ditemukan pola serupa di luar `trend/`**. Keduanya sort/tampilkan
+  riwayat pakai `updated_at`/`created_at` (ISO 8601 asli dari Supabase, bukan `tanggal`
+  string Indonesia) lewat `order=updated_at.desc` di query, jadi tidak kena bug bulan yang
+  sama. Bug ini murni terisolasi di sistem trend (`trend/js/supabase-adapter.js`).

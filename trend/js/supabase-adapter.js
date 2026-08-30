@@ -134,9 +134,41 @@
    * 1 titik waktu itu alih-alih tersebar sesuai tanggal aslinya. Fallback
    * ke updated_at/created_at cuma kalau `tanggal` kosong/tidak valid.
    */
+  // 2026-08-30: `tanggal` field-nya string Indonesia "DD NamaBulan YYYY"
+  // (mis. "27 Agustus 2026"), diisi manual oleh teknisi di form modul.
+  // recordTimestamp() DULU langsung `new Date(raw)` -- ternyata parser
+  // bawaan JS punya heuristik longgar yang cuma kebetulan COCOK untuk
+  // sebagian nama bulan Indonesia yang PREFIX 3-hurufnya sama dengan
+  // Inggris (Januari/Maret/April/Juni/Juli/September/November), TAPI GAGAL
+  // TOTAL (Invalid Date) untuk 4 bulan yang prefix-nya BEDA: Mei (May),
+  // **Agustus (August)**, Oktober (October), Desember (December) --
+  // dibuktikan langsung: `new Date('15 Agustus 2026')` = Invalid Date.
+  // Efeknya SEMUA record dengan tanggal kejadian di 4 bulan itu diam-diam
+  // di-drop dari SEMUA trend module (recordTimestamp null -> baris
+  // dianggap tidak punya waktu -> difilter habis di fetchByModulAndRange),
+  // TANPA error kelihatan sama sekali -- baru ketahuan user lihat langsung
+  // trend FEGT berhenti di 29 Juli walau data Agustus ada. Fix: parse
+  // "DD NamaBulan YYYY" manual pakai peta nama bulan Indonesia -> index,
+  // BUKAN mengandalkan heuristik Date() bawaan sama sekali untuk field ini.
+  var ID_MONTHS = {
+    januari: 0, februari: 1, maret: 2, april: 3, mei: 4, juni: 5,
+    juli: 6, agustus: 7, september: 8, oktober: 9, november: 10, desember: 11
+  };
+  function parseIndonesianDate(s) {
+    var m = /^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/.exec(String(s).trim());
+    if (!m) return null;
+    var month = ID_MONTHS[m[2].toLowerCase()];
+    if (month === undefined) return null;
+    var d = new Date(Number(m[3]), month, Number(m[1]));
+    return isNaN(d.getTime()) ? null : d.getTime();
+  }
   function recordTimestamp(r) {
     var raw = r.tanggal || r.updated_at || r.created_at;
     if (!raw) return null;
+    var idParsed = parseIndonesianDate(raw);
+    if (idParsed !== null) return idParsed;
+    // Fallback: raw bukan format "DD NamaBulan YYYY" (mis. updated_at/
+    // created_at ISO 8601) -- parser bawaan aman dipakai untuk format itu.
     var t = new Date(raw).getTime();
     return isNaN(t) ? null : t;
   }
