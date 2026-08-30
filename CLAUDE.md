@@ -433,3 +433,45 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   → label `'🔁 Direvisi & Disubmit Ulang'`. **Ini status SINTETIS, bukan nilai asli
   Firestore** — kalau baca ulang fungsi ini di masa depan dan bingung kenapa ada case
   yang "tidak match status Firestore mana pun", ingat ini alasannya.
+
+## Investigasi egress Supabase & `payload_size` yang bisa BASI (2026-08-30)
+
+- Sempat dicurigai 6-8 draft (`pm_records.status='draft'`) raksasa (`payload_size` tercatat
+  sampai 20MB) jadi penyebab overage egress bulanan (5GB limit, kepakai 6.06GB) — **investigasi
+  lebih lanjut membuktikan ini SALAH**. Dicek langsung: ukuran `data` SEBENARNYA record-record
+  itu cuma 1-25KB, jauh dari angka `payload_size` yang tercatat. **Kolom `payload_size` bisa
+  BASI/tidak mencerminkan ukuran `data` yang sebenarnya sekarang** — kemungkinan pernah kena
+  jalur simpan yang meng-update `data` tanpa ikut menghitung ulang `payload_size` (dicurigai
+  `raResaveInPlace()`, yang PATCH body-nya sengaja TIDAK menyertakan `payload_size` — lihat
+  fungsi itu di `shared.js`). **Jangan pernah percaya `payload_size` sebagai indikator "record
+  ini masih besar" tanpa verifikasi ulang** (`Buffer.byteLength(JSON.stringify(data))`) — kalau
+  butuh cek ukuran data sungguhan, selalu hitung ulang dari `data` mentahnya, bukan baca kolom
+  ini langsung. Penyebab PASTI lonjakan egress 27-29 Agustus tidak pernah ditemukan — log API
+  Supabase paket Free cuma retensi pendek (~24 jam terlihat di dashboard saat dicek 30 Agustus,
+  data tanggal 27-29 sudah tidak ada lagi).
+
+## Jaring pengaman retry upload Drive untuk draft (2026-08-30)
+
+- `scripts/retry-drive-upload.js` + `.github/workflows/retry-drive-upload.yml` (cron tiap jam,
+  menit :17) — **bukan buat masalah yang sudah ada sekarang** (lihat poin di atas, terbukti
+  belum ada), murni **pencegahan ke depan**: kalau suatu saat ada draft yang foto-fotonya gagal
+  ke Google Drive (skenario `dbSaveSilent()` yang sengaja tidak menolak simpan kalau upload
+  gagal, lihat catatan panjang di `_pmEnsureAllPhotosOnDrive`/`shared.js`), job ini otomatis
+  scan & retry tanpa perlu ada yang buka aplikasi ATAU Claude turun tangan manual lagi.
+- **Deteksi LANGSUNG scan isi `data`** (`collectPending()`, logika identik
+  `_pmEnsureAllPhotosOnDrive` di `shared.js` — cari `dataUrl` yang masih `'data:...'` TANPA
+  `driveUrl`), **SENGAJA TIDAK pakai kolom `payload_size` sebagai filter** — persis karena
+  kolom itu terbukti bisa basi (lihat poin di atas). Kalau nanti mau nambah filter/optimasi di
+  script ini, JANGAN balik pakai `payload_size` sebagai sinyal "perlu dicek", itu sudah
+  terbukti tidak reliable.
+- **Scope dibatasi**: cuma `status='draft'` yang di-update dalam 14 hari terakhir
+  (`RECENT_DAYS`), limit 50 record per jalan. Record `SUBMITTED` TIDAK di-scan di sini —
+  `dbSave()` sekarang sudah menolak simpan kalau upload Drive gagal (lihat riwayat perbaikan
+  lama), jadi record submitted baru seharusnya tidak pernah kena kasus ini lagi. Batasan scope
+  ini sengaja supaya job-nya sendiri tidak ikut boros egress (baca `data` penuh tiap record
+  yang di-scan makan bandwidth juga) — **kalau mau perluas ke SUBMITTED atau histori lebih
+  lama, pertimbangkan trade-off egress job-nya sendiri dulu.**
+- Endpoint upload SAMA PERSIS dengan yang dipakai browser (`GDRIVE_WEB_APP_URL` +
+  `GDRIVE_SECRET_TOKEN`, keduanya sudah publik di `shared.js` client-side, bukan secret
+  tersembunyi — BEDA dari `TELEGRAM_BOT_TOKEN` yang wajib GitHub Secret). Berhasil PATCH balik
+  juga otomatis membetulkan `payload_size` yang basi (dihitung ulang dari `data` final).

@@ -1,0 +1,22 @@
+name: Retry Drive Upload (Stuck Draft Photos)
+
+# Jaring pengaman: cek berkala apakah ada draft (pm_records.status='draft')
+# yang foto-fotonya masih base64 mentah (gagal ke Google Drive sebelumnya,
+# lihat catatan dbSaveSilent() di shared.js) -- kalau ketemu, retry upload
+# ke Drive lalu bersihkan base64-nya dari Supabase. Jalan independen, tidak
+# butuh siapa pun buka aplikasi. Lihat scripts/retry-drive-upload.js untuk
+# detail lengkap (kenapa perlu, batasan scope, dll).
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/retry-drive-upload.js
