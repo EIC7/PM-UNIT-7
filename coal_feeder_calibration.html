@@ -3228,6 +3228,7 @@ function applyRecordToForm(rec, editingId) {
   dbLoad(id, function(rec) {
     setTimeout(function(){
       applyRecordToForm(rec, id);
+      pmMaybeEnterRevisionMode(rec);
       dbShowToast('Data dimuat dari riwayat \u2713');
       if (doPrint) { ensureReportBackground(function(){ setTimeout(cfDownloadPdf,300); }); }
       if (doAutosubmit) { window._raBuildPdf = cfDownloadPdf; raSubmitReportAuto(); }

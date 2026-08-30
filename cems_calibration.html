@@ -2654,6 +2654,7 @@ setInterval(function(){ var el=document.getElementById('clock'); if(el) el.textC
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec);
+      pmMaybeEnterRevisionMode(rec);
       window._editingId = id;
       if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
       if (doPrint && typeof exportPdf === 'function') setTimeout(exportPdf, 300);

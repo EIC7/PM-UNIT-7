@@ -3644,6 +3644,7 @@ initCropDrag();
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec, id);
+      pmMaybeEnterRevisionMode(rec);
       window.fegtCurrentRecord = rec;
       dbShowToast('Data dimuat dari riwayat ✓');
       if(doPrint)setTimeout(function(){runDiagnosisAndPrint();},500);

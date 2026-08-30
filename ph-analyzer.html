@@ -2428,6 +2428,7 @@ function restoreDraftData(rec, editingId) {
   dbLoad(id,function(rec){
     setTimeout(function(){
       applyRecordToForm(rec, id);
+      pmMaybeEnterRevisionMode(rec);
       dbShowToast('Data dimuat dari riwayat ✓');
       if(doPrint){ ensureReportBackground(function(){ setTimeout(phDownloadPdf,300); }); }
       if(doAutosubmit){ window._raBuildPdf = phDownloadPdf; raSubmitReportAuto(); }

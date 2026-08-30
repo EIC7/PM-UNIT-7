@@ -131,14 +131,21 @@
     white-space: nowrap;
   }
 
-  .status-pill::before {
-    content: '';
+  /* Titik status -- dulu ::before (pseudo-element, tidak bisa disentuh JS),
+     sekarang elemen sungguhan .live-dot supaya pmCheckSupabaseHealth()
+     (shared.js) bisa update warnanya jadi status Supabase sungguhan. */
+  .status-pill .live-dot {
+    display: inline-block;
     width: 7px;
     height: 7px;
     border-radius: 50%;
     background: #22c55e;
     animation: pulse-green 2s ease-in-out infinite;
+    flex-shrink: 0;
+    cursor: default;
   }
+  .status-pill .live-dot.pm-health-warn { background:#f59e0b; animation:none; opacity:1; }
+  .status-pill .live-dot.pm-health-down { background:#ef4444; animation:none; opacity:1; }
 
   @keyframes pulse-green {
     0%, 100% { opacity: 1; transform: scale(1); }
@@ -568,7 +575,7 @@
       <button class="btn-back-main" onclick="window.location.href='index.html'">
         ← PM Dashboard
       </button>
-      <div class="status-pill">UNIT 7 — ONLINE</div>
+      <div class="status-pill"><span class="live-dot"></span>UNIT 7 — ONLINE</div>
       <div class="clock-display" id="clockMain">--:--:--</div>
     </div>
   </div>

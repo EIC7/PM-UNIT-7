@@ -22,6 +22,11 @@
         .header-content p{font-size:0.85em;opacity:0.9}
         .header .btn-back{padding:8px 16px;background:#fff;color:#1a6b3a;border:none;border-radius:6px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.9em;transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
         .header .btn-back:hover{background:#f0f0f0;box-shadow:0 4px 8px rgba(0,0,0,0.15)}
+        .live-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.85);animation:blinkMR 2s ease-in-out infinite;flex-shrink:0;cursor:default}
+        @keyframes blinkMR{0%,100%{opacity:1}50%{opacity:0.35}}
+        .live-dot.pm-health-ok{background:#bbf7d0;animation:blinkMR 2s ease-in-out infinite}
+        .live-dot.pm-health-warn{background:#fde68a;animation:none;opacity:1}
+        .live-dot.pm-health-down{background:#fecaca;animation:none;opacity:1}
         .section-title{background:#e8f5e9;padding:10px 14px;border-left:4px solid #2ecc71;margin:18px 0 12px 0;font-weight:700;font-size:0.9em;color:#1a6b3a;border-radius:0 4px 4px 0}
         .form-group{margin-bottom:14px}
         label{display:block;font-weight:600;margin-bottom:5px;font-size:0.88em;color:#333}
@@ -162,6 +167,7 @@
                 <span id="raStatusBadge" style="display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.25);color:#fff">📝 DRAFT</span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <div class="live-dot" title="Status Supabase"></div>
                 <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
                 <button class="btn-back" onclick="window.location.href='history.html'">RIWAYAT</button>
             </div>
@@ -1516,6 +1522,7 @@ function applyImageEdits(){
             dbLoad(id, function(rec) {
                 if (!rec) return;
                 applyRecordToForm(rec);
+                pmMaybeEnterRevisionMode(rec);
                 window._editingId = id;
                 dbShowToast('Data dimuat dari riwayat ✓');
                 if (doPrint) {

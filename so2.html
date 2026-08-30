@@ -2183,6 +2183,7 @@ initCropDrag();
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec, id);
+      pmMaybeEnterRevisionMode(rec);
       dbShowToast('Data dimuat dari riwayat ✓');
       if(doPrint) so2EnsureReportBackground(function(){ setTimeout(so2DownloadPdf, 300); });
       if(doAutosubmit){ window._raBuildPdf = so2DownloadPdf; raSubmitReportAuto(); }

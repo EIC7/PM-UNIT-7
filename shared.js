@@ -3400,8 +3400,13 @@ document.addEventListener('DOMContentLoaded', function () {
    ══════════════════════════════════════════════════════════════════════════ */
 var pmRevisionMode = false;
 
-function pmFindSubmitButton() {
-  return document.querySelector('button[onclick*="raSubmitReport()"]');
+// querySelectorAll, BUKAN querySelector -- beberapa file (mis. fegt.html)
+// punya LEBIH DARI SATU tombol "Submit Laporan" (beberapa tab/section
+// dengan alur submit beda-beda). Kalau cuma ambil yang pertama, tombol
+// lain yang sebetulnya sama-sama perlu dikunci/diganti label jadi
+// kelewat.
+function pmFindSubmitButtons() {
+  return document.querySelectorAll('button[onclick*="raSubmitReport()"]');
 }
 
 function pmMaybeEnterRevisionMode(rec) {
@@ -3409,14 +3414,16 @@ function pmMaybeEnterRevisionMode(rec) {
   if (typeof Approvals === 'undefined') return;
   Approvals.getByChecksheetId(rec.firebase_checksheet_id).then(function (appr) {
     if (!appr || appr.status !== 'returned_to_technician') return;
-    var btn = pmFindSubmitButton();
-    if (!btn) return;
+    var btns = pmFindSubmitButtons();
+    if (!btns.length) return;
     pmRevisionMode = true;
-    btn.innerHTML = '✅ Revisi Selesai dan Resubmit';
-    btn.disabled = true;
-    btn.title = 'Simpan perubahan ke database dulu (tombol "Simpan ke Database") sebelum kirim ulang.';
-    btn.style.opacity = '0.55';
-    btn.style.cursor = 'not-allowed';
+    btns.forEach(function (btn) {
+      btn.innerHTML = '✅ Revisi Selesai dan Resubmit';
+      btn.disabled = true;
+      btn.title = 'Simpan perubahan ke database dulu (tombol "Simpan ke Database") sebelum kirim ulang.';
+      btn.style.opacity = '0.55';
+      btn.style.cursor = 'not-allowed';
+    });
   }).catch(function () {});
 }
 
@@ -3425,10 +3432,10 @@ function pmMaybeEnterRevisionMode(rec) {
 // Resubmit") karena data yang tersimpan sudah yang terbaru/sudah direvisi.
 function pmMarkRevisionSaved() {
   if (!pmRevisionMode) return;
-  var btn = pmFindSubmitButton();
-  if (!btn) return;
-  btn.disabled = false;
-  btn.style.opacity = '';
-  btn.style.cursor = '';
-  btn.title = '';
+  pmFindSubmitButtons().forEach(function (btn) {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    btn.title = '';
+  });
 }

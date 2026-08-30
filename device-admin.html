@@ -16,8 +16,13 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text-dark)}
   header{background:var(--bg2);border-bottom:1px solid var(--border);padding:18px clamp(16px,4vw,40px);position:sticky;top:0;z-index:10}
-  header h1{margin:0;font-size:18px;font-weight:800}
+  header h1{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:9px}
   header p{margin:4px 0 0;font-size:12.5px;color:var(--text-light)}
+  .live-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#93b4d4;animation:blinkDA 2s ease-in-out infinite;flex-shrink:0;cursor:default}
+  @keyframes blinkDA{0%,100%{opacity:1}50%{opacity:0.35}}
+  .live-dot.pm-health-ok{background:#22c55e;animation:blinkDA 2s ease-in-out infinite}
+  .live-dot.pm-health-warn{background:#f59e0b;animation:none;opacity:1}
+  .live-dot.pm-health-down{background:#ef4444;animation:none;opacity:1}
   main{max-width:1000px;margin:0 auto;padding:22px clamp(16px,4vw,40px) 60px}
   .toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
   .toolbar-info{font-size:12.5px;color:var(--text-light)}
@@ -46,7 +51,7 @@
 <body>
 
 <header>
-  <h1>🔑 Device Admin</h1>
+  <h1>🔑 Device Admin <span class="live-dot" title="Status Supabase"></span></h1>
   <p>Kelola device yang boleh akses tanpa password (Trusted Device) — Unit 7 PLTU Paiton</p>
 </header>
 

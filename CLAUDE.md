@@ -475,3 +475,32 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   `GDRIVE_SECRET_TOKEN`, keduanya sudah publik di `shared.js` client-side, bukan secret
   tersembunyi — BEDA dari `TELEGRAM_BOT_TOKEN` yang wajib GitHub Secret). Berhasil PATCH balik
   juga otomatis membetulkan `payload_size` yang basi (dihitung ulang dari `data` final).
+
+## Mode Revisi & indikator Supabase dilebarkan ke SEMUA file modul (2026-08-30)
+
+- `pmMaybeEnterRevisionMode(rec)` (lihat bagian "Mode Revisi" di atas) sekarang dipasang di
+  **semua 19 file modul** yang punya `raSubmitReport()` (sebelumnya cuma 2 file O2 Weekly).
+  Satu baris `pmMaybeEnterRevisionMode(rec);` ditambahkan tepat setelah pemanggilan
+  `applyRecordToForm(rec, id)`/fungsi restore-record setara di blok "LOAD FROM HISTORY"
+  tiap file (nama fungsi restore-nya sendiri bisa beda-beda per file — `applyRecordToForm`
+  di kebanyakan file, `hgRestoreRecord` di `pm-hg-analyzer.html`, dll — yang penting
+  panggil `pmMaybeEnterRevisionMode(rec)` SETELAH record-nya selesai di-render ke form).
+  **Kalau bikin file modul baru dengan fitur load-dari-riwayat, WAJIB tambahkan baris ini
+  juga** supaya alur Revisi konsisten di semua tempat.
+- `pmFindSubmitButtons()` (plural, `querySelectorAll` — BUKAN `pmFindSubmitButton()`
+  singular yang sempat dipakai versi awal) — ditemukan `fegt.html` punya **2 tombol**
+  "Submit Laporan" berbeda (2 section/tab dengan alur `_raBuildPdf` beda-beda:
+  `sixmDownloadPdf` dan `runDiagnosisAndPrint`). Kalau nambah file modul dengan lebih dari
+  1 tombol submit serupa, ini sudah otomatis tertangani (semua tombol yang cocok selector
+  `button[onclick*="raSubmitReport()"]` ikut diganti label & dikunci/dibuka bersamaan) —
+  JANGAN balik ke `querySelector` (singular), itu cuma akan pegang tombol pertama.
+- **Indikator status Supabase (`live-dot`)** sekarang ada di **SEMUA file** (sebelumnya 25
+  dari 31 file — index.html sudah ditambahkan sebelumnya, sekarang 5 sisanya:
+  `maintenance_report_form.html`, `device-admin.html`, `checksheet-level-switch.html`,
+  `outage-index.html`, `outage-indexa.html` juga sudah). Ketiga file terakhir itu tadinya
+  pakai `.status-pill::before` (pseudo-element CSS, TIDAK BISA disentuh JS sama sekali) buat
+  titik hijaunya — diganti jadi elemen sungguhan `<span class="live-dot">` di dalam
+  `.status-pill` supaya `pmCheckSupabaseHealth()` bisa update warnanya. **Kalau ketemu pola
+  serupa (titik status pakai `::before`) di file lain di masa depan, WAJIB dikonversi ke
+  elemen sungguhan dulu sebelum bisa ikut kebagian indikator ini** — pseudo-element tidak
+  pernah bisa di-`querySelectorAll` dari JavaScript.
