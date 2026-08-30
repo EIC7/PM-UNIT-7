@@ -1,0 +1,4 @@
+# State file dari scripts/notify-ra-status-poll.js (checkAndAlertSupabaseHealth) --
+# dipersist lintas run GitHub Actions lewat actions/cache, bukan lewat git.
+# Muncul di working directory kalau script itu dijalankan manual/lokal.
+.health-state.json

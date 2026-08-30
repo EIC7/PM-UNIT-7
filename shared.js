@@ -1306,6 +1306,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         window._editingId = savedId || null;
         if (typeof autosaveClear === 'function') autosaveClear();
         dbShowToast(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
+        pmMarkRevisionSaved();
         if (callback) callback(savedId);
       })
       .catch(function(err) {
@@ -3368,3 +3369,54 @@ document.addEventListener('DOMContentLoaded', function () {
   pmCheckSupabaseHealth();
   setInterval(pmCheckSupabaseHealth, 60000);
 });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MODE REVISI -- laporan yang "Dikembalikan ke Teknisi" (returned_to_technician
+   di Firestore). Dipanggil dari blok "LOAD FROM HISTORY" tiap file modul
+   (setelah dbLoad() berhasil), lewat pmMaybeEnterRevisionMode(rec). BUKAN
+   tombol "Resubmit" (itu khusus laporan yang submit PERTAMA-nya gagal
+   nyampe ke Review Approval Dashboard, lihat historySubmit/submitBtn di
+   history.html) -- ini khusus laporan yang SUDAH sempat direview lalu
+   dikembalikan, dan user baru saja merevisi isinya.
+   Tombol "Submit Laporan" (dicari generik lewat selector onclick, SEMUA
+   19 file modul pakai pola onclick="...; raSubmitReport()" yang sama,
+   sudah diverifikasi) diganti label jadi "Revisi Selesai dan Resubmit" dan
+   DIKUNCI (disabled) sampai user Simpan ke Database ulang dulu (pmMarkRevisionSaved(),
+   dipanggil dari dbSave() sesudah sukses) -- supaya yang terkirim pasti
+   data yang sudah direvisi, bukan data lama yang kebetulan masih ke-load
+   dari draft/riwayat.
+   ══════════════════════════════════════════════════════════════════════════ */
+var pmRevisionMode = false;
+
+function pmFindSubmitButton() {
+  return document.querySelector('button[onclick*="raSubmitReport()"]');
+}
+
+function pmMaybeEnterRevisionMode(rec) {
+  if (!rec || !rec.firebase_checksheet_id) return;
+  if (typeof Approvals === 'undefined') return;
+  Approvals.getByChecksheetId(rec.firebase_checksheet_id).then(function (appr) {
+    if (!appr || appr.status !== 'returned_to_technician') return;
+    var btn = pmFindSubmitButton();
+    if (!btn) return;
+    pmRevisionMode = true;
+    btn.innerHTML = '✅ Revisi Selesai dan Resubmit';
+    btn.disabled = true;
+    btn.title = 'Simpan perubahan ke database dulu (tombol "Simpan ke Database") sebelum kirim ulang.';
+    btn.style.opacity = '0.55';
+    btn.style.cursor = 'not-allowed';
+  }).catch(function () {});
+}
+
+// Dipanggil dari dbSave() begitu simpan sukses -- kalau lagi mode revisi,
+// buka kunci tombol Submit-nya (sekarang berlabel "Revisi Selesai dan
+// Resubmit") karena data yang tersimpan sudah yang terbaru/sudah direvisi.
+function pmMarkRevisionSaved() {
+  if (!pmRevisionMode) return;
+  var btn = pmFindSubmitButton();
+  if (!btn) return;
+  btn.disabled = false;
+  btn.style.opacity = '';
+  btn.style.cursor = '';
+  btn.title = '';
+}

@@ -181,7 +181,7 @@ function historyRowsToTableHtml(rows) {
       '<td id="histStatusCell-'+r.id+'">'+historyStatusBadge(r.status, r.firebase_synced_at)+'</td>'+
       '<td>'+historyAreaLabel(r.modul)+'</td>'+
       '<td style="font-size:10px;color:var(--text3)">'+saved+'</td>'+
-      '<td style="white-space:nowrap;text-align:right">'+
+      '<td id="histActionCell-'+r.id+'" style="white-space:nowrap;text-align:right">'+
         submitBtn+
         '<button onclick="window.location.href=\''+openUrl+'\'" style="padding:4px 10px;font-size:11px;background:var(--ok);color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#9998; Buka</button>'+
         '<button onclick="window.open(\''+printUrl+'\',\'_blank\')" style="padding:4px 10px;font-size:11px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128438; Print</button>'+
@@ -297,6 +297,22 @@ function historyUpgradeStatusBadges(rows) {
         if (appr.status && appr.status !== r.ra_notified_status && !pmNotifAttempted[key]) {
           pmNotifAttempted[key] = true;
           raSendTelegramNotif(r, appr);
+        }
+        // Laporan yang DIKEMBALIKAN ke teknisi -- tombol "Revisi" (BUKAN
+        // Resubmit, itu khusus laporan yang submit pertamanya gagal) buka
+        // halaman modulnya; begitu dibuka, pmMaybeEnterRevisionMode()
+        // (shared.js) yang ganti label "Submit Laporan" jadi "Revisi
+        // Selesai dan Resubmit" dan kunci sampai user simpan ulang.
+        if (appr.status === 'returned_to_technician') {
+          var actionCell = document.getElementById('histActionCell-' + r.id);
+          if (actionCell && !document.getElementById('histRevisiBtn-' + r.id)) {
+            var revisiBtn = document.createElement('button');
+            revisiBtn.id = 'histRevisiBtn-' + r.id;
+            revisiBtn.textContent = '📝 Revisi';
+            revisiBtn.style.cssText = 'padding:4px 10px;font-size:11px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px';
+            revisiBtn.onclick = function(){ window.location.href = modulToUrl(r.modul, r.id); };
+            actionCell.insertBefore(revisiBtn, actionCell.firstChild);
+          }
         }
       }).catch(function(){}); // gagal query 1 baris tidak boleh ganggu baris lain
     };

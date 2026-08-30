@@ -2317,6 +2317,7 @@ pmNumpadInit();
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec, id);
+      pmMaybeEnterRevisionMode(rec);
       dbShowToast('Data dimuat dari riwayat ✓');
       if(doPrint)setTimeout(function(){downloadPdf();},500);
       if(doAutosubmit){ window._raBuildPdf = downloadPdf; raSubmitReportAuto(); }

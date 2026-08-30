@@ -367,3 +367,37 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   normal" begitu pulih — **mirror** persis logika banner `pmHandleHealthResult()` di
   `shared.js` (in-app), cuma bedanya ini persisten lewat cache file, yang di browser lewat
   `pmLS`/localStorage.
+
+## Mode Revisi (tombol "Revisi" untuk laporan returned_to_technician, 2026-08-30)
+
+- **BUKAN** tombol Resubmit yang sudah ada (`historySubmit()` di `history.html`, khusus
+  laporan yang SUBMIT PERTAMA-nya gagal nyampe ke Review Approval Dashboard,
+  `firebase_synced_at` masih kosong) — ini kasus BEDA: laporan yang sudah SEMPAT
+  direview lalu **dikembalikan** ke teknisi (`status: 'returned_to_technician'` di
+  dokumen `approvals` Firestore).
+- `history.html`: baris dengan status real (dari `historyUpgradeStatusBadges()`)
+  `returned_to_technician` dapat tombol **"📝 Revisi"** tambahan (disisipkan ke
+  `#histActionCell-{id}`, id ini WAJIB ada di `<td>` Aksi row template) — klik-nya cuma
+  buka halaman modul yang sama seperti tombol "Buka" (`modulToUrl(r.modul, r.id)`).
+  Kecerdasannya ada di halaman modul-nya sendiri, bukan di tombolnya.
+- `shared.js`: `pmMaybeEnterRevisionMode(rec)` — dipanggil dari blok "LOAD FROM HISTORY"
+  tiap file modul (satu baris tambahan: `pmMaybeEnterRevisionMode(rec);` persis setelah
+  `applyRecordToForm(rec, id);`), cek status Firestore sungguhan lewat
+  `Approvals.getByChecksheetId(rec.firebase_checksheet_id)`. Kalau
+  `returned_to_technician`: cari tombol Submit Laporan lewat selector generik
+  `button[onclick*="raSubmitReport()"]` (SEMUA 19 file modul yang punya `raSubmitReport()`
+  pakai pola onclick yang sama persis, sudah diverifikasi lewat grep — **kalau bikin file
+  modul baru, WAJIB ikuti pola `onclick="window._raBuildPdf=<fn>; raSubmitReport()"`**
+  supaya selector ini tetap ketemu), ganti labelnya jadi **"Revisi Selesai dan Resubmit"**,
+  dan **kunci (`disabled`)** sampai user Simpan ke Database ulang.
+- `pmMarkRevisionSaved()` dipanggil dari `dbSave()` sesudah sukses simpan — kalau
+  `pmRevisionMode` aktif, buka kunci tombolnya (karena data yang tersimpan sudah pasti versi
+  revisi terbaru, bukan data lama). **Kalau menambah jalur simpan baru selain `dbSave()`
+  yang perlu mendukung alur revisi ini, WAJIB panggil `pmMarkRevisionSaved()` juga sesudah
+  sukses** — lupa panggil ini = tombol permanen terkunci walau sudah disimpan.
+- **Baru dipasang di 2 file** (`weekly_calibration_o2_inlet.html` &
+  `weekly_calibration_o2_outlet.html`) — belum dilebarkan ke 17 file modul lain yang juga
+  punya `raSubmitReport()`. Kalau mau dilebarkan: tinggal tambah baris
+  `pmMaybeEnterRevisionMode(rec);` di blok "LOAD FROM HISTORY" masing-masing file (pola
+  sama persis, lihat 2 file di atas sebagai referensi) — mekanismenya sendiri sudah
+  generik di `shared.js`, tidak perlu diubah.
