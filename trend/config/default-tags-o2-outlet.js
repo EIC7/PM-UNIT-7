@@ -35,7 +35,7 @@ O2_OUTLET_CHANNELS.forEach(function (c, idx) {
     name: 'O2 Outlet Ch' + c.ch + ' (' + c.tagCode + ')',
     description: c.desc + ' — pembacaan O2%, per kejadian PM mingguan',
     unit: '%',
-    engineeringLow: 0, engineeringHigh: 25, min: 0, max: 25, chartMax: 25,
+    engineeringLow: 0, engineeringHigh: 20, min: 0, max: 20, chartMax: 20,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
     visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'PM_O2_WEEKLY_OUTLET', updateInterval: null,

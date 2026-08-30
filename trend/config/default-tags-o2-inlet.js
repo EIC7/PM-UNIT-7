@@ -43,7 +43,7 @@ O2_INLET_CHANNELS.forEach(function (c, idx) {
     name: 'O2 Inlet Ch' + c.ch + ' (' + c.tagCode + ')',
     description: c.desc + ' — Before/After kalibrasi O2%, per kejadian PM mingguan',
     unit: '%',
-    engineeringLow: 0, engineeringHigh: 25, min: 0, max: 25, chartMax: 25,
+    engineeringLow: 0, engineeringHigh: 20, min: 0, max: 20, chartMax: 20,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
     visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'PM_O2_WEEKLY_INLET', updateInterval: null,
