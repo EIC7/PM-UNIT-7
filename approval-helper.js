@@ -15,6 +15,18 @@
 //                                 the returned note for which one)
 // ============================================================
 
+// Normalize an `area` value to a single plain string. It can arrive as a real
+// string ('Powerblock'), an array (['Powerblock']), or a JSON-stringified
+// array ('["Powerblock"]') from localStorage['dashboard_area'] / older docs.
+function _firstArea(a) {
+  if (Array.isArray(a)) return a[0] || null;
+  if (typeof a === 'string' && a) {
+    try { const p = JSON.parse(a); if (Array.isArray(p)) return p[0] || null; } catch (e) {}
+    return a;
+  }
+  return null;
+}
+
 const Approvals = {
   COLLECTION: 'approvals',
 
@@ -32,10 +44,14 @@ const Approvals = {
       // these before the name lookup. Omitted (undefined) for normal check
       // sheets, so Firestore just doesn't store the keys.
       ...(meta.team ? { team: meta.team } : {}),
-      ...(meta.area ? { area: meta.area } : {}),
+      ...(_firstArea(meta.area) ? { area: _firstArea(meta.area) } : {}),
       ...(meta.src ? { src: meta.src } : {}),
-      status: 'submitted',
-      review: null,       // {comments, recommendations, signature, reviewedBy, reviewedAt}
+      // When the submitter is themselves a TechOp2 (level 2), the TechOp2
+      // review step is auto-completed and the item goes straight to the
+      // Supervisor's approval queue (status 'reviewed'). meta.autoReview holds
+      // the synthetic review record; absent for a normal technician submit.
+      status: meta.autoReview ? 'reviewed' : 'submitted',
+      review: meta.autoReview || null,   // {comments, recommendations, signature, reviewedBy, reviewedAt, auto}
       approval: null,     // {notes, signature, approvedBy, approvedAt}
       returnedNote: null, // {note, by, stage, returnedAt}
       finalPdfUrl: null,
@@ -92,6 +108,51 @@ const Approvals = {
     });
   },
 
+  // ---- Admin corrections (Review_Approval_Dashboard.html, admin only) ----
+
+  // Undo a "returned to technician" — puts the item back into the queue it
+  // came from. stage 'review' -> back to 'submitted' (TechOp2 queue);
+  // stage 'approval' -> back to 'reviewed' (Supervisor queue). The review
+  // record (if any) is kept when going back to 'reviewed', cleared otherwise.
+  async cancelReturn(id, { by } = {}) {
+    const cur = await this.getById(id);
+    if (!cur) throw new Error('Approval tidak ditemukan.');
+    if (cur.status !== 'returned_to_technician') throw new Error('Item ini tidak sedang dikembalikan.');
+    const backToReviewed = cur.returnedNote && cur.returnedNote.stage === 'approval' && cur.review;
+    await db.collection(this.COLLECTION).doc(id).update({
+      status: backToReviewed ? 'reviewed' : 'submitted',
+      review: backToReviewed ? cur.review : null,
+      returnedNote: null,
+      adminNote: { action: 'cancel-return', by: by || '', at: new Date().toISOString() },
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
+  // Undo a completed review — item drops back to the TechOp2 review queue
+  // ('submitted') and the review record is discarded.
+  async cancelReview(id, { by } = {}) {
+    const cur = await this.getById(id);
+    if (!cur) throw new Error('Approval tidak ditemukan.');
+    if (cur.status !== 'reviewed') throw new Error('Item ini belum/tidak berstatus reviewed.');
+    await db.collection(this.COLLECTION).doc(id).update({
+      status: 'submitted',
+      review: null,
+      adminNote: { action: 'cancel-review', by: by || '', at: new Date().toISOString() },
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
+  // Edit routing / display fields on the approval doc (name, team, area).
+  // area is normalized to a single plain string (see _firstArea).
+  async adminEditRouting(id, { submittedBy, team, area, by } = {}) {
+    const patch = { updatedAt: new Date().toISOString(),
+      adminNote: { action: 'edit-routing', by: by || '', at: new Date().toISOString() } };
+    if (submittedBy !== undefined) patch.submittedBy = String(submittedBy || '').trim();
+    if (team !== undefined) patch.team = team ? String(team).trim() : null;
+    if (area !== undefined) patch.area = _firstArea(area) || null;
+    await db.collection(this.COLLECTION).doc(id).set(patch, { merge: true });
+  },
+
   async deleteById(id) {
     await db.collection(this.COLLECTION).doc(id).delete();
   },
@@ -133,15 +194,54 @@ const Approvals = {
   //     photos upload (proportional to count), then the PDF, then the
   //     approvals record — lets the caller drive a real progress bar
   //     instead of a guessed animation. Never called if omitted.
+  //   autoReview: pass false to force the normal review path even when the
+  //     submitter is a TechOp2. Otherwise this is decided automatically from
+  //     window.AuthSession.get(): a logged-in TechOp2 (role 'techop2')
+  //     submitting their own work skips the review stage — the approvals doc
+  //     is created at status 'reviewed' with a synthetic review record
+  //     ({reviewedBy, reviewedAt, signature, auto:true}) so it goes straight
+  //     to the Supervisor's approval queue. team/area are also backfilled
+  //     from the session here when the caller didn't pass them.
   //
   // Returns true if photos/PDF/approval record all succeeded, false if
   // any part failed (logged to console) — the checksheet doc itself was
   // ALREADY saved by the caller before this runs, so a false return here
   // must never be treated as "the whole submission failed."
   async submitWithFiles(checksheetId, opts = {}) {
-    const { photos, pdfBuilder, assetTag, assetName, checksheetFile, submittedBy, revisionOf, existingApprovalId, onProgress, team, area, src } = opts;
+    const { photos, pdfBuilder, assetTag, assetName, checksheetFile, submittedBy, revisionOf, existingApprovalId, onProgress, src } = opts;
+    let { team, area } = opts;
     const report = (pct, label) => { if (typeof onProgress === 'function') onProgress(pct, label); };
     let ok = true;
+
+    // Who is submitting? A logged-in TechOp2 (level 2) submitting their own
+    // work skips the TechOp2 review stage — the approval is created already
+    // 'reviewed' so it lands straight in the Supervisor's approval queue.
+    // Also backfills team/area routing from the session when the caller
+    // didn't pass them. Fully optional: no session / plain technician =>
+    // unchanged 'submitted' behaviour.
+    let autoReview = null;
+    try {
+      const sess = (typeof window !== 'undefined' && window.AuthSession && window.AuthSession.get) ? window.AuthSession.get() : null;
+      if (sess) {
+        if (!team && sess.team) team = sess.team;
+        // sess.area can be a string, an array, or a JSON-stringified array
+        // ('["Powerblock"]') — normalize all three to the single area string
+        // the approval doc / scope matching expect. team-routing.js isn't
+        // loaded on check sheets, so parse inline.
+        if (!area && sess.area) area = _firstArea(sess.area);
+        if (opts.autoReview !== false && sess.role === 'techop2') {
+          const who = sess.name || submittedBy || 'TechOp2';
+          autoReview = {
+            comments: 'Disubmit langsung oleh TechOp2 (' + who + ') — tahap review dilewati otomatis.',
+            recommendations: '',
+            signature: sess.signature || null,
+            reviewedBy: who,
+            reviewedAt: new Date().toISOString(),
+            auto: true,
+          };
+        }
+      }
+    } catch (e) { /* session lookup is best-effort */ }
     try {
       const photoUrls = {};
       const groups = Object.keys(photos || {});
@@ -198,13 +298,38 @@ const Approvals = {
 
       report(95, 'Mencatat status approval...');
       if (existingApprovalId) {
-        await db.collection(this.COLLECTION).doc(existingApprovalId).set({
+        // Was this the "returned to technician" entry being re-submitted after
+        // a fix? If so, the resubmit is a REVISION: the returned entry is
+        // overwritten in place (new checksheetId/photos/pdf), its status
+        // becomes 'revised' (a distinct, re-review-pending state — or straight
+        // to 'reviewed' when the reviser is a TechOp2 auto-review), and the
+        // return note is moved into returnedHistory[] so the trail survives.
+        let prev = null;
+        try { prev = await this.getById(existingApprovalId); } catch (e) { /* best effort */ }
+        const wasReturned = prev && prev.status === 'returned_to_technician';
+        const patch = {
+          checksheetId,
           assetTag: assetTag || '', assetName: assetName || '', checksheetFile: checksheetFile || '',
-          submittedBy: submittedBy || '', status: 'submitted',
+          submittedBy: submittedBy || '',
+          ...(team ? { team } : {}), ...(area ? { area } : {}),
           updatedAt: new Date().toISOString(),
-        }, { merge: true });
+        };
+        if (wasReturned) {
+          patch.status = autoReview ? 'reviewed' : 'revised';
+          patch.review = autoReview || null;                  // discard the old (pre-return) review; a revision needs a fresh one
+          patch.revisedAt = new Date().toISOString();
+          patch.revisionCount = (prev.revisionCount || 0) + 1;
+          const hist = Array.isArray(prev.returnedHistory) ? prev.returnedHistory.slice() : [];
+          if (prev.returnedNote) hist.push(prev.returnedNote);
+          patch.returnedHistory = hist;
+          patch.returnedNote = null;
+        } else {
+          patch.status = autoReview ? 'reviewed' : 'submitted';
+          if (autoReview) patch.review = autoReview;
+        }
+        await db.collection(this.COLLECTION).doc(existingApprovalId).set(patch, { merge: true });
       } else {
-        await this.create(checksheetId, { assetTag, assetName, checksheetFile, submittedBy, revisionOf, team, area, src });
+        await this.create(checksheetId, { assetTag, assetName, checksheetFile, submittedBy, revisionOf, team, area, src, autoReview });
       }
       report(100, 'Selesai');
     } catch (e) {
@@ -216,8 +341,15 @@ const Approvals = {
 
   STATUS_LABELS: {
     submitted: 'Menunggu Review',
+    revised: 'Direvisi',
     reviewed: 'Menunggu Approval',
     approved: 'Disetujui',
     returned_to_technician: 'Dikembalikan ke Teknisi',
   },
+
+  // A 'revised' entry is behaviourally identical to 'submitted' for queueing /
+  // permissions — it's a distinct label only so reviewers can see the item
+  // has been through a return→revise cycle. Everywhere the code asks "is this
+  // waiting for TechOp2 review", use this instead of `=== 'submitted'`.
+  isPendingReview(status) { return status === 'submitted' || status === 'revised'; },
 };

@@ -640,3 +640,36 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   Actions) — pola fix-nya sama: WIDEN deteksi (tambah kondisi baru), JANGAN ganti/hapus
   fallback lama, karena dokumen historis lama tetap dalam bentuk lama selamanya (Firestore
   tidak migrasi data retroaktif, cuma tulisan BARU yang ikut format baru).
+
+## Akar masalah SEBENARNYA: `approval-helper.js` kita adalah vendored copy yang basi (2026-08-30)
+
+- Fix "deteksi status revised" di atas TERNYATA belum cukup — dites langsung (submit → admin
+  kembalikan → buka "Revisi" → submit ulang), hasilnya approvals doc TETAP jadi
+  `status:'submitted'` (bukan `'revised'`) dan `returnedNote` TIDAK ikut dikosongkan/pindah
+  ke `returnedHistory[]` seperti seharusnya versi baru mereka. Root cause: `approval-helper.js`
+  di root repo INI (dimuat lewat `<script src="approval-helper.js">` di setiap file modul yang
+  punya `raSubmitReport()`) adalah **salinan manual (vendored copy)** dari
+  `github.com/EenPutra/CHECK-SHEET-POMI-ELEKTRIK-ONLINE`, BUKAN di-fetch live dari repo mereka.
+  Salinan kita ketinggalan **200+ baris** (223 baris punya kita vs 355 baris versi terbaru
+  mereka saat dicek) — sama sekali tidak punya logic `wasReturned`/status `'revised'`/
+  `returnedHistory[]`/`revisionCount` yang dibahas di bagian atas dokumen ini.
+- **Diperbaiki**: `approval-helper.js` di-copy ULANG PERSIS dari upstream (diverifikasi dulu
+  lewat `diff` bahwa 4 pemanggilan yang kita pakai — `DB.attachFiles`, `DB.save`,
+  `Storage.uploadBlob`, `Storage.uploadDataUrl`, `Approvals.getByChecksheetId`,
+  `Approvals.submitWithFiles` — semuanya masih kompatibel dengan `db-helper.js`/
+  `storage-helper.js` kita yang ada sekarang, jadi aman di-swap TANPA ikut sync 2 file itu).
+- ⚠️ **File lain yang JUGA di-vendor manual dari repo EenPutra ternyata SAMA-SAMA sudah basi**
+  (dicek pakai `diff` waktu investigasi ini, TAPI BELUM disinkronkan — sengaja di luar scope
+  perbaikan kali ini supaya tidak menimpa banyak hal sekaligus tanpa tes menyeluruh):
+  `db-helper.js` (842 baris beda), `storage-helper.js` (354 baris beda). `firebase-config.js`
+  aman (isinya identik, bedanya cuma LF vs CRLF artifact `diff`, bukan konten). **Kalau nanti
+  ada bug aneh lain yang terasa seperti "PM Unit 7 ketinggalan fitur/fix dari Review Approval
+  Dashboard"**, curigai dulu file-file vendored ini basi lagi — cek `diff` terhadap clone
+  fresh `github.com/EenPutra/CHECK-SHEET-POMI-ELEKTRIK-ONLINE` (baca-saja, JANGAN ubah repo
+  itu) SEBELUM debug jauh ke logic kita sendiri. Belum ada mekanisme otomatis buat sync
+  file-file vendored ini — semuanya manual `cp` tiap kali ketahuan basi.
+- **Pelajaran penting**: cek "apakah logic di sisi kita sudah sinkron dengan status/field
+  yang dikirim mereka" itu TIDAK CUKUP kalau logic pengirimnya sendiri (`approval-helper.js`)
+  juga vendored dan basi — WAJIB verifikasi file vendored-nya dulu SEBELUM percaya hasil baca
+  behavior dari kode kita, karena kode kita bisa saja membaca versi lama yang tidak pernah
+  memproduksi field/status baru itu sama sekali.
