@@ -744,3 +744,36 @@ Supabase sebagai backend, jsPDF untuk export PDF).
     tag"), `.hub-stats` total tag naik dari 93 jadi **98**.
   - `?v=` config/adapter file-file di atas dinaikkan ke `20260830c` di
     `trend_coal-feeder-calibration.html`.
+
+## Fix trend Coal Feeder "tidak baca data" — 2 lokasi tabel Cal 1/Cal 2 (2026-08-30)
+
+- Sesudah rollout 6-tag di atas, user tes langsung dan trend-nya kosong ("—") padahal
+  sudah ada laporan tersubmit. Dicek `data` mentahnya di Supabase: `data.cal1.deviation`/
+  `data.cal2.deviation` MEMANG kosong (`["","",""]`) untuk laporan itu, TAPI datanya
+  bukan tidak ada — user konfirmasi "ada di 4000hr tabelnya". Ketemu:
+  `cf4kCalTableHtml()` di `coal_feeder_calibration.html` MENANAM ULANG tabel Cal 1/Cal 2
+  yang SAMA PERSIS di dalam section "4000 HR PM Pulverizer Instrumentation" (Feeder Floor
+  Area) — tapi pakai ID input BEDA (prefix `cf4kcal1_`/`cf4kcal2_`, bukan `cal1_`/`cal2_`)
+  supaya tidak bentrok DOM dengan tabel standalone-nya. Kalau teknisi isi tabel itu LEWAT
+  section 4000HR (bukan section "Feeder Calibration" standalone), nilainya masuk ke
+  **`data.cf4k.floor_feedercal.calValues.cf4kcal1_dev1/2/3`** (dan `cf4kcal2_*`) — LOKASI
+  BERBEDA TOTAL dari `data.cal1.deviation` yang tadinya jadi satu-satunya sumber dibaca
+  adapter.
+  - Fix: `trend/js/adapters/coal-feeder-calibration-adapter.js` sekarang punya
+    `cal1DeviationAvg(d)`/`cal2DeviationAvg(d)` yang cek `data.cal1`/`data.cal2` standalone
+    DULU, fallback ke `data.cf4k.floor_feedercal.calValues.cf4kcal{1,2}_dev{1,2,3}` kalau
+    yang standalone kosong. Diverifikasi langsung pakai data record nyata (Feeder E) —
+    sebelum fix: `cal1Avg`/`cal2Avg` = `null`; sesudah fix: `0.0849`/`0.1217`.
+  - **Demand Test TIDAK punya versi cf4k-nya** (dicek langsung ke source — cuma
+    `cf4kCalTableHtml()` dipanggil 2x untuk Cal 1/Cal 2, tidak ada versi serupa untuk tabel
+    demand) — jadi `Demand100FlowRate` tetap 1 sumber saja (`data.demand['100'].fr_act`),
+    tidak perlu fallback.
+  - `?v=` `coal-feeder-calibration-adapter.js` dinaikkan lagi ke `20260830d`.
+  - **Pelajaran buat modul checksheet manapun yang "tabel yang sama dipakai ulang di
+    section berbeda"** (pola ini SANGAT mungkin ada di modul lain juga, belum diaudit satu
+    per satu) — JANGAN asumsikan 1 field HTML = 1 lokasi penyimpanan `data`. Field yang
+    "sama" secara visual/nama kolom bisa punya PREFIX ID BEDA kalau di-reuse di section
+    lain, dan karenanya tersimpan di path `data.*` yang beda total. Kalau trend/adapter
+    baru "tidak baca data" padahal user yakin datanya ada, WAJIB curigai kemungkinan ini
+    duluan — cek `dbCollectData()` sumbernya SECARA LENGKAP (cari semua ID field yang
+    mirip/reused), jangan cuma percaya 1 lokasi yang paling jelas kelihatan.

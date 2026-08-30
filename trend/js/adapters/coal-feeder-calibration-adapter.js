@@ -10,6 +10,21 @@
  *   data.cal2.deviation = [dev1, dev2, dev3]  -- 3 titik uji kalibrasi metode 2
  *   data.demand['100'].fr_act                 -- flow rate aktual pada demand 100%
  *
+ * ⚠️ DUA SUMBER buat Cal1/Cal2: tabel Cal 1/Cal 2 yang sama TERTANAM ULANG di
+ * dalam section "4000 HR PM Pulverizer Instrumentation" (Feeder Floor Area,
+ * lihat cf4kCalTableHtml() di coal_feeder_calibration.html), input-nya pakai
+ * ID BEDA (prefix 'cf4kcal1_'/'cf4kcal2_', bukan 'cal1_'/'cal2_') supaya
+ * tidak bentrok DOM dengan tabel standalone-nya. Kalau teknisi ngisi lewat
+ * section 4000HR (bukan section Feeder Calibration standalone), nilainya
+ * TIDAK masuk ke data.cal1/data.cal2 sama sekali -- malah tersimpan di
+ * data.cf4k.floor_feedercal.calValues.cf4kcal1_dev1/2/3 (dan cf4kcal2_*).
+ * Adapter ini WAJIB cek kedua lokasi (standalone dulu, fallback ke cf4k
+ * kalau standalone kosong) -- kalau cuma baca data.cal1/data.cal2 seperti
+ * awalnya, laporan yang diisi lewat 4000HR kelihatan "tidak ada data" di
+ * trend padahal datanya ADA, cuma di lokasi lain. Demand Test TIDAK
+ * ditemukan versi cf4k-nya (cuma ada di section Test Demand Signal standalone,
+ * tidak ditanam ulang di 4000HR) -- jadi Demand100FlowRate tetap 1 sumber saja.
+ *
  * 2026-08-30: Feeder No. di coal_feeder_calibration.html berubah dari input
  * teks bebas jadi dropdown TETAP 6 feeder (7BF-PVR-500A..F, PULVERIZER 7A..F)
  * -- modul yang dikirim sekarang JUGA menyertakan kode feeder itu di
@@ -53,6 +68,25 @@
     return m ? m[1].toUpperCase() : null;
   }
 
+  // Cal1/Cal2 avg: coba tabel standalone dulu (data.cal1/cal2.deviation),
+  // fallback ke tabel yang sama tapi diisi lewat section 4000HR
+  // (data.cf4k.floor_feedercal.calValues.cf4kcal1_dev1/2/3, dst) kalau yang
+  // standalone kosong. Lihat catatan panjang di header file ini.
+  function cal1DeviationAvg(d) {
+    var std = average(d.cal1 && d.cal1.deviation);
+    if (std !== null) return std;
+    var cv = d.cf4k && d.cf4k.floor_feedercal && d.cf4k.floor_feedercal.calValues;
+    if (!cv) return null;
+    return average([cv.cf4kcal1_dev1, cv.cf4kcal1_dev2, cv.cf4kcal1_dev3]);
+  }
+  function cal2DeviationAvg(d) {
+    var std = average(d.cal2 && d.cal2.deviation);
+    if (std !== null) return std;
+    var cv = d.cf4k && d.cf4k.floor_feedercal && d.cf4k.floor_feedercal.calValues;
+    if (!cv) return null;
+    return average([cv.cf4kcal2_dev1, cv.cf4kcal2_dev2, cv.cf4kcal2_dev3]);
+  }
+
   function parseCoalFeederCalibrationRecords(rows) {
     var result = {};
     FEEDER_LETTERS.forEach(function (letter) {
@@ -68,10 +102,10 @@
       if (!letter || FEEDER_LETTERS.indexOf(letter) === -1) return; // tidak bisa dipetakan ke feeder mana pun -- dilewati
       var tagId = 'COAL-FEEDER-' + letter;
 
-      var cal1Avg = average(d.cal1 && d.cal1.deviation);
+      var cal1Avg = cal1DeviationAvg(d);
       if (cal1Avg !== null) result[tagId].Cal1DeviationAvg.push({ time: t, value: cal1Avg, recordId: r.id, pic: r.pic });
 
-      var cal2Avg = average(d.cal2 && d.cal2.deviation);
+      var cal2Avg = cal2DeviationAvg(d);
       if (cal2Avg !== null) result[tagId].Cal2DeviationAvg.push({ time: t, value: cal2Avg, recordId: r.id, pic: r.pic });
 
       var demand100 = toNumber(d.demand && d.demand['100'] && d.demand['100'].fr_act);
