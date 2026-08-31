@@ -57,6 +57,32 @@ html, body {
   letter-spacing: 0.5px;
 }
 
+/* Nav "Dashboard Utama" / "Dashboard Trend" -- flex-basis:100% + order
+   ditaruh SETELAH topbar-clock di DOM supaya title/status/clock tetap di
+   baris pertama seperti sebelumnya, nav ini dipaksa ke baris sendiri di
+   bawahnya (flex-basis 100% selalu makan satu baris penuh), lalu
+   justify-content:center men-tengahkan isinya di baris itu. */
+.topbar-center-nav {
+  flex: 1 0 100%;
+  order: 5;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+.topbar-center-nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  padding: 3px 10px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px;
+  transition: color .15s, border-color .15s;
+}
+.topbar-center-nav a:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+
 /* ── MODE BAR ────────────────────────────────────────────── */
 .modebar {
   display: flex;
