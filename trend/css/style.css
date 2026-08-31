@@ -30,6 +30,7 @@ html, body {
 
 /* ── TOP BAR ─────────────────────────────────────────────── */
 .topbar {
+  position: relative; /* jangkar buat .topbar-center-nav absolute di bawah */
   display: flex;
   align-items: center;
   gap: 16px;
@@ -57,31 +58,41 @@ html, body {
   letter-spacing: 0.5px;
 }
 
-/* Nav "Dashboard Utama" / "Dashboard Trend" -- flex-basis:100% + order
-   ditaruh SETELAH topbar-clock di DOM supaya title/status/clock tetap di
-   baris pertama seperti sebelumnya, nav ini dipaksa ke baris sendiri di
-   bawahnya (flex-basis 100% selalu makan satu baris penuh), lalu
-   justify-content:center men-tengahkan isinya di baris itu. */
+/* Nav "Dashboard Utama" / "Dashboard Trend" -- posisi absolute, dijangkar
+   ke tengah PERSIS .topbar (bukan cuma tengah sisa ruang kosong seperti
+   pendekatan flex-basis:100% sebelumnya) supaya sejajar satu baris dengan
+   title/status di kiri dan jam di kanan, bukan turun ke baris sendiri.
+   Di layar sempit (lihat @media di bawah) dikembalikan ke alur normal
+   (flex-basis:100%, baris sendiri) supaya tidak numpuk di atas title/jam
+   yang di situ juga sudah wrap. */
 .topbar-center-nav {
-  flex: 1 0 100%;
-  order: 5;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-top: 2px;
+  z-index: 1;
 }
 .topbar-center-nav a {
+  font-family: inherit;
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: .4px;
-  padding: 3px 10px;
-  border: 1px solid rgba(255,255,255,.15);
-  border-radius: 999px;
-  transition: color .15s, border-color .15s;
+  padding: 6px 16px;
+  background: var(--bg-main);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  transition: color .15s, border-color .15s, background .15s;
 }
-.topbar-center-nav a:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+.topbar-center-nav a:hover {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  background: var(--accent-cyan-tint);
+}
 
 /* ── MODE BAR ────────────────────────────────────────────── */
 .modebar {
@@ -366,6 +377,16 @@ html, body {
   .topbar-title { flex-basis: 100%; }
   .topbar-clock { margin-left: 0; }
   .mode-btn { flex: 1 1 auto; }
+  /* Layar sempit: title/clock sudah wrap sendiri-sendiri, posisi
+     absolute-center bisa numpuk di atasnya -- kembalikan nav ke alur
+     normal flexbox, baris sendiri di bawah, tetap center. */
+  .topbar-center-nav {
+    position: static;
+    transform: none;
+    flex-basis: 100%;
+    order: 5;
+    margin-top: 4px;
+  }
 
   .kpi-group-row {
     flex-wrap: nowrap;
