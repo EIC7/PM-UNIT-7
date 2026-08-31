@@ -95,8 +95,8 @@ body {
   animation:fadeUp .5s ease both;
 }
 .section-label {
-  font-family:'Arial Narrow','Rajdhani',sans-serif; font-size:clamp(14px,1.2vw,16px); font-weight:600;
-  letter-spacing:clamp(1px,0.3vw,3px); text-transform:uppercase; color:var(--text3);
+  font-family:'Arial Narrow','Rajdhani',sans-serif; font-size:16px; font-weight:600;
+  letter-spacing:clamp(1px,0.3vw,3px); text-transform:uppercase; color:var(--steel);
   margin-bottom:clamp(8px,1.5vh,20px); display:flex; align-items:center; gap:10px;
 }
 .section-label::after { content:''; flex:1; height:1px; background:var(--panel-border); }
@@ -124,14 +124,14 @@ body {
 .meta-field input, .meta-field select {
   border:1.5px solid var(--panel-border); border-radius:6px;
   padding:clamp(4px,0.6vh,8px) clamp(6px,0.9vw,12px);
-  font-family:Arial,'Barlow',sans-serif; font-size:clamp(13px,1.3vw,14px);
+  font-family:Arial,'Barlow',sans-serif; font-size:16px;
   background:#fff; color:var(--text); transition:border-color .2s; width:100%;
 }
 .meta-field input:focus, .meta-field select:focus { outline:none; border-color:#4a6fa5; background:#fff; }
 
 /* MANUAL TABLE */
-.manual-table { width:100%; border-collapse:separate; border-spacing:0; font-size:clamp(12px,1.3vw,14px); }
-.manual-table th { font-family:'Arial Narrow','Rajdhani',sans-serif; font-size:clamp(10px,1vw,12px); font-weight:600; letter-spacing:0; text-transform:uppercase; color:var(--text3); padding:clamp(4px,0.6vh,10px) clamp(3px,0.6vw,14px); text-align:left; border-bottom:2px solid var(--panel-border); white-space:nowrap; }
+.manual-table { width:100%; border-collapse:separate; border-spacing:0; font-size:16px; }
+.manual-table th { font-family:'Arial Narrow','Rajdhani',sans-serif; font-size:16px; font-weight:600; letter-spacing:0; text-transform:uppercase; color:var(--steel); padding:clamp(4px,0.6vh,10px) clamp(3px,0.6vw,14px); text-align:left; border-bottom:2px solid var(--panel-border); white-space:nowrap; }
 .manual-table td { padding:clamp(3px,0.4vh,6px) clamp(3px,0.5vw,10px); border-bottom:1px solid rgba(180,200,220,0.3); vertical-align:middle; }
 .manual-table tr:last-child td { border-bottom:none; }
 .manual-table tr:hover td { background:rgba(37,74,130,0.03); }
@@ -152,8 +152,8 @@ body {
 
 /* PATH TABLE */
 .preview-wrap { overflow-x:auto; }
-.path-table { width:100%; border-collapse:separate; border-spacing:0; font-size:clamp(10px,1.2vw,14px); }
-.path-table th { font-family:'Arial Narrow','Rajdhani',sans-serif; font-size:clamp(7px,0.9vw,12px); font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--text3); padding:clamp(4px,0.5vh,8px) clamp(5px,0.8vw,14px); text-align:left; border-bottom:2px solid var(--panel-border); }
+.path-table { width:100%; border-collapse:separate; border-spacing:0; font-size:16px; }
+.path-table th { font-family:'Arial Narrow','Rajdhani',sans-serif; font-size:16px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--steel); padding:clamp(4px,0.5vh,8px) clamp(5px,0.8vw,14px); text-align:left; border-bottom:2px solid var(--panel-border); }
 .path-table td { padding:clamp(4px,0.5vh,8px) clamp(5px,0.8vw,14px); border-bottom:1px solid rgba(180,200,220,0.3); vertical-align:middle; }
 .path-table tr:last-child td { border-bottom:none; }
 .path-table tr:hover td { background:rgba(37,74,130,0.04); }
@@ -217,7 +217,7 @@ body {
 .status-badge.fail { background:#fdecea; color:var(--fail); border:1px solid #c0392b30; }
 .status-badge.hard { background:#f3e8fd; color:var(--hard); border:1px solid #8e44ad30; }
 .status-badge.none { background:#f4f6f5; color:var(--text3);border:1px solid #b4c8dc30; }
-.temp-val { font-family:'Courier New','Share Tech Mono',monospace; font-size:clamp(9px,1.1vw,13px); }
+.temp-val { font-family:'Courier New','Share Tech Mono',monospace; font-size:16px; }
 .temp-val.ok   { color:var(--ok); font-weight:700; }
 .temp-val.zero { color:var(--text3); }
 
@@ -325,7 +325,7 @@ input[readonly], textarea[readonly], input:disabled, textarea:disabled, select:d
    tombol Next pindah field, dispatch event 'input' supaya oninput= bawaan
    tetap jalan) ditangani otomatis oleh shared.js. Dark & fixed secara
    sengaja, meniru keyboard OS asli yang juga selalu gelap. ── */
-.pm-num-input{ cursor:pointer; caret-color:transparent; }
+.pm-num-input{ cursor:pointer; caret-color:transparent; font-size:16px !important; color:#111 !important; }
 .pm-num-input.pm-num-active{ border-color:#159957 !important; box-shadow:0 0 0 3px rgba(21,153,87,0.15); }
 #pmNumpad{
   position:fixed; left:0; right:0; bottom:0; z-index:10010;
