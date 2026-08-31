@@ -1584,7 +1584,7 @@ function buildEvidenceSlotEl(item) {
       '<button type="button" onclick="event.stopPropagation();evTriggerSource('+item.id+',\'storage\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>'+
     '</div>'+
     '<input type="file" id="evFileInput_'+item.id+'" accept="image/*" style="display:none" onchange="evOnFileSelected('+item.id+',event)">'+
-    '<input type="text" placeholder="Keterangan evidence..." value="'+escapeHtmlG(item.caption)+'" oninput="evUpdateCaption('+item.id+',this.value)" style="width:100%;margin-top:8px;padding:7px 8px;font-size:12px;border:1px solid var(--border);border-radius:5px;box-sizing:border-box">';
+    '<input type="text" placeholder="Keterangan evidence..." value="'+escapeHtmlG(item.caption)+'" oninput="evUpdateCaption('+item.id+',this.value)" style="width:100%;margin-top:8px;padding:7px 8px;font-size:14px;border:1px solid var(--border);border-radius:5px;box-sizing:border-box">';
   return div;
 }
 function evUpdateCaption(id, val) {

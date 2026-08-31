@@ -1721,7 +1721,7 @@ function bsRenderPreviews(side) {
     wrap.innerHTML = thumb + cropBtn + cornerBtn +
       '<div style="font-size:9px;color:var(--text3);max-width:112px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">'+safeName+'</div>'+ 
       nudgeHtml +
-      '<input id="bsImgCaption_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+caption+'" '+(st.active?'disabled':'')+' oninput="bsImages['+JSON.stringify(side)+']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+      '<input id="bsImgCaption_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+caption+'" '+(st.active?'disabled':'')+' oninput="bsImages['+JSON.stringify(side)+']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:14px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
   if (bsImages[side].length > 1) {

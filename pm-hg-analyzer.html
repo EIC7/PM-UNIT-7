@@ -2400,7 +2400,7 @@ function hgRenderPreviews(side) {
         thumb+
         '<button onclick="pmDeleteImgFromArr(hgEvidence['+no+']['+"'"+phase+"'"+'],'+idx+');hgRenderPreviews(\''+side+'\')" style="position:absolute;top:2px;right:2px;background:rgba(180,0,0,0.85);color:#fff;border:none;border-radius:3px;font-size:12px;line-height:1;padding:3px 6px;cursor:pointer">&#10005;</button>'+
       '</div>'+
-      '<input type="text" placeholder="Keterangan" value="'+safeAttr(img.caption||'')+'" oninput="hgEvidence['+no+']['+"'"+phase+"'"+']['+idx+'].caption=this.value" style="width:100%;margin-top:4px;padding:4px 5px;font-size:10px;border:1px solid var(--panel-border,#ccc);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
+      '<input type="text" placeholder="Keterangan" value="'+safeAttr(img.caption||'')+'" oninput="hgEvidence['+no+']['+"'"+phase+"'"+']['+idx+'].caption=this.value" style="width:100%;margin-top:4px;padding:4px 5px;font-size:14px;border:1px solid var(--panel-border,#ccc);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
       (isImg ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
         '<button type="button" onclick="nudgeImageInArray(hgEvidence['+no+']['+"'"+phase+"'"+'],'+idx+',-0.5,function(){hgRenderPreviews(\''+side+'\')})" title="Geser ke kiri di hasil PDF">&#9664;</button>' +
         '<span>'+(img.offsetX||0)+'cm</span>' +

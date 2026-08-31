@@ -2161,8 +2161,8 @@ function cf4kRenderPreviews(key) {
       : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#1d4ed8);display:flex;align-items:center;justify-content:center;cursor:pointer">'
         + '<input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="cf4kSelectForReorder(\''+key+'\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
     wrap.innerHTML = thumb + cropBtn + cornerBtn +
-      '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+
-      '<input id="cf4kCap_'+key+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" '+(st.active?'disabled':'')+' oninput="cf4kEvidence[\''+key+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
+      '<div style="font-size:13px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+
+      '<input id="cf4kCap_'+key+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" '+(st.active?'disabled':'')+' oninput="cf4kEvidence[\''+key+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:14px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
       nudgeHtml;
     container.appendChild(wrap);
   });
@@ -2417,8 +2417,8 @@ function cfRenderPreviews() {
       : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#1d4ed8);display:flex;align-items:center;justify-content:center;cursor:pointer">'
         + '<input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="cfSelectForReorder('+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
     wrap.innerHTML = thumb + cropBtn + cornerBtn +
-      '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+
-      '<input id="cfCap_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" '+(st.active?'disabled':'')+' oninput="cfImages['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+      '<div style="font-size:13px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+
+      '<input id="cfCap_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" '+(st.active?'disabled':'')+' oninput="cfImages['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:14px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
   if (cfImages.length > 1) {

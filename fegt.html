@@ -2807,7 +2807,7 @@ function sixmRenderPreviews(side) {
         thumb+
         '<button onclick="pmDeleteImgFromArr(sixmAssets['+idx+'].evidenceByStep['+si+'],'+i+');sixmRenderPreviews(\''+idx+'_'+si+'\')" style="position:absolute;top:2px;right:2px;background:rgba(180,0,0,0.85);color:#fff;border:none;border-radius:3px;font-size:12px;line-height:1;padding:3px 6px;cursor:pointer">&#10005;</button>'+
       '</div>'+
-      '<input type="text" placeholder="Keterangan" value="'+String(img.caption||'').replace(/"/g,'&quot;')+'" oninput="sixmAssets['+idx+'].evidenceByStep['+si+']['+i+'].caption=this.value" style="width:100%;margin-top:4px;padding:4px 5px;font-size:10px;border:1px solid var(--panel-border,#ccc);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
+      '<input type="text" placeholder="Keterangan" value="'+String(img.caption||'').replace(/"/g,'&quot;')+'" oninput="sixmAssets['+idx+'].evidenceByStep['+si+']['+i+'].caption=this.value" style="width:100%;margin-top:4px;padding:4px 5px;font-size:14px;border:1px solid var(--panel-border,#ccc);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
     '</div>';
   }).join('');
 }
@@ -3240,7 +3240,7 @@ function ldRenderPreviews(side) {
         '</div></div>') : '') +
       '<input type="text" placeholder="Keterangan" value="' + s(img.caption||'') + '" ' +
         'oninput="ldCleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].caption=this.value" ' +
-        'style="width:100%;margin-top:4px;padding:4px 5px;font-size:10px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">' +
+        'style="width:100%;margin-top:4px;padding:4px 5px;font-size:14px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">' +
     '</div>';
   }).join('');
   if (arr.length > 1) {
@@ -3389,9 +3389,9 @@ function clRenderPreviews(portKey, phase) {
       ? '<button onclick="clRemoveImg(\''+portKey+'\',\''+phase+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
       : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #2563eb;display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="clSelectForReorder(\''+portKey+'\',\''+phase+'\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
     wrap.innerHTML = thumb + cropBtn + actionBtn
-      + '<div style="font-size:9px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'
+      + '<div style="font-size:13px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'
       + nudgeHtml
-      + '<input id="cl_cap_'+portKey+'_'+phase+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
+      + '<input id="cl_cap_'+portKey+'_'+phase+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="cleaningImages[\''+portKey+'\'][\''+phase+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:14px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
     container.appendChild(wrap);
   });
   if (arr.length > 1) {
