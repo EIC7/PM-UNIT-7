@@ -2723,13 +2723,73 @@ function raSubmitReportCore(onDone) {
     raSendFinalPdfToFirebaseDashboard(updated || { modul: window.CURRENT_MODUL, id: window._editingId }, (updated && updated.pic) || '', onDone);
   });
 }
+/* ── OVERLAY "SEDANG MENSUBMIT" untuk submit MANUAL (tombol Submit Laporan
+   di halaman modul itu sendiri) ── beda dari overlay #pmAutosubmitOverlay
+   di atas (yang document.write() SEDINI MUNGKIN sebelum DOM ada, khusus
+   halaman ?autosubmit=1 -- tab Submit/Resubmit dari Riwayat atau retry
+   background). Overlay ini baru muncul SETELAH user klik tombol Submit di
+   tengah halaman yang sudah render penuh -- document.write() di titik ini
+   akan MENGHAPUS SELURUH halaman, jadi dibuat lewat DOM biasa
+   (createElement/appendChild). Menutupi layar (blok interaksi lain karena
+   position:fixed menutupi seluruh viewport) sampai
+   raSendFinalPdfToFirebaseDashboard() BENAR-BENAR selesai (bukan cuma
+   status Supabase ter-update ke SUBMITTED) -- supaya user tidak mengira
+   proses sudah tuntas padahal PDF belum sampai ke Review Approval
+   Dashboard. z-index sama dengan #pmAutosubmitOverlay (di bawah
+   #pmAuthGate 2147483647 supaya gate akses tetap menang kalau device
+   belum trusted). */
+function pmShowManualSubmitOverlay() {
+  if (document.getElementById('pmManualSubmitOverlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'pmManualSubmitOverlay';
+  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:rgba(10,16,28,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+  ov.innerHTML =
+    '<style>@keyframes pmManualSubmitSpin{to{transform:rotate(360deg)}}</style>' +
+    '<div id="pmManualSubmitSpinner" style="width:52px;height:52px;border:4px solid rgba(255,255,255,.22);border-top-color:#38bdf8;border-radius:50%;animation:pmManualSubmitSpin .8s linear infinite"></div>' +
+    '<div id="pmManualSubmitTitle" style="color:#fff;font-size:17px;font-weight:800;letter-spacing:.4px">SEDANG MENSUBMIT</div>' +
+    '<div id="pmManualSubmitMsg" style="color:#cbd5e1;font-size:13px;max-width:340px;line-height:1.55">Mohon tunggu, laporan sedang dikirim ke Review Approval Dashboard. Jangan tutup atau refresh halaman ini.</div>';
+  document.body.appendChild(ov);
+}
+// ok=true (laporan benar-benar sudah masuk Review Approval Dashboard) --
+// overlay ganti jadi konfirmasi sukses lalu hilang sendiri. ok=false --
+// overlay TIDAK hilang otomatis (submit ke Firebase gagal/timeout, akan
+// dicoba lagi otomatis di kunjungan berikutnya lewat
+// raRetryPendingFirebaseSyncs -- tapi user perlu tahu itu SEKARANG, bukan
+// cuma lewat toast yang gampang kelewat), dikasih tombol Tutup manual.
+function pmHideManualSubmitOverlay(ok, err) {
+  var ov = document.getElementById('pmManualSubmitOverlay');
+  if (!ov) return;
+  var spinner = document.getElementById('pmManualSubmitSpinner');
+  var title = document.getElementById('pmManualSubmitTitle');
+  var msg = document.getElementById('pmManualSubmitMsg');
+  if (ok) {
+    if (spinner) spinner.outerHTML = '<div style="font-size:44px;line-height:1">✅</div>';
+    if (title) title.textContent = 'BERHASIL DIKIRIM';
+    if (msg) msg.textContent = 'Laporan sudah masuk ke Review Approval Dashboard.';
+    setTimeout(function(){ ov.remove(); }, 1500);
+  } else {
+    if (spinner) spinner.outerHTML = '<div style="font-size:44px;line-height:1">⚠️</div>';
+    if (title) title.textContent = 'BELUM SAMPAI';
+    if (msg) msg.textContent = 'Laporan sudah tersimpan, tapi belum sukses terkirim ke Review Approval Dashboard' + (err ? (' (' + String((err && err.message) || err).slice(0, 150) + ')') : '') + '. Sistem akan mencoba lagi otomatis di kunjungan berikutnya.';
+    if (!document.getElementById('pmManualSubmitCloseBtn')) {
+      var btn = document.createElement('button');
+      btn.id = 'pmManualSubmitCloseBtn';
+      btn.textContent = 'Tutup';
+      btn.style.cssText = 'margin-top:6px;padding:10px 28px;border:none;border-radius:8px;background:#38bdf8;color:#04202e;font-weight:700;font-size:14px;cursor:pointer';
+      btn.onclick = function(){ ov.remove(); };
+      ov.appendChild(btn);
+    }
+  }
+}
 function raSubmitReport() {
   if (!window._editingId) {
     alert('Simpan dulu sebagai Draft sebelum submit.');
     return;
   }
   if (!confirm('Apakah data sudah lengkap? Yakin Submit?')) return;
+  pmShowManualSubmitOverlay();
   raSubmitReportCore(function(ok, err) {
+    pmHideManualSubmitOverlay(ok, err);
     if (!ok) dbShowToast('⚠️ Tersubmit, tapi belum terkirim ke Review Approval Dashboard (' + ((err && err.message) || err) + ') — akan dicoba otomatis lagi nanti.');
   });
 }
