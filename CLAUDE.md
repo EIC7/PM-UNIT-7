@@ -861,3 +861,55 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   riwayat pakai `updated_at`/`created_at` (ISO 8601 asli dari Supabase, bukan `tanggal`
   string Indonesia) lewat `order=updated_at.desc` di query, jadi tidak kena bug bulan yang
   sama. Bug ini murni terisolasi di sistem trend (`trend/js/supabase-adapter.js`).
+
+## Fix `dbList()` limit=100 (Riwayat tidak menampilkan semua data) + counter per modul (2026-09-01)
+
+- `dbList()` (`shared.js`) sebelumnya ambil `limit=100` untuk SELURUH baris `pm_records`
+  (order `updated_at.desc`) SEBELUM difilter per modul di client (`finishWith`) — dengan
+  `pm_records` di 145 total baris dan O2 Weekly Inlet+Outlet saja sudah 64 baris (Inlet
+  ada yang dari Desember 2024), baris lama ketutup baris modul lain yang lebih baru
+  diupdate dan hilang total dari Riwayat walau masih ada di database, TANPA error apa
+  pun yang kelihatan. Limit dinaikkan ke 5000 (pada KEDUA varian query — primer dan
+  fallback tanpa `firebase_checksheet_id`) — aman karena `select` di query ini cuma ambil
+  kolom metadata ringan, tidak pernah menyertakan kolom `data` JSONB yang berat.
+- `history.html`: tiap tombol filter modul sekarang menampilkan jumlah laporan
+  tersimpan, mis. "O2 Weekly Inlet (34)" — dihitung dari `dbList('', ...)` (yang otomatis
+  mengembalikan SEMUA baris tanpa filter) di-group per `normalizeModul()`, lewat
+  `pmHistUpdateFilterCounts()`, refresh tiap 20 detik bareng auto-refresh tabel yang
+  sudah ada. Setiap tombol filter WAJIB punya atribut `data-modul-filter="<argumen yang
+  sama persis dengan onclick="loadHistory('...')"` + `<span class="hist-count">` di dalam
+  `<button>` supaya ikut terhitung — **kalau nambah tombol filter modul baru, WAJIB ikuti
+  pola ini**, dan div pembungkusnya (`#pmHistFilterBar`) jangan diganti id-nya.
+
+## Overlay "SEDANG MENSUBMIT" untuk tombol Submit MANUAL di semua modul (2026-09-01)
+
+- Beda dari `#pmAutosubmitOverlay` (dokumentasi di atas, `document.write()` SEDINI
+  MUNGKIN sebelum DOM ada, khusus halaman `?autosubmit=1`) — overlay baru ini
+  (`#pmManualSubmitOverlay`, `pmShowManualSubmitOverlay()`/`pmHideManualSubmitOverlay(ok,
+  err)` di `shared.js`) untuk tombol Submit **manual** yang diklik user langsung di
+  halaman modul (`raSubmitReport()`, dipakai generik oleh SEMUA modul lewat
+  `button[onclick*="raSubmitReport()"]` — 1 titik perubahan di `shared.js` otomatis
+  berlaku ke semua file, TIDAK perlu edit tiap file modul satu-satu). Dibuat lewat DOM
+  biasa (`createElement`/`appendChild`), BUKAN `document.write()` — beda dari overlay
+  autosubmit karena overlay ini muncul SETELAH halaman sudah full-render (di tengah klik
+  user), `document.write()` di titik itu akan menghapus seluruh halaman.
+- Overlay muncul persis setelah user konfirmasi dialog "Yakin Submit?", dan BARU hilang
+  setelah `raSendFinalPdfToFirebaseDashboard()` benar-benar tuntas (bukan cuma status
+  Supabase ter-update ke SUBMITTED) — yaitu titik yang sama dengan callback `onDone(ok,
+  err)` yang sudah ada. `ok=true` (laporan sungguhan sudah masuk Review Approval
+  Dashboard) → overlay ganti jadi pesan sukses lalu hilang sendiri (1.5 detik). `ok=false`
+  (gagal/timeout kirim ke Firebase — record TETAP tersimpan SUBMITTED di Supabase, cuma
+  belum sync ke Review Approval Dashboard) → overlay **SENGAJA TIDAK hilang otomatis**,
+  dikasih tombol "Tutup" manual — supaya user pasti sadar prosesnya belum tuntas
+  (`raRetryPendingFirebaseSyncs()` akan coba lagi otomatis di kunjungan berikutnya),
+  bukan cuma lewat toast yang gampang kelewat/hilang sendiri.
+- z-index sama dengan `#pmAutosubmitOverlay` (`2147483000`, di bawah `#pmAuthGate`
+  `2147483647`) — overlay ini otomatis memblok interaksi lain ke halaman selama proses
+  berjalan (menutupi seluruh viewport), tidak perlu disable tombol Submit secara terpisah.
+- **Kalau ada file modul yang punya jalur submit CUSTOM** (memanggil
+  `raSubmitReportCore()` langsung, bukan lewat `raSubmitReport()`) — overlay ini TIDAK
+  ikut terpasang di situ. Sudah di-grep saat implementasi: **tidak ada** file modul yang
+  melakukan ini per 2026-09-01, semua (termasuk `fegt.html` yang punya 2 tombol Submit
+  berbeda) memanggil `raSubmitReport()`. Kalau menambah jalur submit baru di masa depan,
+  pastikan tetap lewat `raSubmitReport()` supaya overlay ini otomatis ikut, atau panggil
+  `pmShowManualSubmitOverlay()`/`pmHideManualSubmitOverlay()` manual di jalur barunya.
