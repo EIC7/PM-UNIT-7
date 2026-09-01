@@ -11,8 +11,9 @@
  * kesehatan cell (Voltage/Temperature/Lifetime/Resistance) terdaftar
  * defaultVisible:false, tersedia lewat toggle TAG LIST.
  *
- * ENGINEERING RANGE 0-25%: sama asumsi dengan O2 Inlet, sesuaikan kalau
- * ada spesifikasi instrumen aktual.
+ * ENGINEERING RANGE 0-22% (chartMax): O2 Outlet maksimal aktual instrumen
+ * adalah 21% -- chartMax dilebihkan 1% jadi 22% supaya titik di batas atas
+ * tidak menempel ke garis tepi chart (2026-09-01, user konfirmasi 21%).
  * ==========================================================================
  */
 window.DCS_DEFAULT_TAGS = [];
@@ -35,7 +36,7 @@ O2_OUTLET_CHANNELS.forEach(function (c, idx) {
     name: 'O2 Outlet Ch' + c.ch + ' (' + c.tagCode + ')',
     description: c.desc + ' — pembacaan O2%, per kejadian PM mingguan',
     unit: '%',
-    engineeringLow: 0, engineeringHigh: 20, min: 0, max: 20, chartMax: 20,
+    engineeringLow: 0, engineeringHigh: 22, min: 0, max: 22, chartMax: 22,
     alarmLowLow: null, alarmLow: null, alarmHigh: null, alarmHighHigh: null,
     visible: true, enabled: true,
     source: 'supabase:pm_records', sourceModul: 'PM_O2_WEEKLY_OUTLET', updateInterval: null,
