@@ -905,8 +905,14 @@ pmInitGate();
    TIDAK menggantikan kata-kata di kedua overlay itu sama sekali, cuma
    ikon/animasi tengahnya. Class di-prefix "pm-" khusus supaya tidak
    pernah bentrok sama CSS lokal modul mana pun. Preview sebelum dipasang:
-   lihat riwayat percakapan/artifact "Folder Terbang". */
+   lihat riwayat percakapan/artifact "Folder Terbang".
+   Background solid #060a10 + glow pulsar di belakang ikon SENGAJA disamakan
+   dengan overlay "EIC7" (dbShowSavingOverlay) -- supaya SEMUA overlay
+   full-screen di aplikasi ini (submit manual, submit otomatis, simpan/muat
+   data) terasa satu keluarga visual yang sama, bukan 2 gaya berbeda. */
 var PM_FOLDER_ANIM_CSS =
+  '@keyframes pmGlowPulse{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}}' +
+  '.pm-overlay-glow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(70vw,320px);height:min(70vw,320px);border-radius:50%;background:radial-gradient(ellipse at center, rgba(56,189,248,0.18) 0%, rgba(56,189,248,0) 70%);filter:blur(2px);animation:pmGlowPulse 2.6s ease-in-out infinite;pointer-events:none}' +
   '@keyframes pmFlapCatch{0%,34%{transform:rotate(-16deg) translateY(-3px)}42%{transform:rotate(-24deg) translateY(-6px)}50%,84%{transform:rotate(-16deg) translateY(-3px)}92%{transform:rotate(-24deg) translateY(-6px)}100%{transform:rotate(-16deg) translateY(-3px)}}' +
   '@keyframes pmFly{0%{opacity:0;transform:translate(0,0) scale(.5) rotate(-6deg)}10%{opacity:1;transform:translate(6px,-6px) scale(1) rotate(-4deg)}45%{opacity:1;transform:translate(58px,-38px) scale(1.02) rotate(2deg)}82%{opacity:1;transform:translate(112px,-6px) scale(.85) rotate(6deg)}100%{opacity:0;transform:translate(126px,4px) scale(.35) rotate(10deg)}}' +
   '.pm-folder-scene{position:relative;width:180px;height:96px}' +
@@ -924,6 +930,7 @@ var PM_FOLDER_ANIM_CSS =
   '.pm-paper.pm-p3{animation-delay:1s}' +
   '@media (prefers-reduced-motion: reduce){.pm-folder-right .pm-flap{animation:none}.pm-paper{animation:none;opacity:.9;transform:translate(58px,-24px) scale(.9)}.pm-paper.pm-p2{opacity:.5;transform:translate(20px,-10px) scale(.7)}.pm-paper.pm-p3{opacity:0}}';
 var PM_FOLDER_ANIM_HTML =
+  '<div class="pm-overlay-glow"></div>' +
   '<div class="pm-folder-scene">' +
     '<div class="pm-folder pm-folder-left"></div>' +
     '<div class="pm-paper pm-p1"></div>' +
@@ -963,7 +970,7 @@ var PM_FOLDER_ANIM_HTML =
   // tidak pernah kelihatan siapa pun.
   document.write(
     '<style id="pmAutosubmitOverlayStyle">' + PM_FOLDER_ANIM_CSS + '</style>' +
-    '<div id="pmAutosubmitOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:rgba(10,16,28,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">' +
+    '<div id="pmAutosubmitOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:#060a10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden">' +
       PM_FOLDER_ANIM_HTML +
       '<div style="color:#fff;font-size:17px;font-weight:800;letter-spacing:.4px">SEDANG MENSUBMIT</div>' +
       '<div style="color:#cbd5e1;font-size:13px;max-width:340px;line-height:1.55">Sistem sedang mensubmit otomatis, halaman akan kembali ke riwayat otomatis setelah submit berhasil.</div>' +
@@ -2776,7 +2783,7 @@ function pmShowManualSubmitOverlay() {
   if (document.getElementById('pmManualSubmitOverlay')) return;
   var ov = document.createElement('div');
   ov.id = 'pmManualSubmitOverlay';
-  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:rgba(10,16,28,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:#060a10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden';
   ov.innerHTML =
     '<style>' + PM_FOLDER_ANIM_CSS + '</style>' +
     '<div id="pmManualSubmitAnim">' + PM_FOLDER_ANIM_HTML + '</div>' +
