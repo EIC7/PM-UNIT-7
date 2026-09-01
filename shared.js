@@ -1417,10 +1417,13 @@ function dbList(modul, callback) {
   // status review/approval sungguhan di historyUpgradeStatusBadges), kalau
   // gagal (migration belum jalan) baru ulang tanpa kolom itu -- supaya
   // Riwayat tidak ikut rusak total gara-gara 1 kolom baru belum ada.
-  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status&order=updated_at.desc&limit=100')
+  // limit dinaikkan jauh -- sebelumnya 100 menyebabkan record lama (mis. O2
+  // Weekly Inlet dari Desember 2024) ketutup rows modul lain yang lebih baru
+  // di-update, jadi hilang dari Riwayat walau masih ada di database.
+  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status&order=updated_at.desc&limit=5000')
     .then(finishWith)
     .catch(function() {
-      supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + '&order=updated_at.desc&limit=100')
+      supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + '&order=updated_at.desc&limit=5000')
         .then(finishWith)
         .catch(function(){ callback([]); });
     });

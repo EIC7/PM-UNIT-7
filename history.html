@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
@@ -43,6 +43,7 @@
   background:#243228; color:#7fd9a4; cursor:pointer; white-space:nowrap;
 }
 .pm-hist-refresh-label { font-size:10.5px; color:#7a8a9a; white-space:nowrap; }
+.hist-count { font-weight:700; opacity:0.85; }
 /* Mobile sempit: label waktu & teks tombol disembunyikan, sisakan ikon
    supaya baris topbar tidak melebihi lebar layar (dulu kepotong sampai
    live-dot ikut hilang di ujung kanan). */
@@ -81,27 +82,27 @@
 
   <div class="panel">
     <div class="section-label">Filter Modul</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <button class="btn btn-outline" onclick="loadHistory('')" style="font-size:12px;padding:6px 14px;flex:none">Semua</button>
-      <button class="btn btn-outline" onclick="loadHistory('FEGT')" style="font-size:12px;padding:6px 14px;flex:none">FEGT</button>
-      <button class="btn btn-outline" onclick="loadHistory('CEMS Calibration')" style="font-size:12px;padding:6px 14px;flex:none">CEMS Calibration</button>
-      <button class="btn btn-outline" onclick="loadHistory('SO2')" style="font-size:12px;padding:6px 14px;flex:none">SO2</button>
-      <button class="btn btn-outline" onclick="loadHistory('OPACITY')" style="font-size:12px;padding:6px 14px;flex:none">Opacity</button>
-      <button class="btn btn-outline" onclick="loadHistory('MAINTENANCE_REPORT')" style="font-size:12px;padding:6px 14px;flex:none">Maintenance</button>
-      <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR E4-E5')" style="font-size:12px;padding:6px 14px;flex:none">Belt E4/E5</button>
-      <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR E2-E3')" style="font-size:12px;padding:6px 14px;flex:none">Belt E2/E3</button>
-      <button class="btn btn-outline" onclick="loadHistory('BELT CONVEYOR B1-B2')" style="font-size:12px;padding:6px 14px;flex:none">Belt B1/B2</button>
-      <button class="btn btn-outline" onclick="loadHistory('Coal Feeder Calibration')" style="font-size:12px;padding:6px 14px;flex:none">Coal Feeder</button>
-      <button class="btn btn-outline" onclick="loadHistory('Analyzer Indicator Transmitter (pH)')" style="font-size:12px;padding:6px 14px;flex:none">pH Analyzer</button>
-      <button class="btn btn-outline" onclick="loadHistory('COAL_SILO_LEVEL')" style="font-size:12px;padding:6px 14px;flex:none">Coal Silo Level</button>
-      <button class="btn btn-outline" onclick="loadHistory('DCS-HMI')" style="font-size:12px;padding:6px 14px;flex:none">Dcs-HMI</button>
-      <button class="btn btn-outline" onclick="loadHistory('Flow Meter FGD Inlet &amp; Quencher')" style="font-size:12px;padding:6px 14px;flex:none">Flow Meter FGD</button>
-      <button class="btn btn-outline" onclick="loadHistory('PM HG Analyzer')" style="font-size:12px;padding:6px 14px;flex:none">PM HG Analyzer</button>
-      <button class="btn btn-outline" onclick="loadHistory('O2')" style="font-size:12px;padding:6px 14px;flex:none">O2 Report</button>
-      <button class="btn btn-outline" onclick="loadHistory('O2_WEEKLY_INLET')" style="font-size:12px;padding:6px 14px;flex:none">O2 Weekly Inlet</button>
-      <button class="btn btn-outline" onclick="loadHistory('O2_WEEKLY_OUTLET')" style="font-size:12px;padding:6px 14px;flex:none">O2 Weekly Outlet</button>
-      <button class="btn btn-outline" onclick="loadHistory('GENERATOR_STATOR_LEAK')" style="font-size:12px;padding:6px 14px;flex:none">Gen Stator Leak</button>
-      <button class="btn btn-outline" onclick="loadHistory('Mark VIe Alarm & Module Inspection')" style="font-size:12px;padding:6px 14px;flex:none">Mark VIe</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="pmHistFilterBar">
+      <button class="btn btn-outline" data-modul-filter="" onclick="loadHistory('')" style="font-size:12px;padding:6px 14px;flex:none">Semua<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="FEGT" onclick="loadHistory('FEGT')" style="font-size:12px;padding:6px 14px;flex:none">FEGT<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="CEMS Calibration" onclick="loadHistory('CEMS Calibration')" style="font-size:12px;padding:6px 14px;flex:none">CEMS Calibration<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="SO2" onclick="loadHistory('SO2')" style="font-size:12px;padding:6px 14px;flex:none">SO2<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="OPACITY" onclick="loadHistory('OPACITY')" style="font-size:12px;padding:6px 14px;flex:none">Opacity<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="MAINTENANCE_REPORT" onclick="loadHistory('MAINTENANCE_REPORT')" style="font-size:12px;padding:6px 14px;flex:none">Maintenance<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR E4-E5" onclick="loadHistory('BELT CONVEYOR E4-E5')" style="font-size:12px;padding:6px 14px;flex:none">Belt E4/E5<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR E2-E3" onclick="loadHistory('BELT CONVEYOR E2-E3')" style="font-size:12px;padding:6px 14px;flex:none">Belt E2/E3<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR B1-B2" onclick="loadHistory('BELT CONVEYOR B1-B2')" style="font-size:12px;padding:6px 14px;flex:none">Belt B1/B2<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="Coal Feeder Calibration" onclick="loadHistory('Coal Feeder Calibration')" style="font-size:12px;padding:6px 14px;flex:none">Coal Feeder<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="Analyzer Indicator Transmitter (pH)" onclick="loadHistory('Analyzer Indicator Transmitter (pH)')" style="font-size:12px;padding:6px 14px;flex:none">pH Analyzer<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="COAL_SILO_LEVEL" onclick="loadHistory('COAL_SILO_LEVEL')" style="font-size:12px;padding:6px 14px;flex:none">Coal Silo Level<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="DCS-HMI" onclick="loadHistory('DCS-HMI')" style="font-size:12px;padding:6px 14px;flex:none">Dcs-HMI<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="Flow Meter FGD Inlet &amp; Quencher" onclick="loadHistory('Flow Meter FGD Inlet &amp; Quencher')" style="font-size:12px;padding:6px 14px;flex:none">Flow Meter FGD<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="PM HG Analyzer" onclick="loadHistory('PM HG Analyzer')" style="font-size:12px;padding:6px 14px;flex:none">PM HG Analyzer<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="O2" onclick="loadHistory('O2')" style="font-size:12px;padding:6px 14px;flex:none">O2 Report<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="O2_WEEKLY_INLET" onclick="loadHistory('O2_WEEKLY_INLET')" style="font-size:12px;padding:6px 14px;flex:none">O2 Weekly Inlet<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="O2_WEEKLY_OUTLET" onclick="loadHistory('O2_WEEKLY_OUTLET')" style="font-size:12px;padding:6px 14px;flex:none">O2 Weekly Outlet<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="GENERATOR_STATOR_LEAK" onclick="loadHistory('GENERATOR_STATOR_LEAK')" style="font-size:12px;padding:6px 14px;flex:none">Gen Stator Leak<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="Mark VIe Alarm & Module Inspection" onclick="loadHistory('Mark VIe Alarm & Module Inspection')" style="font-size:12px;padding:6px 14px;flex:none">Mark VIe<span class="hist-count"></span></button>
     </div>
     <div id="historyList" style="overflow-x:auto">
       <div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Memuat...</div>
@@ -246,6 +247,32 @@ function pmHistUpdateRefreshLabel() {
 setInterval(function(){
   if (document.hidden) return; // hemat request kalau tab sedang tidak aktif
   pmHistRefresh();
+}, 20000);
+
+/* Jumlah laporan tersimpan per tombol filter, mis. "FEGT (12)". dbList('')
+   selalu ambil SELURUH baris dari Supabase dulu (filter per-modul baru
+   terjadi di client, lihat finishWith di shared.js), jadi panggilan ini
+   otomatis dapat total yang sebenarnya -- bukan cuma yang lagi tampil. */
+function pmHistUpdateFilterCounts() {
+  dbList('', function(rows) {
+    var counts = {};
+    var total = (rows || []).length;
+    (rows || []).forEach(function(r) {
+      var key = normalizeModul(r.modul);
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    document.querySelectorAll('#pmHistFilterBar button[data-modul-filter]').forEach(function(btn) {
+      var filterVal = btn.getAttribute('data-modul-filter');
+      var span = btn.querySelector('.hist-count');
+      if (!span) return;
+      var n = filterVal === '' ? total : (counts[normalizeModul(filterVal)] || 0);
+      span.textContent = ' (' + n + ')';
+    });
+  });
+}
+setInterval(function(){
+  if (document.hidden) return;
+  pmHistUpdateFilterCounts();
 }, 20000);
 
 /* Label Area per baris riwayat -- kosakata SAMA persis dengan <option>
@@ -618,6 +645,7 @@ pmCheckSyncDiagnosis(function(problems) {
 
 /* Auto-load all on open */
 loadHistory('');
+pmHistUpdateFilterCounts();
 </script>
 </body>
 </html>
