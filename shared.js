@@ -928,9 +928,13 @@ var PM_FOLDER_ANIM_CSS =
   '.pm-paper::after{top:9px;right:7px}' +
   '.pm-paper.pm-p2{animation-delay:.5s}' +
   '.pm-paper.pm-p3{animation-delay:1s}' +
+  '@keyframes pmEicFlicker{0%,92%,100%{opacity:1}93%{opacity:.35}95%{opacity:1}96%{opacity:.5}98%{opacity:1}}' +
+  '.pm-eic-label{display:flex;justify-content:center;font-family:\'Arial Black\',Impact,-apple-system,sans-serif;font-weight:900;font-size:20px;letter-spacing:2px;color:#eaffff}' +
+  '.pm-eic-label span{display:inline-block;animation:pmEicFlicker 2.4s infinite;text-shadow:0 0 6px #7fe9ff,0 0 14px #35c9ff}' +
   '@media (prefers-reduced-motion: reduce){.pm-folder-right .pm-flap{animation:none}.pm-paper{animation:none;opacity:.9;transform:translate(58px,-24px) scale(.9)}.pm-paper.pm-p2{opacity:.5;transform:translate(20px,-10px) scale(.7)}.pm-paper.pm-p3{opacity:0}}';
 var PM_FOLDER_ANIM_HTML =
   '<div class="pm-overlay-glow"></div>' +
+  '<div class="pm-eic-label"><span>E</span><span>I</span><span>C</span><span>7</span></div>' +
   '<div class="pm-folder-scene">' +
     '<div class="pm-folder pm-folder-left"></div>' +
     '<div class="pm-paper pm-p1"></div>' +
