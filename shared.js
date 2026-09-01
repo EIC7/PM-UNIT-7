@@ -898,6 +898,40 @@ function pmInitGate() {
 // dipanggil langsung tanpa nunggu DOMContentLoaded.
 pmInitGate();
 
+/* ── Animasi overlay submit "folder terbang" ala file-copy Windows lama ──
+   Dipakai BERSAMA oleh #pmAutosubmitOverlay (di bawah, document.write
+   sedini mungkin) dan #pmManualSubmitOverlay (raSubmitReport, dibuat lewat
+   DOM biasa) -- 1 sumber CSS/markup supaya kedua overlay selalu konsisten,
+   TIDAK menggantikan kata-kata di kedua overlay itu sama sekali, cuma
+   ikon/animasi tengahnya. Class di-prefix "pm-" khusus supaya tidak
+   pernah bentrok sama CSS lokal modul mana pun. Preview sebelum dipasang:
+   lihat riwayat percakapan/artifact "Folder Terbang". */
+var PM_FOLDER_ANIM_CSS =
+  '@keyframes pmFlapCatch{0%,34%{transform:rotate(-16deg) translateY(-3px)}42%{transform:rotate(-24deg) translateY(-6px)}50%,84%{transform:rotate(-16deg) translateY(-3px)}92%{transform:rotate(-24deg) translateY(-6px)}100%{transform:rotate(-16deg) translateY(-3px)}}' +
+  '@keyframes pmFly{0%{opacity:0;transform:translate(0,0) scale(.5) rotate(-6deg)}10%{opacity:1;transform:translate(6px,-6px) scale(1) rotate(-4deg)}45%{opacity:1;transform:translate(58px,-38px) scale(1.02) rotate(2deg)}82%{opacity:1;transform:translate(112px,-6px) scale(.85) rotate(6deg)}100%{opacity:0;transform:translate(126px,4px) scale(.35) rotate(10deg)}}' +
+  '.pm-folder-scene{position:relative;width:180px;height:96px}' +
+  '.pm-folder{position:absolute;bottom:10px;width:56px;height:40px}' +
+  '.pm-folder::before{content:"";position:absolute;top:-7px;left:3px;width:24px;height:9px;background:#c9860f;border-radius:3px 6px 0 0}' +
+  '.pm-folder::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#f0b429,#c9860f);border-radius:2px 7px 7px 7px;box-shadow:0 6px 14px rgba(0,0,0,.35)}' +
+  '.pm-folder-left{left:6px}' +
+  '.pm-folder-right{right:6px}' +
+  '.pm-folder-right .pm-flap{position:absolute;left:-2px;right:-2px;top:2px;height:22px;background:linear-gradient(180deg,#ffce54,#e0a52a);border-radius:2px 8px 3px 3px;transform-origin:0% 100%;transform:rotate(-16deg) translateY(-3px);box-shadow:0 3px 8px rgba(0,0,0,.3);animation:pmFlapCatch 1.5s ease-in-out infinite}' +
+  '.pm-paper{position:absolute;bottom:26px;left:30px;width:22px;height:16px;background:#f8fafc;border-radius:2px;box-shadow:0 2px 5px rgba(0,0,0,.25);opacity:0;animation:pmFly 1.5s cubic-bezier(.4,0,.2,1) infinite}' +
+  '.pm-paper::before,.pm-paper::after{content:"";position:absolute;left:3px;right:3px;height:2px;background:#9fb0c3;border-radius:1px}' +
+  '.pm-paper::before{top:5px}' +
+  '.pm-paper::after{top:9px;right:7px}' +
+  '.pm-paper.pm-p2{animation-delay:.5s}' +
+  '.pm-paper.pm-p3{animation-delay:1s}' +
+  '@media (prefers-reduced-motion: reduce){.pm-folder-right .pm-flap{animation:none}.pm-paper{animation:none;opacity:.9;transform:translate(58px,-24px) scale(.9)}.pm-paper.pm-p2{opacity:.5;transform:translate(20px,-10px) scale(.7)}.pm-paper.pm-p3{opacity:0}}';
+var PM_FOLDER_ANIM_HTML =
+  '<div class="pm-folder-scene">' +
+    '<div class="pm-folder pm-folder-left"></div>' +
+    '<div class="pm-paper pm-p1"></div>' +
+    '<div class="pm-paper pm-p2"></div>' +
+    '<div class="pm-paper pm-p3"></div>' +
+    '<div class="pm-folder pm-folder-right"><div class="pm-flap"></div></div>' +
+  '</div>';
+
 /* ── JARING PENGAMAN TOTAL untuk halaman ?autosubmit=1 ──
    Ditemukan laporan yang macet total di alur Submit dari Riwayat/retry
    otomatis TANPA PERNAH lapor sukses maupun gagal, bahkan setelah
@@ -928,9 +962,9 @@ pmInitGate();
   // autosubmit=1 TANPA autoclose=1) -- iframe-nya display:none, overlay ini
   // tidak pernah kelihatan siapa pun.
   document.write(
-    '<style id="pmAutosubmitOverlayStyle">@keyframes pmAutosubmitSpin{to{transform:rotate(360deg)}}</style>' +
+    '<style id="pmAutosubmitOverlayStyle">' + PM_FOLDER_ANIM_CSS + '</style>' +
     '<div id="pmAutosubmitOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:rgba(10,16,28,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif">' +
-      '<div style="width:52px;height:52px;border:4px solid rgba(255,255,255,.22);border-top-color:#38bdf8;border-radius:50%;animation:pmAutosubmitSpin .8s linear infinite"></div>' +
+      PM_FOLDER_ANIM_HTML +
       '<div style="color:#fff;font-size:17px;font-weight:800;letter-spacing:.4px">SEDANG MENSUBMIT</div>' +
       '<div style="color:#cbd5e1;font-size:13px;max-width:340px;line-height:1.55">Sistem sedang mensubmit otomatis, halaman akan kembali ke riwayat otomatis setelah submit berhasil.</div>' +
     '</div>'
@@ -2744,8 +2778,8 @@ function pmShowManualSubmitOverlay() {
   ov.id = 'pmManualSubmitOverlay';
   ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483000;background:rgba(10,16,28,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif';
   ov.innerHTML =
-    '<style>@keyframes pmManualSubmitSpin{to{transform:rotate(360deg)}}</style>' +
-    '<div id="pmManualSubmitSpinner" style="width:52px;height:52px;border:4px solid rgba(255,255,255,.22);border-top-color:#38bdf8;border-radius:50%;animation:pmManualSubmitSpin .8s linear infinite"></div>' +
+    '<style>' + PM_FOLDER_ANIM_CSS + '</style>' +
+    '<div id="pmManualSubmitAnim">' + PM_FOLDER_ANIM_HTML + '</div>' +
     '<div id="pmManualSubmitTitle" style="color:#fff;font-size:17px;font-weight:800;letter-spacing:.4px">SEDANG MENSUBMIT</div>' +
     '<div id="pmManualSubmitMsg" style="color:#cbd5e1;font-size:13px;max-width:340px;line-height:1.55">Mohon tunggu, laporan sedang dikirim ke Review Approval Dashboard. Jangan tutup atau refresh halaman ini.</div>';
   document.body.appendChild(ov);
@@ -2759,7 +2793,7 @@ function pmShowManualSubmitOverlay() {
 function pmHideManualSubmitOverlay(ok, err) {
   var ov = document.getElementById('pmManualSubmitOverlay');
   if (!ov) return;
-  var spinner = document.getElementById('pmManualSubmitSpinner');
+  var spinner = document.getElementById('pmManualSubmitAnim');
   var title = document.getElementById('pmManualSubmitTitle');
   var msg = document.getElementById('pmManualSubmitMsg');
   if (ok) {
