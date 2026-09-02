@@ -940,3 +940,48 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   jadi risikonya lebih kecil, tapi kalau ke depan ada fix mendesak di salah satu file itu
   dan user lapor "belum kelihatan di beberapa device" lagi, curigai hal yang sama dan
   tambahkan `?v=` ke situ juga.
+
+## Modul baru: ID Fan Flow Transmitter Line Purging (MOD-21, 2026-09-02)
+
+- Didigitalisasi dari CSV checksheet kertas "ID FAN Flow Transmitters Impulse Line
+  Purging" untuk `7BG-FAN-500` (Induced Draft Fan 7), tracking dua flow transmitter
+  `7BG-FT-933A`/`7BG-FT-933B` sekaligus dalam SATU form (bukan 2 form terpisah) --
+  CSV sumbernya sendiri agak berantakan (hasil export Excel/PDF yang kolomnya
+  ke-split aneh), jadi struktur tabel di-rekonstruksi manual + dikonfirmasi ke user
+  sebelum dibangun (lihat riwayat percakapan kalau perlu detail alasannya):
+  - Tiap baris checklist (langkah 1,2,3,4,5,6,8,9,10 -- TIDAK ADA baris "7" di tabel
+    checklist, langkah 7 adalah tabel pengukuran terpisah) punya **4 checkbox**
+    (Pass A/Fail A/Pass B/Fail B) -- status 933A dan 933B dicatat TERPISAH, bukan
+    status tunggal untuk keduanya, walau sebagian baris di CSV keliatan cuma
+    menampilkan 1 "OK" (kemungkinan artifact export yang hilang, bukan disengaja).
+  - Langkah 9 ("Raise new WO & repair if any defect found") SENGAJA pakai widget
+    Pass/Fail generik yang SAMA dengan baris lain (bukan widget Ya/Tidak khusus)
+    walau makna "Pass" di baris ini = "tidak ada defect" (kebalikan makna literal
+    tapi konsisten UI-nya) -- keputusan sadar, jangan diubah jadi widget beda kalau
+    direvisi ulang.
+  - Langkah 7 jadi tabel pengukuran terpisah "Card Value (mA)" + "Flow (T/H)", MASING-
+    MASING 4 kolom numerik (Before 933A/After 933A/Before 933B/After 933B) -- kosong
+    by default (bukan pre-fill contoh angka dari CSV).
+  - 2 galeri foto evidence terpisah (bukan 1 galeri gabungan) -- "Cleaning Panel"
+    (langkah 4) dan "Before/After Line Purging" (langkah 7). Implementasi PAKAI 1
+    registry `EV_GALLERIES = {cleaning:{...}, purging:{...}}` + fungsi generik
+    yang menerima parameter `gk` ('cleaning'/'purging'), BUKAN 2 salinan fungsi
+    duplikat -- kalau nambah galeri evidence ke-3 di modul ini nanti, tambahkan
+    entry baru ke registry itu, jangan copy-paste fungsi lagi.
+- Area (`RA_MODUL_AREA`): **`boiler`** -- ID Fan menarik flue gas dari furnace, satu
+  bucket dengan FEGT/SO2/CEMS/Opacity/Flow Meter FGD (semua instrumen jalur flue gas
+  boiler), BUKAN `common`/`turbine` walau nama "Fan" terdengar seperti equipment
+  mekanikal umum.
+- `window.CURRENT_MODUL = 'ID_FAN_LINE_PURGING'` (nilai yang BENAR-BENAR tersimpan ke
+  `pm_records.modul`), beda dari argumen `dbSave('id_fan_line_purging')` (lowercase,
+  cuma dipakai `dbCollectData(modul)` buat validasi pemanggil) -- pola identik dengan
+  `generator_stator_leak_monitoring.html`, JANGAN disamakan jadi satu string.
+- File ini dibangun oleh subagent (general-purpose, bukan fork) yang 2x gagal dengan
+  server error ("response stopped arriving") persis di titik mau menulis file HTML
+  besar (~2000 baris) sekaligus dalam 1 tool call -- baru berhasil setelah diminta
+  menulis BERTAHAP (skeleton dulu via Write, lalu isi tiap bagian lewat Edit
+  terpisah-terpisah). **Pelajaran untuk task serupa di masa depan** (bikin file HTML
+  modul baru yang besar dari nol): kalau delegasi ke subagent, minta dari awal untuk
+  menulis bertahap (Write skeleton kecil + banyak Edit kecil), jangan minta tulis
+  1 file besar sekaligus dalam 1 Write -- lebih tahan terhadap error server di
+  tengah generasi panjang, dan lebih gampang diverifikasi bertahap juga.
