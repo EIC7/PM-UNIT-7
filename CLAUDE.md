@@ -1030,3 +1030,77 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   CHCB/WWTP") mengandung substring "DCS" juga, jadi kalau urutan dibalik bakal
   ke-normalize salah jadi `DCS_HMI` (kebuka lewat `dcs-hmi-inspection.html`, file
   salah — pola proteksi yang sama seperti `GENERATOR_STATOR_LEAK` vs `FEGT/LEAK`).
+
+## 🔴🔴 BUG KRITIS: `_pmStripBase64ForSave()` memutasi state foto LIVE di SEMUA modul (2026-09-02)
+
+- User lapor di `cems_calibration.html`: foto yang di-crop-ulang tampil **hitam** di
+  crop modal, dan foto **hilang** (kotak kosong) di PDF preview maupun PDF final —
+  padahal thumbnail di galeri masih kelihatan normal. Investigasi awal fokus ke file
+  itu saja, tapi root cause-nya ternyata di **`shared.js`, dipakai SEMUA modul**.
+- **Root cause**: `_pmStripBase64ForSave(obj)` (dipanggil `dbSave()`, `dbSaveSilent()`
+  /autosave, DAN `raResaveInPlace()` — 3 jalur simpan) versi lama **memutasi `obj`
+  in-place** (`obj.dataUrl = ''`). Semua `dbCollectData()`/`collectData()` tiap modul
+  mengembalikan array/object evidence **LANGSUNG** (mis. `evidence: calEvidence` —
+  REFERENCE yang sama, bukan clone) sebagai bagian dari `rec.data`. Jadi
+  `_pmStripBase64ForSave(rec.data)` sebenarnya memutasi **`calEvidence` yang sama
+  persis** dengan yang masih dipakai UI halaman itu.
+- **Efek berantai**: begitu SATU KALI saja proses simpan (manual, submit, ATAU
+  autosave otomatis di background) jalan untuk foto yang sudah punya `driveUrl`,
+  `entry.dataUrl`-nya langsung KOSONG **di memori live juga** — bukan cuma di
+  payload yang dikirim ke Supabase (yang MEMANG sengaja dikosongkan, itu bukan
+  bug). Efeknya BEDA-BEDA tergantung siapa yang baca `dataUrl` setelah itu, TANPA
+  reload halaman sama sekali:
+  - Thumbnail galeri (`<img src="...">` yang SUDAH ter-render sebelumnya) tetap
+    kelihatan normal — browser tidak re-fetch src yang sama, jadi DOM lama masih
+    nempel. **Ini yang bikin bug ini gampang lolos ke luput** — kelihatannya foto
+    baik-baik saja di galeri.
+  - Klik "✂️ Crop Ulang" → `img.src = ''` (dataUrl kosong) → crop modal nampil
+    **hitam polos** (background `#cropWrap` default, gambar tidak pernah ter-load).
+  - Generate PDF → `doc.addImage('', ...)` gagal → **`try{}catch(e){}` diam-diam
+    menelan error-nya** (pola lama di semua fungsi `drawEvidenceGroup`-sejenis) →
+    kotak foto kosong bergaris tepi, tanpa error/warning yang kelihatan sama sekali.
+  - Autosave berjalan periodik di background (lihat dokumentasi autosave di atas)
+    — jadi bug ini **akan** ke-trigger cepat atau lambat di HAMPIR SEMUA sesi kerja
+    yang cukup panjang untuk sempat autosave sekali, ditambah upload foto sebelum
+    ATAU sesudah momen autosave itu.
+- **Fix**: `_pmStripBase64ForSave()` sekarang **mengembalikan deep-clone** yang
+  sudah di-strip, **TIDAK PERNAH memutasi `obj` aslinya**. Ketiga titik pemanggil
+  diubah dari `_pmStripBase64ForSave(rec.data);` (pola LAMA, sekarang jadi no-op
+  efektif kalau ditulis ulang seperti ini) jadi
+  `rec.data = _pmStripBase64ForSave(rec.data);` (assign hasil return-nya) — WAJIB
+  pola ini kalau ada jalur simpan baru yang butuh strip base64 juga di masa depan.
+- **Dampaknya BUKAN cuma CEMS Calibration** — fungsi ini dipakai generik oleh
+  `dbSave()`/`dbSaveSilent()`/`raResaveInPlace()` untuk SEMUA modul yang punya foto
+  evidence. Kalau ke depan ada laporan serupa ("foto hilang di crop-ulang/PDF,
+  padahal thumbnail masih ada") dari modul LAIN, ini sudah otomatis ikut
+  terselesaikan oleh fix yang sama — TIDAK perlu diperbaiki lagi per file.
+- **Cara verifikasi cepat kalau curiga regresi serupa di masa depan**: di console
+  browser pada modul mana pun yang lagi dibuka, jalankan
+  `_pmStripBase64ForSave({dataUrl:'data:x',driveUrl:'y'})` lalu cek nilai
+  return-nya `.dataUrl === ''` (benar) TAPI objek argumen asli yang dipegang
+  variabel terpisah TIDAK ikut berubah — kalau argumen aslinya ikut berubah,
+  berarti ada pemanggilan baru yang balik memutasi in-place lagi.
+
+## Revisi CEMS Calibration (2026-09-02): urutan DAS + ABS Error/Drift Limit
+
+- `DAS_FIELDS` ("Analyzer Reading (DAS) Before/After Calibration", Step 4 & 7)
+  urutannya diubah sesuai screenshot layar DAS sungguhan: Flow-SO2-NOx-CO2 (baris
+  1), O2-Hg-PM-Pressure (baris 2) — urutan array = urutan render `.field-grid`
+  (CSS grid auto-flow, lihat `buildDasGrid()`). Field **"Gas Stack Reading"**
+  DIPINDAH dari `TEMP_FIELDS` ke `DAS_FIELDS` (baris ke-3, sendirian) dan diganti
+  nama jadi **"Gas Stack Temp Reading"**. Karena field ini pindah ARRAY (dari
+  `temperature.GasStack` jadi `dasBefore.GasStack`/`dasAfter.GasStack`), record
+  historis lama yang sudah punya nilai di situ TIDAK hilang dari database, cuma
+  tidak lagi muncul di form manapun (baik TEMP grid maupun DAS grid) — dampak
+  collateral yang disengaja/diterima dari restrukturisasi ini, bukan bug.
+- Tabel kalibrasi Zero/Span1/Span2 (Step 5, fungsi `buildCalTable()`/PDF
+  `calTable()`) dapat 2 kolom baru:
+  - **ABS Error** = `|Expected Value - Concentration|`, **SELALU dihitung ulang**
+    (live lewat `updateAbsError()` saat input exp/act berubah, di PDF lewat
+    `Math.abs(parseFloat(exp)-parseFloat(act))`) — **TIDAK PERNAH disimpan** ke
+    `pm_records.data` sebagai field terpisah, supaya tidak ada 2 sumber
+    kebenaran yang bisa saling tidak sinkron. Kalau nanti butuh field ABS Error
+    di tabel lain, ikuti pola ini (turunan, bukan field tersimpan).
+  - **Drift Limit** — kolom kosong murni (input manual, TIDAK ada default/
+    perhitungan apa pun), disimpan sebagai `data.zero/span1/span2.<key>.drift`.
+    Sengaja kosong sesuai permintaan user ("sediakan tabelnya saja").
