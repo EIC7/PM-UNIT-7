@@ -1511,6 +1511,13 @@ function normalizeModul(name) {
   if (n.indexOf('MAINTENANCE')>=0 || n.indexOf('REPORT')>=0) return 'MAINTENANCE_REPORT';
   if (n.indexOf('SILO')>=0) return 'COAL_SILO_LEVEL';
   if (n.indexOf('COAL')>=0 || n.indexOf('FEEDER')>=0) return 'COAL_FEEDER';
+  // HARUS sebelum cek DCS/HMI generik di bawah -- modul dari
+  // dcs-console-chcb.html/dcs-console-wwtp.html ('Inspection & Cleaning DCS
+  // Console - Common CHCB/WWTP') juga mengandung substring 'DCS', jadi kalau
+  // urutan dibalik ke-normalize salah jadi 'DCS_HMI' lalu kebuka lewat
+  // dcs-hmi-inspection.html (file Unit 7 MCR, drop/console-nya beda total).
+  if (n.indexOf('CHCB')>=0 && n.indexOf('CONSOLE')>=0) return 'CEC_CONSOLE_CHCB';
+  if (n.indexOf('CONSOLE')>=0 && (n.indexOf('WWTP')>=0 || n.indexOf('WWT')>=0)) return 'CEC_CONSOLE_WWTP';
   if (n.indexOf('DCS')>=0 || n.indexOf('HMI')>=0 || n.indexOf('OIS')>=0) return 'DCS_HMI';
   if (n.indexOf('FLOW METER')>=0 || n.indexOf('FLOWMETER')>=0 || n.indexOf('FGD')>=0) return 'FLOWMETER_FGD';
   if (n.indexOf('CONDUCTIVITY')>=0) return 'CONDUCTIVITY';
@@ -1548,6 +1555,8 @@ function raModulToUrl(modul, id) {
   if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
   if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
   if (norm === 'ID_FAN_LINE_PURGING')   return 'id_fan_line_purging.html?id=' + id;
+  if (norm === 'CEC_CONSOLE_CHCB')      return 'dcs-console-chcb.html?id=' + id;
+  if (norm === 'CEC_CONSOLE_WWTP')      return 'dcs-console-wwtp.html?id=' + id;
   return 'index.html';
 }
 function raModulToPrintUrl(modul, id) {
@@ -2456,7 +2465,9 @@ var RA_ASSET_LABEL = {
   FLOWMETER_FGD: 'Flow Meter FGD', 'PH-ANALYZER': 'Analyzer Indicator Transmitter (pH)',
   PM_HG_ANALYZER: 'PM HG Analyzer', GENERATOR_STATOR_LEAK: 'Generator Stator Leak Monitoring',
   MARK_VIE: 'Mark VIe Alarm & Module Inspection',
-  ID_FAN_LINE_PURGING: 'ID Fan Flow Transmitter Line Purging'
+  ID_FAN_LINE_PURGING: 'ID Fan Flow Transmitter Line Purging',
+  CEC_CONSOLE_CHCB: 'Inspection & Cleaning DCS Console - Common CHCB',
+  CEC_CONSOLE_WWTP: 'Inspection & Cleaning DCS Console - Common WWTP'
 };
 
 /* ── PEMETAAN MODUL -> AREA (routing eksplisit ke reviewer) ──
@@ -2482,8 +2493,8 @@ var RA_ASSET_LABEL = {
 var RA_MODUL_AREA = {
   FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
   COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler', ID_FAN_LINE_PURGING: 'boiler',
-  BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common',
-  'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp',
+  BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common', CEC_CONSOLE_CHCB: 'common',
+  'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp', CEC_CONSOLE_WWTP: 'wwtp',
   GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
 };
 // Nilai AREA PERSIS seperti pilihan checkbox Register di

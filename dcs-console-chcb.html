@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DCS HMI/OIS Inspection — Unit 7</title>
+<title>Inspection & Cleaning DCS Console — Common CHCB — Unit 7</title>
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -368,9 +368,9 @@ body{
   <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
   <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
   <div class="topbar-sep"></div>
-  <div class="topbar-logo">DCS HMI/OIS</div>
+  <div class="topbar-logo">DCS CONSOLE CHCB</div>
   <div class="topbar-sep"></div>
-  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; 1 Yearly Inspection &amp; Cleaning DCS HMI/OIS</div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Inspection &amp; Cleaning DCS Console — Common CHCB</div>
   <div class="topbar-right"><div class="live-dot"></div><div class="topbar-time" id="clockDCS">--:--:--</div></div>
 </div>
 
@@ -430,7 +430,7 @@ body{
 
   <!-- CHECKLIST TABLE -->
   <div class="panel">
-    <div class="section-label">Step of Work — Inspection &amp; Cleaning DCS HMI/OIS</div>
+    <div class="section-label">Step of Work — Inspection &amp; Cleaning DCS Console (Common CHCB)</div>
     <p class="scroll-hint">&#8617; Geser kanan untuk melihat semua kolom</p>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="manual-table" id="dcsMainTable" style="min-width:600px">
@@ -448,7 +448,7 @@ body{
       <!-- Note General -->
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#128247; Evidence Photo &amp; Catatan</div>
-        <textarea id="dcsNoteGeneral" rows="3" placeholder="Catatan umum pekerjaan DCS HMI/OIS..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px;box-sizing:border-box"></textarea>
+        <textarea id="dcsNoteGeneral" rows="3" placeholder="Catatan umum pekerjaan DCS Console CHCB..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px;box-sizing:border-box"></textarea>
         <div id="dcsImgDropGeneral" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2)"
           onclick="toggleSourceChoices('dcsSourceGeneral')"
           ondragover="event.preventDefault()"
@@ -498,7 +498,7 @@ body{
   <!-- ACTION BUTTONS -->
   <div class="btn-row" style="margin-top:20px">
     <button class="btn btn-pdf" onclick="dcsDownloadPdf()">&#11015; Download PDF Report</button>
-    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('dcs_hmi')">&#128190; Simpan ke Database</button>
+    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('cec_console_chcb')">&#128190; Simpan ke Database</button>
     <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=dcsDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="dcsReset()">&#10005; Reset</button>
   </div>
@@ -1862,22 +1862,17 @@ var DCS_CHECKS = [
 ];
 
 // Label/desc drop 210-213 & 214 DIPERBAIKI (2026-09-02) sesuai data asset
-// sungguhan dari sistem lain (bukan lagi placeholder generik "Drop 21X" /
-// "OPT/OPC Operator Workstation") -- id INTERNAL (drop210, dst) SENGAJA
-// TIDAK diubah supaya data historis yang sudah tersimpan (key di
-// dcsActiveDrops/data JSON pakai id lama) tetap kebaca normal, cuma label
-// tampilan & PDF yang berubah. 3 kolom lama CEC-CONS-WW/CEC-CONS-CH1/
-// CEC-CONS-CH2 (placeholder generik, bukan tag asli) DIPINDAH ke 2 modul
-// baru terpisah (dcs-console-chcb.html / dcs-console-wwtp.html) supaya
-// routing area Review Approval Dashboard-nya benar (Common CHCB vs Common
-// WWTP beda area/reviewer) -- lihat CLAUDE.md.
+// File ini pisahan dari dcs-hmi-inspection.html (2026-09-02) -- dulu 3
+// kolom generik CEC-CONS-WW/CEC-CONS-CH1/CEC-CONS-CH2 nempel di modul Unit 7
+// MCR itu, sekarang dipecah ke modul sendiri (area Common CHCB, beda
+// reviewer dari Unit 7 MCR) dengan tag asli (bukan placeholder generik lagi)
+// -- lihat CLAUDE.md.
 var DCS_DROPS = [
-  {id:'drop200', label:'Drop 200',       desc:'EWS Engineering Workstation'},
-  {id:'drop210', label:'7EC-DROP-210',   desc:'U#7 MCR Operator Work Station 210'},
-  {id:'drop211', label:'7EC-DROP-211',   desc:'U#7 MCR Operator Work Station 211'},
-  {id:'drop212', label:'7EC-DROP-212',   desc:'U#7 MCR Operator Work Station 212'},
-  {id:'drop213', label:'7EC-DROP-213',   desc:'U#7 MCR Operator Work Station 213'},
-  {id:'drop214', label:'CEC-CONS-CR1',   desc:'#C MCR Operator Interface Station Drop Unit 7 214'},
+  {id:'drop212', label:'CEC-DROP-212', desc:'CHCB Operator Interface Console Drop 212'},
+  {id:'drop213', label:'CEC-DROP-213', desc:'CHCB Operator Interface Console Drop 213'},
+  {id:'dropch0', label:'CEC-DROP-CH0', desc:'Common Coal Handling - Operator Interface Station Console CH 0'},
+  {id:'dropch1', label:'CEC-DROP-CH1', desc:'Common Coal Handling - Operator Interface Station Console No 1'},
+  {id:'dropch2', label:'CEC-DROP-CH2', desc:'Common Coal Handling - Operator Interface Station Console No 2'},
 ];
 
 var dcsImages = {general:[], defect:[]};
@@ -2352,7 +2347,7 @@ function dcsDownloadPdf() {
       doc.setFillColor(30,58,95);
       doc.rect(marginX, y, contentW, 10, 'F');
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(255,255,255);
-      doc.text('INSPECTION & CLEANING DCS HMI/OIS', pw/2, y+7, {align:'center'});
+      doc.text('INSPECTION & CLEANING DCS CONSOLE - COMMON CHCB', pw/2, y+7, {align:'center'});
       y += 14;
       doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(80,100,130);
       doc.text('PLTU Paiton Unit 7  ·  1 Yearly Inspection  ·  MOD-12  |  WO: '+safe(wo||'-'), marginX+3, y);
@@ -2446,7 +2441,7 @@ function dcsDownloadPdf() {
             doc.setFillColor(255,255,255);
             doc.rect(marginX, marginTop2, contentW, ph-marginTop2-bgFooterH, 'F');
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
-            doc.text('INSPECTION & CLEANING DCS HMI/OIS — (lanjutan)', pw/2, marginTop2 - 3, {align:'center'});
+            doc.text('INSPECTION & CLEANING DCS CONSOLE - COMMON CHCB — (lanjutan)', pw/2, marginTop2 - 3, {align:'center'});
           }
         },
         didDrawCell: function(data) {
@@ -2555,7 +2550,7 @@ function dcsDownloadPdf() {
    DB COLLECT
 ══════════════════════════════════════════════ */
 function dbCollectData(modul) {
-  if (modul !== 'dcs_hmi') return null;
+  if (modul !== 'cec_console_chcb') return null;
   dcsSyncCaptions();
   var gv = function(id){ var e=document.getElementById(id); return e?e.value:''; };
 
@@ -2572,7 +2567,7 @@ function dbCollectData(modul) {
 
   var ki = function(img){ return {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||'',widthCm:img.widthCm,heightCm:img.heightCm,offsetX:img.offsetX||0}; };
   return {
-    modul: 'DCS HMI/OIS Inspection',
+    modul: 'Inspection & Cleaning DCS Console - Common CHCB',
     tanggal:    gv('dcsDate'),
     pic:        gv('dcsPIC'),
     work_order: gv('dcsWO'),
@@ -2589,7 +2584,7 @@ function dbCollectData(modul) {
 }
 
 /* ── Fitur F: Autosave Draft — dipakai shared.js untuk restore & cek modul ── */
-window.CURRENT_MODUL = 'dcs_hmi'; // HARUS sama persis dengan check di dbCollectData(modul)
+window.CURRENT_MODUL = 'cec_console_chcb'; // HARUS sama persis dengan check di dbCollectData(modul)
 
 function applyRecordToForm(rec, editingId) {
   var data = rec.data || {};
