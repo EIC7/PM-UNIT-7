@@ -2387,13 +2387,31 @@ function chk_set(id,v){ var el=document.getElementById(id); if (el) el.checked =
    ditangani shared.js (autosaveCheckAndPrompt) selama dbCollectData +
    restoreDraftData ada di sini — tidak perlu localStorage tambahan.
    ══════════════════════════════════════════════════════════════ */
+// Nama modul yang dikirim ke history.html/Review Approval Dashboard SEKARANG
+// dinamis, mengikuti frequency yang dipilih di Step 1 -- pola SAMA PERSIS
+// dengan coal_feeder_calibration.html/form_o2_report.html (dash dibuang,
+// mis. "3-Monthly" -> "3Monthly CEMS Calibration"). Substring "CEMS" TETAP
+// dipertahankan (bukan diganti "Cems") karena normalizeModul() di shared.js
+// (cek `n.indexOf('CEMS')`) dan trend adapter (`ilike.*CEMS*`) keduanya
+// bergantung pada substring itu buat routing/query -- tetap aman walau
+// nama modul dapat prefix/suffix apa pun asal "CEMS" masih ada di situ.
+// Kalau frequency belum dipilih (form baru dibuka), fallback ke nama polos
+// tanpa prefix.
+function cemsModulName(){
+  var freq = (document.querySelector('input[name="freq"]:checked') || {}).value || '';
+  var freqPart = freq.replace(/-/g, '');
+  return freqPart ? (freqPart + ' CEMS Calibration') : 'CEMS Calibration';
+}
 function dbCollectData(modul){
   // Dipanggil oleh shared.js (dbSave/autosave) — bentuk rec HARUS sesuai
   // kolom tabel pm_records: modul, tanggal, pic, work_order, unit, data.
+  // Argumen `modul` di sini TETAP string fixed 'CEMS Calibration' (dipakai
+  // cuma buat validasi pemanggil, sama seperti pola coal_feeder_calibration.
+  // html) -- yang dinamis cuma field `modul:` di object yang di-return.
   if (modul !== 'CEMS Calibration') return null;
   var full = collectData();
   return {
-    modul: 'CEMS Calibration',
+    modul: cemsModulName(),
     tanggal: full.meta.tanggal || null,
     pic: full.meta.pic || null,
     work_order: full.meta.workorder || null,
