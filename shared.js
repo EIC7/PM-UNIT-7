@@ -1516,6 +1516,7 @@ function normalizeModul(name) {
   if (n.indexOf('CONDUCTIVITY')>=0) return 'CONDUCTIVITY';
   if (n.indexOf('HG')>=0 || n.indexOf('MERCURY')>=0) return 'PM_HG_ANALYZER';
   if (n.indexOf('PH')>=0 || n.indexOf('TRANSMITTER')>=0 || n.indexOf('AIT')>=0 || n.indexOf('ANALYZER')>=0) return 'PH-ANALYZER';
+  if (n.indexOf('ID FAN')>=0 || n.indexOf('ID_FAN')>=0 || n.indexOf('LINE PURGING')>=0 || n.indexOf('LINE_PURGING')>=0) return 'ID_FAN_LINE_PURGING';
   return n;
 }
 
@@ -1546,6 +1547,7 @@ function raModulToUrl(modul, id) {
   if (norm === 'O2_WEEKLY_OUTLET')   return 'weekly_calibration_o2_outlet.html?id=' + id;
   if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
   if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
+  if (norm === 'ID_FAN_LINE_PURGING')   return 'id_fan_line_purging.html?id=' + id;
   return 'index.html';
 }
 function raModulToPrintUrl(modul, id) {
@@ -2453,7 +2455,8 @@ var RA_ASSET_LABEL = {
   COAL_FEEDER: 'Coal Feeder Calibration', DCS_HMI: 'DCS HMI/OIS Inspection',
   FLOWMETER_FGD: 'Flow Meter FGD', 'PH-ANALYZER': 'Analyzer Indicator Transmitter (pH)',
   PM_HG_ANALYZER: 'PM HG Analyzer', GENERATOR_STATOR_LEAK: 'Generator Stator Leak Monitoring',
-  MARK_VIE: 'Mark VIe Alarm & Module Inspection'
+  MARK_VIE: 'Mark VIe Alarm & Module Inspection',
+  ID_FAN_LINE_PURGING: 'ID Fan Flow Transmitter Line Purging'
 };
 
 /* ── PEMETAAN MODUL -> AREA (routing eksplisit ke reviewer) ──
@@ -2478,7 +2481,7 @@ var RA_ASSET_LABEL = {
    salah satu diubah nanti. */
 var RA_MODUL_AREA = {
   FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
-  COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler',
+  COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler', ID_FAN_LINE_PURGING: 'boiler',
   BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common',
   'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp',
   GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
