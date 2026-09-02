@@ -985,3 +985,48 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   menulis bertahap (Write skeleton kecil + banyak Edit kecil), jangan minta tulis
   1 file besar sekaligus dalam 1 Write -- lebih tahan terhadap error server di
   tengah generasi panjang, dan lebih gampang diverifikasi bertahap juga.
+
+## Pisah DCS Console Common CHCB/WWTP dari dcs-hmi-inspection.html (2026-09-02)
+
+- `dcs-hmi-inspection.html` dulu punya 9 kolom drop/console dalam `DCS_DROPS`:
+  6 milik Unit 7 MCR asli (`drop200`-`drop214`) + 3 kolom **placeholder generik**
+  (`ceccons`/`cecch1`/`cecch2`, label "CEC-CONS-WW"/"CEC-CONS-CH1"/"CEC-CONS-CH2")
+  yang sebenarnya BUKAN bagian Unit 7 MCR — tag & deskripsi aslinya baru dikonfirmasi
+  user dari sistem lain (Maximo-style asset lookup, screenshot). 3 kolom itu
+  DIHAPUS dari `DCS_DROPS` di file ini dan dipindah ke 2 modul baru:
+  - `dcs-console-chcb.html` (MOD-22, area `common`) — 5 tag asli:
+    `CEC-DROP-212`, `CEC-DROP-213`, `CEC-DROP-CH0`, `CEC-DROP-CH1`, `CEC-DROP-CH2`.
+  - `dcs-console-wwtp.html` (MOD-23, area `wwtp`) — 2 tag asli:
+    `CEC-DROP-WWT1`, `CEC-DROP-WWT2`.
+  - **Alasan dipecah jadi 2 file, bukan 1 file gabungan 7 kolom** (dikonfirmasi ke
+    user): satu modul di arsitektur ini cuma bisa punya SATU nilai `RA_MODUL_AREA`
+    (satu laporan = satu reviewer/area tujuan di Review Approval Dashboard) — CHCB
+    dan WWTP butuh 2 reviewer/area beda, jadi HARUS 2 modul terpisah supaya routing
+    otomatisnya benar.
+  - Kedua file baru adalah **copy langsung** dari `dcs-hmi-inspection.html`
+    (struktur checklist 13 langkah "Step of Work" SAMA PERSIS, cuma `DCS_DROPS`
+    + judul/topbar + 4 titik registrasi modul yang beda: argumen `dbSave()`,
+    check `modul !==` di `dbCollectData()`, `window.CURRENT_MODUL`, dan literal
+    `modul:` yang dikembalikan) — bukan dibangun dari nol, supaya semua fitur
+    reusable (crop modal, autosave, PDF, dst.) ikut otomatis tanpa perlu ditulis
+    ulang. **Kalau modul ini perlu direvisi lagi ke depan, cek KETIGA file**
+    (`dcs-hmi-inspection.html`, `dcs-console-chcb.html`, `dcs-console-wwtp.html`)
+    kalau perubahannya menyangkut struktur checklist/PDF yang dulunya sama-sama
+    di-copy dari sumber yang sama — gampang lupa salah satu kalau cuma edit 1 file.
+- Label & deskripsi `drop210`-`drop213` (Unit 7 MCR) DIPERBAIKI dari placeholder
+  generik "Drop 21X"/"OPT/OPC Operator Workstation" jadi tag asli
+  `7EC-DROP-210`...`213` / "U#7 MCR Operator Work Station 21X" (dikonfirmasi dari
+  screenshot yang sama). `drop214` jadi tag `CEC-CONS-CR1` / "#C MCR Operator
+  Interface Station Drop Unit 7 214". **`id` INTERNAL field-field ini (`drop210`,
+  dst.) SENGAJA TIDAK diubah** (tetap `drop210`...`drop214`) walau tag tampilannya
+  berubah total — supaya data historis yang sudah tersimpan (key `dcsActiveDrops`/
+  `data.checks[idx].drops` pakai id lama) tetap kebaca normal setelah label
+  berubah. Sudah diverifikasi: 1 record historis existing DCS-HMI tetap kebuka
+  tanpa error setelah perubahan ini.
+- `normalizeModul()` (shared.js): kedua modul baru (`CEC_CONSOLE_CHCB`/
+  `CEC_CONSOLE_WWTP`) dicek `n.indexOf('CHCB')`/`n.indexOf('WWTP'/'WWT')` +
+  `n.indexOf('CONSOLE')` **SEBELUM** cek generik `DCS`/`HMI`/`OIS` di baris
+  berikutnya — modul string barunya ("Inspection & Cleaning DCS Console - Common
+  CHCB/WWTP") mengandung substring "DCS" juga, jadi kalau urutan dibalik bakal
+  ke-normalize salah jadi `DCS_HMI` (kebuka lewat `dcs-hmi-inspection.html`, file
+  salah — pola proteksi yang sama seperti `GENERATOR_STATOR_LEAK` vs `FEGT/LEAK`).
