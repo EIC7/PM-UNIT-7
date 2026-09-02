@@ -174,18 +174,41 @@ function waitForPendingDriveUploads() {
    export tiap modul TIDAK PERLU DIUBAH SAMA SEKALI, karena mereka selalu
    baca `dataUrl` seperti biasa dan tidak pernah tahu ada Drive di baliknya. */
 
-/* Dipanggil dbSave() SEBELUM kirim ke Supabase: foto yang SUDAH punya
-   driveUrl (artinya sudah aman tersimpan di Drive) -- dataUrl base64-nya
-   (paling berat di payload) dibuang, cukup simpan driveUrl (string pendek).
-   Foto yang upload Drive-nya gagal/belum kelar (driveUrl masih kosong)
-   TETAP kirim dataUrl-nya apa adanya -- supaya tidak ada foto yang hilang. */
+/* Dipanggil dbSave()/dbSaveSilent()/raResaveInPlace() SEBELUM kirim ke
+   Supabase: foto yang SUDAH punya driveUrl (artinya sudah aman tersimpan di
+   Drive) -- dataUrl base64-nya (paling berat di payload) dibuang, cukup
+   simpan driveUrl (string pendek). Foto yang upload Drive-nya gagal/belum
+   kelar (driveUrl masih kosong) TETAP kirim dataUrl-nya apa adanya --
+   supaya tidak ada foto yang hilang.
+   🔴 BUG BESAR (ditemukan 2026-09-02, dari laporan "foto hilang di
+   crop-ulang & PDF" di cems_calibration.html — TAPI berlaku ke SEMUA modul,
+   bukan cuma file itu): versi lama fungsi ini MEMUTASI `obj` in-place
+   (`obj.dataUrl = ''`). Karena SEMUA `dbCollectData()`/`collectData()` tiap
+   modul mengembalikan array/object evidence LANGSUNG (mis. `evidence:
+   calEvidence`), BUKAN deep-clone, `rec.data.evidence` SEBENARNYA objek
+   YANG SAMA PERSIS (sama reference) dengan state foto yang masih aktif
+   dipakai UI. Begitu dbSave()/autosave/raResaveInPlace() jalan SEKALI,
+   `entry.dataUrl` foto yang sudah ke Drive ikut KOSONG di memori LIVE juga
+   -- bukan cuma di payload yang dikirim ke Supabase. DOM `<img>` thumbnail
+   yang SUDAH SEMPAT ter-render sebelumnya tetap kelihatan normal (browser
+   tidak re-fetch src yang sama), tapi kode manapun yang baca ULANG
+   `entry.dataUrl` dari JS SETELAH itu (re-crop -- `img.src=''` jadi hitam;
+   PDF export -- `doc.addImage('')` gagal, kena `try{}catch(e){}` diam-diam
+   jadi kotak kosong) langsung dapat string kosong, TANPA reload halaman.
+   FIX: fungsi ini sekarang MENGEMBALIKAN deep-clone yang sudah di-strip,
+   TIDAK PERNAH memutasi `obj` aslinya -- WAJIB pakai pola
+   `rec.data = _pmStripBase64ForSave(rec.data)` (assign hasil return-nya),
+   BUKAN `_pmStripBase64ForSave(rec.data);` polos (itu pola lama yang salah,
+   sekarang jadi no-op efektif kalau dipakai lagi seperti itu). */
 function _pmStripBase64ForSave(obj) {
-  if (Array.isArray(obj)) { obj.forEach(_pmStripBase64ForSave); return; }
-  if (!obj || typeof obj !== 'object') return;
-  if (typeof obj.dataUrl === 'string' && obj.dataUrl.indexOf('data:') === 0 && obj.driveUrl) {
-    obj.dataUrl = '';
+  if (Array.isArray(obj)) return obj.map(_pmStripBase64ForSave);
+  if (!obj || typeof obj !== 'object') return obj;
+  var out = {};
+  Object.keys(obj).forEach(function(k){ out[k] = _pmStripBase64ForSave(obj[k]); });
+  if (typeof out.dataUrl === 'string' && out.dataUrl.indexOf('data:') === 0 && out.driveUrl) {
+    out.dataUrl = '';
   }
-  Object.keys(obj).forEach(function(k){ _pmStripBase64ForSave(obj[k]); });
+  return out;
 }
 
 /* Dipanggil dbLoad() SETELAH ambil record dari Supabase: foto yang cuma
@@ -1347,7 +1370,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
       );
       return; // hentikan di sini -- overlay error+retry sudah ditampilkan di atas, jangan lanjut simpan
     }
-    _pmStripBase64ForSave(rec.data);
+    rec.data = _pmStripBase64ForSave(rec.data);
     // Hitung ukuran byte ASLI (uncompressed) dari payload SETELAH base64 yang
     // sudah punya driveUrl dibuang, dan simpan sebagai payload_size di record
     // itu sendiri. Nanti dbLoad baca angka ini duluan supaya progress bar
@@ -1427,7 +1450,7 @@ function raResaveInPlace(modul, callback) {
       );
       return;
     }
-    _pmStripBase64ForSave(rec.data);
+    rec.data = _pmStripBase64ForSave(rec.data);
     var patch = {
       data: rec.data, tanggal: rec.tanggal, pic: rec.pic, work_order: rec.work_order,
       updated_at: new Date().toISOString()
@@ -2098,7 +2121,7 @@ function dbSaveSilent(modul) {
     return _pmEnsureAllPhotosOnDrive(rec.data, modul);
   }).then(function(stillFailed) {
     if (stillFailed.length) console.warn('[autosave-server] ' + stillFailed.length + ' foto masih gagal ke Drive, akan dicoba lagi siklus autosave berikutnya:', stillFailed);
-    _pmStripBase64ForSave(rec.data);
+    rec.data = _pmStripBase64ForSave(rec.data);
     rec.payload_size = _dbByteLength(JSON.stringify(rec));
     var path = existingId ? (SUPA_TABLE + '?id=eq.' + existingId) : SUPA_TABLE;
     var method = existingId ? 'PATCH' : 'POST';

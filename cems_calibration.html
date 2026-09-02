@@ -454,15 +454,23 @@ var OPTICAL_ROWS = [
   {key:'Flow', label:'Flow',    me:false},
   {key:'O2Wet',label:'O2 Wet',  me:false}
 ];
+// Urutan DAS_FIELDS (2026-09-02, dikonfirmasi user dari screenshot layar DAS
+// sungguhan): Flow-SO2-NOx-CO2 (baris 1, kiri ke kanan), O2-Hg-PM-Pressure
+// (baris 2), lalu Gas Stack Temp Reading (baris 3) -- field ini DIPINDAH ke
+// sini dari TEMP_FIELDS (dulu key 'GasStack' label "Gas Stack Reading" di
+// situ) karena secara konsep dia bacaan DAS juga, bukan cuma temperatur
+// komponen fisik CEMS seperti field TEMP_FIELDS lainnya. Urutan array =
+// urutan render di .field-grid (CSS grid auto-flow, lihat buildDasGrid()).
 var DAS_FIELDS = [
-  {key:'NOx',      label:'NOx',      unit:'mg/Nm³'},
+  {key:'Flow',     label:'Flow',     unit:'m³/s'},
   {key:'SO2',      label:'SO2',      unit:'mg/Nm³'},
+  {key:'NOx',      label:'NOx',      unit:'mg/Nm³'},
   {key:'CO2',      label:'CO2',      unit:'%'},
   {key:'O2',       label:'O2',       unit:'%'},
-  {key:'Flow',     label:'Flow',     unit:'m³/s'},
   {key:'Hg',       label:'Hg',       unit:'mg/Nm³'},
   {key:'PM',       label:'PM',       unit:'mg/Nm³'},
-  {key:'Pressure', label:'Pressure', unit:'kPa'}
+  {key:'Pressure', label:'Pressure', unit:'kPa'},
+  {key:'GasStack', label:'Gas Stack Temp Reading', unit:'°C'}
 ];
 var TEMP_FIELDS = [
   {key:'MC3',        label:'MC3 Cell'},
@@ -472,7 +480,6 @@ var TEMP_FIELDS = [
   {key:'SamplePump', label:'Sample Pump'},
   {key:'ProbeFilter',label:'Probe Filter'},
   {key:'ProbeTube',  label:'Probe Tube'},
-  {key:'GasStack',   label:'Gas Stack Reading'},
   {key:'RoomTemp',   label:'CEMS Room Temp'}
 ];
 // Expected Value permanen (tidak bisa diedit user) kecuali baris yang
@@ -1710,18 +1717,34 @@ function buildTempGrid(){
   });
   grid.innerHTML = html;
 }
+// ABS Error = |Expected Value - Concentration|, DIHITUNG OTOMATIS (read-only,
+// tidak disimpan terpisah -- selalu diturunkan ulang dari exp & act, baik di
+// live form maupun di PDF, supaya tidak ada 2 sumber kebenaran yang bisa
+// beda). Drift Limit SENGAJA cuma kolom kosong (input manual) -- user isi
+// sendiri belakangan, ini cuma sediakan tempatnya.
+function updateAbsError(prefix, key){
+  var expEl = document.getElementById(prefix+'_'+key+'_exp');
+  var actEl = document.getElementById(prefix+'_'+key+'_act');
+  var absEl = document.getElementById(prefix+'_'+key+'_abs');
+  if (!expEl || !actEl || !absEl) return;
+  var exp = parseFloat(expEl.value), act = parseFloat(actEl.value);
+  absEl.value = (isFinite(exp) && isFinite(act)) ? Math.abs(exp-act).toFixed(2) : '';
+}
 function buildCalTable(tblId, headerClass, rows, prefix){
   var tbl = document.getElementById(tblId);
-  var html = '<thead class="'+headerClass+'"><tr><th>Parameter</th><th>Expected Value</th><th>Concentration</th></tr></thead><tbody>';
+  var html = '<thead class="'+headerClass+'"><tr><th>Parameter</th><th>Expected Value</th><th>Concentration</th><th>ABS Error</th><th>Drift Limit</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var expVal = (r.exp!==undefined ? r.exp : '');
     // Expected Value permanen (disabled) kecuali r.editable true (O2 Wet).
+    // Baris editable tetap perlu memicu updateAbsError() saat exp berubah.
     var expCell = r.editable
-      ? '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'">'
+      ? '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')">'
       : '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'" disabled>';
     html += '<tr><td class="param-cell">'+r.label+'</td>' +
       '<td>'+expCell+'</td>' +
-      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_act"></td></tr>';
+      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_act" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')"></td>' +
+      '<td><input type="text" id="'+prefix+'_'+r.key+'_abs" readonly tabindex="-1" style="background:#eee;color:#555;text-align:center"></td>' +
+      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_drift"></td></tr>';
   });
   html += '</tbody>';
   tbl.innerHTML = html;
@@ -2185,7 +2208,7 @@ function collectDas(prefix){
 }
 function collectCal(prefix, rows){
   var out = {};
-  rows.forEach(function(r){ out[r.key] = { exp: val(prefix+'_'+r.key+'_exp'), act: val(prefix+'_'+r.key+'_act') }; });
+  rows.forEach(function(r){ out[r.key] = { exp: val(prefix+'_'+r.key+'_exp'), act: val(prefix+'_'+r.key+'_act'), drift: val(prefix+'_'+r.key+'_drift') }; });
   return out;
 }
 
@@ -2230,7 +2253,7 @@ function applyData(d){
   applyOptical('oa', d.opticalAfter); val_set('oa_overall', d.opticalAfterOverall);
   function applyDas(prefix, data){ if(!data) return; DAS_FIELDS.forEach(function(f){ val_set(prefix+'_'+f.key, data[f.key]); }); }
   applyDas('da', d.dasBefore); applyDas('db', d.dasAfter);
-  function applyCal(prefix, rows, data){ if(!data) return; rows.forEach(function(r){ if(data[r.key]){ val_set(prefix+'_'+r.key+'_exp', data[r.key].exp); val_set(prefix+'_'+r.key+'_act', data[r.key].act); } }); }
+  function applyCal(prefix, rows, data){ if(!data) return; rows.forEach(function(r){ if(data[r.key]){ val_set(prefix+'_'+r.key+'_exp', data[r.key].exp); val_set(prefix+'_'+r.key+'_act', data[r.key].act); val_set(prefix+'_'+r.key+'_drift', data[r.key].drift); updateAbsError(prefix, r.key); } }); }
   applyCal('z', ZERO_ROWS, d.zero); applyCal('sp1', SPAN1_ROWS, d.span1); applyCal('sp2', SPAN2_ROWS, d.span2);
   if (d.temperature) TEMP_FIELDS.forEach(function(f){ val_set('t_'+f.key, d.temperature[f.key]); });
   if (d.inspection1) ['a','b','c','d'].forEach(function(k){ chk_set('insp1_'+k, d.inspection1[k]); });
@@ -2446,8 +2469,12 @@ function exportPdf(){
       checkPage(7 + estTableBlockH(rows.length));
       doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,30,25);
       doc.text(subtitle, marginX, y+4); y += 7;
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Expected Value','Concentration']],
-        body: rows.map(function(r){ return [r.label, data[r.key].exp, data[r.key].act]; }),
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Expected Value','Concentration','ABS Error','Drift Limit']],
+        body: rows.map(function(r){
+          var exp = parseFloat(data[r.key].exp), act = parseFloat(data[r.key].act);
+          var absErr = (isFinite(exp) && isFinite(act)) ? Math.abs(exp-act).toFixed(2) : '';
+          return [r.label, data[r.key].exp, data[r.key].act, absErr, data[r.key].drift];
+        }),
         styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:headerColor,textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 6;
     }
