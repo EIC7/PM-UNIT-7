@@ -247,12 +247,12 @@
     <div class="step-title"><span class="stepnum">2</span> Cal Gas Regulator Outlet Pressure (psi)</div>
     <div style="font-size:12px;color:#7c8b83;font-style:italic;margin-bottom:10px">Check before calibration</div>
     <div class="field-grid">
-      <div class="field-item zero-fld"><label>Zero - Outlet Pressure</label><input type="number" id="gasZeroOutlet"></div>
-      <div class="field-item zero-fld"><label>Zero - Remaining Gas Cylinder</label><input type="number" id="gasZeroCyl"></div>
-      <div class="field-item span1-fld"><label>Span 1 - Outlet Pressure</label><input type="number" id="gasSpan1Outlet"></div>
-      <div class="field-item span1-fld"><label>Span 1 - Remaining Gas Cylinder</label><input type="number" id="gasSpan1Cyl"></div>
-      <div class="field-item span2-fld"><label>Span 2 - Outlet Pressure</label><input type="number" id="gasSpan2Outlet"></div>
-      <div class="field-item span2-fld"><label>Span 2 - Remaining Gas Cylinder</label><input type="number" id="gasSpan2Cyl"></div>
+      <div class="field-item zero-fld"><label>Zero - Outlet Pressure</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasZeroOutlet"></div>
+      <div class="field-item zero-fld"><label>Zero - Remaining Gas Cylinder</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasZeroCyl"></div>
+      <div class="field-item span1-fld"><label>Span 1 - Outlet Pressure</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasSpan1Outlet"></div>
+      <div class="field-item span1-fld"><label>Span 1 - Remaining Gas Cylinder</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasSpan1Cyl"></div>
+      <div class="field-item span2-fld"><label>Span 2 - Outlet Pressure</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasSpan2Outlet"></div>
+      <div class="field-item span2-fld"><label>Span 2 - Remaining Gas Cylinder</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasSpan2Cyl"></div>
     </div>
   </div>
 
@@ -260,7 +260,7 @@
   <div class="panel step-panel">
     <div class="step-title"><span class="stepnum">3</span> Optical Energy Reading Before Calibration</div>
     <div style="overflow-x:auto"><table class="cems-table" id="tblOpticalBefore"></table></div>
-    <div class="overall-row"><label>Overall System Energy:</label><input type="number" id="ob_overall" step="0.01"><span class="unit">%</span></div>
+    <div class="overall-row"><label>Overall System Energy:</label><input type="text" inputmode="none" readonly class="pm-num-input" id="ob_overall"><span class="unit">%</span></div>
   </div>
 
   <!-- STEP 4 -->
@@ -290,7 +290,7 @@
   <div class="panel step-panel">
     <div class="step-title"><span class="stepnum">6</span> Optical Energy Reading After Calibration</div>
     <div style="overflow-x:auto"><table class="cems-table" id="tblOpticalAfter"></table></div>
-    <div class="overall-row"><label>Overall System Energy:</label><input type="number" id="oa_overall" step="0.01"><span class="unit">%</span></div>
+    <div class="overall-row"><label>Overall System Energy:</label><input type="text" inputmode="none" readonly class="pm-num-input" id="oa_overall"><span class="unit">%</span></div>
   </div>
 
   <!-- STEP 7 -->
@@ -1715,8 +1715,8 @@ function buildOpticalTable(tblId, prefix){
   var html = '<thead class="hdr-optical"><tr><th>Parameter</th><th>Measured Energy</th><th>Concentration</th></tr></thead><tbody>';
   OPTICAL_ROWS.forEach(function(r){
     html += '<tr><td class="param-cell">'+r.label+'</td>' +
-      '<td>' + (r.me ? '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_me">' : '<input type="text" value="N/A" disabled>') + '</td>' +
-      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_c"></td></tr>';
+      '<td>' + (r.me ? '<input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+r.key+'_me">' : '<input type="text" value="N/A" disabled>') + '</td>' +
+      '<td><input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+r.key+'_c"></td></tr>';
   });
   html += '</tbody>';
   tbl.innerHTML = html;
@@ -1726,7 +1726,7 @@ function buildDasGrid(gridId, prefix){
   var html = '';
   DAS_FIELDS.forEach(function(f){
     html += '<div class="field-item"><label>'+f.label+' <span class="unit">('+f.unit+')</span></label>' +
-      '<input type="number" step="0.01" id="'+prefix+'_'+f.key+'"></div>';
+      '<input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+f.key+'"></div>';
   });
   grid.innerHTML = html;
 }
@@ -1752,7 +1752,7 @@ function buildTempGrid(){
     if (f.key === 'RoomTemp') {
       html += '<div class="field-item"><label>'+f.label+'</label>' +
         '<div class="field-item-row">' +
-          '<input type="number" step="0.01" id="t_'+f.key+'">' +
+          '<input type="text" inputmode="none" readonly class="pm-num-input" id="t_'+f.key+'">' +
           '<div class="unit-toggle" id="roomTempUnitToggle">' +
             '<button type="button" data-unit="F" onclick="setRoomTempUnit(\'F\')">°F</button>' +
             '<button type="button" data-unit="C" onclick="setRoomTempUnit(\'C\')">°C</button>' +
@@ -1760,7 +1760,7 @@ function buildTempGrid(){
         '</div></div>';
       return;
     }
-    html += '<div class="field-item"><label>'+f.label+'</label><input type="number" step="0.01" id="t_'+f.key+'"></div>';
+    html += '<div class="field-item"><label>'+f.label+'</label><input type="text" inputmode="none" readonly class="pm-num-input" id="t_'+f.key+'"></div>';
   });
   grid.innerHTML = html;
 }
@@ -1812,11 +1812,11 @@ function buildCalTable(tblId, headerClass, rows, prefix){
     // Expected Value permanen (disabled) kecuali r.editable true (O2 Wet).
     // Baris editable tetap perlu memicu updateAbsError() saat exp berubah.
     var expCell = r.editable
-      ? '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')">'
+      ? '<input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')">'
       : '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'" disabled>';
     html += '<tr><td class="param-cell">'+r.label+'</td>' +
       '<td>'+expCell+'</td>' +
-      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_act" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')"></td>' +
+      '<td><input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+r.key+'_act" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')"></td>' +
       '<td><input type="text" id="'+prefix+'_'+r.key+'_abs" readonly tabindex="-1" style="background:#eee;color:#555;text-align:center"></td>' +
       '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_drift" value="'+r.drift+'" disabled></td>' +
       '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_ooc" value="'+r.ooc+'" disabled></td></tr>';
@@ -1834,6 +1834,12 @@ setRoomTempUnit(roomTempUnit); // set class 'active' awal (default 'C')
 buildCalTable('tblZero', 'hdr-zero', ZERO_ROWS, 'z');
 buildCalTable('tblSpan1', 'hdr-span1', SPAN1_ROWS, 'sp1');
 buildCalTable('tblSpan2', 'hdr-span2', SPAN2_ROWS, 'sp2');
+// Numpad custom (pola sama persis dengan weekly_calibration_o2_inlet.html/
+// _outlet.html) -- keypad angka bawaan HP tidak punya tombol minus, padahal
+// banyak field di sini (Concentration/Actual kalibrasi, dst.) butuh nilai
+// negatif. Dipanggil SETELAH semua build*() di atas supaya semua elemen
+// class="pm-num-input" sudah ada di DOM.
+pmNumpadInit();
 
 /* ══════════════════════════════════════════════════════════════
    STEP 9 — INSPECTION (gabungan 1 Monthly / 3 Monthly / 2 Yearly).
