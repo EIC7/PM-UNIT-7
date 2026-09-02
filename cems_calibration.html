@@ -59,6 +59,15 @@
 .field-item label{display:block;font-size:12px;font-weight:700;color:#3d4c44;margin-bottom:4px}
 .field-item input{width:100%;box-sizing:border-box;border:1px solid #dfe6e1;border-radius:7px;padding:9px 10px;font-size:13.5px;background:#f7f8f6}
 .field-item .unit{font-size:10.5px;color:#8a9791;font-weight:600}
+/* Toggle satuan F/C -- khusus field CEMS Room Temp (buildTempGrid()). Nilai
+   yang diketik user TIDAK dikonversi di sini (tetap apa adanya di form) --
+   konversi F->C cuma terjadi saat generate PDF (lihat fahrenheitToCelsius()
+   & Step 8 exportPdf()), karena judul tabel Step 8 sudah fix "(°C)". */
+.field-item-row{display:flex;gap:6px;align-items:stretch}
+.field-item-row input{flex:1 1 auto;min-width:0}
+.unit-toggle{display:inline-flex;border:1px solid #dfe6e1;border-radius:7px;overflow:hidden;flex:0 0 auto}
+.unit-toggle button{border:none;background:#f7f8f6;color:#5b6b62;font-size:11px;font-weight:700;padding:0 10px;cursor:pointer}
+.unit-toggle button.active{background:#2e7d5b;color:#fff}
 .overall-row{display:flex;align-items:center;gap:8px;margin-top:10px}
 .overall-row label{font-weight:700;font-size:13px;color:#20302a}
 .overall-row input{width:120px;border:1px solid #dfe6e1;border-radius:7px;padding:8px 10px;font-size:13.5px;background:#f7f8f6}
@@ -238,12 +247,12 @@
     <div class="step-title"><span class="stepnum">2</span> Cal Gas Regulator Outlet Pressure (psi)</div>
     <div style="font-size:12px;color:#7c8b83;font-style:italic;margin-bottom:10px">Check before calibration</div>
     <div class="field-grid">
-      <div class="field-item zero-fld"><label>Zero - Outlet Pressure</label><input type="number" id="gasZeroOutlet"></div>
-      <div class="field-item zero-fld"><label>Zero - Remaining Gas Cylinder</label><input type="number" id="gasZeroCyl"></div>
-      <div class="field-item span1-fld"><label>Span 1 - Outlet Pressure</label><input type="number" id="gasSpan1Outlet"></div>
-      <div class="field-item span1-fld"><label>Span 1 - Remaining Gas Cylinder</label><input type="number" id="gasSpan1Cyl"></div>
-      <div class="field-item span2-fld"><label>Span 2 - Outlet Pressure</label><input type="number" id="gasSpan2Outlet"></div>
-      <div class="field-item span2-fld"><label>Span 2 - Remaining Gas Cylinder</label><input type="number" id="gasSpan2Cyl"></div>
+      <div class="field-item zero-fld"><label>Zero - Outlet Pressure</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasZeroOutlet"></div>
+      <div class="field-item zero-fld"><label>Zero - Remaining Gas Cylinder</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasZeroCyl"></div>
+      <div class="field-item span1-fld"><label>Span 1 - Outlet Pressure</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasSpan1Outlet"></div>
+      <div class="field-item span1-fld"><label>Span 1 - Remaining Gas Cylinder</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasSpan1Cyl"></div>
+      <div class="field-item span2-fld"><label>Span 2 - Outlet Pressure</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasSpan2Outlet"></div>
+      <div class="field-item span2-fld"><label>Span 2 - Remaining Gas Cylinder</label><input type="text" inputmode="none" readonly class="pm-num-input" id="gasSpan2Cyl"></div>
     </div>
   </div>
 
@@ -251,7 +260,7 @@
   <div class="panel step-panel">
     <div class="step-title"><span class="stepnum">3</span> Optical Energy Reading Before Calibration</div>
     <div style="overflow-x:auto"><table class="cems-table" id="tblOpticalBefore"></table></div>
-    <div class="overall-row"><label>Overall System Energy:</label><input type="number" id="ob_overall" step="0.01"><span class="unit">%</span></div>
+    <div class="overall-row"><label>Overall System Energy:</label><input type="text" inputmode="none" readonly class="pm-num-input" id="ob_overall"><span class="unit">%</span></div>
   </div>
 
   <!-- STEP 4 -->
@@ -281,7 +290,7 @@
   <div class="panel step-panel">
     <div class="step-title"><span class="stepnum">6</span> Optical Energy Reading After Calibration</div>
     <div style="overflow-x:auto"><table class="cems-table" id="tblOpticalAfter"></table></div>
-    <div class="overall-row"><label>Overall System Energy:</label><input type="number" id="oa_overall" step="0.01"><span class="unit">%</span></div>
+    <div class="overall-row"><label>Overall System Energy:</label><input type="text" inputmode="none" readonly class="pm-num-input" id="oa_overall"><span class="unit">%</span></div>
   </div>
 
   <!-- STEP 7 -->
@@ -1706,8 +1715,8 @@ function buildOpticalTable(tblId, prefix){
   var html = '<thead class="hdr-optical"><tr><th>Parameter</th><th>Measured Energy</th><th>Concentration</th></tr></thead><tbody>';
   OPTICAL_ROWS.forEach(function(r){
     html += '<tr><td class="param-cell">'+r.label+'</td>' +
-      '<td>' + (r.me ? '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_me">' : '<input type="text" value="N/A" disabled>') + '</td>' +
-      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_c"></td></tr>';
+      '<td>' + (r.me ? '<input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+r.key+'_me">' : '<input type="text" value="N/A" disabled>') + '</td>' +
+      '<td><input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+r.key+'_c"></td></tr>';
   });
   html += '</tbody>';
   tbl.innerHTML = html;
@@ -1717,15 +1726,41 @@ function buildDasGrid(gridId, prefix){
   var html = '';
   DAS_FIELDS.forEach(function(f){
     html += '<div class="field-item"><label>'+f.label+' <span class="unit">('+f.unit+')</span></label>' +
-      '<input type="number" step="0.01" id="'+prefix+'_'+f.key+'"></div>';
+      '<input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+f.key+'"></div>';
   });
   grid.innerHTML = html;
+}
+// Satuan CEMS Room Temp yang lagi aktif -- 'C' default (rekaman lama semua
+// diisi dalam Celsius, sebelum toggle ini ada, jadi default HARUS 'C' biar
+// data lama tidak salah diinterpretasikan sebagai Fahrenheit).
+var roomTempUnit = 'C';
+function setRoomTempUnit(u){
+  roomTempUnit = u;
+  var toggle = document.getElementById('roomTempUnitToggle');
+  if (!toggle) return;
+  Array.prototype.forEach.call(toggle.querySelectorAll('button'), function(b){
+    b.classList.toggle('active', b.dataset.unit === u);
+  });
+}
+function fahrenheitToCelsiusRounded(f){
+  return Math.round((f - 32) * 5 / 9);
 }
 function buildTempGrid(){
   var grid = document.getElementById('tempGrid');
   var html = '';
   TEMP_FIELDS.forEach(function(f){
-    html += '<div class="field-item"><label>'+f.label+'</label><input type="number" step="0.01" id="t_'+f.key+'"></div>';
+    if (f.key === 'RoomTemp') {
+      html += '<div class="field-item"><label>'+f.label+'</label>' +
+        '<div class="field-item-row">' +
+          '<input type="text" inputmode="none" readonly class="pm-num-input" id="t_'+f.key+'">' +
+          '<div class="unit-toggle" id="roomTempUnitToggle">' +
+            '<button type="button" data-unit="F" onclick="setRoomTempUnit(\'F\')">°F</button>' +
+            '<button type="button" data-unit="C" onclick="setRoomTempUnit(\'C\')">°C</button>' +
+          '</div>' +
+        '</div></div>';
+      return;
+    }
+    html += '<div class="field-item"><label>'+f.label+'</label><input type="text" inputmode="none" readonly class="pm-num-input" id="t_'+f.key+'"></div>';
   });
   grid.innerHTML = html;
 }
@@ -1777,11 +1812,11 @@ function buildCalTable(tblId, headerClass, rows, prefix){
     // Expected Value permanen (disabled) kecuali r.editable true (O2 Wet).
     // Baris editable tetap perlu memicu updateAbsError() saat exp berubah.
     var expCell = r.editable
-      ? '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')">'
+      ? '<input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')">'
       : '<input type="number" step="0.01" id="'+prefix+'_'+r.key+'_exp" value="'+expVal+'" disabled>';
     html += '<tr><td class="param-cell">'+r.label+'</td>' +
       '<td>'+expCell+'</td>' +
-      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_act" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')"></td>' +
+      '<td><input type="text" inputmode="none" readonly class="pm-num-input" id="'+prefix+'_'+r.key+'_act" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')"></td>' +
       '<td><input type="text" id="'+prefix+'_'+r.key+'_abs" readonly tabindex="-1" style="background:#eee;color:#555;text-align:center"></td>' +
       '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_drift" value="'+r.drift+'" disabled></td>' +
       '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_ooc" value="'+r.ooc+'" disabled></td></tr>';
@@ -1795,9 +1830,16 @@ buildOpticalTable('tblOpticalAfter', 'oa');
 buildDasGrid('dasBeforeGrid', 'da');
 buildDasGrid('dasAfterGrid', 'db');
 buildTempGrid();
+setRoomTempUnit(roomTempUnit); // set class 'active' awal (default 'C')
 buildCalTable('tblZero', 'hdr-zero', ZERO_ROWS, 'z');
 buildCalTable('tblSpan1', 'hdr-span1', SPAN1_ROWS, 'sp1');
 buildCalTable('tblSpan2', 'hdr-span2', SPAN2_ROWS, 'sp2');
+// Numpad custom (pola sama persis dengan weekly_calibration_o2_inlet.html/
+// _outlet.html) -- keypad angka bawaan HP tidak punya tombol minus, padahal
+// banyak field di sini (Concentration/Actual kalibrasi, dst.) butuh nilai
+// negatif. Dipanggil SETELAH semua build*() di atas supaya semua elemen
+// class="pm-num-input" sudah ada di DOM.
+pmNumpadInit();
 
 /* ══════════════════════════════════════════════════════════════
    STEP 9 — INSPECTION (gabungan 1 Monthly / 3 Monthly / 2 Yearly).
@@ -2272,7 +2314,7 @@ function collectData(){
     zero: collectCal('z', ZERO_ROWS), span1: collectCal('sp1', SPAN1_ROWS), span2: collectCal('sp2', SPAN2_ROWS),
     opticalAfter: collectOptical('oa'), opticalAfterOverall: val('oa_overall'),
     dasAfter: collectDas('db'),
-    temperature: (function(){ var o={}; TEMP_FIELDS.forEach(function(f){o[f.key]=val('t_'+f.key);}); return o; })(),
+    temperature: (function(){ var o={}; TEMP_FIELDS.forEach(function(f){o[f.key]=val('t_'+f.key);}); o.RoomTempUnit=roomTempUnit; return o; })(),
     inspection1: { a:chk('insp1_a'), b:chk('insp1_b'), c:chk('insp1_c'), d:chk('insp1_d') },
     inspection3: { a:chk('insp3_a'), b:chk('insp3_b'), c:chk('insp3_c'), d:chk('insp3_d') },
     inspection2y:{ a:chk('insp2y_a'), b:chk('insp2y_b'), c:chk('insp2y_c') },
@@ -2303,7 +2345,14 @@ function applyData(d){
   // kalau ada pun sudah tidak relevan/kosong).
   function applyCal(prefix, rows, data){ if(!data) return; rows.forEach(function(r){ if(data[r.key]){ val_set(prefix+'_'+r.key+'_exp', data[r.key].exp); val_set(prefix+'_'+r.key+'_act', data[r.key].act); updateAbsError(prefix, r.key); } }); }
   applyCal('z', ZERO_ROWS, d.zero); applyCal('sp1', SPAN1_ROWS, d.span1); applyCal('sp2', SPAN2_ROWS, d.span2);
-  if (d.temperature) TEMP_FIELDS.forEach(function(f){ val_set('t_'+f.key, d.temperature[f.key]); });
+  if (d.temperature) {
+    TEMP_FIELDS.forEach(function(f){ val_set('t_'+f.key, d.temperature[f.key]); });
+    // Record lama (sebelum toggle F/C ada) tidak punya RoomTempUnit --
+    // biarkan default 'C' dari deklarasi awal, JANGAN di-set ulang ke
+    // undefined (setRoomTempUnit(undefined) bakal bikin toggle-nya
+    // kehilangan class 'active' di kedua tombol).
+    if (d.temperature.RoomTempUnit) setRoomTempUnit(d.temperature.RoomTempUnit);
+  }
   if (d.inspection1) ['a','b','c','d'].forEach(function(k){ chk_set('insp1_'+k, d.inspection1[k]); });
   if (d.inspection3) ['a','b','c','d'].forEach(function(k){ chk_set('insp3_'+k, d.inspection3[k]); });
   if (d.inspection2y) ['a','b','c'].forEach(function(k){ chk_set('insp2y_'+k, d.inspection2y[k]); });
@@ -2643,9 +2692,20 @@ function exportPdf(){
     y = doc.lastAutoTable.finalY + 8;
 
     // ── STEP 8 ──
+    // CEMS Room Temp bisa diketik dalam °F (toggle di form, lihat
+    // buildTempGrid/setRoomTempUnit) -- judul tabel ini FIX "(°C)", jadi
+    // kalau satuannya lagi F, konversi ke C dulu (dibulatkan, TANPA koma)
+    // sebelum dicetak. Titik ukur lain tidak punya toggle, selalu apa adanya.
     sectionHeader('Step 8: Actual Temperature Reading (°C)', estTableBlockH(TEMP_FIELDS.length));
     doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Titik Ukur','Suhu (°C)']],
-      body: TEMP_FIELDS.map(function(f){ return [f.label, safe(d.temperature[f.key])]; }),
+      body: TEMP_FIELDS.map(function(f){
+        var v = d.temperature[f.key];
+        if (f.key === 'RoomTemp' && d.temperature.RoomTempUnit === 'F') {
+          var n = parseFloat(v);
+          v = isFinite(n) ? String(fahrenheitToCelsiusRounded(n)) : v;
+        }
+        return [f.label, safe(v)];
+      }),
       styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:[243,233,201],textColor:[20,30,25]}, theme:'grid' });
     y = doc.lastAutoTable.finalY + 8;
 
