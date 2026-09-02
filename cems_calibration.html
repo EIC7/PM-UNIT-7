@@ -45,6 +45,14 @@
 .cems-table thead.hdr-optical th{background:#f4d9a6}
 .cems-table input[type=text],.cems-table input[type=number]{width:100%;box-sizing:border-box;border:1px solid #dfe6e1;border-radius:6px;padding:7px 8px;font-size:13px;background:#f7f8f6}
 .cems-table input:disabled{color:#9aa39d;font-style:italic;background:#eef0ee}
+/* Status warna ABS Error (hijau/kuning/merah) -- pakai !important karena
+   shared.css punya aturan global "input[type=number]{background:#fff
+   !important}" (GLOBAL INPUT COLOR FIX, anti dark-mode HP) yang kalau
+   tidak dilawan dengan !important + selector lebih spesifik begini, bikin
+   warna status ini ketiban jadi putih polos, tidak kelihatan sama sekali. */
+.cems-table input.cal-ok{background:#c8f0cf !important}
+.cems-table input.cal-warn{background:#fff3b0 !important}
+.cems-table input.cal-bad{background:#f8c9c9 !important}
 .cems-table td.param-cell{font-weight:700;color:#20302a;background:#fafcfb;white-space:nowrap}
 
 .field-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
@@ -484,23 +492,27 @@ var TEMP_FIELDS = [
 ];
 // Expected Value permanen (tidak bisa diedit user) kecuali baris yang
 // ditandai editable:true (cuma O2 Wet di tabel Zero).
+// drift/ooc: batas Drift Limit & Out-Of-Control bawaan analyzer CEMS asli
+// (referensi layar "View Calibration" DCS) -- nilai TETAP per parameter,
+// bukan input manual. SO2 di Span 2 sengaja beda dari Zero/Span 1 (40/80,
+// bukan 5/10) -- NOx tetap sama (20/40) di semua tabel yang memuatnya.
 var ZERO_ROWS  = [
-  {key:'CO',  label:'CO',    exp:'0'},
-  {key:'NOx', label:'NOx',   exp:'0'},
-  {key:'SO2', label:'SO2',   exp:'0'},
-  {key:'H2O', label:'H2O',   exp:'0'},
-  {key:'CO2', label:'CO2',   exp:'0'},
-  {key:'Flow',label:'Flow',  exp:'0'},
-  {key:'O2Wet',label:'O2 Wet',exp:'12', editable:true}
+  {key:'CO',  label:'CO',    exp:'0', drift:40, ooc:80},
+  {key:'NOx', label:'NOx',   exp:'0', drift:20, ooc:40},
+  {key:'SO2', label:'SO2',   exp:'0', drift:5,  ooc:10},
+  {key:'H2O', label:'H2O',   exp:'0', drift:0,  ooc:0},
+  {key:'CO2', label:'CO2',   exp:'0', drift:1,  ooc:2},
+  {key:'Flow',label:'Flow',  exp:'0', drift:0,  ooc:0},
+  {key:'O2Wet',label:'O2 Wet',exp:'12', editable:true, drift:1, ooc:2}
 ];
 var SPAN1_ROWS = [
-  {key:'CO',  label:'CO',  exp:'367.80'},
-  {key:'SO2', label:'SO2', exp:'76.80'},
-  {key:'CO2', label:'CO2', exp:'17.03'}
+  {key:'CO',  label:'CO',  exp:'367.80', drift:40, ooc:80},
+  {key:'SO2', label:'SO2', exp:'76.80',  drift:5,  ooc:10},
+  {key:'CO2', label:'CO2', exp:'17.03',  drift:1,  ooc:2}
 ];
 var SPAN2_ROWS = [
-  {key:'NOx', label:'NOx', exp:'340.80'},
-  {key:'SO2', label:'SO2', exp:'439.80'}
+  {key:'NOx', label:'NOx', exp:'340.80', drift:20, ooc:40},
+  {key:'SO2', label:'SO2', exp:'439.80', drift:40, ooc:80}
 ];
 
 var calEvidence = null;
@@ -1720,19 +1732,46 @@ function buildTempGrid(){
 // ABS Error = |Expected Value - Concentration|, DIHITUNG OTOMATIS (read-only,
 // tidak disimpan terpisah -- selalu diturunkan ulang dari exp & act, baik di
 // live form maupun di PDF, supaya tidak ada 2 sumber kebenaran yang bisa
-// beda). Drift Limit SENGAJA cuma kolom kosong (input manual) -- user isi
-// sendiri belakangan, ini cuma sediakan tempatnya.
+// beda). Drift Limit & OOC (Out-Of-Control) BUKAN input manual -- nilai
+// tetap per parameter dari ROWS config (r.drift/r.ooc, lihat definisi
+// ZERO_ROWS/SPAN1_ROWS/SPAN2_ROWS), sekadar ditampilkan di kolomnya sendiri.
+// Status warna ABS Error: hijau kalau 0..Drift Limit, kuning kalau
+// Drift Limit..OOC, merah kalau > OOC -- KECUALI drift==0 DAN ooc==0
+// (H2O, Flow) yang berarti parameter itu memang tidak dicek driftnya di
+// analyzer asli, jadi selalu hijau berapa pun ABS Error-nya (lihat
+// referensi screenshot layar "View Calibration" DCS).
+var CAL_STATUS_CLASS = { ok:'cal-ok', warn:'cal-warn', bad:'cal-bad' };
+function calStatusFor(abs, drift, ooc){
+  if (!isFinite(abs) || !isFinite(drift) || !isFinite(ooc)) return null;
+  if (drift === 0 && ooc === 0) return 'ok';
+  if (abs <= drift) return 'ok';
+  if (abs <= ooc) return 'warn';
+  return 'bad';
+}
 function updateAbsError(prefix, key){
   var expEl = document.getElementById(prefix+'_'+key+'_exp');
   var actEl = document.getElementById(prefix+'_'+key+'_act');
   var absEl = document.getElementById(prefix+'_'+key+'_abs');
+  var driftEl = document.getElementById(prefix+'_'+key+'_drift');
+  var oocEl = document.getElementById(prefix+'_'+key+'_ooc');
   if (!expEl || !actEl || !absEl) return;
   var exp = parseFloat(expEl.value), act = parseFloat(actEl.value);
-  absEl.value = (isFinite(exp) && isFinite(act)) ? Math.abs(exp-act).toFixed(2) : '';
+  var abs = (isFinite(exp) && isFinite(act)) ? Math.abs(exp-act) : NaN;
+  absEl.value = isFinite(abs) ? abs.toFixed(2) : '';
+  var drift = driftEl ? parseFloat(driftEl.value) : NaN;
+  var ooc = oocEl ? parseFloat(oocEl.value) : NaN;
+  var status = calStatusFor(abs, drift, ooc);
+  // Pakai class (cal-ok/cal-warn/cal-bad), BUKAN el.style.background --
+  // shared.css punya "input[type=number]{background:#fff !important}"
+  // (GLOBAL INPUT COLOR FIX) yang selalu menang atas inline style biasa.
+  // Class dengan !important + selector lebih spesifik (lihat .cems-table
+  // input.cal-ok dkk di <style> atas) baru bisa mengalahkannya.
+  absEl.classList.remove('cal-ok','cal-warn','cal-bad');
+  if (status) absEl.classList.add(CAL_STATUS_CLASS[status]);
 }
 function buildCalTable(tblId, headerClass, rows, prefix){
   var tbl = document.getElementById(tblId);
-  var html = '<thead class="'+headerClass+'"><tr><th>Parameter</th><th>Expected Value</th><th>Concentration</th><th>ABS Error</th><th>Drift Limit</th></tr></thead><tbody>';
+  var html = '<thead class="'+headerClass+'"><tr><th>Parameter</th><th>Expected Value</th><th>Concentration</th><th>ABS Error</th><th>Drift Limit</th><th>OOC</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var expVal = (r.exp!==undefined ? r.exp : '');
     // Expected Value permanen (disabled) kecuali r.editable true (O2 Wet).
@@ -1744,7 +1783,8 @@ function buildCalTable(tblId, headerClass, rows, prefix){
       '<td>'+expCell+'</td>' +
       '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_act" oninput="updateAbsError(\''+prefix+'\',\''+r.key+'\')"></td>' +
       '<td><input type="text" id="'+prefix+'_'+r.key+'_abs" readonly tabindex="-1" style="background:#eee;color:#555;text-align:center"></td>' +
-      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_drift"></td></tr>';
+      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_drift" value="'+r.drift+'" disabled></td>' +
+      '<td><input type="number" step="0.01" id="'+prefix+'_'+r.key+'_ooc" value="'+r.ooc+'" disabled></td></tr>';
   });
   html += '</tbody>';
   tbl.innerHTML = html;
@@ -2208,7 +2248,11 @@ function collectDas(prefix){
 }
 function collectCal(prefix, rows){
   var out = {};
-  rows.forEach(function(r){ out[r.key] = { exp: val(prefix+'_'+r.key+'_exp'), act: val(prefix+'_'+r.key+'_act'), drift: val(prefix+'_'+r.key+'_drift') }; });
+  // drift/ooc TIDAK disimpan di sini -- nilainya tetap (fixed reference dari
+  // ROWS config), bukan data yang berubah per record. Kalau ikut disimpan,
+  // record lama (sebelum kolom ini ada) bisa balik nilai kosong saat dibuka
+  // lagi via applyCal() dan menimpa nilai default yang baru.
+  rows.forEach(function(r){ out[r.key] = { exp: val(prefix+'_'+r.key+'_exp'), act: val(prefix+'_'+r.key+'_act') }; });
   return out;
 }
 
@@ -2253,7 +2297,11 @@ function applyData(d){
   applyOptical('oa', d.opticalAfter); val_set('oa_overall', d.opticalAfterOverall);
   function applyDas(prefix, data){ if(!data) return; DAS_FIELDS.forEach(function(f){ val_set(prefix+'_'+f.key, data[f.key]); }); }
   applyDas('da', d.dasBefore); applyDas('db', d.dasAfter);
-  function applyCal(prefix, rows, data){ if(!data) return; rows.forEach(function(r){ if(data[r.key]){ val_set(prefix+'_'+r.key+'_exp', data[r.key].exp); val_set(prefix+'_'+r.key+'_act', data[r.key].act); val_set(prefix+'_'+r.key+'_drift', data[r.key].drift); updateAbsError(prefix, r.key); } }); }
+  // drift/ooc SENGAJA tidak di-restore dari data lama -- sudah terisi
+  // benar dari ROWS config saat buildCalTable(), termasuk untuk record lama
+  // yang disimpan sebelum kolom ini ada (data[r.key].drift dari record itu
+  // kalau ada pun sudah tidak relevan/kosong).
+  function applyCal(prefix, rows, data){ if(!data) return; rows.forEach(function(r){ if(data[r.key]){ val_set(prefix+'_'+r.key+'_exp', data[r.key].exp); val_set(prefix+'_'+r.key+'_act', data[r.key].act); updateAbsError(prefix, r.key); } }); }
   applyCal('z', ZERO_ROWS, d.zero); applyCal('sp1', SPAN1_ROWS, d.span1); applyCal('sp2', SPAN2_ROWS, d.span2);
   if (d.temperature) TEMP_FIELDS.forEach(function(f){ val_set('t_'+f.key, d.temperature[f.key]); });
   if (d.inspection1) ['a','b','c','d'].forEach(function(k){ chk_set('insp1_'+k, d.inspection1[k]); });
@@ -2465,16 +2513,33 @@ function exportPdf(){
 
     // ── STEP 5 ──
     sectionHeader('Step 5: Calibration', estTableBlockH(ZERO_ROWS.length));
+    // Warna status ABS Error di PDF (RGB) -- padanan CAL_STATUS_CLASS
+    // (versi CSS class) yang dipakai form live, lihat updateAbsError().
+    var CAL_STATUS_RGB = { ok:[200,240,207], warn:[255,243,176], bad:[248,201,201] };
     function calTable(subtitle, headerColor, rows, data){
       checkPage(7 + estTableBlockH(rows.length));
       doc.setFont('helvetica','bold'); doc.setFontSize(9.5); doc.setTextColor(20,30,25);
       doc.text(subtitle, marginX, y+4); y += 7;
-      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Expected Value','Concentration','ABS Error','Drift Limit']],
+      // drift/ooc diambil langsung dari ROWS config (r.drift/r.ooc) -- nilai
+      // tetap per parameter, bukan dari data record (lihat catatan di
+      // collectCal/applyCal kenapa drift/ooc tidak lagi disimpan per record).
+      var rowStatus = rows.map(function(r){
+        var exp = parseFloat(data[r.key].exp), act = parseFloat(data[r.key].act);
+        var abs = (isFinite(exp) && isFinite(act)) ? Math.abs(exp-act) : NaN;
+        return calStatusFor(abs, r.drift, r.ooc);
+      });
+      doc.autoTable({ startY:y, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom}, willDrawPage:function(){drawBgOnce();}, head:[['Parameter','Expected Value','Concentration','ABS Error','Drift Limit','OOC']],
         body: rows.map(function(r){
           var exp = parseFloat(data[r.key].exp), act = parseFloat(data[r.key].act);
           var absErr = (isFinite(exp) && isFinite(act)) ? Math.abs(exp-act).toFixed(2) : '';
-          return [r.label, data[r.key].exp, data[r.key].act, absErr, data[r.key].drift];
+          return [r.label, data[r.key].exp, data[r.key].act, absErr, r.drift, r.ooc];
         }),
+        didParseCell: function(cellData){
+          if (cellData.section === 'body' && cellData.column.index === 3) {
+            var status = rowStatus[cellData.row.index];
+            if (status) cellData.cell.styles.fillColor = CAL_STATUS_RGB[status];
+          }
+        },
         styles:{fontSize:8.5,cellPadding:2.2}, headStyles:{fillColor:headerColor,textColor:[20,30,25]}, theme:'grid' });
       y = doc.lastAutoTable.finalY + 6;
     }

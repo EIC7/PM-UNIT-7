@@ -2044,6 +2044,36 @@ function rotateCropImage(dir) {
 
 ---
 
+## S. Status Warna Dinamis di Input (Hijau/Kuning/Merah) — Melawan GLOBAL INPUT COLOR FIX
+
+**Tujuan:** kolom input (biasanya `readonly`, hasil hitungan otomatis seperti ABS Error) perlu berubah warna background sesuai status (contoh: dalam batas normal = hijau, mendekati batas = kuning, di luar batas = merah), mengikuti pola layar analyzer DCS asli.
+
+**Ditemukan pertama kali di:** `cems_calibration.html` (September 2026) — tabel Zero/Span1/Span2 Calibration, kolom ABS Error diwarnai berdasarkan perbandingan ke Drift Limit/OOC (Out-Of-Control).
+
+**⚠️ Jebakan utama:** `shared.css` punya aturan global (bagian "GLOBAL INPUT COLOR FIX", dipasang supaya form tidak rusak kalau HP user pakai dark-mode paksa browser):
+```css
+input[type=text], input[type=number], input[type=date], textarea, select {
+  color: #111 !important; background: #fff !important;
+}
+```
+Karena pakai `!important`, kalau warna status di-set lewat `el.style.background = '...'` (inline style TANPA `!important`), warnanya **tidak akan pernah kelihatan** — selalu ketiban putih oleh aturan global ini. Ini bukan bug di kode status-nya sendiri; gejalanya bisa membingungkan karena `el.style.background` di DOM/devtools tetap terbaca benar (warna sudah ke-assign), tapi `getComputedStyle()`/tampilan visualnya tetap putih.
+
+**Cara yang benar:** pakai CSS class + `!important`, dengan selector yang lebih spesifik dari aturan global (`input[type=number]` cuma 1 attribute + 1 element = specificity rendah), supaya bisa menang:
+```css
+.nama-tabel input.cal-ok{background:#c8f0cf !important}
+.nama-tabel input.cal-warn{background:#fff3b0 !important}
+.nama-tabel input.cal-bad{background:#f8c9c9 !important}
+```
+```js
+absEl.classList.remove('cal-ok','cal-warn','cal-bad');
+if (status) absEl.classList.add({ok:'cal-ok', warn:'cal-warn', bad:'cal-bad'}[status]);
+```
+Untuk PDF (jsPDF autoTable), gunakan `didParseCell` untuk set `cellData.cell.styles.fillColor` — jalur ini tidak kena masalah `!important` CSS karena jsPDF menggambar sendiri, tidak lewat cascade browser.
+
+**Butuh dari user:** aturan ambang batas (nilai hijau/kuning/merah) — jangan menebak, karena bisa beda per parameter/tabel (lihat contoh CEMS: Drift Limit & OOC beda-beda per parameter, bahkan bisa beda antar tabel Zero/Span1/Span2 untuk parameter yang sama).
+
+---
+
 
 Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditanyakan:
 
