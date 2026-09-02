@@ -913,3 +913,30 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   berbeda) memanggil `raSubmitReport()`. Kalau menambah jalur submit baru di masa depan,
   pastikan tetap lewat `raSubmitReport()` supaya overlay ini otomatis ikut, atau panggil
   `pmShowManualSubmitOverlay()`/`pmHideManualSubmitOverlay()` manual di jalur barunya.
+
+## 🔴 `shared.js`/`shared.css` TIDAK PERNAH punya cache-busting `?v=` (fix 2026-09-02)
+
+- User lapor overlay submit/EIC7 yang baru dipasang (folder terbang, background solid,
+  label EIC7) "belum ganti di beberapa browser" walau sudah dipush ke GitHub. Root cause:
+  `shared.js`/`shared.css` dimuat di **31/21 file** (`<script src="shared.js">`,
+  `<link href="shared.css">`) **TANPA query param `?v=` sama sekali** — beda dari
+  `trend/*.html` yang SUDAH lama pakai konvensi ini (lihat komentar "?v= cache-busting"
+  di `trend_*.html`). Browser (terutama Chrome mobile, sudah pernah jadi masalah yang sama
+  di sistem trend) bisa nyimpan cache file itu lama sekali karena URL-nya tidak pernah
+  berubah — device yang kebetulan sudah cache `shared.js` versi LAMA (sebelum overlay
+  folder terbang dipasang) terus menampilkan versi lama tanpa error apa pun yang
+  kelihatan, walau repo GitHub sudah benar ter-update.
+- **Fix**: semua referensi `shared.js`/`shared.css` di 31 file (termasuk `outage-*.html`
+  — sistem Outage TERNYATA tetap memuat `shared.js`, walau CSS-nya sendiri terpisah)
+  sekarang pakai `?v=20260902a`.
+- **WAJIB naikkan angka versi ini lagi setiap kali `shared.js` ATAU `shared.css` diubah**
+  ke depannya — sama seperti konvensi `?v=` yang sudah lama dipakai di `trend/*.html`.
+  Lupa naikkan versi = perubahan baru bisa "tidak kelihatan" di sebagian device untuk
+  waktu yang tidak terduga (tergantung kapan cache browser device itu terakhir expire),
+  persis kasus yang baru terjadi ini.
+- **Belum diperluas** ke `db-helper.js`/`storage-helper.js`/`approval-helper.js`/
+  `firebase-config.js` (juga dimuat di 20 file TANPA `?v=` sama sekali) — file-file itu
+  jarang berubah (vendored dari upstream, lihat catatan "vendored copy yang basi" di atas)
+  jadi risikonya lebih kecil, tapi kalau ke depan ada fix mendesak di salah satu file itu
+  dan user lapor "belum kelihatan di beberapa device" lagi, curigai hal yang sama dan
+  tambahkan `?v=` ke situ juga.
