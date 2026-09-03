@@ -1794,3 +1794,86 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   di dokumen), dan "Warning and Instruction to RIC" tetap utuh. Screenshot
   popup index.html juga diverifikasi visual (headless Chrome
   `--screenshot`) — kartu biru/merah tampil sesuai desain yang diminta.
+
+## JSA Condition Access: checklist "Plant Process & Risk Checklist" jadi grid meniru tabel Word + YES/NO per item + "Others" dinamis (2026-09-03)
+
+- User kirim screenshot tabel Word asli beranotasi garis merah, minta
+  tampilan web checklist-nya dibuat MENIRU tata letak kolom tabel itu
+  (bukan daftar checkbox polos seperti sebelumnya) — *"saya ingin
+  tampilannya dibuat seperti ini di halaman website... dan diaplikasikan ke
+  versi word asli. jadi semua point yang butuh dipilih bisa kita pilih
+  secara lengkap"*. Sebelum diintegrasikan, dibuat **pratinjau lewat
+  Artifact** dulu (disetujui user: "oke sip terapkan") — pola ini (preview
+  dulu sebelum sentuh file produksi) dipakai karena perubahan struktur
+  data/UI-nya besar dan user eksplisit minta lihat dulu.
+- **4 panel grid** (`#jsaChecklistContainer`, class prefix `jsa-cl-` biar
+  tidak bentrok class lain di file): panel kiri "Plant & Risk Category"
+  (UNIT/SYSTEM/EQUIPMENT Online-Offline + RISK CATEGORY JOB LOW/HIGH +
+  Mandatory Lifting Plan/Pre-Evacuation Plan/HOT WORK/dst sebagai checkbox
+  tunggal) dan 3 panel "Hazard Group" berdampingan (masing-masing beberapa
+  section dengan header abu-abu/cokelat, meniru posisi 3 pasang kolom
+  HAZARDS/RISK di tabel asli). Di layar sempit otomatis susun 1-2 kolom.
+- **🔴 Insight PENTING yang menentukan desain data model**: TIDAK SEMUA
+  checkbox di tabel asli punya pasangan YES/NO — cuma item di 3 kolom
+  HAZARD GROUP (kanan) yang punya 2 sel checkbox bersebelahan (YES lalu NO,
+  `cbCol`/`cbCol+1`). Item di KOLOM PALING KIRI (General Lifting, Heavy/
+  Complex Lifting, Confined Space, Excavation, Underwater Work, HOT WORK,
+  WORKING AT HIGH, Online/Offline Low & High Voltage — 9 item) CUMA punya 1
+  kolom checkbox tunggal; kolom SESUDAHNYA di baris yang sama sudah milik
+  label hazard grup lain sama sekali (dikonfirmasi baca XML mentah row-per-
+  row). Kalau item-item ini diperlakukan sebagai pasangan YES/NO juga dan
+  ditulis ke `cbCol+1`, itu akan MENIMPA label hazard tetangga. Makanya
+  `JSA_CHECKLIST_ITEMS` sekarang punya flag `pair:true/false` — item
+  `pair:true` (32 item) dapat tombol YES/NO (`jsaClPairRow()`), item
+  `pair:false` (9 item) dapat checkbox tunggal biasa (`jsaClSingleRow()`).
+  **Kalau menambah modul checklist grid serupa di file lain nanti, WAJIB
+  verifikasi ulang XML per-row dulu (jangan asumsi semua checkbox px punya
+  pasangan)** — pola true-vs-false ini SANGAT bergantung struktur tabel
+  spesifik, tidak bisa digeneralisasi begitu saja.
+- **Data model checklist berubah dari boolean ke string** untuk item
+  `pair:true`: `jsaState.checklist[key]` sekarang `'yes'` / `'no'` / `''`
+  (bukan lagi `true`/`false`) — KEDUA sisi (YES dan NO) ditulis eksplisit ke
+  Word tiap generate (`jsaFillTable1()`), termasuk saat belum dipilih sama
+  sekali (`'o'`/`'o'` keduanya, bukan `'x'` nyasar). Item `pair:false` TETAP
+  boolean seperti semula (tidak ada perubahan perilaku). `applyRecordToForm()`
+  punya migrasi otomatis baca record LAMA (sebelum revisi ini, checklist-nya
+  semua boolean): utk item `pair:true`, `true` lama → `'yes'` sekarang.
+- **Online/Offline (UNIT/SYSTEM/EQUIPMENT) dan Risk Category pindah dari
+  3 `<select>`+1 `<select>` terpisah jadi bagian dari grid** (`jsaState.plant`
+  = `{unit,system,equipment}`, `jsaState.riskCategory`) — elemen
+  `#jsaOnlineOfflineUnit/System/Equipment` dan `#jsaRiskCategory` SUDAH TIDAK
+  ADA lagi di DOM, `dbCollectData()`/`applyRecordToForm()`/
+  `jsaCollectFormValues()` baca langsung dari `jsaState` (bukan
+  `document.getElementById(...).value` lagi) untuk field-field ini.
+  `applyRecordToForm()` fallback baca field lama (`onlineOfflineUnit` dst,
+  string terpisah) kalau record belum punya `data.plant` gabungan.
+- **"Others / Specific Hazard" jadi dinamis, TIDAK lagi 1 slot tetap
+  "ELECTRICAL"** — sesuai permintaan user *"untuk other karena tambahan
+  maka dibuat fleksibel agar bisa tambah manual bukan hanya Electrical, dan
+  electrical sekarang dibuat kosong"*. TAPI ini **DIBATASI MAKS 5 baris**
+  (`JSA_OTHERS_ROWS = [15,16,17,18,19]`, `JSA_OTHERS_MAX`) — BEDA dari
+  Additional Control Measures di Table 3 (yang tabel bersarangnya BISA
+  disisipi baris baru tanpa batas) karena section ini ada di **Table 1**,
+  bukan tabel bersarang yang didesain fleksibel — 5 baris fisik (row15-19,
+  kolom 8=label/9=YES/10=NO) itu SEMUA yang tersedia di template Word,
+  tidak bisa ditambah baris baru tanpa merombak total struktur Table 1.
+  Tombol "+ Tambah Hazard" otomatis `disabled` begitu mencapai 5. Baris
+  yang TIDAK diisi user (kosong) SENGAJA ditulis kosong-total ke Word
+  (label='', YES/NO keduanya 'o') supaya teks "..."/"ELECTRICAL" bawaan
+  template tidak pernah nyangkut di output.
+- Diverifikasi lewat headless Chrome + inspeksi langsung ke sel XML akhir
+  (BUKAN cuma cari substring, karena 'x'/'o' terlalu umum buat dicari
+  polos): Online/Offline 3 baris independen, Risk Category, item pair YES
+  DAN NO (termasuk item yang SENGAJA dibiarkan belum dipilih — keduanya
+  harus 'o'), item single checkbox TIDAK merusak label hazard tetangganya
+  (`Ozone` tetap utuh setelah `Confined Space` dicentang), 3 baris "Others"
+  terisi + 2 baris sisa dikosongkan total, "ELECTRICAL" sudah tidak ada
+  sebagai item tetap, dan Additional Control Measures + Warning/Instruction
+  (Table 3, kode TIDAK disentuh sama sekali di revisi ini) tetap jalan
+  normal.
+- **Kalau nanti diminta menerapkan pola grid+YES/NO yang sama ke
+  `jsa_report.html` (Risk to Trip)** — belum dikerjakan per commit ini,
+  user sengaja fokus ke Condition Access dulu. Row/col-nya PASTI beda
+  (v2 template py baris Risk Level tambahan yang menggeser semua offset),
+  dan perlu dicek ulang apakah v2 juga punya pembagian pair/single yang
+  sama atau beda — JANGAN asumsikan sama persis dengan Condition Access.
