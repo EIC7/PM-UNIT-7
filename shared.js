@@ -1471,6 +1471,12 @@ function raResaveInPlace(modul, callback) {
 /* ── DB LIST (untuk history page) ── */
 function dbList(modul, callback) {
   var BASE_COLS = 'id,modul,tanggal,pic,work_order,created_at,updated_at,status,firebase_synced_at';
+  // asset/asset_desc/area -- kolom ringan baru (lihat CLAUDE.md, migration
+  // "Workorder_Asset_Assetdescription") dipakai maintenance_report_form.html
+  // buat nama laporan dinamis di Riwayat + kolom Area. Sama seperti
+  // firebase_checksheet_id di bawah, kolom ini bisa belum ada kalau migration-nya
+  // belum dijalankan -- fallback bertingkat.
+  var AREA_COLS = 'asset,asset_desc,area';
   function finishWith(rows) {
     if (!modul) { callback(rows || []); return; }
     var normFilter = normalizeModul(modul);
@@ -1488,12 +1494,16 @@ function dbList(modul, callback) {
   // limit dinaikkan jauh -- sebelumnya 100 menyebabkan record lama (mis. O2
   // Weekly Inlet dari Desember 2024) ketutup rows modul lain yang lebih baru
   // di-update, jadi hilang dari Riwayat walau masih ada di database.
-  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status&order=updated_at.desc&limit=5000')
+  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status,' + AREA_COLS + '&order=updated_at.desc&limit=5000')
     .then(finishWith)
     .catch(function() {
-      supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + '&order=updated_at.desc&limit=5000')
+      supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status&order=updated_at.desc&limit=5000')
         .then(finishWith)
-        .catch(function(){ callback([]); });
+        .catch(function() {
+          supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + '&order=updated_at.desc&limit=5000')
+            .then(finishWith)
+            .catch(function(){ callback([]); });
+        });
     });
 }
 
@@ -1531,6 +1541,12 @@ function normalizeModul(name) {
     if (n.indexOf('B1')>=0 || n.indexOf('B12')>=0 || (n.indexOf('B-1')>=0)) return 'BELT_B12';
     return 'BELT';
   }
+  // HARUS sebelum cek MAINTENANCE/REPORT di bawah -- modul 'JSA Report'
+  // (nilai modul asli jsa_report.html) juga mengandung substring 'REPORT',
+  // jadi kalau urutan dibalik bakal ke-normalize salah jadi
+  // MAINTENANCE_REPORT (kebuka lewat maintenance_report_form.html, file
+  // salah -- pola proteksi yang sama seperti GENERATOR_STATOR_LEAK vs FEGT).
+  if (n.indexOf('JSA')>=0) return 'JSA_REPORT';
   if (n.indexOf('MAINTENANCE')>=0 || n.indexOf('REPORT')>=0) return 'MAINTENANCE_REPORT';
   if (n.indexOf('SILO')>=0) return 'COAL_SILO_LEVEL';
   if (n.indexOf('COAL')>=0 || n.indexOf('FEEDER')>=0) return 'COAL_FEEDER';
@@ -1580,6 +1596,7 @@ function raModulToUrl(modul, id) {
   if (norm === 'ID_FAN_LINE_PURGING')   return 'id_fan_line_purging.html?id=' + id;
   if (norm === 'CEC_CONSOLE_CHCB')      return 'dcs-console-chcb.html?id=' + id;
   if (norm === 'CEC_CONSOLE_WWTP')      return 'dcs-console-wwtp.html?id=' + id;
+  if (norm === 'JSA_REPORT')            return 'jsa_report.html?id=' + id;
   return 'index.html';
 }
 function raModulToPrintUrl(modul, id) {
@@ -2664,12 +2681,28 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   // sama). RA_ASSET_LABEL[record.modul] cuma buat modul yang nyimpan KODE
   // singkat mentah sebagai modul (mis. 'O2', 'GENERATOR_STATOR_LEAK').
   var label = RA_ASSET_LABEL[record.modul] || record.modul || RA_ASSET_LABEL[modKey] || modKey;
+  // 🆕 Nama laporan DINAMIS "Workorder_Asset_Assetdescription" -- dipakai
+  // maintenance_report_form.html (modul generik, 1 file dipakai untuk banyak
+  // equipment berbeda-beda, jadi label statis 'Maintenance Report' di atas
+  // tidak cukup untuk membedakan laporan satu sama lain di Review Approval
+  // Dashboard). record.asset/record.asset_desc adalah kolom ringan baru
+  // (lihat CLAUDE.md + dbList() AREA_COLS) -- GENERIK, modul lain BEBAS ikut
+  // memakainya nanti dengan cara yang sama tanpa ubah fungsi ini lagi. Modul
+  // yang tidak pernah mengisi kolom ini (19 modul lain saat ini) otomatis
+  // tetap pakai label statis di atas, TIDAK ADA regresi.
+  if (record.asset || record.asset_desc) {
+    label = [record.work_order, record.asset, record.asset_desc].filter(Boolean).join('_');
+  }
   // Nama PIC/Checked By ASLI -- lihat catatan RA_MODUL_AREA di atas,
   // routing reviewer sekarang lewat parameter team/area eksplisit di
   // Approvals.submitWithFiles(), bukan lagi lewat name-match submittedBy,
   // jadi tidak perlu diganti identitas sintetis lagi.
   var effectiveSubmittedBy = submittedByName || record.pic || '';
-  var areaKey = RA_MODUL_AREA[modKey];
+  // 🆕 record.area (kolom ringan, dipilih user lewat dropdown Area di form --
+  // lihat maintenance_report_form.html) DIPRIORITASKAN di atas RA_MODUL_AREA
+  // (peta statis per-modul) -- modul generik seperti Maintenance Report tidak
+  // terikat 1 area tetap, areanya ditentukan PER LAPORAN oleh user sendiri.
+  var areaKey = record.area || RA_MODUL_AREA[modKey];
   // Ditemukan laporan yang macet TANPA PERNAH melapor sukses ATAU gagal
   // (firebase_synced_at dan firebase_sync_error dua-duanya kosong selamanya)
   // -- root cause paling mungkin: fetch() ke Apps Script Drive proxy milik

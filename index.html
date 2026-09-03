@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <title>PM Diagnostic System — Unit 7 PLTU Paiton</title>
-    <script src="shared.js?v=20260902a"></script>
+    <script src="shared.js?v=20260902b"></script>
     <style>
         /* ═══════════════ MODERN LIGHT THEME DASHBOARD ═══════════════ */
         :root {
@@ -1093,6 +1093,44 @@
                     <span class="tag">REPORT</span>
                     <span class="tag">FORM</span>
                     <span class="tag">DOKUMENTASI</span>
+                    <span class="tag">PDF EXPORT</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- JSA Report -- generate Word (.docx) dari template
+                 jsa_template.docx (persis JSA_BUILD_DISMANTLE_SCAFFOLDING_
+                 FINAL_CONTOH_BERSIH.docx yang dikonfirmasi user), hazard
+                 dipilih dari library jsa_hazard_bank.json per step. TIDAK
+                 ada PDF/Review Approval Dashboard di modul ini -- output
+                 murni Word untuk direview & ditandatangani manual. -->
+            <div class="pm-card" onclick="window.location.href='jsa_report.html'" style="--card-color: #1a3a6b;">
+                <div class="card-index">JSA</div>
+                <div class="card-icon">🦺</div>
+                <div class="card-title">JSA<br>Report</div>
+                <div class="card-desc">Job Safety Analysis dinamis — susun step pekerjaan, pilih hazard dari library (otomatis mengisi risk & control measures), lalu generate langsung ke file Word (.docx) siap direview dan ditandatangani.</div>
+                <div class="card-tags">
+                    <span class="tag">JSA</span>
+                    <span class="tag">HAZARD PICKER</span>
+                    <span class="tag">WORD EXPORT</span>
+                </div>
+                <div class="card-arrow">↗</div>
+            </div>
+
+            <!-- FORM REPORT SEMENTARA -- link ke maintenance_report_form.html lokal
+                 (beda dari MOD-09 di atas yang linknya ke halaman eksternal Unit 8) --
+                 dropdown Area (Boiler/Turbine/Common CHCB/Common WWTP) & nama laporan
+                 dinamis Workorder_Asset_Assetdescription sudah ditambahkan di file ini,
+                 lihat CLAUDE.md. -->
+            <div class="pm-card" onclick="window.location.href='maintenance_report_form.html'" style="--card-color: #f97316;">
+                <div class="card-index">SEMENTARA</div>
+                <div class="card-icon">🧾</div>
+                <div class="card-title">Form Report<br>Sementara</div>
+                <div class="card-desc">Form laporan maintenance umum (PM/CM/EM/DR) untuk equipment apa saja lintas area — nama laporan otomatis mengikuti Work Order, Asset, dan Asset Description, dengan filter Area (Boiler/Turbine/Common CHCB/Common WWTP) untuk routing ke Review Approval Dashboard.</div>
+                <div class="card-tags">
+                    <span class="tag">REPORT</span>
+                    <span class="tag">SEMENTARA</span>
+                    <span class="tag">AREA FILTER</span>
                     <span class="tag">PDF EXPORT</span>
                 </div>
                 <div class="card-arrow">↗</div>

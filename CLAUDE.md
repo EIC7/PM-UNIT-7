@@ -1104,3 +1104,204 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   - **Drift Limit** — kolom kosong murni (input manual, TIDAK ada default/
     perhitungan apa pun), disimpan sebagai `data.zero/span1/span2.<key>.drift`.
     Sengaja kosong sesuai permintaan user ("sediakan tabelnya saja").
+
+## `maintenance_report_form.html`: nama laporan dinamis "WO_Asset_AssetDesc" + Area (2026-09-02)
+
+- **Migration WAJIB dijalankan dulu** sebelum file ini dipakai lagi setelah
+  update ini: `ALTER TABLE pm_records ADD COLUMN IF NOT EXISTS asset text,
+  ADD COLUMN IF NOT EXISTS asset_desc text, ADD COLUMN IF NOT EXISTS area
+  text;` + `NOTIFY pgrst, 'reload schema';` — ketiganya NULLABLE murni
+  (tidak ada default/NOT NULL), tidak menyentuh kolom/tabel lain. Kalau lupa
+  dijalankan: `dbSave()`/`dbSaveSilent()` di file ini akan GAGAL TOTAL (PostgREST
+  menolak SELURUH POST/PATCH kalau ada 1 saja key yang bukan kolom asli
+  tabelnya, bukan cuma mengabaikan field itu) — sama seperti pola
+  `firebase_checksheet_id` yang sudah ada sebelumnya.
+- **Kenapa 3 kolom BARU (bukan cuma pakai `data` JSONB yang sudah ada)**:
+  `dbList()` (Riwayat) sengaja TIDAK PERNAH fetch kolom `data` (berat, JSONB)
+  supaya daftar Riwayat tetap ringan/cepat — cuma kolom metadata tipis
+  (`BASE_COLS`) yang di-select. Karena `assetTag`/`assetDesc` sebelumnya cuma
+  ada di dalam `data`, Riwayat tidak bisa menampilkan nama laporan yang
+  membedakan satu Maintenance Report dari yang lain (semua tampil generik
+  "Maintenance Report"). 3 kolom ringan baru (`asset`, `asset_desc`, `area`)
+  di top-level row menyelesaikan ini tanpa perlu fetch `data` sama sekali.
+  Nilainya TETAP disimpan dobel di dalam `data.assetTag`/`data.assetDesc` juga
+  (tidak dihapus) untuk kompatibilitas record lama/PDF export yang masih baca
+  dari situ.
+- `dbList()` (`shared.js`) — `AREA_COLS = 'asset,asset_desc,area'` ditambah ke
+  select, dengan fallback BERTINGKAT (3 level: base+firebase_checksheet_id+
+  AREA_COLS → base+firebase_checksheet_id saja → base saja) persis pola
+  `firebase_checksheet_id` yang sudah ada — supaya Riwayat tidak ikut rusak
+  total kalau migration di atas belum sempat dijalankan.
+- **`record.modul` TETAP `'Maintenance Report'` (TIDAK diubah jadi dinamis)**
+  — ini SENGAJA, bukan lupa. `modul` adalah kunci ROUTING (`normalizeModul()`/
+  `modulToUrl()`/filter tombol Riwayat) yang harus 100% stabil; Maintenance
+  Report dipakai untuk equipment APA SAJA lintas plant (bukan 1 equipment
+  tetap seperti modul lain), jadi asset/asset description-nya berupa teks
+  bebas yang BISA kebetulan mengandung kata kunci modul lain (mis. "O2
+  Analyzer", "SO2", "FEGT") — kalau ikut ditaruh di `modul`, `normalizeModul()`
+  bisa salah rute buka file modul lain. Nama dinamis "WO_Asset_AssetDesc"
+  HANYA dipakai sebagai **label tampilan** (Riwayat, lewat `historyReportName()`
+  di `history.html`) dan **nama laporan yang dikirim ke Review Approval
+  Dashboard** (`assetName`, lewat `record.asset`/`record.asset_desc` di
+  `raSendFinalPdfToFirebaseDashboard()`, `shared.js`) — bukan pengganti kunci
+  routing. Pola ini GENERIK: modul lain di masa depan yang juga ingin nama
+  dinamis serupa tinggal ikut mengisi kolom `asset`/`asset_desc` yang sama,
+  tidak perlu ubah `raSendFinalPdfToFirebaseDashboard()`/`historyReportName()`
+  lagi — modul yang tidak mengisi kolom ini (semua 19 modul lain saat ini)
+  otomatis tetap pakai label statis lama, tidak ada regresi.
+- **Dropdown Area baru** (`#area` di "Informasi Pekerjaan": Boiler/Turbine/
+  Common CHCB/Common WWTP, value `boiler`/`turbine`/`common`/`wwtp` — PERSIS
+  sama dengan kosakata `RA_MODUL_AREA`/`RA_AREA_LABEL_C7` yang sudah ada,
+  supaya tidak nyimpang) diisi USER PER LAPORAN (bukan tetap per-modul seperti
+  modul lain) karena Maintenance Report tidak terikat 1 area tetap. Disimpan
+  ke kolom ringan `area` yang sama. `raSendFinalPdfToFirebaseDashboard()`
+  sekarang `var areaKey = record.area || RA_MODUL_AREA[modKey];` (prioritaskan
+  `record.area` per-laporan di atas peta statis) — ini yang benar-benar
+  menentukan `team`/`area` dikirim ke `Approvals.submitWithFiles()` untuk
+  routing reviewer/filter area di Review Approval Dashboard.
+  `historyAreaLabel()` (`history.html`) juga diupdate senada: sekarang terima
+  row PENUH (bukan cuma string modul) dan prioritaskan `r.area`.
+- Fix tambahan yang ditemukan waktu audit file ini terhadap dokumen di atas:
+  budget kompresi foto jalur `cropAndSave()` (`var MAX`) di file ini MASIH
+  1MB (`1*1024*1024`) — bukan 500KB seperti seharusnya (lihat bagian "Budget
+  kompresi foto (500KB) TIDAK terpusat" di atas, ternyata file ini kelewat
+  saat perbaikan 20 file sebelumnya). Sudah disamakan ke `500*1024`.
+- Format submit laporan LAMA (sistem login bertingkat/checker/reviewer, pilot
+  awal fitur approval PM) **sudah tidak ada** di file ini per audit ini —
+  sudah diganti generic `raSubmitReport()`/`raSubmitReportCore()` (`shared.js`)
+  sejak commit sebelumnya, cuma sisa komentar "checker/reviewer/login dihapus"
+  yang menjelaskan histori ini. Tidak ada perubahan kode diperlukan di bagian
+  ini.
+- Card baru **"Form Report Sementara"** ditambahkan di `index.html` (setelah
+  card MOD-09), link LANGSUNG ke `maintenance_report_form.html` lokal — beda
+  dari card **MOD-09 "Maintenance Report Form"** yang SUDAH ADA SEBELUMNYA,
+  yang ternyata linknya ke halaman EKSTERNAL
+  (`eenputra.github.io/CHECK-SHEET-POMI-ELEKTRIK-ONLINE/UNIT%208/...`, repo
+  Unit 8 milik pihak lain) — BUKAN ke file lokal ini. Ditemukan waktu audit
+  ini, TIDAK diubah/dihapus (di luar scope yang diminta), tapi perlu diketahui
+  kalau nanti ada laporan serupa "MOD-09 kebuka ke tempat yang salah".
+
+## Modul baru: JSA Report (`jsa_report.html`, 2026-09-03) — generate Word dinamis
+
+- **Beda TOTAL dari semua modul lain di repo ini**: outputnya **Word (.docx)**,
+  BUKAN PDF, dan **TIDAK ADA** alur Submit/Review Approval Dashboard sama
+  sekali (dikonfirmasi eksplisit oleh user — tujuannya file Word ini
+  direview & ditandatangani manual oleh pihak terkait, bukan lewat dashboard
+  approval online). Cuma ada 2 aksi: **Simpan Draft** (`dbSave('JSA Report')`,
+  ke Supabase `pm_records` seperti modul lain, supaya tidak hilang & muncul
+  di Riwayat) dan **Generate Word** (proses 100% di browser, TIDAK ada
+  server/Python di baliknya).
+- **Template acuan**: `jsa_template.docx` (root repo, binary asset) — ini
+  adalah salinan PERSIS `JSA_BUILD_DISMANTLE_SCAFFOLDING_FINAL_CONTOH_BERSIH.docx`
+  yang sudah dikonfirmasi user sebagai template resmi (5 tabel: judul, info+
+  risk-assessment matrix, tabel JSA 5 kolom, spacer, tabel Gas Test PEL —
+  lihat riwayat percakapan sebelumnya soal cara tabel ini ditemukan/disanitasi
+  dari 2 tanda tangan asli). **Kalau template resminya berubah lagi di masa
+  depan** (revisi form baru dari user), file `jsa_template.docx` ini yang
+  perlu diganti — tapi HARUS diaudit ulang struktur XML-nya dulu (lihat poin
+  di bawah, banyak field bergantung index baris/sel PERSIS) sebelum
+  `jsaFillTable1()`/`jsaRebuildTable2()` dianggap masih valid.
+- **Mesin generate Word** (`jsaGenerateWord()` di `jsa_report.html`) pakai
+  **JSZip** (CDN, MIT license — bukan library docx-template berbayar seperti
+  docxtemplater, supaya konsisten dengan semua dependency lain di repo ini
+  yang gratis) + `DOMParser`/`XMLSerializer` BAWAAN BROWSER buat baca/tulis
+  `word/document.xml` di dalam file .docx (yang sebenarnya cuma ZIP berisi
+  XML). Alurnya: `fetch('jsa_template.docx')` → `JSZip.loadAsync()` → parse
+  `word/document.xml` → `jsaFillTable1()` (isi field Informasi Pekerjaan) +
+  `jsaRebuildTable2()` (buang isi contoh lama, bangun ulang dari step/hazard
+  yang diisi user) → `XMLSerializer` → `zip.generateAsync({type:'blob'})` →
+  download lewat `<a download>` sementara (`jsaDownloadBlob`).
+- **⚠️ SELALU akses paragraf/run lewat DIRECT-CHILD saja**
+  (`jsaDirectChildren(el, localName)`, filter manual `childNodes` by
+  `namespaceURI`+`localName` — BUKAN `querySelector`/`getElementsByTagName`
+  yang tembus ke descendant manapun) — pelajaran yang sama persis dari
+  pembuatan contoh sample Python (lxml) sebelumnya: kalau ada drawing/textbox
+  bersarang dengan paragraf sendiri, traversal yang tidak direct-child-aware
+  bisa salah pilih node. Semua helper (`jsaSetParagraphText`,
+  `jsaSetSoleCheckboxText`, dst.) mengikuti aturan ini.
+- **Struktur Table 1 (info-header) PENUH KEJUTAN kalau tidak dicek XML
+  mentahnya** — jangan asumsi dari tampilan visual/python-docx text dump
+  saja. Yang paling penting: **Row 0 (Equipment Tag) ternyata 2 PARAGRAF
+  TERPISAH** (`p[0]`="Area to be Access...(KKS No.): " label, `p[1]`=nilai
+  tag) — BUKAN 1 paragraf gabungan seperti kelihatannya dari python-docx
+  `cell.text` (yang menggabungkan semua paragraf jadi satu string tanpa
+  pemisah jelas). Riset awal sempat salah asumsi ini 1 paragraf, ketahuan
+  lewat selftest otomatis (lihat poin di bawah) yang mendeteksi teks contoh
+  lama "7TL-MOV-250" masih nyangkut setelah generate. **Kalau field baru mau
+  ditambahkan ke Table 1 di masa depan, WAJIB verifikasi ulang jumlah
+  paragraf per sel pakai lxml (`tc.findall("w:p", NS)`) SATU PER SATU**,
+  jangan percaya hasil `cell.text` python-docx atau tampilan visual Word.
+  Sel lain yang sudah diverifikasi (row2 HIRA, row8/9 checkbox Risk Category,
+  row20 WO/Priority/EPAS, row21 tanggal, row23 nama signature) semuanya
+  memang cuma 1 paragraf, aman.
+- **Table 2 (JOB SAFETY ANALYSIS) jauh lebih sederhana** dari pola
+  `JSA_Standard.docx` yang lama (numId/bullet, border double/dotted beda per
+  posisi baris) — template BARU ini tidak pakai numId sama sekali (section
+  letter "A."/"B."/"C." literal teks biasa), dan border SERAGAM di semua
+  baris (top/bottom selalu dotted, kecuali No./Work Sequence kolom yang
+  punya `left=single`/`right=double` tetap) — tidak ada perlakuan khusus
+  baris pertama/terakhir. `jsaSectionHeaderRow()`/`jsaHazardTableRow()` di
+  `jsa_report.html` meniru pola ini persis (constants `JSA_COLW`, border
+  spec hardcoded sesuai hasil baca XML mentah — lihat riwayat percakapan
+  kalau perlu detail lengkap tiap kombinasi border).
+- **No. (nomor step) di-reset per SECTION** (bukan nomor urut keseluruhan
+  tabel) — step pertama tiap section A/B/C selalu mulai dari 1 lagi.
+  Section yang usernya TIDAK isi step sama sekali (`jsaState.sections[code]
+  .steps.length === 0`) **dilewati total** (header section-nya juga tidak
+  dicetak) — supaya tidak ada "B. Work Process" kosong tanpa isi di output.
+- **Hazard picker**: library gabungan disimpan di `jsa_hazard_bank.json`
+  (root repo, 29 entry) — hasil MERGE `hazard_bank.json` (dikirim user lebih
+  awal, isi hazard utk contoh job ganti bearing pompa, 22 hazard unik setelah
+  di-dedupe lintas section A/B/C) **+ 7 hazard baru** yang diekstrak dari
+  `JSA_BUILD_DISMANTLE_SCAFFOLDING_FINAL_CONTOH_BERSIH.docx` (contoh job
+  scaffolding real) yang belum ada di `hazard_bank.json` (permukaan panas,
+  beban scaffolding lebihi kapasitas, benda jatuh dari ketinggian, scaffolding
+  tanpa tag/SWL, dst — lihat field `source` tiap entry utk asal-usulnya).
+  **Ini KHUSUS diminta user** ("cek juga hazard dari dokumen sebelumnya...
+  tambahkan yang tidak ada"). Format tiap entry: `{id, hazard:[...],
+  risk:[...], control:[...], source?}` — `hazard`/`risk`/`control` array
+  (multi-kalimat), `jsaHazardBank` di JS gabungkan jadi string `' / '`
+  (hazard) atau `'\n'` (risk/control, 1 baris = 1 paragraf nanti). **Kalau
+  user kirim daftar hazard "final" di masa depan** (sempat dijanjikan "saya
+  kirim nanti" di awal percakapan) — replace isi `jsa_hazard_bank.json`
+  dengan format yang sama, TIDAK perlu ubah kode `jsa_report.html` sama
+  sekali (picker generik baca apa adanya dari file JSON ini).
+- **🔴 CAKUPAN SENGAJA BERTAHAP (persetujuan eksplisit user)** — field yang
+  SUDAH dinamis: Equipment Tag, Work to be Done, Work Method (multi-baris),
+  HIRA reference, Risk Category (LOW/HIGH toggle), WO/Priority/EPAS App,
+  Work Period Start/Finish, 5 nama Signature (Applicant/Operation Supervisor/
+  Health & Safety/RIC/Maintenance Supervisor — teks nama saja, TIDAK ada
+  capture tanda tangan gambar, konsisten dengan semua modul lain di repo
+  ini), dan tentu saja Section/Step/Hazard (fitur inti). **BELUM dinamis**
+  (sengaja dideferred ke versi berikutnya): matrix checklist Risk
+  Category detail (Lifting Plan/Confined Space/Excavation/Hot Work/Working
+  at High/Online-Offline Voltage) + PLANT PROCESS HAZARD IDENTIFICATION
+  (~30 checkbox Online/Offline/Oxygen/Flammable), tabel Gas Test PEL, tabel
+  CONTROL MEASURES SELECTION, section "Additional Control Measures" & 
+  "Warning and Instruction to RIC" — semua bagian ini **MASIH MEMBAWA ISIAN
+  ASLI dari contoh job scaffolding** (mis. "VARIABLE OPEN BREAKER AND
+  VARIABLE GROUNDING" di Additional Control Measures, checkbox
+  "Isolate Electrical Power supply"/dll ter-centang) karena `jsa_report.html`
+  TIDAK menyentuh Table 1 baris-baris itu maupun Table 3/4 sama sekali.
+  **User HARUS diberi tahu jelas** tiap kali modul ini dipakai/didemokan:
+  bagian-bagian itu perlu diedit MANUAL di Word setelah di-generate kalau
+  tidak relevan dengan pekerjaan yang baru. Kalau nanti diminta melanjutkan
+  ke fase berikutnya, cek riwayat percakapan bagian "Cakupan checklist" utk
+  keputusan bertahap ini.
+- **Diverifikasi lewat selftest otomatis** (browser asli, headless Chrome +
+  local HTTP server sementara — BUKAN cuma baca kode): isi semua field +
+  2 step section A + 1 step section B + campuran hazard dari library &
+  manual, generate, lalu re-parse hasil akhirnya dan cek isi tiap field
+  benar DAN teks contoh lama (`7TL-MOV-250`) sudah tidak ada sama sekali.
+  Kode selftest ini SUDAH DIHAPUS lagi dari `jsa_report.html` (cuma dipakai
+  sekali waktu development, bukan bagian permanen file). Hasil akhirnya juga
+  dikonversi ke PDF lewat LibreOffice headless **HANYA untuk verifikasi
+  visual internal** (border tabel, layout, tidak ada korupsi) — TIDAK
+  pernah dikirim ke user sebagai deliverable (user eksplisit minta Word
+  saja, bukan PDF).
+- Registrasi generik: `normalizeModul()` (`shared.js`) — cek substring
+  `'JSA'` **SEBELUM** cek `MAINTENANCE`/`REPORT` (modul ini bernilai literal
+  `'JSA Report'`, yang mengandung substring `'REPORT'` juga — pola proteksi
+  sama seperti `GENERATOR_STATOR_LEAK` vs `FEGT`). `raModulToUrl()` diarahkan
+  ke `jsa_report.html?id=`. Tombol filter "JSA" ditambahkan di
+  `history.html`, card baru ditambahkan di `index.html`.

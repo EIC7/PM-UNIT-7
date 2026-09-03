@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Riwayat PM — Unit 7</title>
-<script src="shared.js?v=20260902a"></script>
+<script src="shared.js?v=20260902b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -89,6 +89,7 @@
       <button class="btn btn-outline" data-modul-filter="SO2" onclick="loadHistory('SO2')" style="font-size:12px;padding:6px 14px;flex:none">SO2<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="OPACITY" onclick="loadHistory('OPACITY')" style="font-size:12px;padding:6px 14px;flex:none">Opacity<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="MAINTENANCE_REPORT" onclick="loadHistory('MAINTENANCE_REPORT')" style="font-size:12px;padding:6px 14px;flex:none">Maintenance<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="JSA_REPORT" onclick="loadHistory('JSA_REPORT')" style="font-size:12px;padding:6px 14px;flex:none">JSA<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR E4-E5" onclick="loadHistory('BELT CONVEYOR E4-E5')" style="font-size:12px;padding:6px 14px;flex:none">Belt E4/E5<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR E2-E3" onclick="loadHistory('BELT CONVEYOR E2-E3')" style="font-size:12px;padding:6px 14px;flex:none">Belt E2/E3<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR B1-B2" onclick="loadHistory('BELT CONVEYOR B1-B2')" style="font-size:12px;padding:6px 14px;flex:none">Belt B1/B2<span class="hist-count"></span></button>
@@ -150,6 +151,17 @@ function historyStatusBadge(status, firebaseSyncedAt) {
   return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'" title="'+s.title+'">'+s.label+'</span>';
 }
 
+// 🆕 Nama laporan dinamis "Workorder_Asset_Assetdescription" -- dipakai
+// maintenance_report_form.html (kolom ringan asset/asset_desc, lihat CLAUDE.md
+// + shared.js dbList() AREA_COLS). Modul yang tidak mengisi kolom ini (semua
+// modul lain saat ini) tetap tampil r.modul apa adanya seperti sebelumnya.
+function historyReportName(r) {
+  if (r.asset || r.asset_desc) {
+    return [r.work_order, r.asset, r.asset_desc].filter(Boolean).join('_');
+  }
+  return r.modul;
+}
+
 function historyRowsToTableHtml(rows) {
   var html = '<table class="manual-table" style="width:100%;font-size:12px">'+
     '<thead><tr><th>Modul</th><th>Tanggal</th><th>PIC</th><th>Work Order</th><th>Status</th><th>Area</th><th>Disimpan</th><th>Aksi</th></tr></thead><tbody>';
@@ -178,12 +190,12 @@ function historyRowsToTableHtml(rows) {
       submitBtn = '<button id="'+submitBtnId+'" onclick="historySubmit(\''+r.id+'\',\''+r.modul+'\')" style="padding:4px 10px;font-size:11px;background:#f59e0b;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px">&#128260; Resubmit</button>';
     }
     html += '<tr>'+
-      '<td><span class="path-label">'+r.modul+'</span></td>'+
+      '<td><span class="path-label">'+historyReportName(r)+'</span></td>'+
       '<td>'+(r.tanggal||'-')+'</td>'+
       '<td>'+(r.pic||'-')+'</td>'+
       '<td>'+(r.work_order||'-')+'</td>'+
       '<td id="histStatusCell-'+r.id+'">'+historyStatusBadge(r.status, r.firebase_synced_at)+'</td>'+
-      '<td>'+historyAreaLabel(r.modul)+'</td>'+
+      '<td>'+historyAreaLabel(r)+'</td>'+
       '<td style="font-size:10px;color:var(--text3)">'+saved+'</td>'+
       '<td id="histActionCell-'+r.id+'" style="white-space:nowrap;text-align:right">'+
         submitBtn+
@@ -285,9 +297,15 @@ setInterval(function(){
    data, tidak diduplikasi ke sini. Modul yang belum dipetakan (mis.
    Maintenance Report) tampil "-". */
 var HIST_AREA_LABEL = { boiler: 'Boiler', turbine: 'Turbine', common: 'Common CHCB', wwtp: 'Common WWTP' };
-function historyAreaLabel(modul) {
+// r bisa berupa row penuh (punya r.area, kolom ringan baru -- lihat CLAUDE.md
+// "Workorder_Asset_Assetdescription") ATAU sekadar string modul (dipanggil
+// dari tempat lain yang cuma punya modul, backward-compat). r.area
+// DIPRIORITASKAN di atas peta statis RA_MODUL_AREA -- modul generik seperti
+// Maintenance Report tidak terikat 1 area tetap, areanya per-laporan.
+function historyAreaLabel(r) {
   if (typeof RA_MODUL_AREA === 'undefined' || typeof normalizeModul !== 'function') return '-';
-  var area = RA_MODUL_AREA[normalizeModul(modul)];
+  var modul = (r && typeof r === 'object') ? r.modul : r;
+  var area = (r && typeof r === 'object' && r.area) || RA_MODUL_AREA[normalizeModul(modul)];
   return area ? (HIST_AREA_LABEL[area] || area) : '-';
 }
 

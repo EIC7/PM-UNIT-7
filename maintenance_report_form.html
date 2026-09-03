@@ -6,7 +6,7 @@
     <title>Maintenance Report</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="shared.js?v=20260902a"></script>
+    <script src="shared.js?v=20260902b"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
@@ -185,6 +185,17 @@
         </div>
 
         <div class="section-title">📌 Informasi Pekerjaan</div>
+
+        <div class="form-group">
+            <label>Area</label>
+            <select id="area">
+                <option value="">— Pilih Area —</option>
+                <option value="boiler">Boiler</option>
+                <option value="turbine">Turbine</option>
+                <option value="common">Common CHCB</option>
+                <option value="wwtp">Common WWTP</option>
+            </select>
+        </div>
 
         <div class="row">
             <div class="form-group"><label>WO No.</label><input type="text" id="wo" placeholder="Nomor Work Order"></div>
@@ -1147,10 +1158,11 @@ function applyImageEdits(){
 
         function applyRecordToForm(rec) {
             document.getElementById('reportType').value = (rec.data && rec.data.reportType) || 'EM';
+            document.getElementById('area').value = rec.area || (rec.data && rec.data.area) || '';
             document.getElementById('wo').value = rec.work_order || '';
             document.getElementById('workDate').value = rec.tanggal || new Date().toISOString().split('T')[0];
-            document.getElementById('assetTag').value = (rec.data && rec.data.assetTag) || '';
-            document.getElementById('assetDesc').value = (rec.data && rec.data.assetDesc) || '';
+            document.getElementById('assetTag').value = rec.asset || (rec.data && rec.data.assetTag) || '';
+            document.getElementById('assetDesc').value = rec.asset_desc || (rec.data && rec.data.assetDesc) || '';
             document.getElementById('failureDesc').value = (rec.data && rec.data.failureDesc) || '';
             document.getElementById('pic').value = rec.pic || '';
             document.getElementById('material').value = (rec.data && rec.data.material) || '';
@@ -2006,7 +2018,7 @@ function applyImageEdits(){
 
             var imgArr = sections[p.type][p.idx].images;
             var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
-            var MAX = 1 * 1024 * 1024;
+            var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
             var dataUrl;
 
             for (var q = 0.85; q >= 0.25; q -= 0.1) {
@@ -2185,6 +2197,18 @@ function applyImageEdits(){
                 tanggal: document.getElementById('workDate').value || null,
                 pic: document.getElementById('pic').value || null,
                 work_order: document.getElementById('wo').value || null,
+                // Kolom ringan (top-level, BUKAN di dalam `data` JSONB) supaya bisa
+                // dibaca dbList() tanpa fetch `data` yang berat -- dipakai shared.js
+                // (raSendFinalPdfToFirebaseDashboard) buat nama laporan dinamis
+                // "WO_Asset_AssetDescription" yang dikirim ke Review Approval
+                // Dashboard, dan historyAreaLabel() (history.html) buat kolom Area.
+                // ⚠️ WAJIB migration dulu (lihat CLAUDE.md, ALTER TABLE pm_records
+                // ADD COLUMN asset/asset_desc/area) SEBELUM file ini dipakai --
+                // PostgREST menolak SELURUH POST/PATCH (bukan cuma field ini) kalau
+                // ada 1 saja key yang bukan kolom asli tabelnya.
+                asset: document.getElementById('assetTag').value || null,
+                asset_desc: document.getElementById('assetDesc').value || null,
+                area: document.getElementById('area').value || null,
                 data: {
                     reportType: document.getElementById('reportType').value || 'EM',
                     assetTag: document.getElementById('assetTag').value || '',

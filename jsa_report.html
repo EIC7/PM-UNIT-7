@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSA Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="shared.js?v=20260902b"></script>
+<script src="db-helper.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;padding:8px;overflow-x:hidden}
+.container{max-width:920px;margin:0 auto;background:#fff;border-radius:10px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.1)}
+.header{background:linear-gradient(135deg,#1a3a6b,#2e6fcc);color:#fff;padding:16px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.header-content h1{font-size:1.2em;margin-bottom:4px}
+.header-content p{font-size:0.85em;opacity:0.9}
+.header .btn-back{padding:8px 16px;background:#fff;color:#1a3a6b;border:none;border-radius:6px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.9em;transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+.header .btn-back:hover{background:#f0f0f0}
+.live-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.85);animation:blinkJS 2s ease-in-out infinite;flex-shrink:0;cursor:default}
+@keyframes blinkJS{0%,100%{opacity:1}50%{opacity:0.35}}
+.live-dot.pm-health-ok{background:#bbf7d0;animation:blinkJS 2s ease-in-out infinite}
+.live-dot.pm-health-warn{background:#fde68a;animation:none;opacity:1}
+.live-dot.pm-health-down{background:#fecaca;animation:none;opacity:1}
+.section-title{background:#e8f0fe;padding:10px 14px;border-left:4px solid #2e6fcc;margin:18px 0 12px 0;font-weight:700;font-size:0.9em;color:#1a3a6b;border-radius:0 4px 4px 0}
+.form-group{margin-bottom:14px}
+label{display:block;font-weight:600;margin-bottom:5px;font-size:0.88em;color:#333}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:1em;font-family:inherit;color:#222;background:#fff}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#2e6fcc;box-shadow:0 0 0 3px rgba(46,111,204,0.15)}
+textarea{min-height:64px;resize:vertical;line-height:1.5}
+select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%23999'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:600px){.row,.row3{grid-template-columns:1fr}}
+.section-box{background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-bottom:12px}
+.btn{padding:10px 16px;border:none;border-radius:6px;font-size:0.9em;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:opacity 0.2s}
+.btn:active{opacity:0.75}
+.btn-blue{background:#2e6fcc;color:#fff}
+.btn-green{background:#2ecc71;color:#fff}
+.btn-red{background:#e74c3c;color:#fff;padding:6px 12px;font-size:0.82em}
+.btn-gray{background:#e0e0e0;color:#333}
+.btn-full{width:100%;justify-content:center;margin-bottom:10px}
+/* ── JSA sections/steps/hazard rows ── */
+.jsa-section{border:1px solid #d7e3f5;border-radius:8px;margin-bottom:16px;overflow:hidden}
+.jsa-section-head{background:#1a3a6b;color:#fff;padding:10px 14px;font-weight:700;font-size:0.92em;display:flex;justify-content:space-between;align-items:center}
+.jsa-section-body{padding:12px}
+.jsa-step{border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:10px;background:#fafcff}
+.jsa-step-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.jsa-step-head input{flex:1}
+.jsa-step-no{background:#2e6fcc;color:#fff;font-weight:700;font-size:0.85em;border-radius:6px;padding:9px 12px;flex-shrink:0}
+.jsa-hazard-row{border:1px dashed #cfd8e3;border-radius:6px;padding:10px;margin:8px 0;background:#fff;position:relative}
+.jsa-hazard-row .rm-row{position:absolute;top:6px;right:6px}
+.jsa-hazard-row label{font-size:0.78em;color:#5a6b7a}
+.jsa-hazard-row textarea{min-height:48px;font-size:0.9em}
+.jsa-step-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.jsa-step-actions .btn{font-size:0.82em;padding:7px 12px}
+/* ── Hazard picker modal ── */
+#hazardModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:14px}
+#hazardModal.show{display:flex}
+.hz-dialog{background:#fff;border-radius:10px;width:min(96vw,680px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.hz-dialog-header{padding:14px 16px;border-bottom:1px solid #eee}
+.hz-dialog-header input{margin-top:8px}
+.hz-dialog-body{overflow-y:auto;padding:10px 16px;flex:1}
+.hz-item{display:flex;gap:10px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+.hz-item input{width:auto;margin-top:3px}
+.hz-item .hz-name{font-weight:600;font-size:0.9em;color:#222}
+.hz-item .hz-src{font-size:0.72em;color:#999;margin-top:2px}
+.hz-dialog-footer{padding:12px 16px;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:8px}
+@media print{.no-print{display:none!important}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="no-print header">
+    <div class="header-content">
+      <h1>🦺 JSA Report</h1>
+      <p>Job Safety Analysis — generate langsung ke Word (.docx)</p>
+      <span id="jsaStatusBadge" style="display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.25);color:#fff">📝 DRAFT</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="live-dot" title="Status Supabase"></div>
+      <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
+      <button class="btn-back" onclick="window.location.href='history.html'">RIWAYAT</button>
+    </div>
+  </div>
+
+  <!-- ══ INFORMASI PEKERJAAN ══ -->
+  <div class="section-title">📌 Informasi Pekerjaan</div>
+  <div class="section-box">
+    <div class="form-group"><label>Area to be Access / Equipment Tag No. (KKS No.)</label><input type="text" id="jsaEquipTag" placeholder="7TL-MOV-250 / 7TL-MOV-260B"></div>
+    <div class="form-group"><label>Work to be Done</label><textarea id="jsaWorkToBeDone" placeholder="Uraian pekerjaan..."></textarea></div>
+    <div class="form-group">
+      <label>Work Method (1 baris = 1 poin, tekan Enter untuk poin baru)</label>
+      <textarea id="jsaWorkMethod" placeholder="Mobilisasi material...&#10;Pemasangan...&#10;dst" style="min-height:88px"></textarea>
+    </div>
+    <div class="row">
+      <div class="form-group"><label>HIRA Reference No.</label><input type="text" id="jsaHiraRef" placeholder="Opsional"></div>
+      <div class="form-group"><label>Risk Category</label>
+        <select id="jsaRiskCategory">
+          <option value="LOW">LOW</option>
+          <option value="HIGH">HIGH</option>
+        </select>
+      </div>
+    </div>
+    <div class="row3">
+      <div class="form-group"><label>WO No.</label><input type="text" id="jsaWo" placeholder="Nomor Work Order"></div>
+      <div class="form-group"><label>Priority No.</label><input type="text" id="jsaPriority" placeholder="Cth: 30"></div>
+      <div class="form-group"><label>EPAS Application No.</label><input type="text" id="jsaEpas" placeholder="Cth: P-PA-119144"></div>
+    </div>
+    <div class="row">
+      <div class="form-group"><label>Work Period — Date &amp; Time Start</label><input type="datetime-local" id="jsaPeriodStart"></div>
+      <div class="form-group"><label>Work Period — Date &amp; Time Finish</label><input type="datetime-local" id="jsaPeriodFinish"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:6px"><label style="margin-bottom:2px">Signature — Nama (ketik nama, tanda tangan fisik dilakukan di file Word setelah dicetak)</label></div>
+    <div class="row" style="margin-bottom:12px">
+      <div class="form-group"><label>Applicant</label><input type="text" id="jsaSigApplicant" placeholder="Nama"></div>
+      <div class="form-group"><label>Operation Supervisor</label><input type="text" id="jsaSigOpSupervisor" placeholder="Nama"></div>
+    </div>
+    <div class="row">
+      <div class="form-group"><label>Health &amp; Safety</label><input type="text" id="jsaSigHealthSafety" placeholder="Nama"></div>
+      <div class="form-group"><label>RIC</label><input type="text" id="jsaSigRic" placeholder="Nama"></div>
+    </div>
+    <div class="form-group"><label>Maintenance Supervisor</label><input type="text" id="jsaSigMaintSupervisor" placeholder="Nama"></div>
+  </div>
+
+  <!-- ══ STEPS + HAZARD ══ -->
+  <div class="section-title">🪜 Langkah Pekerjaan &amp; Hazard</div>
+  <div id="jsaSectionsContainer"></div>
+
+  <div class="no-print" style="margin-top:20px">
+    <button class="btn btn-green btn-full" onclick="jsaSaveDraft()" style="padding:13px;font-size:1em">💾 Simpan Draft</button>
+    <button class="btn btn-blue btn-full" onclick="jsaGenerateWord()" style="padding:13px;font-size:1em">📄 Generate Word (.docx)</button>
+  </div>
+</div>
+
+<!-- ══ HAZARD PICKER MODAL ══ -->
+<div id="hazardModal">
+  <div class="hz-dialog">
+    <div class="hz-dialog-header">
+      <div style="font-weight:700;font-size:1em">🔎 Pilih Hazard dari Library</div>
+      <input type="text" id="hzSearchInput" placeholder="Cari hazard... (mis. 'ketinggian', 'listrik')" oninput="hzRenderList()">
+    </div>
+    <div class="hz-dialog-body" id="hzListBody"></div>
+    <div class="hz-dialog-footer">
+      <button class="btn btn-gray" onclick="hzCloseModal()">Batal</button>
+      <button class="btn btn-blue" onclick="hzConfirmSelection()">✓ Tambahkan yang Dipilih</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// JSA REPORT — state, render, hazard bank, docx generator
+// ══════════════════════════════════════════════════════════════════════════
+window.CURRENT_MODUL = 'JSA Report';
+
+// Section A/B/C TETAP (bukan bisa ditambah/dihapus user) -- mengikuti pola
+// tetap 3 section di template Word (jsa_template.docx, Table 2 "JOB SAFETY
+// ANALYSIS"). Tiap section auto-numbering "No." mulai dari 1 lagi (lihat
+// jsaRenumberSteps()).
+var JSA_SECTIONS_META = [
+  {code:'A', title:'Preparation/ Persiapan'},
+  {code:'B', title:'Work Process/ Proses Kerja'},
+  {code:'C', title:'Completion / Demob / Penyelesaian'}
+];
+
+// step = {text, hazards:[{hazard, risk, control}]} -- risk/control disimpan
+// sebagai STRING multi-baris (1 baris textarea = 1 paragraf di Word nanti,
+// di-split saat generate), supaya gampang dibind langsung ke <textarea>.
+var jsaState = {
+  sections: { A: {steps: []}, B: {steps: []}, C: {steps: []} }
+};
+
+var jsaHazardBank = []; // dimuat dari jsa_hazard_bank.json
+var jsaHazardPickerTarget = null; // {sectionCode, stepIdx} -- step yang lagi dibuka pickernya
+var jsaHazardPickerSelected = {}; // id -> true, state sementara selama modal terbuka
+
+function jsaLoadHazardBank() {
+  fetch('jsa_hazard_bank.json').then(function(r){ return r.json(); }).then(function(data) {
+    jsaHazardBank = data || [];
+  }).catch(function(err) {
+    console.error('[jsa] gagal load jsa_hazard_bank.json', err);
+    jsaHazardBank = [];
+  });
+}
+
+function jsaNewStep() { return {text: '', hazards: []}; }
+function jsaNewHazardRow(hazard, risk, control) {
+  return {hazard: hazard || '', risk: risk || '', control: control || ''};
+}
+
+function jsaAddStep(code) {
+  jsaState.sections[code].steps.push(jsaNewStep());
+  jsaRenderSections();
+}
+function jsaRemoveStep(code, stepIdx) {
+  if (!confirm('Hapus step ini beserta semua hazard di dalamnya?')) return;
+  jsaState.sections[code].steps.splice(stepIdx, 1);
+  jsaRenderSections();
+}
+function jsaUpdateStepText(code, stepIdx, val) {
+  jsaState.sections[code].steps[stepIdx].text = val;
+}
+function jsaAddManualHazardRow(code, stepIdx) {
+  jsaState.sections[code].steps[stepIdx].hazards.push(jsaNewHazardRow());
+  jsaRenderSections();
+}
+function jsaRemoveHazardRow(code, stepIdx, hzIdx) {
+  jsaState.sections[code].steps[stepIdx].hazards.splice(hzIdx, 1);
+  jsaRenderSections();
+}
+function jsaUpdateHazardField(code, stepIdx, hzIdx, field, val) {
+  jsaState.sections[code].steps[stepIdx].hazards[hzIdx][field] = val;
+}
+
+function jsaEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function jsaRenderSections() {
+  var container = document.getElementById('jsaSectionsContainer');
+  var html = '';
+  JSA_SECTIONS_META.forEach(function(meta) {
+    var steps = jsaState.sections[meta.code].steps;
+    html += '<div class="jsa-section">' +
+      '<div class="jsa-section-head"><span>' + meta.code + '. ' + jsaEsc(meta.title) + '</span>' +
+      '<button class="btn btn-blue" style="font-size:0.8em;padding:6px 12px" onclick="jsaAddStep(\'' + meta.code + '\')">+ Tambah Step</button></div>' +
+      '<div class="jsa-section-body">';
+    if (!steps.length) {
+      html += '<div style="color:#999;font-size:0.85em;padding:8px 0">Belum ada step. Klik "+ Tambah Step" untuk mulai.</div>';
+    }
+    steps.forEach(function(step, stepIdx) {
+      html += '<div class="jsa-step">' +
+        '<div class="jsa-step-head">' +
+          '<div class="jsa-step-no">' + (stepIdx + 1) + '</div>' +
+          '<input type="text" placeholder="Deskripsi step (mis. PTW Preparation & Toolbox Meeting)" value="' + jsaEsc(step.text) + '" oninput="jsaUpdateStepText(\'' + meta.code + '\',' + stepIdx + ',this.value)">' +
+          '<button class="btn btn-red" onclick="jsaRemoveStep(\'' + meta.code + '\',' + stepIdx + ')">🗑</button>' +
+        '</div>';
+      step.hazards.forEach(function(hz, hzIdx) {
+        html += '<div class="jsa-hazard-row">' +
+          '<button class="btn btn-red rm-row" onclick="jsaRemoveHazardRow(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ')" title="Hapus hazard ini">✕</button>' +
+          '<div class="form-group"><label>Hazard</label><textarea style="min-height:32px" oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'hazard\',this.value)">' + jsaEsc(hz.hazard) + '</textarea></div>' +
+          '<div class="row">' +
+            '<div class="form-group"><label>Risk (1 baris = 1 poin)</label><textarea oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'risk\',this.value)">' + jsaEsc(hz.risk) + '</textarea></div>' +
+            '<div class="form-group"><label>Control Measures (1 baris = 1 poin)</label><textarea oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'control\',this.value)">' + jsaEsc(hz.control) + '</textarea></div>' +
+          '</div>' +
+        '</div>';
+      });
+      html += '<div class="jsa-step-actions">' +
+        '<button class="btn btn-blue" onclick="jsaOpenHazardPicker(\'' + meta.code + '\',' + stepIdx + ')">🔎 Pilih Hazard dari Library</button>' +
+        '<button class="btn btn-gray" onclick="jsaAddManualHazardRow(\'' + meta.code + '\',' + stepIdx + ')">+ Tambah Hazard Manual</button>' +
+      '</div></div>';
+    });
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+}
+
+// ── HAZARD PICKER MODAL ──────────────────────────────────────────────────
+function jsaOpenHazardPicker(code, stepIdx) {
+  jsaHazardPickerTarget = {code: code, stepIdx: stepIdx};
+  jsaHazardPickerSelected = {};
+  document.getElementById('hzSearchInput').value = '';
+  hzRenderList();
+  document.getElementById('hazardModal').classList.add('show');
+}
+function hzCloseModal() {
+  document.getElementById('hazardModal').classList.remove('show');
+  jsaHazardPickerTarget = null;
+}
+function hzRenderList() {
+  var q = (document.getElementById('hzSearchInput').value || '').toLowerCase();
+  var body = document.getElementById('hzListBody');
+  var items = jsaHazardBank.filter(function(hz) {
+    if (!q) return true;
+    var hay = (hz.hazard.join(' ') + ' ' + hz.risk.join(' ') + ' ' + hz.control.join(' ')).toLowerCase();
+    return hay.indexOf(q) >= 0;
+  });
+  if (!items.length) {
+    body.innerHTML = '<div style="color:#999;padding:20px;text-align:center">Tidak ada hazard yang cocok.</div>';
+    return;
+  }
+  body.innerHTML = items.map(function(hz) {
+    var checked = jsaHazardPickerSelected[hz.id] ? 'checked' : '';
+    var srcTag = hz.source ? '<div class="hz-src">Sumber: ' + jsaEsc(hz.source) + '</div>' : '';
+    return '<label class="hz-item">' +
+      '<input type="checkbox" ' + checked + ' onchange="hzToggleSelect(\'' + hz.id + '\',this.checked)">' +
+      '<div><div class="hz-name">' + jsaEsc(hz.hazard.join(' / ')) + '</div>' +
+      '<div style="font-size:0.78em;color:#666;margin-top:2px">Risk: ' + jsaEsc(hz.risk.join('; ')) + '</div>' +
+      srcTag + '</div></label>';
+  }).join('');
+}
+function hzToggleSelect(id, checked) {
+  if (checked) jsaHazardPickerSelected[id] = true; else delete jsaHazardPickerSelected[id];
+}
+function hzConfirmSelection() {
+  if (!jsaHazardPickerTarget) return;
+  var t = jsaHazardPickerTarget;
+  var picked = jsaHazardBank.filter(function(hz){ return jsaHazardPickerSelected[hz.id]; });
+  picked.forEach(function(hz) {
+    jsaState.sections[t.code].steps[t.stepIdx].hazards.push(jsaNewHazardRow(
+      hz.hazard.join(' / '), hz.risk.join('\n'), hz.control.join('\n')
+    ));
+  });
+  hzCloseModal();
+  jsaRenderSections();
+}
+
+// ── SIMPAN / MUAT (Supabase pm_records, draft saja -- TIDAK ada Submit/
+//    Review Approval Dashboard di modul ini, lihat CLAUDE.md) ────────────
+function dbCollectData(modul) {
+  if (!modul || modul.toUpperCase().indexOf('JSA') === -1) return null;
+  return {
+    modul: 'JSA Report',
+    tanggal: new Date().toISOString().split('T')[0],
+    pic: document.getElementById('jsaSigApplicant').value || null,
+    work_order: document.getElementById('jsaWo').value || null,
+    data: {
+      equipTag: document.getElementById('jsaEquipTag').value || '',
+      workToBeDone: document.getElementById('jsaWorkToBeDone').value || '',
+      workMethod: document.getElementById('jsaWorkMethod').value || '',
+      hiraRef: document.getElementById('jsaHiraRef').value || '',
+      riskCategory: document.getElementById('jsaRiskCategory').value || 'LOW',
+      priority: document.getElementById('jsaPriority').value || '',
+      epas: document.getElementById('jsaEpas').value || '',
+      periodStart: document.getElementById('jsaPeriodStart').value || '',
+      periodFinish: document.getElementById('jsaPeriodFinish').value || '',
+      sigApplicant: document.getElementById('jsaSigApplicant').value || '',
+      sigOpSupervisor: document.getElementById('jsaSigOpSupervisor').value || '',
+      sigHealthSafety: document.getElementById('jsaSigHealthSafety').value || '',
+      sigRic: document.getElementById('jsaSigRic').value || '',
+      sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || '',
+      sections: jsaState.sections
+    }
+  };
+}
+
+function applyRecordToForm(rec) {
+  var d = rec.data || {};
+  document.getElementById('jsaEquipTag').value = d.equipTag || '';
+  document.getElementById('jsaWorkToBeDone').value = d.workToBeDone || '';
+  document.getElementById('jsaWorkMethod').value = d.workMethod || '';
+  document.getElementById('jsaHiraRef').value = d.hiraRef || '';
+  document.getElementById('jsaRiskCategory').value = d.riskCategory || 'LOW';
+  document.getElementById('jsaWo').value = rec.work_order || '';
+  document.getElementById('jsaPriority').value = d.priority || '';
+  document.getElementById('jsaEpas').value = d.epas || '';
+  document.getElementById('jsaPeriodStart').value = d.periodStart || '';
+  document.getElementById('jsaPeriodFinish').value = d.periodFinish || '';
+  document.getElementById('jsaSigApplicant').value = d.sigApplicant || rec.pic || '';
+  document.getElementById('jsaSigOpSupervisor').value = d.sigOpSupervisor || '';
+  document.getElementById('jsaSigHealthSafety').value = d.sigHealthSafety || '';
+  document.getElementById('jsaSigRic').value = d.sigRic || '';
+  document.getElementById('jsaSigMaintSupervisor').value = d.sigMaintSupervisor || '';
+  jsaState.sections = (d.sections && d.sections.A && d.sections.B && d.sections.C)
+    ? d.sections
+    : {A:{steps:[]}, B:{steps:[]}, C:{steps:[]}};
+  jsaRenderSections();
+}
+
+function jsaSaveDraft() {
+  dbSave('JSA Report');
+}
+
+// Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
+function restoreDraftData(rec, editingId) {
+  if (!rec) return;
+  applyRecordToForm(rec);
+  if (editingId) window._editingId = editingId;
+  if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
+}
+
+/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  if (!id) return;
+  dbLoad(id, function(rec) {
+    if (!rec) return;
+    applyRecordToForm(rec);
+    window._editingId = id;
+    if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
+  });
+})();
+
+// ══════════════════════════════════════════════════════════════════════════
+// GENERATE WORD -- kloning jsa_template.docx (persis
+// JSA_BUILD_DISMANTLE_SCAFFOLDING_FINAL_CONTOH_BERSIH.docx yang sudah
+// dikonfirmasi user) + isi field dinamis. Jalan 100% di browser (JSZip +
+// DOMParser/XMLSerializer bawaan browser) -- TIDAK ada server/Python di
+// belakang PM-UNIT-7, jadi proses templating harus di sisi client. Teknik
+// manipulasi XML-nya SAMA PERSIS dengan yang dipakai membangun contoh sample
+// sebelumnya (lxml, Python): SELALU baca/tulis lewat DIRECT-CHILD saja
+// (bukan querySelector/getElementsByTagName yang tembus ke drawing/textbox
+// bersarang) -- lihat riwayat CLAUDE.md soal bug nested-paragraph kalau ini
+// dilanggar.
+// ══════════════════════════════════════════════════════════════════════════
+var JSA_W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+var JSA_XML_NS = 'http://www.w3.org/XML/1998/namespace';
+
+function jsaDirectChildren(el, localName) {
+  var out = [];
+  for (var i = 0; i < el.childNodes.length; i++) {
+    var n = el.childNodes[i];
+    if (n.nodeType === 1 && n.namespaceURI === JSA_W_NS && n.localName === localName) out.push(n);
+  }
+  return out;
+}
+function jsaMk(doc, tag, attrs) {
+  var el = doc.createElementNS(JSA_W_NS, tag);
+  if (attrs) Object.keys(attrs).forEach(function(k) { el.setAttributeNS(JSA_W_NS, k, attrs[k]); });
+  return el;
+}
+function jsaAppendAll(el, children) {
+  (children || []).forEach(function(c) { if (c) el.appendChild(c); });
+  return el;
+}
+function jsaTextNode(doc, text) {
+  var t = doc.createElementNS(JSA_W_NS, 'w:t');
+  t.setAttributeNS(JSA_XML_NS, 'xml:space', 'preserve');
+  t.textContent = text == null ? '' : text;
+  return t;
+}
+
+// ── Paragraph replace (Table 1, field tunggal per sel) -- reuse rPr run
+//    PERTAMA yang sudah ada di paragraf itu (supaya font/size/bold ikut
+//    formatting asli template), lalu ganti isinya jadi 1 run baru. Persis
+//    pola set_paragraph_text() yang sudah terbukti di skrip Python sample. ──
+function jsaSetParagraphText(p, newText) {
+  var runs = jsaDirectChildren(p, 'r');
+  var firstRpr = null;
+  if (runs.length) {
+    var rprList = jsaDirectChildren(runs[0], 'rPr');
+    if (rprList.length) firstRpr = rprList[0];
+  }
+  runs.forEach(function(r) { p.removeChild(r); });
+  if (!newText) return; // paragraf jadi kosong (sah di OOXML, tidak perlu <w:r> sama sekali)
+  var doc = p.ownerDocument;
+  var run = jsaMk(doc, 'w:r');
+  if (firstRpr) run.appendChild(firstRpr.cloneNode(true));
+  run.appendChild(jsaTextNode(doc, newText));
+  p.appendChild(run);
+}
+// Ganti isi 1 <w:t> tunggal (dipakai utk toggle checkbox 'x'/'o' Risk
+// Category) -- cari <w:t> pertama di dalam sel lewat direct-child paragraf
+// -> direct-child run -> direct-child t (tidak perlu ganti seluruh paragraf).
+function jsaSetSoleCheckboxText(tc, val) {
+  var ps = jsaDirectChildren(tc, 'p');
+  if (!ps.length) return;
+  var runs = jsaDirectChildren(ps[0], 'r');
+  if (!runs.length) return;
+  var ts = jsaDirectChildren(runs[0], 't');
+  if (!ts.length) return;
+  ts[0].textContent = val;
+}
+
+function jsaFmtDateTime(localVal) {
+  // input type="datetime-local" -> "YYYY-MM-DDTHH:MM" ; format tampilan
+  // Word mengikuti gaya template ("DD/MM/YYYY HH:MM").
+  if (!localVal) return '';
+  var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(localVal);
+  if (!m) return localVal;
+  return m[3] + '/' + m[2] + '/' + m[1] + '   ' + m[4] + ':' + m[5];
+}
+
+function jsaFillTable1(tbl1, form) {
+  var rows = jsaDirectChildren(tbl1, 'tr');
+  function tc(rowIdx, tcIdx) { return jsaDirectChildren(rows[rowIdx], 'tc')[tcIdx]; }
+  function soleP(rowIdx, tcIdx) { return jsaDirectChildren(tc(rowIdx, tcIdx), 'p')[0]; }
+
+  // Row 0 tc0: p[0]=label "Area to be Access...(KKS No.): " (JANGAN disentuh), p[1]=value
+  var equipPs = jsaDirectChildren(tc(0, 0), 'p');
+  jsaSetParagraphText(equipPs[1], form.equipTag);
+
+  // Row 1 tc0: p[0]=label "Work to be Done:   " (JANGAN disentuh), p[1]=value
+  var wtbdPs = jsaDirectChildren(tc(1, 0), 'p');
+  jsaSetParagraphText(wtbdPs[1], form.workToBeDone);
+
+  // Row 1 tc1: p[0]=label "Work Method:" (JANGAN disentuh), p[1..]=1 baris
+  // per poin -- dibongkar semua lalu dibangun ulang sejumlah baris input.
+  var wmTc = tc(1, 1);
+  var wmPs = jsaDirectChildren(wmTc, 'p');
+  var wmLabelP = wmPs[0];
+  var wmTemplateP = wmPs[1] || wmPs[0]; // dipakai contoh formatting rPr utk baris baru
+  var wmRunsTemplate = jsaDirectChildren(wmTemplateP, 'r');
+  var wmRpr = wmRunsTemplate.length ? jsaDirectChildren(wmRunsTemplate[0], 'rPr')[0] : null;
+  for (var i = 1; i < wmPs.length; i++) wmTc.removeChild(wmPs[i]);
+  var wmLines = (form.workMethod || '').split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+  var wmDoc = wmTc.ownerDocument;
+  wmLines.forEach(function(line) {
+    var p = jsaMk(wmDoc, 'w:p');
+    var pPr = jsaMk(wmDoc, 'w:pPr');
+    if (wmRpr) pPr.appendChild(wmRpr.cloneNode(true));
+    p.appendChild(pPr);
+    var r = jsaMk(wmDoc, 'w:r');
+    if (wmRpr) r.appendChild(wmRpr.cloneNode(true));
+    r.appendChild(jsaTextNode(wmDoc, line));
+    p.appendChild(r);
+    wmTc.appendChild(p);
+  });
+
+  // Row 2 tc1: HIRA reference value (paragraf kosong di template)
+  jsaSetParagraphText(soleP(2, 1), form.hiraRef);
+
+  // Row 8/9 tc[2]: toggle Risk Category LOW/HIGH ('x' yang dipilih, 'o' lainnya)
+  jsaSetSoleCheckboxText(tc(8, 2), form.riskCategory === 'LOW' ? 'x' : 'o');
+  jsaSetSoleCheckboxText(tc(9, 2), form.riskCategory === 'HIGH' ? 'x' : 'o');
+
+  // Row 20: WO / Priority / EPAS App (masing-masing "Label: value" 1 paragraf)
+  jsaSetParagraphText(soleP(20, 2), 'WO: ' + form.wo);
+  jsaSetParagraphText(soleP(20, 3), 'Priority no.: ' + form.priority);
+  jsaSetParagraphText(soleP(20, 4), 'EPAS App: ' + form.epas);
+
+  // Row 21: Work Period Start/Finish (sel value TERPISAH dari sel label)
+  jsaSetParagraphText(soleP(21, 3), jsaFmtDateTime(form.periodStart));
+  jsaSetParagraphText(soleP(21, 5), jsaFmtDateTime(form.periodFinish));
+
+  // Row 23: nama Signature (Applicant/Op.Supervisor/Health&Safety/RIC/Maint.Supervisor)
+  // -- kolom label perannya ada di row 22 pada index tc yang SAMA.
+  jsaSetParagraphText(soleP(23, 2), form.sigApplicant);
+  jsaSetParagraphText(soleP(23, 3), form.sigOpSupervisor);
+  jsaSetParagraphText(soleP(23, 4), form.sigHealthSafety);
+  jsaSetParagraphText(soleP(23, 5), form.sigRic);
+  jsaSetParagraphText(soleP(23, 6), form.sigMaintSupervisor);
+}
+
+// ── Table 2 (JOB SAFETY ANALYSIS) -- row0 (judul abu-abu) & row1 (header
+//    kolom) DIPERTAHANKAN APA ADANYA, sisanya (contoh job asli dari
+//    template) DIBUANG lalu dibangun ulang dari jsaState. Border/font persis
+//    hasil pembacaan XML mentah jsa_template.docx (lihat riwayat percakapan)
+//    -- SEMUA baris pakai border top/bottom dotted seragam (bukan
+//    double/single khusus baris terakhir seperti template JSA_Standard.docx
+//    yang lama), jauh lebih sederhana. ──
+var JSA_COLW = [306, 4031, 2713, 2943, 5316];
+
+function jsaBorders(doc, spec) {
+  var b = jsaMk(doc, 'w:tcBorders');
+  ['top','left','bottom','right'].forEach(function(side) {
+    if (!spec[side]) return;
+    b.appendChild(jsaMk(doc, 'w:' + side, {'w:val': spec[side][0], 'w:sz': String(spec[side][1]), 'w:space': '0', 'w:color': 'auto'}));
+  });
+  return b;
+}
+function jsaCellP(doc, text, opts) {
+  opts = opts || {};
+  var rprKids = [
+    jsaMk(doc, 'w:rFonts', {'w:asciiTheme':'minorHAnsi','w:hAnsiTheme':'minorHAnsi','w:cstheme':'minorHAnsi'})
+  ];
+  if (opts.bold) rprKids.push(jsaMk(doc, 'w:b'));
+  rprKids.push(jsaMk(doc, 'w:sz', {'w:val':'22'}));
+  rprKids.push(jsaMk(doc, 'w:szCs', {'w:val':'22'}));
+  var pPr = jsaMk(doc, 'w:pPr');
+  if (opts.jc) pPr.appendChild(jsaMk(doc, 'w:jc', {'w:val': opts.jc}));
+  jsaAppendAll(pPr, [jsaAppendAll(jsaMk(doc, 'w:rPr'), rprKids.map(function(k){return k.cloneNode(true);}))]);
+  var p = jsaMk(doc, 'w:p');
+  p.appendChild(pPr);
+  if (text) {
+    var r = jsaMk(doc, 'w:r');
+    jsaAppendAll(r, rprKids);
+    r.appendChild(jsaTextNode(doc, text));
+    p.appendChild(r);
+  }
+  return p;
+}
+function jsaCell(doc, width, borders, paragraphs, gridSpan) {
+  var tcPr = jsaMk(doc, 'w:tcPr');
+  tcPr.appendChild(jsaMk(doc, 'w:tcW', {'w:w': String(width), 'w:type': 'dxa'}));
+  if (gridSpan) tcPr.appendChild(jsaMk(doc, 'w:gridSpan', {'w:val': String(gridSpan)}));
+  tcPr.appendChild(borders);
+  var tc = jsaMk(doc, 'w:tc');
+  tc.appendChild(tcPr);
+  jsaAppendAll(tc, paragraphs.length ? paragraphs : [jsaCellP(doc, '')]);
+  return tc;
+}
+function jsaRow(doc, cells) {
+  var tr = jsaMk(doc, 'w:tr');
+  var trPr = jsaMk(doc, 'w:trPr');
+  trPr.appendChild(jsaMk(doc, 'w:cantSplit'));
+  trPr.appendChild(jsaMk(doc, 'w:trHeight', {'w:val': '240'}));
+  trPr.appendChild(jsaMk(doc, 'w:jc', {'w:val': 'center'}));
+  tr.appendChild(trPr);
+  jsaAppendAll(tr, cells);
+  return tr;
+}
+function jsaSectionHeaderRow(doc, code, title) {
+  var p = jsaMk(doc, 'w:p');
+  var pPr = jsaMk(doc, 'w:pPr');
+  pPr.appendChild(jsaAppendAll(jsaMk(doc, 'w:rPr'), [jsaMk(doc, 'w:b')]));
+  p.appendChild(pPr);
+  function arialRun(text) {
+    var r = jsaMk(doc, 'w:r');
+    r.appendChild(jsaAppendAll(jsaMk(doc, 'w:rPr'), [
+      jsaMk(doc, 'w:rFonts', {'w:ascii':'Arial','w:hAnsi':'Arial','w:cs':'Arial'}),
+      jsaMk(doc, 'w:b')
+    ]));
+    r.appendChild(jsaTextNode(doc, text));
+    return r;
+  }
+  p.appendChild(arialRun(code + '.'));
+  p.appendChild(arialRun(title));
+  var borders = jsaBorders(doc, {right: ['single', 4]});
+  var cell = jsaCell(doc, 15309, borders, [p], 5);
+  return jsaRow(doc, [cell]);
+}
+function jsaHazardTableRow(stepNo, stepText, hazardText, riskLines, controlLines, doc) {
+  var isFirst = stepNo !== null;
+  var noBorders = jsaBorders(doc, isFirst ? {bottom:['dotted',4]} : {top:['dotted',4], bottom:['dotted',4]});
+  var noCell = jsaCell(doc, JSA_COLW[0], noBorders, [jsaCellP(doc, isFirst ? stepNo : '', {bold:true})]);
+
+  var wsBorders = jsaBorders(doc, {top:['dotted',4], left:['single',4], bottom:['dotted',4], right:['double',6]});
+  var wsCell = jsaCell(doc, JSA_COLW[1], wsBorders, [jsaCellP(doc, isFirst ? stepText : '', {bold:true})]);
+
+  var hzBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['double',6]});
+  var hzCell = jsaCell(doc, JSA_COLW[2], hzBorders, [jsaCellP(doc, hazardText, {})]);
+
+  var riskBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['double',6]});
+  var riskParas = (riskLines.length ? riskLines : ['']).map(function(l){ return jsaCellP(doc, l, {jc:'center'}); });
+  var riskCell = jsaCell(doc, JSA_COLW[3], riskBorders, riskParas);
+
+  var ctrlBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['single',4]});
+  var ctrlParas = (controlLines.length ? controlLines : ['']).map(function(l){ return jsaCellP(doc, l, {}); });
+  var ctrlCell = jsaCell(doc, JSA_COLW[4], ctrlBorders, ctrlParas);
+
+  return jsaRow(doc, [noCell, wsCell, hzCell, riskCell, ctrlCell]);
+}
+
+function jsaRebuildTable2(tbl2) {
+  var doc = tbl2.ownerDocument;
+  var rows = jsaDirectChildren(tbl2, 'tr');
+  // buang semua row KECUALI row0 (judul) & row1 (header kolom)
+  for (var i = rows.length - 1; i >= 2; i--) tbl2.removeChild(rows[i]);
+
+  JSA_SECTIONS_META.forEach(function(meta) {
+    var steps = jsaState.sections[meta.code].steps;
+    if (!steps.length) return; // section tanpa step dilewati, tidak dicetak headernya
+    tbl2.appendChild(jsaSectionHeaderRow(doc, meta.code, meta.title));
+    steps.forEach(function(step, stepIdx) {
+      var hazards = step.hazards.length ? step.hazards : [jsaNewHazardRow()];
+      hazards.forEach(function(hz, hzIdx) {
+        var riskLines = (hz.risk || '').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+        var controlLines = (hz.control || '').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+        var row = jsaHazardTableRow(
+          hzIdx === 0 ? String(stepIdx + 1) : null,
+          hzIdx === 0 ? step.text : null,
+          hz.hazard || '', riskLines, controlLines, doc
+        );
+        tbl2.appendChild(row);
+      });
+    });
+  });
+}
+
+function jsaBuildFilename(form) {
+  var parts = [form.wo, form.equipTag].filter(Boolean);
+  var base = parts.length ? parts.join('_') : 'JSA_Report';
+  return base.replace(/\s+/g, '_').replace(/[\\/:*?"<>|]+/g, '') + '.docx';
+}
+
+function jsaCollectFormValues() {
+  return {
+    equipTag: document.getElementById('jsaEquipTag').value || '',
+    workToBeDone: document.getElementById('jsaWorkToBeDone').value || '',
+    workMethod: document.getElementById('jsaWorkMethod').value || '',
+    hiraRef: document.getElementById('jsaHiraRef').value || '',
+    riskCategory: document.getElementById('jsaRiskCategory').value || 'LOW',
+    wo: document.getElementById('jsaWo').value || '',
+    priority: document.getElementById('jsaPriority').value || '',
+    epas: document.getElementById('jsaEpas').value || '',
+    periodStart: document.getElementById('jsaPeriodStart').value || '',
+    periodFinish: document.getElementById('jsaPeriodFinish').value || '',
+    sigApplicant: document.getElementById('jsaSigApplicant').value || '',
+    sigOpSupervisor: document.getElementById('jsaSigOpSupervisor').value || '',
+    sigHealthSafety: document.getElementById('jsaSigHealthSafety').value || '',
+    sigRic: document.getElementById('jsaSigRic').value || '',
+    sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || ''
+  };
+}
+
+function jsaDownloadBlob(blob, filename) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+}
+
+function jsaGenerateWord() {
+  var form = jsaCollectFormValues();
+  var btn = event && event.target ? event.target : null;
+  var origText = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '⏳ Membuat Word...'; btn.disabled = true; }
+  fetch('jsa_template.docx').then(function(r) {
+    if (!r.ok) throw new Error('jsa_template.docx tidak ditemukan (' + r.status + ')');
+    return r.arrayBuffer();
+  }).then(function(buf) {
+    return JSZip.loadAsync(buf);
+  }).then(function(zip) {
+    return zip.file('word/document.xml').async('string').then(function(xmlStr) {
+      var parser = new DOMParser();
+      var xdoc = parser.parseFromString(xmlStr, 'application/xml');
+      if (xdoc.getElementsByTagName('parsererror').length) throw new Error('Template XML rusak/tidak valid.');
+      var body = jsaDirectChildren(xdoc.documentElement, 'body')[0];
+      var topTbls = jsaDirectChildren(body, 'tbl');
+      if (topTbls.length < 3) throw new Error('Struktur template tidak sesuai (tabel kurang dari 3).');
+      jsaFillTable1(topTbls[1], form);
+      jsaRebuildTable2(topTbls[2]);
+      var newXml = new XMLSerializer().serializeToString(xdoc);
+      zip.file('word/document.xml', newXml);
+      return zip.generateAsync({type: 'blob'});
+    });
+  }).then(function(blob) {
+    jsaDownloadBlob(blob, jsaBuildFilename(form));
+    if (typeof dbShowToast === 'function') dbShowToast('✓ Word berhasil dibuat & diunduh');
+  }).catch(function(err) {
+    console.error('[jsa] generate word gagal', err);
+    alert('Gagal membuat Word: ' + (err && err.message ? err.message : err));
+  }).then(function() {
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+  });
+}
+
+jsaLoadHazardBank();
+jsaRenderSections();
+</script>
+</body>
+</html>

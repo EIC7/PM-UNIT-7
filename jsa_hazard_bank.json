@@ -1,0 +1,480 @@
+[
+  {
+    "hazard": [
+      "Manual handling"
+    ],
+    "risk": [
+      "Property damage (Peralatan rusak)",
+      "Back sprain / punggung terkilir"
+    ],
+    "control": [
+      "Menyediakan tas untuk tempat alat dan spare part",
+      "Sehat secara fisik",
+      "Pastikan Semua alat harus diperiksa dan di tagging",
+      "Gunakan APD yang tepat"
+    ],
+    "id": "hz001"
+  },
+  {
+    "hazard": [
+      "Bising dari peralatan sekitar"
+    ],
+    "risk": [
+      "Gangguan pendengaran"
+    ],
+    "control": [
+      "Gunakan APD pelindung pendengaran"
+    ],
+    "id": "hz002"
+  },
+  {
+    "hazard": [
+      "Debu"
+    ],
+    "risk": [
+      "Gangguang pernafasan",
+      "Iritis mta"
+    ],
+    "control": [
+      "Gunakan Masker debu N95 dan kacamata safety bening"
+    ],
+    "id": "hz003"
+  },
+  {
+    "hazard": [
+      "Lack of Scaffolding Installation (Pemasangan scaffold yang tidak standart)",
+      "Scaffolding Collapses (Perancah runtuh / roboh)",
+      "Falling Object (Material jatuh)"
+    ],
+    "risk": [
+      "Lost Time Injury (Cidera hilang jam kerja)",
+      "Property damage (Peralatan rusak)",
+      "Injury due to falling object (Cidera karena kejatuhan material)"
+    ],
+    "control": [
+      "Lakukan Tool box meeting tentang JSA / langkah-langkah pekerjaan sebelum melakukan pekerjaan",
+      "Pastikan beban material disesuaikan dengan kekuatan strukturdan mendistribusikan beban secara merata",
+      "Pastikan pekerja punya kompetensi (Scaffolder Certified) dan punya kompetensi/ sertifikat bekerja ketinggian sesuai permenaker No.9/2016. (TKBT 2 certified)",
+      "Pastikan leader / foreman mengarahkan penempatan material yang aman dan rapi",
+      "Inspeksi & tag scaffold sebelum digunakan",
+      "Pemeriksaan prapenggunaan scaffolding setiaphari",
+      "Perancah harus berdiri di atastanah yang memadai atau dipasang pada struktur yang dikenal kuat (mis. Balok dll",
+      "Pastikan semua material perancah sesuai standar PT POMI",
+      "Pastikan dasar yang digunakan perancah dipasang base plate",
+      "Pastikan pipa perancah gantung terpasang kestruktur yang kokoh",
+      "PastikanPerancah di inspeksi oleh Inspektor Scaffolder bersertifikat dan lakukan inspeksi minimal 7 hari",
+      "Perhatikan jarak pemasangan pipa scaffolding dengan ekspansi pipa bertekanan di tempat kerja",
+      "Baricade area saat pemasangan",
+      "Pastikan teknisi perancah dan assistennya menggunakan full body harness",
+      "Inspeksi dan tagging full body harness sebelum digunakan"
+    ],
+    "id": "hz004"
+  },
+  {
+    "hazard": [
+      "Electrical & Meggering (13.8/6.9 kV & 1000 VDC)"
+    ],
+    "risk": [
+      "Fatality (kematian)",
+      "Electrical shock (tersengat listrik)"
+    ],
+    "control": [
+      "Good communication  between work parties & MCR",
+      "Be aware and careful of energized parts",
+      "Informasikan kepada RIC disekitar tempat kerja",
+      "Bekerja min. 2 orang",
+      "Pekerjaan dilakukan oleh teknisi dan sesuai dengan prosedur",
+      "Pastikan sumber tegangan tidak ada tegangan sisa dengan menggunakan alat AVO oleh workparty",
+      "Gunakan APD (baju kerja lengan panjang, sarung tangan, kacamata safety bening, helem safety)"
+    ],
+    "id": "hz005"
+  },
+  {
+    "hazard": [
+      "Ergonomic"
+    ],
+    "risk": [
+      "Cidera otot"
+    ],
+    "control": [
+      "Posisi tubuh yang benar saat bekerja",
+      "Gunakan alat bantu platform yang aman"
+    ],
+    "id": "hz006"
+  },
+  {
+    "hazard": [
+      "Halangan disekitar (kabel power, vacuum cleaner, dll)"
+    ],
+    "risk": [
+      "Cidera tersandung, kebentur, terjepit"
+    ],
+    "control": [
+      "Barikade halangan lantai ditempat kerja",
+      "Komunikasi dengan workparty lainnya",
+      "Gunakan APD, Safety Shoes"
+    ],
+    "id": "hz007"
+  },
+  {
+    "hazard": [
+      "Halangan disekitar"
+    ],
+    "risk": [
+      "Cidera tersandung, kebentur, terjepit"
+    ],
+    "control": [
+      "Barikade halangan lantai ditempat kerja",
+      "Komunikasi dengan workparty lainnya",
+      "Gunakan APD, Safety Shoes"
+    ],
+    "id": "hz008"
+  },
+  {
+    "hazard": [
+      "Objek tajam"
+    ],
+    "risk": [
+      "Cidera tertusuk benda tajam"
+    ],
+    "control": [
+      "Gunakan APD baju kerja lengan panjang dan sarung tangan",
+      "Pasang pelindung pada benda tajam jika diperlukan"
+    ],
+    "id": "hz009"
+  },
+  {
+    "hazard": [
+      "Terpapar bahan kimia (Lube oil)"
+    ],
+    "risk": [
+      "Iritasi tangan",
+      "Pencemaran lingkungan"
+    ],
+    "control": [
+      "Gunakan APD sarung tangan, baju kerja lengan Panjang",
+      "Sediakan tempat sampah B3 ditempat kerja",
+      "MSDS dibaca dan dimengerti",
+      "Menyediakan tank penampungan oil bekas"
+    ],
+    "id": "hz010"
+  },
+  {
+    "hazard": [
+      "Unproper Tools"
+    ],
+    "risk": [
+      "Cidera"
+    ],
+    "control": [
+      "Pastikan tools yang dipakai sesuai dengan fungsi dan peruntukannya",
+      "Periksa dan pastikan tools dalam keadaan baik dan layak pakai",
+      "Untuk electric tool sudah terlabel sesuai warna bulan pemeriksaan",
+      "Gunakan APD yang standard saat menggunakan tools"
+    ],
+    "id": "hz011"
+  },
+  {
+    "hazard": [
+      "Paparan gas berbahaya (SF6)"
+    ],
+    "risk": [
+      "Gangguan pernapasan"
+    ],
+    "control": [
+      "Gunakan Masker debu N95",
+      "jauhkan alat pernapasan dari tabung saat pengetesan atapun Pengisian",
+      "Laporkan dan perbaiki segera saat menemukan abnormalliti"
+    ],
+    "id": "hz012"
+  },
+  {
+    "hazard": [
+      "Paparan panas matahari, cuaca hujan dan licin"
+    ],
+    "risk": [
+      "Dehidrasi",
+      "Terpeleset"
+    ],
+    "control": [
+      "Gunakan APD baju kerja serap keringat, helm safety",
+      "Sediakan air minum yang cukup dan botol minum",
+      "Jika cuaca hujan maka pekerjaan berhenti",
+      "Sediakan air minum yang cukup"
+    ],
+    "id": "hz013"
+  },
+  {
+    "hazard": [
+      "Pressure Water (FP System)"
+    ],
+    "risk": [
+      "Property damage (Peralatan rusak)"
+    ],
+    "control": [
+      "Isolasi system Fire Protection"
+    ],
+    "id": "hz014"
+  },
+  {
+    "hazard": [
+      "Bekerja di ketinggian"
+    ],
+    "risk": [
+      "Cidera karena jatuh"
+    ],
+    "control": [
+      "Gunakan APD, (full body harness, baju kerja lengan panjang, sarung tangan, kacamata safety bening, helem safety)",
+      "Pastikan pekerja punya kompetensi bekerja diketinggian sesuai permenaker No.9/2016. (TKBT 2 certified)"
+    ],
+    "id": "hz015"
+  },
+  {
+    "hazard": [
+      "Bekerja ketinggian"
+    ],
+    "risk": [
+      "Jatuh",
+      "Kematian / Fatality",
+      "Material dan alat jatuh"
+    ],
+    "control": [
+      "Lakukan tool box meeting sebelum melakukan pekerjaan",
+      "Pastikan pekerja dalam kondisi sehat jasmani dan rohani",
+      "Pastikan pekerja punya kompetensi/ sertifikat bekerja ketinggian sesuai permenaker No.9/2016 ( sertifikat TKBT 2).",
+      "Gunakan APD full body harness yang telah diinspeksi oleh PT POMI dan",
+      "Sediakan angkur yang kuat dan kokoh",
+      "Pastikan lanyard hook full body harness kaitkan ke  angkur yang kokoh dan kuat",
+      "Pastikan 3 titik kontak saat memanjat dan turun.",
+      "Pasang proteksi tambahan pada pagar pengaman",
+      "Pastikan material ditempatkan tidak menghalangi alat darurat, jalan darurat",
+      "Pasang tanda dan pengaman tambahan (kicker plate tambahan) pada sisi pagar apabila material disimpan disisi pagar",
+      "Pastikan safety man tersedia saat proses pemasangan perancah",
+      "Pastikaan komunikasi baik dan jelas antar pekerja (komunikasi 2 arah) pada saat transfer material scaffolding dan proses pemasangan.",
+      "Pasang barikade dan sign dibawah proses pemasangan scaffolding",
+      "Pastikan kunci rachet diikat dengan aman"
+    ],
+    "id": "hz016"
+  },
+  {
+    "hazard": [
+      "Rotating Equipment (Cooling Fan)"
+    ],
+    "risk": [
+      "Cidera karena terjepit"
+    ],
+    "control": [
+      "Isolasi sumber tegangan untuk cooling fan",
+      "Komunikasikan dengan workparty lainnya dan MCR ketika running test"
+    ],
+    "id": "hz017"
+  },
+  {
+    "hazard": [
+      "Falling Object (Material jatuh)"
+    ],
+    "risk": [
+      "Tertimpa",
+      "Equipment rusak"
+    ],
+    "control": [
+      "Pastikan beban material disesuaikan dengan kekuatan strukturdan mendistribusikan beban secara merata",
+      "Pastikan kapasitas alat pengangkat sesuai dengan beban yang di angkat",
+      "Alat angkat angkut harus dipastikan dalam keadaan baik dan di tag",
+      "Operator alat angkat angkut harus memiliki sertifikat pengoprasian",
+      "Dilakukan minimal 2 orang terlatih sebagai operator dan rigger",
+      "Jauhi area pengangkatan yang memiliki resiko tertimpa material",
+      "Selalu lihat area sekitar pengangkatan dan peringatkan pekerja yang kurang aman",
+      "Gunakan APD sesuai standard (sarung tangan, long sleve wearpack, Helm, kacamata safety, dan sepatu safety)"
+    ],
+    "id": "hz018"
+  },
+  {
+    "hazard": [
+      "Racking/draw-out circuit breaker dan pemasangan grounding device"
+    ],
+    "risk": [
+      "Arc flash / ledakan busur listrik saat proses racking jika breaker belum dalam posisi OPEN",
+      "Tersengat listrik jika grounding device dipasang sebelum breaker benar-benar terisolasi",
+      "Cidera terjepit pada mekanisme racking"
+    ],
+    "control": [
+      "Pastikan breaker dalam posisi OPEN (trip) sebelum proses racking ke posisi test/disconnected (ref. NFPA 70E)",
+      "Tutup pintu cubicle saat proses racking bila mekanisme mengizinkan (door-closed/remote racking)",
+      "Verifikasi zero energy (tidak ada tegangan) dengan alat ukur sebelum memasang grounding device/cluster",
+      "Gunakan APD arc-flash sesuai kategori risiko/incident energy saat racking (arc-flash suit, face shield)",
+      "Pasang Lock-Out Tag-Out (LOTO) pada breaker dan grounding device",
+      "Dilakukan oleh teknisi kompeten dan terlatih switching/racking breaker, minimal 2 orang"
+    ],
+    "source": "literature (NFPA 70E electrical safe work practices) — added 2026-07-09",
+    "id": "hz019"
+  },
+  {
+    "hazard": [
+      "Tegangan sisa (residual/trapped capacitive charge) pada winding/kabel setelah insulation resistance (megger/IR) test"
+    ],
+    "risk": [
+      "Tersengat listrik akibat pelepasan muatan kapasitif yang tersimpan pada winding/kabel",
+      "Kerusakan alat ukur megger jika proses discharge tidak sempurna"
+    ],
+    "control": [
+      "Discharge winding/kabel ke ground minimal selama waktu yang setara dengan durasi charging/test (ref. IEEE Std 43)",
+      "Gunakan discharge rod/grounding stick sebelum menyentuh terminal setelah megger test",
+      "Jangan melepas grounding sampai proses discharge selesai sempurna",
+      "Gunakan APD sarung tangan tahan tegangan (insulating gloves) saat proses discharge",
+      "Pekerjaan dilakukan oleh teknisi kompeten dan berpengalaman megger test"
+    ],
+    "source": "literature (IEEE Std 43 insulation resistance testing practice) — added 2026-07-09",
+    "id": "hz020"
+  },
+  {
+    "hazard": [
+      "Rotating Equipment (Motor Shaft/Rotor/Coupling) saat function/running test"
+    ],
+    "risk": [
+      "Cidera terjepit/tertarik pada bagian yang berputar (shaft, coupling, kipas)",
+      "Fatality akibat entanglement pakaian/aksesoris pada bagian yang berputar"
+    ],
+    "control": [
+      "Pastikan coupling guard/rotating guard terpasang sebelum motor dijalankan (ref. OSHA 29 CFR 1910.212 - machine guarding)",
+      "Jaga jarak aman dan hindari pakaian/aksesoris longgar di dekat bagian berputar",
+      "Komunikasikan dengan workparty dan MCR sebelum start motor",
+      "Monitoring dilakukan dari posisi aman / gunakan alat ukur non-kontak (thermal gun, vibration pen) bila memungkinkan",
+      "Stop motor segera jika ditemukan abnormality selama running test"
+    ],
+    "source": "literature (OSHA 29 CFR 1910.212 machine guarding) — added 2026-07-09",
+    "id": "hz021"
+  },
+  {
+    "hazard": [
+      "Sisa tekanan/fluida panas (residual pressure/hot condensate) pada line drain/vent saat isolasi atau pembukaan valve"
+    ],
+    "risk": [
+      "Luka bakar (scalding) akibat kontak dengan kondensat panas yang masih bertekanan",
+      "Cidera akibat semburan fluida bertekanan saat valve dibuka/di-stroke"
+    ],
+    "control": [
+      "Pastikan sistem sudah di-drain/depressurize sebelum isolasi valve dibuka (ref. ASME B31.1 Power Piping - safe draining/venting practice)",
+      "Verifikasi tidak ada passing/kebocoran pada isolation valve sebelum melanjutkan pekerjaan",
+      "Gunakan APD tahan panas (sarung tangan, baju kerja lengan panjang, kacamata safety bening)",
+      "Buka valve secara perlahan dan berdiri di luar jalur semburan (arah bukaan drain/vent)",
+      "Perlakukan tekanan dan panas sebagai hazardous energy yang wajib dikontrol (ref. OSHA 29 CFR 1910.147 - control of hazardous energy)",
+      "Pekerjaan dilakukan oleh teknisi kompeten sesuai prosedur, minimal 2 orang"
+    ],
+    "source": "literature (ASME B31.1 Power Piping safe draining/venting practice; OSHA 29 CFR 1910.147 control of hazardous energy) — added 2026-08-19",
+    "id": "hz022"
+  },
+  {
+    "hazard": [
+      "Permukaan panas di sekitar area kerja"
+    ],
+    "risk": [
+      "Dehidrasi",
+      "Melepuh",
+      "Luka bakar"
+    ],
+    "control": [
+      "Sediakan air minum yang cukup dan botol minum",
+      "Gunakan APD baju kerja lengan panjang dan sarung tangan tahan panas",
+      "Pastikan jarak aman dari permukaan panas / waspada radiant heat"
+    ],
+    "source": "JSA_BUILD_DISMANTLE_SCAFFOLDING_7TLMOV250_260 (contoh real)",
+    "id": "hz023"
+  },
+  {
+    "hazard": [
+      "Beban scaffolding melebihi kekuatan struktur/permukaan lantai"
+    ],
+    "risk": [
+      "Struktur roboh",
+      "Cidera serius / fatality"
+    ],
+    "control": [
+      "Lakukan Toolbox Meeting tentang JSA dan langkah-langkah pekerjaan sebelum mulai",
+      "Ikuti desain scaffolding yang sudah disetujui",
+      "Distribusikan beban merata sesuai kapasitas struktur/lantai"
+    ],
+    "source": "JSA_BUILD_DISMANTLE_SCAFFOLDING_7TLMOV250_260 (contoh real)",
+    "id": "hz024"
+  },
+  {
+    "hazard": [
+      "Benda jatuh (material/tools/komponen scaffolding) dari ketinggian"
+    ],
+    "risk": [
+      "Cidera kepala serius",
+      "Fatality",
+      "Property damage"
+    ],
+    "control": [
+      "Pasang tool lanyard pada semua tools yang digunakan di ketinggian",
+      "Pasang safety net/debris net/barricade di bawah area kerja",
+      "Wajib helm safety",
+      "DILARANG melempar material/pipa dari ketinggian -- turunkan pakai tali/rope"
+    ],
+    "source": "JSA_BUILD_DISMANTLE_SCAFFOLDING_7TLMOV250_260 (contoh real)",
+    "id": "hz025"
+  },
+  {
+    "hazard": [
+      "Beban platform melebihi kapasitas desain scaffolding"
+    ],
+    "risk": [
+      "Platform ambruk",
+      "Cidera serius / fatality"
+    ],
+    "control": [
+      "Jangan melebihi SWL (Safe Working Load) scaffolding yang tertera pada tag",
+      "Distribusikan beban merata di atas platform"
+    ],
+    "source": "JSA_BUILD_DISMANTLE_SCAFFOLDING_7TLMOV250_260 (contoh real)",
+    "id": "hz026"
+  },
+  {
+    "hazard": [
+      "Scaffolding tidak memenuhi standar keselamatan (belum diinspeksi)"
+    ],
+    "risk": [
+      "Struktur tidak aman",
+      "Cidera serius"
+    ],
+    "control": [
+      "Lakukan inspeksi visual menyeluruh -- periksa semua coupler, joint pin, platform, guard rail, toe board sebelum digunakan"
+    ],
+    "source": "JSA_BUILD_DISMANTLE_SCAFFOLDING_7TLMOV250_260 (contoh real)",
+    "id": "hz027"
+  },
+  {
+    "hazard": [
+      "Penggunaan scaffolding tanpa tag yang valid / melebihi SWL"
+    ],
+    "risk": [
+      "Cidera serius",
+      "Fatality",
+      "Scaffolding tidak aman digunakan"
+    ],
+    "control": [
+      "Wajib pasang scaffolding tag sebelum scaffolding dapat digunakan",
+      "Tag harus diisi lengkap (tanggal, SWL, status)",
+      "Informasikan kepada semua pengguna scaffolding tentang batas SWL"
+    ],
+    "source": "JSA_BUILD_DISMANTLE_SCAFFOLDING_7TLMOV250_260 (contoh real)",
+    "id": "hz028"
+  },
+  {
+    "hazard": [
+      "Beban scaffolding melebihi kekuatan sisa struktur saat pembongkaran bertahap"
+    ],
+    "risk": [
+      "Struktur tidak stabil",
+      "Roboh",
+      "Cidera serius"
+    ],
+    "control": [
+      "Bongkar sesuai urutan yang benar (top-down)",
+      "Jangan lepas komponen struktural kritis sebelum komponen di atasnya dibongkar"
+    ],
+    "source": "JSA_BUILD_DISMANTLE_SCAFFOLDING_7TLMOV250_260 (contoh real)",
+    "id": "hz029"
+  }
+]
