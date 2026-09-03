@@ -2360,3 +2360,76 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   laporan "tombol X tidak jalan" di produksi nanti, cek dulu apakah
   asumsi struktur `data` JSONB (nama field persis) masih valid sebelum
   curiga hal lain.
+
+## Tombol JSA History dipindah ke header + preview nama file di JSA History (2026-09-03)
+
+- Tombol "🦺 JSA History →" yang tadinya di section "Riwayat PM Terkini"
+  (bawah halaman `index.html`, gampang kelewat karena harus scroll dulu)
+  DIPINDAH (bukan ditambah lagi) ke **header**, sejajar dengan tombol
+  "📋 RIWAYAT" yang sudah ada (`.btn-jsa-history`, warna amber `#b45309`
+  supaya beda dari biru RIWAYAT dan ungu EIC7 PORTAL) -- tombol lama di
+  section Riwayat PM Terkini dihapus total supaya tidak dobel.
+  `.header-right` sudah `flex-wrap:wrap` di ≤768px dari awal, jadi tombol
+  baru otomatis ikut wrap rapi di layar sempit tanpa CSS tambahan.
+- `jsa_history.html`: kolom **Asset** sekarang menampilkan subtitle kecil
+  `📄 WO_Asset.docx` di bawah nama tag -- preview nama file yang akan
+  didownload, dihitung lewat `jsaBuildFilenamePreview(wo, equipTag)` yang
+  MENIRU PERSIS logic `jsaBuildFilename()` di `jsa_report.html`/
+  `jsa_condition_access.html` (WO No. + Area to be Access/Equipment Tag,
+  digabung underscore, disanitasi karakter ilegal filename). **Kalau logic
+  penamaan file di kedua file modul itu diubah lagi, WAJIB disamakan lagi
+  di `jsaBuildFilenamePreview()`** -- 2 salinan terpisah yang harus tetap
+  identik, bukan fungsi shared.
+
+## 🔴 Bug: hasil download JSA jadi ".docx.zip" + popup "Yakin akan meninggalkan halaman?" ikut membatalkan download (2026-09-03)
+
+- User lapor 2 hal dari HP Android: (1) file yang didownload namanya jadi
+  **"TES_TES.docx.zip"** (bukan `.docx` polos) -- dibuktikan dgn screenshot
+  file manager yang berhasil "membuka" file itu sbg folder ZIP berisi
+  `word/`, `docProps/`, `[Content_Types].xml`, dll (struktur internal
+  `.docx` yang memang aslinya ZIP) -- membuktikan ISI filenya benar, cuma
+  SALAH DIKENALI sbg arsip ZIP biasa. (2) popup kustom "Yakin akan
+  meninggalkan halaman?" (`pmShowLeaveConfirm`, lihat bagian "Bug numpad...
+  + konfirmasi tinggalkan halaman" di atas) muncul dan MEMBATALKAN proses
+  Generate Word/Download, dirasakan user sbg "bug yang sangat mengganggu".
+- **Akar masalah #1**: `zip.generateAsync({type:'blob'})` (JSZip, dipakai
+  `jsaBuildWordBlob()` di KEDUA file JSA) TIDAK PERNAH set opsi `mimeType`
+  -- defaultnya `'application/zip'`. Blob hasil download jadi py MIME type
+  ZIP walau `<a download="Nama.docx">` sudah benar namanya -- Chrome
+  Android (dan kemungkinan browser lain yg sniff MIME Blob) mendeteksi
+  ketidakcocokan lalu menambah ekstensi `.zip` lagi di belakang. **Fix**:
+  `generateAsync({type:'blob', mimeType:
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})`
+  di kedua file. **Kalau nanti ada fitur baru yang generate Blob dari JSZip
+  di modul lain, WAJIB set `mimeType` eksplisit juga** -- jangan andalkan
+  default JSZip.
+- **Akar masalah #2 (lebih serius, GENERIK ke SEMUA modul, bukan cuma
+  JSA)**: `jsaDownloadBlob()` (dan pola SAMA yang dipakai fitur
+  download/export apa pun di seluruh repo ini -- bikin `<a href="blob:...">`
+  lalu `a.click()` sintetis) TERNYATA ikut kena tangkap listener global
+  `document.addEventListener('click', ..., true)` punya `pmShowLeaveConfirm`
+  (shared.js) -- listener itu cuma cek `el.closest('a[href]')` lalu
+  `isNavLink = href tidak diawali '#'/'javascript:'` TANPA mengecualikan
+  skema `blob:`/`data:`. Kalau `window._raDirty` true (ada perubahan belum
+  disimpan -- SANGAT UMUM, JSA/modul manapun biasanya baru selesai diisi
+  pas mau di-generate/download), `a.click()` sintetis buat trigger download
+  ikut di-`preventDefault()`+`stopImmediatePropagation()`, proses download
+  BATAL, dan popup leave-confirm muncul MENGGANTIKANNYA -- kalau user
+  pilih "Ya", kodenya malah `window.location.href = href` (blob: URL),
+  MENAVIGASI seluruh halaman ke isi mentah Blob (bukan mendownloadnya lewat
+  atribut `download`), efeknya browser tetap "mendownload" tapi TANPA nama
+  file yang benar dari atribut `download` -- pola inilah yg paling mungkin
+  jadi penyebab SEBENARNYA nama file mentah/aneh yang dilaporkan user,
+  BUKAN cuma soal mimeType semata. **Fix**: `isNavLink` di
+  `shared.js` sekarang JUGA mengecualikan href yang diawali `blob:` atau
+  `data:` -- skema itu TIDAK PERNAH berarti "navigasi keluar halaman",
+  selalu berarti "sedang trigger download file dari memori (PDF/Word/CSV)".
+  **Bug ini SEBELUMNYA berpotensi (belum tentu sudah) mempengaruhi SEMUA
+  modul lain yang pakai pola sintesis `<a href="blob:...">`+`a.click()`
+  serupa buat export PDF/CSV** (fitur "Konfirmasi tinggalkan halaman" baru
+  ditambahkan 2026-09-03 di sesi sebelumnya, jadi window bug-nya singkat) --
+  fix ini otomatis berlaku ke SEMUA modul sekaligus (1 titik perbaikan di
+  `shared.js`), TIDAK perlu ditelusuri/diperbaiki manual per file.
+- `shared.js?v=` dinaikkan ke `20260903e` di SEMUA 37 file yang
+  memuatnya (wajib per konvensi cache-busting -- lihat bagian "shared.js/
+  shared.css TIDAK PERNAH punya cache-busting" di atas).
