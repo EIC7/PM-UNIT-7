@@ -1567,3 +1567,56 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   SUNGGUHAN (bukan cuma `.click()`) ke tombol "1" lalu cek
   `document.activeElement` — TETAP field aslinya (bukan tombolnya), caret
   tidak hilang.
+
+## Revisi lanjutan numpad + overlay EIC7 disamakan + urutan field O2 Outlet (2026-09-03)
+
+1. **Scroll otomatis field paling bawah halaman** — `pmNumpadEnsureVisible()`
+   dulu cuma `window.scrollBy()` sejauh yang dibutuhkan, tapi kalau field-nya
+   PALING BAWAH di halaman (mis. channel/baris TERAKHIR), dokumen kehabisan
+   ruang scroll dan field itu TETAP ketutup numpad walau sudah discroll
+   semaksimal mungkin. Fix: `document.body.style.paddingBottom` di-set
+   SEMENTARA setinggi numpad (`pad.offsetHeight`) SEBELUM cek scroll —
+   nambah ruang scroll ekstra secara otomatis, field APA PUN (termasuk yang
+   paling bawah) selalu bisa naik ke atas numpad. Dibuang lagi
+   (`pmNumpadCloseUI()`) begitu numpad ditutup.
+2. **Numpad custom TIDAK ditampilkan di desktop/PC/laptop** — keyboard fisik
+   sudah lebih lengkap (semua digit + minus + titik + Tab bawaan browser).
+   `PM_IS_TOUCH_DEVICE` (`matchMedia('(pointer: coarse)')`, BUKAN cuma lebar
+   layar — ini standar deteksi "device utamanya dipakai lewat jari" vs
+   "mouse/trackpad presisi", aman juga utk laptop touchscreen yang tetap
+   punya keyboard fisik) dicek di awal `pmNumpadInit()`: kalau desktop,
+   `readonly` dilepas dari semua `.pm-num-input` (supaya bisa diketik
+   langsung) dan numpad SAMA SEKALI tidak dibuat/listener-nya tidak
+   dipasang.
+3. **Overlay EIC7 (`dbShowSavingOverlay`, dipakai Simpan & Muat dari
+   Riwayat) DISAMAKAN dengan overlay submit** — user sempat minta ini
+   sebelumnya dan dilaporkan selesai, tapi ternyata cuma overlay SUBMIT
+   (`#pmAutosubmitOverlay`/`#pmManualSubmitOverlay`) yang kepakai animasi
+   "folder terbang" (`PM_FOLDER_ANIM_HTML`/`PM_FOLDER_ANIM_CSS`) —
+   `dbShowSavingOverlay` KELEWAT, masih pakai animasi lama sendiri (ring +
+   lightning bolt SVG berputar, `dbSavingRingSvg`/`dbSavingEicWrap`).
+   Sekarang diganti pakai `PM_FOLDER_ANIM_HTML` yang SAMA PERSIS
+   (`#dbSavingFolderAnim`, sudah termasuk label EIC7 + glow-nya sendiri,
+   `dbSavingGlowField` lama dihapus karena duplikat). Mode error
+   (`dbShowSavingOverlayError`) tetap pakai `#dbSavingErrorIcon` terpisah
+   seperti sebelumnya, cuma toggle-nya sekarang ke `#dbSavingFolderAnim`
+   (bukan `dbSavingRingSvg`+`dbSavingEicWrap` lagi). Keyframes lama
+   (`dbEicRingSpin`/`dbEicRingPulse`/`dbEicBoltPulse`/`dbEicFlicker`/
+   `dbEicFieldPulse`, plus `dbSpin` yang ternyata sudah lama tidak dipakai
+   sama sekali) dihapus, sudah tidak relevan.
+4. **Urutan field O2 Outlet** (`buildO2ChannelCards()`) diubah sesuai
+   permintaan: baris 1 = O2 Reading + Lifetime, baris 2 = Temp + Voltage,
+   baris 3 = Resistance. Grid diubah dari `auto-fit` (jumlah kolom per baris
+   BERUBAH-UBAH tergantung lebar layar) jadi `1fr 1fr` TETAP 2 kolom —
+   auto-fit bisa jadi 3+ kolom di layar lebar yang bikin urutan baris tidak
+   konsisten dengan permintaan ini. ID field tidak berubah (cuma urutan
+   render), data lama tetap kompatibel.
+- Diverifikasi lewat headless Chrome (item 1-3, termasuk override
+  `matchMedia` sementara di test utk simulasi `pointer:coarse` karena
+  headless defaultnya selalu `pointer:fine`): field PALING BAWAH halaman
+  (channel 8) berhasil naik ke atas numpad setelah scroll+padding; mode
+  desktop (`pointer:fine`, default headless) numpad tidak pernah dibuat +
+  `readonly` lepas; overlay baru punya `.pm-folder-scene`+`.pm-eic-label`,
+  elemen lama (`dbSavingRingSvg`/`dbSavingEicWrap`) sudah tidak ada,
+  toggle normal/error benar. Item 4 diverifikasi baca ulang kode (perubahan
+  murni urutan string HTML, risiko rendah).

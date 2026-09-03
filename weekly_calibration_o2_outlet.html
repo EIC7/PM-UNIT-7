@@ -7,14 +7,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260903a"></script>
+<script src="shared.js?v=20260903c"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="db-helper.js"></script>
 <script src="storage-helper.js"></script>
 <script src="approval-helper.js"></script>
-<link rel="stylesheet" href="shared.css?v=20260903b">
+<link rel="stylesheet" href="shared.css?v=20260903d">
 <style>
 /* ── Fitur reusable: geser posisi foto ── */
 .img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
@@ -1629,11 +1629,15 @@ function buildO2ChannelCards() {
     card.className = 'o2-channel-card';
     card.innerHTML =
       '<div class="o2-channel-head-num o2chlabel-'+ck+'" style="margin-bottom:10px">'+o2ChLabel(c)+'</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:12px">'+
+      // 🆕 Urutan field SENGAJA diminta user: baris 1 = O2 Reading & Lifetime,
+      // baris 2 = Temp & Voltage, baris 3 = Resistance (grid 2 kolom TETAP,
+      // bukan auto-fit lagi -- auto-fit bisa jadi 3+ kolom di layar lebar,
+      // yang bikin urutan baris tidak konsisten dengan permintaan ini).
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
         '<div class="meta-field"><label>O2 Reading (%)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_o2Reading" oninput="o2UpdateChannelField(\''+ck+'\',\'o2Reading\',this.value)"></div>'+
-        '<div class="meta-field"><label>Voltage (mV)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_voltage" oninput="o2UpdateChannelField(\''+ck+'\',\'voltage\',this.value)"></div>'+
-        '<div class="meta-field"><label>Temp (°C)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_temperature" oninput="o2UpdateChannelField(\''+ck+'\',\'temperature\',this.value)"></div>'+
         '<div class="meta-field"><label>Lifetime (mo)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_lifetime" oninput="o2UpdateChannelField(\''+ck+'\',\'lifetime\',this.value)"></div>'+
+        '<div class="meta-field"><label>Temp (°C)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_temperature" oninput="o2UpdateChannelField(\''+ck+'\',\'temperature\',this.value)"></div>'+
+        '<div class="meta-field"><label>Voltage (mV)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_voltage" oninput="o2UpdateChannelField(\''+ck+'\',\'voltage\',this.value)"></div>'+
         '<div class="meta-field"><label>Resistance (Ω)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_resistance" oninput="o2UpdateChannelField(\''+ck+'\',\'resistance\',this.value)"></div>'+
       '</div>'+
       '<div style="margin-bottom:12px"><label class="o2-catatan-label">&#128221; Keterangan</label><textarea id="o2cat_reading_'+ck+'" rows="2" class="o2-catatan-textarea" placeholder="Keterangan channel ini..."></textarea></div>'+
