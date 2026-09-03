@@ -120,7 +120,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div class="live-dot" title="Status Supabase"></div>
       <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
-      <button class="btn-back" onclick="window.location.href='history.html'">RIWAYAT</button>
+      <button class="btn-back" onclick="window.location.href='jsa_history.html'">RIWAYAT</button>
     </div>
   </div>
 
@@ -815,6 +815,14 @@ function restoreDraftData(rec, editingId) {
     applyRecordToForm(rec);
     window._editingId = id;
     if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
+    // ?autodownload=1 -- dipakai jsa_history.html (tombol "Download") lewat
+    // iframe tersembunyi: begitu record selesai dimuat ke form, langsung
+    // panggil jsaGenerateWord() sendiri TANPA user perlu klik apa pun --
+    // jsaGenerateWord() sudah aman dipanggil tanpa event klik asli (var btn
+    // = event && event.target ? ... : null, lihat definisinya).
+    if (params.get('autodownload') === '1') {
+      setTimeout(function() { jsaGenerateWord(); }, 500);
+    }
   });
 })();
 

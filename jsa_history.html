@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSA History</title>
+<script src="shared.js?v=20260903d"></script>
+<script src="db-helper.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1420;color:#e7ebf2;padding:8px;overflow-x:hidden}
+.container{max-width:1100px;margin:0 auto;background:#161d2c;border-radius:10px;padding:16px;box-shadow:0 2px 16px rgba(0,0,0,0.4);border:1px solid #232c40}
+.header{background:linear-gradient(135deg,#1a3a6b,#2e6fcc);color:#fff;padding:16px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.header-content h1{font-size:1.2em;margin-bottom:4px}
+.header-content p{font-size:0.85em;opacity:0.9}
+.header .btn-back{padding:8px 16px;background:#1c2334;color:#bfd6f7;border:1px solid #3a4560;border-radius:6px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.9em}
+.header .btn-back:hover{background:#232c40}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filter-btn{padding:7px 14px;font-size:12px;font-weight:600;border:1px solid #3a4560;border-radius:999px;background:#1c2334;color:#aab4c4;cursor:pointer}
+.filter-btn.active{background:#2e6fcc;color:#fff;border-color:#2e6fcc}
+.manual-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.manual-table th{text-align:left;padding:9px 10px;background:#1c2a44;color:#bfd6f7;font-weight:700;border-bottom:1px solid #2a3348}
+.manual-table td{padding:9px 10px;border-bottom:1px solid #232c40;color:#dbe1ea}
+.manual-table tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-ca{background:#1c2a44;color:#7fb2f0}
+.badge-rt{background:#3a2020;color:#e5695c}
+.btn-edit{padding:5px 12px;font-size:11px;background:#2e6fcc;color:#fff;border:none;border-radius:5px;cursor:pointer;margin-right:6px;font-weight:600}
+.btn-download{padding:5px 12px;font-size:11px;background:#57b98a;color:#0b2016;border:none;border-radius:5px;cursor:pointer;font-weight:600}
+.empty-msg{text-align:center;padding:30px;color:#7c8698;font-size:13px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-content">
+      <h1>🦺 JSA History</h1>
+      <p>Riwayat Job Safety Analysis (Condition Access &amp; Risk To Trip) — Edit atau unduh langsung ke Word</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" data-f="ALL" onclick="jsaHistFilter('ALL')">Semua<span class="hist-count" id="cntALL"></span></button>
+    <button class="filter-btn" data-f="JSA_CONDITION_ACCESS" onclick="jsaHistFilter('JSA_CONDITION_ACCESS')">JSA Condition Access<span class="hist-count" id="cntJSA_CONDITION_ACCESS"></span></button>
+    <button class="filter-btn" data-f="JSA_REPORT" onclick="jsaHistFilter('JSA_REPORT')">JSA Risk To Trip<span class="hist-count" id="cntJSA_REPORT"></span></button>
+  </div>
+
+  <div id="jsaHistList">
+    <div class="empty-msg">Memuat riwayat...</div>
+  </div>
+</div>
+
+<!-- Iframe tersembunyi utk trigger "Download" tanpa membuka tab penuh --
+     halaman JSA modul dimuat dgn ?id=...&autodownload=1, begitu selesai
+     generate Word (jsaGenerateWord() dipanggil otomatis di sana) iframe
+     ini dilepas lagi. Lihat CLAUDE.md. -->
+<iframe id="jsaDownloadFrame" style="display:none" title="jsa-download"></iframe>
+
+<script>
+var jsaHistAllRows = [];
+var jsaHistCurrentFilter = 'ALL';
+
+function jsaHistLoad() {
+  dbList('', function(rows) {
+    jsaHistAllRows = (rows || []).filter(function(r) {
+      var n = normalizeModul(r.modul);
+      return n === 'JSA_REPORT' || n === 'JSA_CONDITION_ACCESS';
+    });
+    jsaHistRenderCounts();
+    jsaHistRender();
+  });
+}
+
+function jsaHistRenderCounts() {
+  document.getElementById('cntALL').textContent = ' (' + jsaHistAllRows.length + ')';
+  ['JSA_CONDITION_ACCESS', 'JSA_REPORT'].forEach(function(k) {
+    var n = jsaHistAllRows.filter(function(r) { return normalizeModul(r.modul) === k; }).length;
+    document.getElementById('cnt' + k).textContent = ' (' + n + ')';
+  });
+}
+
+function jsaHistFilter(f) {
+  jsaHistCurrentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-f') === f);
+  });
+  jsaHistRender();
+}
+
+function jsaHistBadge(modul) {
+  var n = normalizeModul(modul);
+  if (n === 'JSA_CONDITION_ACCESS') return '<span class="badge badge-ca">Condition Access</span>';
+  return '<span class="badge badge-rt">Risk To Trip</span>';
+}
+
+function jsaHistRender() {
+  var rows = jsaHistCurrentFilter === 'ALL'
+    ? jsaHistAllRows
+    : jsaHistAllRows.filter(function(r) { return normalizeModul(r.modul) === jsaHistCurrentFilter; });
+  var container = document.getElementById('jsaHistList');
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty-msg">Belum ada laporan JSA tersimpan.</div>';
+    return;
+  }
+  var html = '<table class="manual-table"><thead><tr>' +
+    '<th>Jenis</th><th>Tanggal</th><th>PIC</th><th>Work Order</th><th>Disimpan</th><th>Aksi</th>' +
+    '</tr></thead><tbody>';
+  rows.forEach(function(r) {
+    var openUrl = raModulToUrl(r.modul, r.id);
+    var dlUrl = openUrl + (openUrl.indexOf('?') >= 0 ? '&' : '?') + 'autodownload=1';
+    var saved = dbFmtLocalDateTime(r.updated_at);
+    html += '<tr>' +
+      '<td>' + jsaHistBadge(r.modul) + '</td>' +
+      '<td>' + (r.tanggal || '-') + '</td>' +
+      '<td>' + (r.pic || '-') + '</td>' +
+      '<td>' + (r.work_order || '-') + '</td>' +
+      '<td style="font-size:10.5px;color:#7c8698">' + saved + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn-edit" onclick="window.location.href=\'' + openUrl + '\'">✎ Edit</button>' +
+        '<button class="btn-download" onclick="jsaHistDownload(\'' + dlUrl + '\', this)">⬇ Download</button>' +
+      '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// Download tanpa pindah halaman: muat modul JSA terkait di iframe tersembunyi
+// dengan ?autodownload=1 -- halaman itu sendiri yang panggil jsaGenerateWord()
+// otomatis begitu record selesai dimuat (lihat blok "LOAD FROM HISTORY" di
+// jsa_report.html/jsa_condition_access.html). Tombol dikunci sementara supaya
+// tidak diklik dobel selagi proses jalan.
+function jsaHistDownload(url, btn) {
+  var origText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Memproses...';
+  var frame = document.getElementById('jsaDownloadFrame');
+  frame.src = url;
+  setTimeout(function() {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+    frame.src = 'about:blank';
+  }, 6000);
+}
+
+jsaHistLoad();
+</script>
+</body>
+</html>

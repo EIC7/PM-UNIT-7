@@ -2026,9 +2026,93 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   screenshot penuh (`--screenshot`, window 1440×1800) kedua file
   menampilkan tema gelap + layout lebar dengan benar dan tetap terbaca
   (kontras cukup di semua elemen yang diperiksa visual).
-- **Belum dikerjakan di sesi ini** (masih pending dari permintaan user yang
-  sama): (1) buat halaman "JSA History" terpisah (bukan digabung ke
-  `history.html` umum) dengan tombol Edit + Download saja (tanpa Submit/
-  Print), ditambahkan ke `index.html` di sebelah tombol Riwayat; (2) fitur
-  preview hasil Word sebelum download (BARU tahap diskusi/rekomendasi,
-  user eksplisit minta belum dikerjakan dulu).
+- **(2) fitur preview hasil Word sebelum download MASIH belum dikerjakan**
+  (BARU tahap diskusi/rekomendasi, user eksplisit minta belum dikerjakan
+  dulu — lihat bagian "Rekomendasi preview Word" di bawah kalau nanti
+  diminta lanjut).
+
+## Halaman `jsa_history.html` terpisah (bukan digabung ke `history.html` umum, 2026-09-03)
+
+- User eksplisit minta riwayat JSA JANGAN digabung ke `history.html` umum
+  — dibuat file baru `jsa_history.html` (tema gelap senada kedua modul
+  JSA), diberi link dari `index.html` (tombol baru "🦺 JSA History →" di
+  sebelah tombol "Lihat Semua Riwayat →" yang sudah ada, section Riwayat
+  PM Terkini) DAN dari tombol "RIWAYAT" di header `jsa_report.html`/
+  `jsa_condition_access.html` sendiri (diubah dari `history.html` ke
+  `jsa_history.html`). Tombol filter "JSA Risk to Trip"/"JSA Condition
+  Access" yang SUDAH ADA di `history.html` (dari revisi sebelumnya)
+  SENGAJA TIDAK dihapus — tetap berfungsi normal, cuma sudah tidak
+  jadi jalur utama untuk lihat riwayat JSA.
+- **Cuma 2 aksi per baris: "✎ Edit" dan "⬇ Download"** (TIDAK ada Submit/
+  Resubmit/Print seperti `history.html` umum — sesuai permintaan eksplisit,
+  masuk akal karena JSA memang tidak punya alur Submit/Review Approval
+  Dashboard sama sekali). Data diambil lewat `dbList('', cb)` (tanpa
+  filter modul, ambil SEMUA lalu difilter manual client-side by
+  `normalizeModul(r.modul) === 'JSA_REPORT' || === 'JSA_CONDITION_ACCESS'`)
+  — BUKAN `dbList('JSA Report', cb)` yang cuma bisa filter 1 modul per
+  panggilan.
+- **"✎ Edit"**: `window.location.href = raModulToUrl(r.modul, r.id)` --
+  sama persis perilaku tombol "Buka" di `history.html` (buka halaman JSA
+  modul terkait dgn `?id=...`, form otomatis terisi dari record).
+- **"⬇ Download"**: BUKAN generate Word langsung di `jsa_history.html`
+  (akan duplikasi total logic `jsaFillTable1`/`jsaRebuildTable2`/
+  `jsaFillTable3` yang sudah ada di kedua file modul) -- alih-alih, memuat
+  halaman modul JSA terkait di **iframe tersembunyi**
+  (`#jsaDownloadFrame`) dengan `?id=...&autodownload=1`. Parameter
+  `autodownload=1` ini ditangani di blok "LOAD FROM HISTORY" KEDUA file
+  modul (`jsa_report.html`/`jsa_condition_access.html`) -- begitu record
+  selesai dimuat ke form, `jsaGenerateWord()` dipanggil OTOMATIS lewat
+  `setTimeout` 500ms (tanpa user perlu klik apa pun) -- `jsaGenerateWord()`
+  sudah aman dipanggil tanpa event klik asli sejak awal dibuat (var btn =
+  event && event.target ? ... : null). Iframe di-reset ke `about:blank`
+  setelah 6 detik (cukup waktu utk fetch template + generate + trigger
+  download `<a download>`, yang bekerja normal walau dari dalam iframe
+  same-origin -- pola iframe tersembunyi ini SUDAH established di repo ini
+  utk retry submit otomatis, lihat `window.parent`/`window.opener` di
+  `shared.js`, jadi aman dipakai lagi di sini).
+  - **Kalau nanti field auto-download ini bermasalah** (mis. browser
+    memblokir download dari iframe tanpa gesture user secara langsung) --
+    alternatif fallback: ganti `iframe.src=url` jadi `window.open(url,
+    '_blank')` (tab baru, gesture klik tombol "Download" tetap terhitung
+    sebagai user gesture) lalu `window.close()` otomatis di
+    modul-nya sendiri setelah `jsaGenerateWord()` kelar (perlu tambah
+    `setTimeout(function(){window.close();}, N)` di blok autodownload).
+    BELUM diimplementasikan versi ini -- iframe dicoba dulu karena lebih
+    sederhana (tidak perlu urus popup-blocker/tab ekstra).
+- Diverifikasi lewat headless Chrome (dbList di-mock, TIDAK butuh koneksi
+  Supabase sungguhan): render tabel benar (row SO2 ikut di-mock TIDAK
+  muncul, cuma 2 baris JSA yang tampil), counter filter benar (1 Condition
+  Access + 1 Risk To Trip), tombol Edit & Download keduanya ada. **BELUM
+  diverifikasi end-to-end dengan Supabase sungguhan** (download beneran
+  trigger `<a download>` dari dalam iframe, sampai file benar-benar
+  tersimpan) -- kalau ada laporan "tombol Download tidak berfungsi",
+  verifikasi jalur iframe ini dulu sebelum curiga hal lain.
+
+## Rekomendasi preview Word sebelum download (belum dikerjakan, 2026-09-03)
+
+- User tanya (belum minta dikerjakan): bisa tidak preview hasil Word di
+  halaman web dulu sebelum download, buat mastiin JSA sudah lengkap?
+  Kalau iya, bentuknya apa (Word asli atau PDF)?
+- **Rekomendasi**: pola **"Preview Hasil PDF"** yang SUDAH ADA di modul
+  lain (mis. O2 Inlet/Outlet, `showPdfPreview(doc, filename)`) TIDAK bisa
+  dipakai apa adanya di sini -- modul-modul itu generate PDF LANGSUNG lewat
+  jsPDF (objek `doc` di memori bisa langsung dirender ke `<iframe>`/
+  `<embed>` via `doc.output('bloburl')`), sedangkan JSA generate **.docx**
+  (bukan PDF) lewat manipulasi XML+JSZip. Dua opsi:
+  1. **Render .docx APA ADANYA pakai library `docx-preview` (JS, ringan,
+     client-side, TANPA konversi ke PDF)** -- tampilkan hasil generate di
+     dalam modal/iframe sebelum tombol download ditekan. Lebih ringan &
+     cepat, TAPI rendering-nya cuma APROKSIMASI tampilan Word (border tabel
+     kompleks/font Wingdings checkbox kemungkinan tidak 100% identik
+     dengan yang muncul di Microsoft Word asli).
+  2. **Konversi .docx -> PDF di browser dulu, baru preview pakai pola
+     `showPdfPreview` yang sudah ada** -- visual FIDELITAS lebih tinggi &
+     konsisten dengan pola modul lain, TAPI TIDAK ADA converter docx->PDF
+     ringan pure-JS yang bagus (opsi realistis cuma WASM build LibreOffice,
+     ukurannya puluhan MB, berat utk dimuat di setiap kunjungan halaman JSA).
+  - **Rekomendasi konkret**: opsi 1 (`docx-preview`) -- trade-off fidelitas
+    lebih masuk akal dibanding beban puluhan MB WASM LibreOffice cuma buat
+    fitur preview. Bentuk preview-nya jadinya **mirip tampilan Word**
+    (bukan PDF) dirender di dalam modal, BUKAN true-PDF.
+  - Belum ada keputusan final -- ini murni rekomendasi, tunggu konfirmasi
+    user sebelum implementasi.
