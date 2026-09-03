@@ -6,7 +6,7 @@
 <title>JSA Conditional Access</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
-<script src="shared.js?v=20260903e"></script>
+<script src="shared.js?v=20260903f"></script>
 <script src="db-helper.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -1490,7 +1490,9 @@ function jsaGenerateWord() {
   }
   if (btn) { btn.innerHTML = '⏳ Membuat Word...'; btn.disabled = true; }
   jsaBuildWordBlob(form).then(function(blob) {
-    jsaDownloadBlob(blob, jsaBuildFilename(form));
+    var filename = jsaBuildFilename(form);
+    jsaDownloadBlob(blob, filename);
+    jsaUploadWordToDrive(blob, filename); // best-effort, tidak di-await -- lihat komentar fungsinya
     if (typeof dbShowToast === 'function') dbShowToast('✓ Word berhasil dibuat & diunduh');
   }).catch(function(err) {
     console.error('[jsa] generate word gagal', err);
@@ -1498,6 +1500,44 @@ function jsaGenerateWord() {
   }).then(function() {
     if (btn) { btn.innerHTML = origText; btn.disabled = false; }
   });
+}
+
+function jsaBlobToDataUrl(blob) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function() { resolve(reader.result); };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Upload salinan Word yang baru digenerate ke Google Drive -- SELALU
+// best-effort, TIDAK PERNAH memblokir/membatalkan download lokal walau
+// gagal total (dipanggil TANPA di-await/return dari jsaGenerateWord()).
+// Kalau record ini BELUM pernah disimpan (window._editingId kosong)
+// dilewati saja -- tidak ada baris Supabase utk nyimpan link-nya. File
+// Drive versi SEBELUMNYA (kalau ada) dihapus lewat deleteFotoDariGDrive()
+// (fungsi generik, walau namanya "Foto" bekerja utk fileId APA PUN)
+// setelah upload baru sukses, supaya tidak menumpuk salinan basi tiap
+// kali user Generate Word ulang berkali-kali. Butuh backend Apps Script
+// yang sudah terima field `mimeType` opsional -- lihat CLAUDE.md.
+function jsaUploadWordToDrive(blob, filename) {
+  var id = window._editingId;
+  if (!id) return;
+  jsaBlobToDataUrl(blob).then(function(dataUrl) {
+    return uploadFileToGDrive(dataUrl, filename, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', window.CURRENT_MODUL, '');
+  }).then(function(result) {
+    if (!result || !result.success) return;
+    return supaFetch('GET', 'pm_records?id=eq.' + id + '&select=data').then(function(rows) {
+      var row = rows && rows[0];
+      if (!row) return;
+      var oldFileId = row.data && row.data.wordDriveFileId;
+      var merged = Object.assign({}, row.data || {}, { wordDriveUrl: result.fileUrl, wordDriveFileId: result.fileId });
+      return _pmPatchRecordWithRetry(id, { data: merged }).then(function() {
+        if (oldFileId && oldFileId !== result.fileId) deleteFotoDariGDrive(oldFileId);
+      });
+    });
+  }).catch(function(err) { console.error('[jsa] upload Word ke Drive gagal (non-fatal):', err); });
 }
 
 // ── Preview Word (docx-preview, render APROKSIMASI -- BUKAN Word asli

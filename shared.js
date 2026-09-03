@@ -387,6 +387,36 @@ function _pmGenUniqueDriveFileName(modul) {
   return safeModul + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg';
 }
 
+/* Versi GENERIK uploadFotoKeGDrive() -- terima mimeType eksplisit, dipakai
+   untuk file NON-FOTO (mis. Word .docx hasil JSA, lihat jsaUploadWordToDrive
+   di jsa_report.html/jsa_condition_access.html). Endpoint Apps Script yang
+   sama (action default/upload) -- WAJIB backend-nya sudah diupdate terima
+   field `mimeType` opsional (lihat CLAUDE.md, kalau belum diupdate fungsi
+   ini akan tetap "berhasil" tapi file di Drive salah MIME type/rusak).
+   TIDAK ikut _pmPendingDriveUploads (itu khusus gerbang wajib SEBELUM
+   dbSave() foto -- JSA tidak pernah punya foto, upload Word ini best-effort
+   terpisah, tidak pernah memblokir simpan/download apa pun). */
+function uploadFileToGDrive(dataUrlBase64, fileName, mimeType, modul, keterangan) {
+  if (!GDRIVE_WEB_APP_URL || !dataUrlBase64) return Promise.resolve(null);
+  return fetch(GDRIVE_WEB_APP_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      token: GDRIVE_SECRET_TOKEN,
+      imageBase64: dataUrlBase64,
+      fileName: fileName,
+      mimeType: mimeType,
+      originalFileName: fileName || '',
+      modul: modul || (window.CURRENT_MODUL || 'unknown'),
+      keterangan: keterangan || ''
+    })
+  }).then(function(res){ return res.json(); })
+    .then(function(result){
+      if (!result.success) { console.error('Upload GDrive (file) gagal:', result.error); return null; }
+      return result; // {success, fileId, fileUrl}
+    })
+    .catch(function(err){ console.error('Upload GDrive (file) error:', err); return null; });
+}
+
 function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
   if (!GDRIVE_WEB_APP_URL || !dataUrlBase64) return Promise.resolve(null);
   // fileName dari pemanggil (nama device) diabaikan sebagai KEY penyimpanan --

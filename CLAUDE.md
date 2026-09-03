@@ -2490,3 +2490,67 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   (nama modul lain diubah)**, cek dulu apakah nama baru masih mengandung
   substring yang dipakai `normalizeModul()` sebelum asumsikan aman
   ikut pola yang sama.
+
+## JSA: file Word hasil generate diupload juga ke Google Drive (2026-09-03)
+
+- User minta hasil Word JSA "disimpan ke database" sama seperti modul lain
+  -- ternyata maksudnya: ada salinan CLOUD (Google Drive), bukan cuma
+  didownload lokal ke device. User eksplisit pilih opsi ini lewat
+  AskUserQuestion ("Kalau bisa ke google drive saja walaupun tanpa foto
+  biar tidak membebani supabase") dibanding alternatif "ikut alur Submit ke
+  Review Approval Dashboard" (JSA TETAP TIDAK punya alur Submit/Approval,
+  itu keputusan sadar sejak awal, lihat bagian JSA Report di atas -- yang
+  berubah CUMA soal ke mana file Word-nya disalin).
+- **Backend Apps Script (`GDRIVE_WEB_APP_URL`, project "DATABASE EIC7" di
+  script.google.com, TIDAK ADA di repo ini -- user tempel isi `Code.gs`
+  lewat screenshot) diupdate 2 baris** di bagian AKSI UPLOAD: `mimeType`
+  sekarang terima field opsional dari body request (default `'image/jpeg'`
+  kalau tidak dikirim -- SEMUA pemanggil lama/foto tidak pernah kirim field
+  ini, jadi 100% backward compatible), dan regex strip prefix data URL
+  digeneralisasi dari `/^data:image\/\w+;base64,/` (CUMA cocok
+  `data:image/...`) jadi `/^data:[^;]+;base64,/` (cocok MIME apa pun) --
+  tanpa 2 perubahan ini, upload file NON-gambar akan gagal decode base64
+  (prefix tidak pernah kestrip) DAN blob-nya dipaksa `image/jpeg` walau
+  isinya bukan gambar sama sekali.
+- **`shared.js`**: `uploadFileToGDrive(dataUrlBase64, fileName, mimeType,
+  modul, keterangan)` -- versi GENERIK dari `uploadFotoKeGDrive()` yang
+  sudah ada (BUKAN mengubah fungsi lama itu sama sekali, supaya jalur foto
+  yang sudah teruji tidak ikut kesenggol) -- terima `mimeType` eksplisit,
+  TIDAK ikut antrian `_pmPendingDriveUploads` (gerbang WAJIB sebelum
+  `dbSave()` foto -- JSA tidak pernah punya foto, upload Word ini
+  best-effort terpisah total, TIDAK PERNAH memblokir simpan/download
+  apa pun). Penghapusan file lama pakai `deleteFotoDariGDrive(fileId)` yang
+  SUDAH ADA (nama fungsinya "Foto" tapi implementasinya generik, cuma hapus
+  by fileId -- aman dipakai ulang utk file Word, TIDAK PERLU bikin fungsi
+  hapus baru).
+- **`jsa_report.html`/`jsa_condition_access.html`**: `jsaGenerateWord()`
+  sekarang, SETELAH `jsaDownloadBlob()` (download lokal SELALU jalan
+  duluan/tidak pernah menunggu upload Drive), memanggil
+  `jsaUploadWordToDrive(blob, filename)` TANPA di-await -- alur: convert
+  Blob ke base64 (`jsaBlobToDataUrl`, `FileReader.readAsDataURL`) → upload
+  via `uploadFileToGDrive()` dgn `mimeType`
+  `'application/vnd.openxmlformats-officedocument.wordprocessingml.document'`
+  → GET `data` terkini dari Supabase → merge `wordDriveUrl`/
+  `wordDriveFileId` ke situ (BUKAN overwrite seluruh `data` dgn snapshot
+  form baru -- supaya field lain yang belum sempat di-"Simpan Draft" tidak
+  ikut ke-persist diam-diam sbg efek samping klik Download) → PATCH balik
+  lewat `_pmPatchRecordWithRetry()` (helper retry yg sudah ada) → hapus
+  file Drive VERSI LAMA (`oldFileId`, kalau ada & beda dari yang baru)
+  supaya tidak menumpuk salinan basi tiap kali user Generate Word ulang.
+  **Kalau `window._editingId` masih kosong** (laporan belum PERNAH disimpan
+  sekali pun) upload Drive DILEWATI SELURUHNYA -- tidak ada baris Supabase
+  utk nyimpan link-nya, download lokal tetap jalan normal. Field baru
+  (`data.wordDriveUrl`/`data.wordDriveFileId`) TIDAK BUTUH migration SQL
+  apa pun -- `data` sudah JSONB bebas skema, cukup key baru di dalamnya.
+- **`jsa_history.html`**: tombol baru **"📎 Drive"** di kolom Aksi, MUNCUL
+  HANYA kalau `d.wordDriveUrl` sudah ada (laporan lama yang belum pernah
+  di-generate Word setelah fitur ini ada, wajar tidak punya tombol ini).
+- `shared.js?v=` dinaikkan ke `20260903f` di semua 37 file.
+- **BELUM diverifikasi end-to-end** (upload dari browser SUNGGUHAN sampai
+  file benar-benar muncul di folder Drive dgn MIME/nama benar) -- backend
+  Apps Script baru bisa diupdate manual oleh user sendiri (di luar akses
+  Claude), jadi verifikasi PENUH baru bisa dilakukan setelah user konfirmasi
+  sudah redeploy. Kalau laporan "tombol Drive tidak muncul"/"upload gagal
+  diam-diam" muncul nanti, cek DULU apakah Apps Script-nya benar-benar sudah
+  diupdate+redeploy (Deploy → Manage deployments → Edit → Deploy ulang,
+  BUKAN cuma disimpan di editor) sebelum curiga kode sisi client.
