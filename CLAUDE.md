@@ -1511,3 +1511,32 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   berubah sampai user pilih salah satu tombol, "Lanjut Edit" menutup popup
   tanpa navigasi dan TIDAK mereset `_raDirty` (supaya popup muncul lagi
   kalau dicoba lagi).
+
+## Numpad: nama kolom yang sedang diisi ditampilkan di atas numpad (2026-09-03)
+
+- User lapor tidak ada penanda kolom mana yang sedang diisi lewat numpad
+  custom. Sebenarnya SUDAH ada (`.pm-num-active`, border hijau + glow di
+  field-nya sendiri) tapi field itu bisa ketutup numpad (walau
+  `pmNumpadEnsureVisible()` sudah coba scroll ke atasnya) atau border-nya
+  kurang kelihatan di layar kecil/kondisi tertentu.
+- **Fix**: nama kolom sekarang DITULIS LANGSUNG di atas numpad sendiri
+  (`#pmNumpadFieldLabel`, baris baru di atas hint "Next → ...", SELALU
+  kelihatan tidak peduli field-nya lagi ketutup atau tidak) — di-update di
+  `pmNumpadUpdateNextLabel()` (sudah dipanggil `pmNumpadOpen()` dan tiap
+  "Next", jadi otomatis ikut ke mana pun user pindah field).
+  `pmNumpadFieldLabel(el)` cari teksnya lewat 3 pola generik (BUKAN perlu
+  edit HTML modul manapun):
+  1. `<label>` sebagai sibling di wrapper umum (`.meta-field`/`.form-group`/
+     `.field-group`) — pola PALING BANYAK dipakai di seluruh modul.
+  2. Field di dalam `<td>` tabel (pola tabel per-channel, mis. O2 Weekly) —
+     ambil teks `<td>` PERTAMA di baris yang sama (biasanya nama/tag
+     channel, mis. "7BG-AE-562 (Channel 1)").
+  3. Fallback: `aria-label`/`title`/`placeholder` elemen itu sendiri.
+  **Kalau ada pola field lain di masa depan yang tidak kena 3 pola ini**
+  (label-nya tetap kosong di numpad), tambahkan case baru ke
+  `pmNumpadFieldLabel()` — jangan bikin solusi per-file, ini SENGAJA
+  generik.
+- Diverifikasi lewat headless Chrome: buka field `.meta-field` biasa (dapat
+  "Bottle Pressure - Span (psi)"), pindah lewat Next (label ikut berubah ke
+  field berikutnya), dan buka field tabel channel (dapat nama tag channel
+  dari `<td>` pertama baris itu) — ketiganya benar.

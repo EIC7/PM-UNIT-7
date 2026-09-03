@@ -3472,6 +3472,7 @@ function pmNumpadInit() {
   var pad = document.createElement('div');
   pad.id = 'pmNumpad';
   pad.innerHTML =
+    '<div class="pm-numpad-field" id="pmNumpadFieldLabel"></div>' +
     '<div class="pm-numpad-hint" id="pmNumpadHint">Next &rarr; pindah ke kolom berikutnya</div>' +
     '<div class="pm-numpad-grid">' +
       '<button type="button" onclick="pmNumpadPress(\'1\')">1</button>' +
@@ -3513,6 +3514,43 @@ function pmNumpadUpdateNextLabel() {
   var hint = document.getElementById('pmNumpadHint');
   if (btn) btn.textContent = isLast ? '✓ Selesai' : 'Next →';
   if (hint) hint.textContent = isLast ? 'Kolom terakhir — tekan ✓ untuk selesai' : 'Next → pindah ke kolom berikutnya';
+  var fieldLabelEl = document.getElementById('pmNumpadFieldLabel');
+  if (fieldLabelEl) fieldLabelEl.textContent = '✏️ ' + (pmNumpadFieldLabel(pmNumpadActiveEl) || 'Kolom ini');
+}
+
+// 🆕 User mengeluh tidak ada penanda kolom mana yang sedang diisi lewat
+// numpad -- field aktif SUDAH dikasih border hijau (.pm-num-active, lihat
+// shared.css) tapi field itu sendiri bisa ketutup numpad (walau
+// pmNumpadEnsureVisible sudah coba scroll ke atasnya) atau border-nya
+// kurang kelihatan di layar kecil. Solusinya: tampilkan NAMA kolomnya
+// langsung DI ATAS numpad (selalu kelihatan, tidak ikut ketutup apa pun) --
+// bukan cuma andalkan border di field yang mungkin di luar pandangan.
+// Coba beberapa pola struktur HTML yang dipakai di seluruh modul (generik,
+// TIDAK butuh ubah HTML modul manapun):
+//   1) <label> jadi sibling di wrapper umum (.meta-field/.form-group/dst)
+//      -- pola PALING BANYAK dipakai.
+//   2) <input> di dalam <td> tabel, <td> PERTAMA di baris yang sama biasanya
+//      berisi label/nama channel (pola tabel per-channel O2 dkk).
+//   3) fallback: aria-label/title/placeholder elemen itu sendiri.
+function pmNumpadFieldLabel(el) {
+  if (!el) return null;
+  var wrap = el.closest('.meta-field, .form-group, .field-group');
+  if (wrap) {
+    var lbl = wrap.querySelector('label');
+    if (lbl && lbl.textContent.trim()) return lbl.textContent.trim();
+  }
+  var td = el.closest('td');
+  if (td) {
+    var tr = td.parentElement;
+    var firstTd = tr && tr.querySelector('td');
+    if (firstTd && firstTd !== td && firstTd.textContent.trim()) {
+      return firstTd.textContent.trim();
+    }
+  }
+  if (el.getAttribute('aria-label')) return el.getAttribute('aria-label');
+  if (el.title) return el.title;
+  if (el.placeholder) return el.placeholder;
+  return null;
 }
 
 // 🆕 Tombol Back HP (browser back / gesture Android) dulu langsung
