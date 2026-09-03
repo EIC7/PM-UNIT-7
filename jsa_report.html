@@ -92,8 +92,9 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
       <label>Work Method (1 baris = 1 poin, tekan Enter untuk poin baru)</label>
       <textarea id="jsaWorkMethod" placeholder="Mobilisasi material...&#10;Pemasangan...&#10;dst" style="min-height:88px"></textarea>
     </div>
-    <div class="row">
+    <div class="row3">
       <div class="form-group"><label>HIRA Reference No.</label><input type="text" id="jsaHiraRef" placeholder="Opsional"></div>
+      <div class="form-group"><label>Risk To Trip, No.</label><input type="text" id="jsaRiskToTrip" placeholder="Opsional"></div>
       <div class="form-group"><label>Risk Category</label>
         <select id="jsaRiskCategory">
           <option value="LOW">LOW</option>
@@ -101,10 +102,22 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
         </select>
       </div>
     </div>
+    <div class="form-group">
+      <label>Risk Level (HIRA) — menentukan approval tambahan otomatis</label>
+      <select id="jsaRiskLevel" onchange="jsaRenderApprovalHint()">
+        <option value="">— Tidak dipakai —</option>
+        <option value="low">Low (Risk Level 1-5) — tanpa approval tambahan</option>
+        <option value="medium">Medium (6-10) — tanpa approval tambahan</option>
+        <option value="high">High (11-17) — approval: Dept. Manager</option>
+        <option value="extreme1">Extreme (18-22) — approval: Sr. Manager</option>
+        <option value="extreme2">Extreme (23-25) — approval: President Director</option>
+      </select>
+      <div id="jsaApprovalHint" style="margin-top:6px"></div>
+    </div>
     <div class="row3">
       <div class="form-group"><label>WO No.</label><input type="text" id="jsaWo" placeholder="Nomor Work Order"></div>
       <div class="form-group"><label>Priority No.</label><input type="text" id="jsaPriority" placeholder="Cth: 30"></div>
-      <div class="form-group"><label>EPAS Application No.</label><input type="text" id="jsaEpas" placeholder="Cth: P-PA-119144"></div>
+      <div class="form-group"><label>EPAS Application No.</label><input type="text" id="jsaEpas" placeholder="Cth: P-PA-129093"></div>
     </div>
     <div class="row">
       <div class="form-group"><label>Work Period — Date &amp; Time Start</label><input type="datetime-local" id="jsaPeriodStart"></div>
@@ -112,19 +125,51 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
     </div>
     <div class="form-group" style="margin-bottom:6px"><label style="margin-bottom:2px">Signature — Nama (ketik nama, tanda tangan fisik dilakukan di file Word setelah dicetak)</label></div>
     <div class="row" style="margin-bottom:12px">
-      <div class="form-group"><label>Applicant</label><input type="text" id="jsaSigApplicant" placeholder="Nama"></div>
-      <div class="form-group"><label>Operation Supervisor</label><input type="text" id="jsaSigOpSupervisor" placeholder="Nama"></div>
-    </div>
-    <div class="row">
-      <div class="form-group"><label>Health &amp; Safety</label><input type="text" id="jsaSigHealthSafety" placeholder="Nama"></div>
+      <div class="form-group"><label>Operation Supervisor / POC</label><input type="text" id="jsaSigOpSupervisor" placeholder="Nama"></div>
       <div class="form-group"><label>RIC</label><input type="text" id="jsaSigRic" placeholder="Nama"></div>
     </div>
-    <div class="form-group"><label>Maintenance Supervisor</label><input type="text" id="jsaSigMaintSupervisor" placeholder="Nama"></div>
+    <div class="row">
+      <div class="form-group"><label>Maintenance Supervisor / ENG / Call Out Leader</label><input type="text" id="jsaSigMaintSupervisor" placeholder="Nama"></div>
+      <div class="form-group"><label>Health &amp; Safety</label><input type="text" id="jsaSigHealthSafety" placeholder="Nama"></div>
+    </div>
+    <div class="form-group"><label>Intersection Spv (FA/Chem)</label><input type="text" id="jsaSigIntersectionSpv" placeholder="Nama"></div>
+    <div class="form-group"><label>Nama Approval Tambahan (Dept. Manager / Sr. Manager / President Director — sesuai Risk Level di atas)</label><input type="text" id="jsaSigAdditionalApproval" placeholder="Nama (kosongkan kalau Risk Level Low/Medium)"></div>
+  </div>
+
+  <!-- ══ PLANT PROCESS & RISK CHECKLIST (Table 1 matrix) ══ -->
+  <div class="section-title">☑️ Plant Process &amp; Risk Checklist</div>
+  <div class="section-box">
+    <div class="form-group">
+      <label>Online / Offline (berlaku untuk baris UNIT/SYSTEM/EQUIPMENT)</label>
+      <select id="jsaOnlineOffline">
+        <option value="">— Tidak dipilih —</option>
+        <option value="online">Online</option>
+        <option value="offline">Offline</option>
+      </select>
+    </div>
+    <div id="jsaChecklistContainer"></div>
   </div>
 
   <!-- ══ STEPS + HAZARD ══ -->
   <div class="section-title">🪜 Langkah Pekerjaan &amp; Hazard</div>
   <div id="jsaSectionsContainer"></div>
+
+  <!-- ══ CONTROL MEASURES SELECTION (Table 3, nested) ══ -->
+  <div class="section-title">🛡️ Control Measures Selection</div>
+  <div class="section-box">
+    <div id="jsaControlMeasuresContainer"></div>
+  </div>
+
+  <!-- ══ ADDITIONAL CONTROL MEASURES ══ -->
+  <div class="section-title">📝 Additional Control Measures (Please Specify)</div>
+  <div class="section-box">
+    <div style="font-size:0.8em;color:#666;margin-bottom:8px">Maksimal 4 baris (mengikuti slot di template Word). "Warning and Instruction to RIC" TIDAK bisa diubah lewat form ini — tetap standar perusahaan.</div>
+    <button type="button" class="btn btn-gray" style="margin-bottom:10px" onclick="jsaAutoFillAdditionalMeasures()">⚡ Isi Otomatis dari Control Measures di Step</button>
+    <div class="form-group"><label>1.</label><input type="text" id="jsaAddMeasure1"></div>
+    <div class="form-group"><label>2.</label><input type="text" id="jsaAddMeasure2"></div>
+    <div class="form-group"><label>3.</label><input type="text" id="jsaAddMeasure3"></div>
+    <div class="form-group"><label>4.</label><input type="text" id="jsaAddMeasure4"></div>
+  </div>
 
   <div class="no-print" style="margin-top:20px">
     <button class="btn btn-green btn-full" onclick="jsaSaveDraft()" style="padding:13px;font-size:1em">💾 Simpan Draft</button>
@@ -166,9 +211,115 @@ var JSA_SECTIONS_META = [
 // step = {text, hazards:[{hazard, risk, control}]} -- risk/control disimpan
 // sebagai STRING multi-baris (1 baris textarea = 1 paragraf di Word nanti,
 // di-split saat generate), supaya gampang dibind langsung ke <textarea>.
+// checklist/controlMeasures: key -> boolean (checkbox Table 1 matrix /
+// Table 3 Control Measures Selection -- lihat JSA_CHECKLIST_ITEMS/
+// JSA_CONTROL_MEASURES_ITEMS di bawah).
 var jsaState = {
-  sections: { A: {steps: []}, B: {steps: []}, C: {steps: []} }
+  sections: { A: {steps: []}, B: {steps: []}, C: {steps: []} },
+  checklist: {},
+  controlMeasures: {}
 };
+
+// ── Item checklist Table 1 (Plant Process Hazard Identification + Risk
+//    detail) -- {row, labelCol, cbCol} adalah index PERSIS hasil pembacaan
+//    XML mentah jsa_template.docx (lihat riwayat percakapan/CLAUDE.md kalau
+//    perlu verifikasi ulang). Cuma item yang checkbox-nya JELAS/tidak
+//    ambigu yang dimasukkan sini -- beberapa sel di template asli adalah
+//    HEADER GRUP (mis. "Hazardous Substances", "Work Environment", "Fire
+//    Risk", "Electrical Hazard", "Others") yang punya sub-kolom "YES"/"NO"
+//    sendiri TANPA checkbox tunggal yang jelas -- SENGAJA dilewati, bukan
+//    kelupaan.
+var JSA_CHECKLIST_ITEMS = [
+  {key:'traffic', label:'Traffic (Pedestrian)', row:11, labelCol:4, cbCol:5},
+  {key:'general_lifting', label:'General Lifting', row:12, labelCol:0, cbCol:1},
+  {key:'chlorine', label:'Chlorine (Cl2)', row:12, labelCol:2, cbCol:3},
+  {key:'heat', label:'Heat', row:12, labelCol:5, cbCol:6},
+  {key:'class_c', label:'Class C (energized elect. equipment)', row:12, labelCol:8, cbCol:9},
+  {key:'heavy_lifting', label:'Heavy/Complex Lifting', row:13, labelCol:0, cbCol:1},
+  {key:'h2s', label:'Hydrogen Sulfide (H2S)', row:13, labelCol:2, cbCol:3},
+  {key:'slippery', label:'Slippery Surfaces', row:13, labelCol:5, cbCol:6},
+  {key:'class_b', label:'Class B (flammable liquid or gas)', row:13, labelCol:8, cbCol:9},
+  {key:'ammonia', label:'Ammonia (NH3)', row:14, labelCol:1, cbCol:2},
+  {key:'cold', label:'Cold', row:14, labelCol:4, cbCol:5},
+  {key:'class_a', label:'Class A (combustible solid material)', row:14, labelCol:7, cbCol:8},
+  {key:'confined_space', label:'Confined Space', row:15, labelCol:0, cbCol:1},
+  {key:'co', label:'Carbon Monoxide (CO)', row:15, labelCol:2, cbCol:3},
+  {key:'lighting', label:'Lighting', row:15, labelCol:5, cbCol:6},
+  {key:'excavation', label:'Excavation', row:16, labelCol:0, cbCol:1},
+  {key:'ozone', label:'Ozone (O3)', row:16, labelCol:2, cbCol:3},
+  {key:'humidity', label:'Humidity', row:16, labelCol:5, cbCol:6},
+  {key:'underwater', label:'Underwater Work', row:17, labelCol:0, cbCol:1},
+  {key:'so2', label:'Sulfur Dioxide (SO2)', row:17, labelCol:2, cbCol:3},
+  {key:'hot_work', label:'HOT WORK', row:18, labelCol:0, cbCol:1},
+  {key:'xray', label:'X-Ray / Radiografi', row:18, labelCol:2, cbCol:3},
+  {key:'high_voltage', label:'High Voltage', row:18, labelCol:5, cbCol:6},
+  {key:'entrapment', label:'Entrapment', row:18, labelCol:8, cbCol:9},
+  {key:'working_at_high', label:'WORKING AT HIGH', row:19, labelCol:0, cbCol:1},
+  {key:'co2', label:'Carbon Dioxide (CO2)', row:19, labelCol:2, cbCol:3},
+  {key:'low_voltage', label:'Low Voltage', row:19, labelCol:5, cbCol:6},
+  {key:'manual_handling', label:'Manual Handling', row:19, labelCol:8, cbCol:9},
+  {key:'online_voltage', label:'Online Low & High Voltage', row:20, labelCol:0, cbCol:1},
+  {key:'chem_contaminant', label:'Chemical Contaminant', row:20, labelCol:2, cbCol:3},
+  {key:'env_impact', label:'Environmental Impact', row:20, labelCol:8, cbCol:9},
+  {key:'offline_voltage', label:'Offline High Voltage', row:21, labelCol:0, cbCol:1},
+  {key:'dust', label:'Dust', row:21, labelCol:2, cbCol:3},
+  {key:'steam', label:'Steam', row:7, labelCol:3, cbCol:4},
+  {key:'oxygen_deficiency', label:'Oxygen Deficiency', row:7, labelCol:6, cbCol:7},
+  {key:'hydrogen_gas', label:'Hydrogen gas', row:7, labelCol:9, cbCol:10},
+  {key:'hot_water', label:'Hot Water', row:8, labelCol:3, cbCol:4},
+  {key:'fumes_vapors', label:'Fumes/Vapors', row:8, labelCol:6, cbCol:7},
+  {key:'fuel_oil', label:'Fuel Oil', row:8, labelCol:9, cbCol:10},
+  {key:'pressurized_water', label:'Pressurized Water', row:9, labelCol:3, cbCol:4},
+  {key:'lube_oil', label:'Lube Oil', row:9, labelCol:9, cbCol:10},
+  {key:'rotating_parts', label:'Rotating Parts', row:10, labelCol:3, cbCol:4},
+  {key:'height_falls', label:'Height/Falls', row:10, labelCol:6, cbCol:7},
+  {key:'coal', label:'Coal', row:10, labelCol:9, cbCol:10}
+];
+
+// ── Item Control Measures Selection (Table 3, tabel BERSARANG di dalam
+//    Table 3 -- lihat jsaGetNestedControlTable()). Checkbox di sini pakai
+//    mekanisme Word CONTENT CONTROL asli (<w:sdt><w14:checkbox>...), BEDA
+//    dari Table 1 yang cuma karakter ☐/☒ polos -- lihat jsaSetSdtCheckbox().
+//    row = index baris di tabel bersarang (0 = header "CONTROL MEASURES
+//    SELECTION", 1-18 = item, masing-masing 4 logical cell: label|cb|label2|cb2). ──
+var JSA_CONTROL_MEASURES_ITEMS = [
+  {key:'cm_no_isolation', label:'No Isolation Needed', row:1, side:0},
+  {key:'cm_safety_helmet', label:'Safety Helmet', row:1, side:1},
+  {key:'cm_isolate_elec_power', label:'Isolate Electrical Power supply', row:2, side:0},
+  {key:'cm_safety_shoes', label:'Safety Shoes', row:2, side:1},
+  {key:'cm_isolate_elec_control', label:'Isolate Electrical power control', row:3, side:0},
+  {key:'cm_eye_protection', label:'Eye Protection', row:3, side:1},
+  {key:'cm_grounding', label:'Grounding / Earthing', row:4, side:0},
+  {key:'cm_hearing_protection', label:'Hearing Protection (earmuff/ear plug)', row:4, side:1},
+  {key:'cm_continue_cooling', label:'Continue cooling', row:5, side:0},
+  {key:'cm_welding_mask', label:'Welding Mask', row:5, side:1},
+  {key:'cm_release_pressure', label:'Release pressure', row:6, side:0},
+  {key:'cm_leather_apron', label:'Leather apron/gauntlet', row:6, side:1},
+  {key:'cm_signs_erected', label:'Signs Erected', row:7, side:0},
+  {key:'cm_leather_gloves', label:'Leather gloves', row:7, side:1},
+  {key:'cm_gas_test', label:'Gas test', row:8, side:0},
+  {key:'cm_dust_mask', label:'Dust Mask', row:8, side:1},
+  {key:'cm_personal_gas_monitor', label:'Personal Gas monitor', row:9, side:0},
+  {key:'cm_rubber_gloves', label:'Rubber Gloves', row:9, side:1},
+  {key:'cm_barricades', label:'Barricades Erected', row:10, side:0},
+  {key:'cm_rubber_apron', label:'Rubber apron', row:10, side:1},
+  {key:'cm_empty_vessel', label:'Empty vessel/draining', row:11, side:0},
+  {key:'cm_safety_boot_chemical', label:'Safety boot for chemical', row:11, side:1},
+  {key:'cm_clean_purge', label:'Clean/purge/flushing', row:12, side:0},
+  {key:'cm_safety_goggles', label:'Safety Goggles', row:12, side:1},
+  {key:'cm_venting', label:'Venting', row:13, side:0},
+  {key:'cm_safety_harness', label:'Safety harness', row:13, side:1},
+  {key:'cm_fire_extinguisher', label:'Fire Extinguisher prepared', row:14, side:0},
+  {key:'cm_scba', label:'Self-Contain Breathing Apparatus (SCBA)', row:14, side:1},
+  {key:'cm_remove_flammable', label:'Remove flammable materials', row:15, side:0},
+  {key:'cm_radio_comm', label:'Radio communication', row:15, side:1},
+  {key:'cm_force_logic', label:'Force Logic required', row:16, side:0},
+  {key:'cm_standby_watch', label:'Standby/watch person', row:16, side:1},
+  {key:'cm_face_shield', label:'Face Shield', row:17, side:0},
+  {key:'cm_fire_watcher', label:'Fire Watcher person', row:17, side:1},
+  {key:'cm_others', label:'Others', row:18, side:0},
+  {key:'cm_safety_officer', label:'Safety Officer', row:18, side:1}
+];
 
 var jsaHazardBank = []; // dimuat dari jsa_hazard_bank.json
 var jsaHazardPickerTarget = null; // {sectionCode, stepIdx} -- step yang lagi dibuka pickernya
@@ -214,6 +365,74 @@ function jsaUpdateHazardField(code, stepIdx, hzIdx, field, val) {
 
 function jsaEsc(s) {
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function jsaToggleChecklist(key, checked) {
+  jsaState.checklist[key] = checked;
+}
+function jsaRenderChecklist() {
+  var container = document.getElementById('jsaChecklistContainer');
+  container.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">' +
+    JSA_CHECKLIST_ITEMS.map(function(item) {
+      var checked = jsaState.checklist[item.key] ? 'checked' : '';
+      return '<label style="display:flex;align-items:center;gap:8px;font-size:0.85em;padding:4px 0;cursor:pointer">' +
+        '<input type="checkbox" style="width:auto" ' + checked + ' onchange="jsaToggleChecklist(\'' + item.key + '\',this.checked)">' +
+        jsaEsc(item.label) + '</label>';
+    }).join('') + '</div>';
+}
+
+function jsaToggleControlMeasure(key, checked) {
+  jsaState.controlMeasures[key] = checked;
+}
+function jsaRenderControlMeasures() {
+  var container = document.getElementById('jsaControlMeasuresContainer');
+  container.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">' +
+    JSA_CONTROL_MEASURES_ITEMS.map(function(item) {
+      var checked = jsaState.controlMeasures[item.key] ? 'checked' : '';
+      return '<label style="display:flex;align-items:center;gap:8px;font-size:0.85em;padding:4px 0;cursor:pointer">' +
+        '<input type="checkbox" style="width:auto" ' + checked + ' onchange="jsaToggleControlMeasure(\'' + item.key + '\',this.checked)">' +
+        jsaEsc(item.label) + '</label>';
+    }).join('') + '</div>';
+}
+
+// Peta Risk Level (HIRA) -> nama field approval tambahan yang perlu diisi +
+// baris di Table 1 mana ("Refer HIRA risk Level" -- lihat template asli).
+// Low/Medium sengaja tidak butuh approval tambahan (bukan bug).
+var JSA_RISK_LEVEL_APPROVAL = {
+  high: 'Dept. Manager (11-17)',
+  extreme1: 'Sr. Manager (18-22)',
+  extreme2: 'President Director (23-25)'
+};
+function jsaRenderApprovalHint() {
+  var level = document.getElementById('jsaRiskLevel').value;
+  var hint = document.getElementById('jsaApprovalHint');
+  var need = JSA_RISK_LEVEL_APPROVAL[level];
+  hint.innerHTML = need
+    ? '<span style="font-size:0.8em;color:#a35c1f;font-weight:600">⚠️ Butuh approval tambahan: ' + need + '</span>'
+    : '<span style="font-size:0.8em;color:#2ecc71">Tidak butuh approval tambahan.</span>';
+}
+
+// "Isi Otomatis" -- kumpulkan SEMUA baris Control Measures yang sudah
+// diketik user di step manapun (Table 2), ambil yang UNIK, isi ke 4 slot
+// Additional Control Measures (kalau lebih dari 4, sisanya dibuang -- kasih
+// tahu user lewat alert supaya tidak diam-diam kepotong).
+function jsaAutoFillAdditionalMeasures() {
+  var seen = {};
+  var unique = [];
+  Object.keys(jsaState.sections).forEach(function(code) {
+    jsaState.sections[code].steps.forEach(function(step) {
+      step.hazards.forEach(function(hz) {
+        (hz.control || '').split('\n').map(function(s){return s.trim();}).filter(Boolean).forEach(function(line) {
+          var key = line.toLowerCase();
+          if (!seen[key]) { seen[key] = true; unique.push(line); }
+        });
+      });
+    });
+  });
+  if (!unique.length) { alert('Belum ada Control Measures yang diisi di step manapun.'); return; }
+  var slots = ['jsaAddMeasure1','jsaAddMeasure2','jsaAddMeasure3','jsaAddMeasure4'];
+  slots.forEach(function(id, i) { document.getElementById(id).value = unique[i] || ''; });
+  if (unique.length > 4) alert('Ada ' + unique.length + ' control measures unik, cuma 4 slot yang tersedia di template -- sisanya (' + (unique.length - 4) + ') tidak ikut diisi. Silakan pilih manual kalau perlu yang lain.');
 }
 
 function jsaRenderSections() {
@@ -312,23 +531,33 @@ function dbCollectData(modul) {
   return {
     modul: 'JSA Report',
     tanggal: new Date().toISOString().split('T')[0],
-    pic: document.getElementById('jsaSigApplicant').value || null,
+    pic: document.getElementById('jsaSigOpSupervisor').value || null,
     work_order: document.getElementById('jsaWo').value || null,
     data: {
       equipTag: document.getElementById('jsaEquipTag').value || '',
       workToBeDone: document.getElementById('jsaWorkToBeDone').value || '',
       workMethod: document.getElementById('jsaWorkMethod').value || '',
       hiraRef: document.getElementById('jsaHiraRef').value || '',
+      riskToTrip: document.getElementById('jsaRiskToTrip').value || '',
       riskCategory: document.getElementById('jsaRiskCategory').value || 'LOW',
+      riskLevel: document.getElementById('jsaRiskLevel').value || '',
       priority: document.getElementById('jsaPriority').value || '',
       epas: document.getElementById('jsaEpas').value || '',
       periodStart: document.getElementById('jsaPeriodStart').value || '',
       periodFinish: document.getElementById('jsaPeriodFinish').value || '',
-      sigApplicant: document.getElementById('jsaSigApplicant').value || '',
+      onlineOffline: document.getElementById('jsaOnlineOffline').value || '',
       sigOpSupervisor: document.getElementById('jsaSigOpSupervisor').value || '',
-      sigHealthSafety: document.getElementById('jsaSigHealthSafety').value || '',
       sigRic: document.getElementById('jsaSigRic').value || '',
       sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || '',
+      sigHealthSafety: document.getElementById('jsaSigHealthSafety').value || '',
+      sigIntersectionSpv: document.getElementById('jsaSigIntersectionSpv').value || '',
+      sigAdditionalApproval: document.getElementById('jsaSigAdditionalApproval').value || '',
+      addMeasure1: document.getElementById('jsaAddMeasure1').value || '',
+      addMeasure2: document.getElementById('jsaAddMeasure2').value || '',
+      addMeasure3: document.getElementById('jsaAddMeasure3').value || '',
+      addMeasure4: document.getElementById('jsaAddMeasure4').value || '',
+      checklist: jsaState.checklist,
+      controlMeasures: jsaState.controlMeasures,
       sections: jsaState.sections
     }
   };
@@ -340,21 +569,34 @@ function applyRecordToForm(rec) {
   document.getElementById('jsaWorkToBeDone').value = d.workToBeDone || '';
   document.getElementById('jsaWorkMethod').value = d.workMethod || '';
   document.getElementById('jsaHiraRef').value = d.hiraRef || '';
+  document.getElementById('jsaRiskToTrip').value = d.riskToTrip || '';
   document.getElementById('jsaRiskCategory').value = d.riskCategory || 'LOW';
+  document.getElementById('jsaRiskLevel').value = d.riskLevel || '';
   document.getElementById('jsaWo').value = rec.work_order || '';
   document.getElementById('jsaPriority').value = d.priority || '';
   document.getElementById('jsaEpas').value = d.epas || '';
   document.getElementById('jsaPeriodStart').value = d.periodStart || '';
   document.getElementById('jsaPeriodFinish').value = d.periodFinish || '';
-  document.getElementById('jsaSigApplicant').value = d.sigApplicant || rec.pic || '';
-  document.getElementById('jsaSigOpSupervisor').value = d.sigOpSupervisor || '';
-  document.getElementById('jsaSigHealthSafety').value = d.sigHealthSafety || '';
+  document.getElementById('jsaOnlineOffline').value = d.onlineOffline || '';
+  document.getElementById('jsaSigOpSupervisor').value = d.sigOpSupervisor || rec.pic || '';
   document.getElementById('jsaSigRic').value = d.sigRic || '';
   document.getElementById('jsaSigMaintSupervisor').value = d.sigMaintSupervisor || '';
+  document.getElementById('jsaSigHealthSafety').value = d.sigHealthSafety || '';
+  document.getElementById('jsaSigIntersectionSpv').value = d.sigIntersectionSpv || '';
+  document.getElementById('jsaSigAdditionalApproval').value = d.sigAdditionalApproval || '';
+  document.getElementById('jsaAddMeasure1').value = d.addMeasure1 || '';
+  document.getElementById('jsaAddMeasure2').value = d.addMeasure2 || '';
+  document.getElementById('jsaAddMeasure3').value = d.addMeasure3 || '';
+  document.getElementById('jsaAddMeasure4').value = d.addMeasure4 || '';
+  jsaState.checklist = d.checklist || {};
+  jsaState.controlMeasures = d.controlMeasures || {};
   jsaState.sections = (d.sections && d.sections.A && d.sections.B && d.sections.C)
     ? d.sections
     : {A:{steps:[]}, B:{steps:[]}, C:{steps:[]}};
   jsaRenderSections();
+  jsaRenderChecklist();
+  jsaRenderControlMeasures();
+  jsaRenderApprovalHint();
 }
 
 function jsaSaveDraft() {
@@ -440,18 +682,6 @@ function jsaSetParagraphText(p, newText) {
   run.appendChild(jsaTextNode(doc, newText));
   p.appendChild(run);
 }
-// Ganti isi 1 <w:t> tunggal (dipakai utk toggle checkbox 'x'/'o' Risk
-// Category) -- cari <w:t> pertama di dalam sel lewat direct-child paragraf
-// -> direct-child run -> direct-child t (tidak perlu ganti seluruh paragraf).
-function jsaSetSoleCheckboxText(tc, val) {
-  var ps = jsaDirectChildren(tc, 'p');
-  if (!ps.length) return;
-  var runs = jsaDirectChildren(ps[0], 'r');
-  if (!runs.length) return;
-  var ts = jsaDirectChildren(runs[0], 't');
-  if (!ts.length) return;
-  ts[0].textContent = val;
-}
 
 function jsaFmtDateTime(localVal) {
   // input type="datetime-local" -> "YYYY-MM-DDTHH:MM" ; format tampilan
@@ -462,16 +692,60 @@ function jsaFmtDateTime(localVal) {
   return m[3] + '/' + m[2] + '/' + m[1] + '   ' + m[4] + ':' + m[5];
 }
 
+// Toggle Word content-control checkbox yang TERSISIP DI TENGAH sebuah
+// paragraf (bukan membungkus seluruh <w:tc> seperti di Table 3) -- dipakai
+// khusus utk Risk Level (row 2 tc1-4), lihat catatan panjang di
+// jsaFillTable1. Update DUA hal sekaligus (w14:checked ATTRIBUTE + karakter
+// run yang tampil) -- Word/LibreOffice bisa merender checkbox dari
+// w14:checked SAJA walau run-nya kosong, tapi tetap set keduanya supaya
+// konsisten kalau dibuka software lain yang cuma baca run text-nya.
+function jsaToggleInlineSdtCheckbox(sdtEl, checked) {
+  var sdtPr = jsaDirectChildren(sdtEl, 'sdtPr')[0];
+  var cb = sdtPr ? sdtPr.getElementsByTagNameNS(JSA_W14_NS, 'checkbox')[0] : null;
+  var checkedEl = cb ? cb.getElementsByTagNameNS(JSA_W14_NS, 'checked')[0] : null;
+  if (checkedEl) checkedEl.setAttributeNS(JSA_W14_NS, 'w14:val', checked ? '1' : '0');
+  var content = jsaDirectChildren(sdtEl, 'sdtContent')[0];
+  if (content) {
+    var ts = content.getElementsByTagNameNS(JSA_W_NS, 't');
+    if (ts.length) ts[0].textContent = checked ? '☒' : '☐';
+  }
+}
+
+// Set/insert satu karakter checkbox ☒ (checked) / ☐ (unchecked) sebagai
+// PLAIN TEXT ke direct-child pertama paragraf sebuah sel -- dipakai untuk
+// checkbox Table 1 lainnya (Risk Category, Online/Offline, Plant Process
+// Hazard Identification -- SEMUANYA karakter unicode polos, BUKAN Word
+// content-control). Kalau selnya kosong sama sekali (tidak ada <w:r>, kasus
+// nyata ditemukan di beberapa baris real dokumen ini), BUAT run baru --
+// jangan asumsikan selalu ada run yang tinggal diganti teksnya.
+function jsaSetGlyphCheckbox(tc, checked) {
+  if (!tc) return;
+  var glyph = checked ? '☒' : '☐'; // ☒ / ☐
+  var ps = jsaDirectChildren(tc, 'p');
+  var p = ps[0];
+  if (!p) { p = jsaMk(tc.ownerDocument, 'w:p'); tc.appendChild(p); }
+  var runs = jsaDirectChildren(p, 'r');
+  if (runs.length) {
+    var ts = jsaDirectChildren(runs[0], 't');
+    if (ts.length) { ts[0].textContent = glyph; return; }
+  }
+  var doc = tc.ownerDocument;
+  var r = jsaMk(doc, 'w:r');
+  r.appendChild(jsaTextNode(doc, glyph));
+  p.appendChild(r);
+}
+
 function jsaFillTable1(tbl1, form) {
   var rows = jsaDirectChildren(tbl1, 'tr');
   function tc(rowIdx, tcIdx) { return jsaDirectChildren(rows[rowIdx], 'tc')[tcIdx]; }
   function soleP(rowIdx, tcIdx) { return jsaDirectChildren(tc(rowIdx, tcIdx), 'p')[0]; }
+  function lastP(rowIdx, tcIdx) { var ps = jsaDirectChildren(tc(rowIdx, tcIdx), 'p'); return ps[ps.length - 1]; }
 
   // Row 0 tc0: p[0]=label "Area to be Access...(KKS No.): " (JANGAN disentuh), p[1]=value
   var equipPs = jsaDirectChildren(tc(0, 0), 'p');
   jsaSetParagraphText(equipPs[1], form.equipTag);
 
-  // Row 1 tc0: p[0]=label "Work to be Done:   " (JANGAN disentuh), p[1]=value
+  // Row 1 tc0: p[0]=label "Work to be Done:" (JANGAN disentuh), p[1]=value
   var wtbdPs = jsaDirectChildren(tc(1, 0), 'p');
   jsaSetParagraphText(wtbdPs[1], form.workToBeDone);
 
@@ -479,7 +753,6 @@ function jsaFillTable1(tbl1, form) {
   // per poin -- dibongkar semua lalu dibangun ulang sejumlah baris input.
   var wmTc = tc(1, 1);
   var wmPs = jsaDirectChildren(wmTc, 'p');
-  var wmLabelP = wmPs[0];
   var wmTemplateP = wmPs[1] || wmPs[0]; // dipakai contoh formatting rPr utk baris baru
   var wmRunsTemplate = jsaDirectChildren(wmTemplateP, 'r');
   var wmRpr = wmRunsTemplate.length ? jsaDirectChildren(wmRunsTemplate[0], 'rPr')[0] : null;
@@ -498,29 +771,81 @@ function jsaFillTable1(tbl1, form) {
     wmTc.appendChild(p);
   });
 
-  // Row 2 tc1: HIRA reference value (paragraf kosong di template)
-  jsaSetParagraphText(soleP(2, 1), form.hiraRef);
+  // Row 2 tc0: "HIRA reference no: ..." -- 1 paragraf gabungan label+value,
+  // ganti seluruhnya.
+  jsaSetParagraphText(soleP(2, 0), 'HIRA reference no: ' + form.hiraRef);
 
-  // Row 8/9 tc[2]: toggle Risk Category LOW/HIGH ('x' yang dipilih, 'o' lainnya)
-  jsaSetSoleCheckboxText(tc(8, 2), form.riskCategory === 'LOW' ? 'x' : 'o');
-  jsaSetSoleCheckboxText(tc(9, 2), form.riskCategory === 'HIGH' ? 'x' : 'o');
+  // Row 2 tc1-4: checkbox Risk Level (Low/Medium/High/Extreme) -- BUKAN
+  // karakter ☐/☒ polos seperti dugaan awal, ternyata Word content-control
+  // (<w:sdt>) TERSISIP DI TENGAH paragraf (bukan membungkus seluruh sel
+  // seperti Table 3) -- ketahuan dari w14:checked di tc3/tc4 bernilai 1
+  // padahal glyph run-nya KOSONG (Word/LibreOffice tetap merender checkbox
+  // tercentang dari metadata w14:checked, TIDAK bergantung ke isi run-nya
+  // -- makanya riset awal sempat salah simpul "tidak ada checkbox" dari
+  // sekadar mencari karakter ☐/☒ di teks). tc4 (Extreme) PUNYA 2 sdt
+  // terpisah (18-22 dan 23-25, digabung 1 sel lewat kata "or") -- jsaState
+  // pakai 2 opsi terpisah (extreme1/extreme2) yang dipetakan ke sdt index
+  // ke-0/ke-1 di tc4. Semua 5 slot direset ke unchecked dulu SEBELUM slot
+  // terpilih di-set, supaya tidak ada sisa centang dari job asli sumber
+  // template ini nyangkut di pilihan yang tidak dipilih user.
+  var RISK_LEVEL_SLOTS = {low:[1,0], medium:[2,0], high:[3,0], extreme1:[4,0], extreme2:[4,1]};
+  Object.keys(RISK_LEVEL_SLOTS).forEach(function(key) {
+    var slot = RISK_LEVEL_SLOTS[key];
+    var cellTc = tc(2, slot[0]);
+    var sdts = cellTc.getElementsByTagNameNS(JSA_W_NS, 'sdt');
+    var sdt = sdts[slot[1]];
+    if (sdt) jsaToggleInlineSdtCheckbox(sdt, key === form.riskLevel);
+  });
 
-  // Row 20: WO / Priority / EPAS App (masing-masing "Label: value" 1 paragraf)
-  jsaSetParagraphText(soleP(20, 2), 'WO: ' + form.wo);
-  jsaSetParagraphText(soleP(20, 3), 'Priority no.: ' + form.priority);
-  jsaSetParagraphText(soleP(20, 4), 'EPAS App: ' + form.epas);
+  // Row 3 tc1: "RISK TO TRIP, No: ...." -- 1 paragraf gabungan, ganti seluruhnya.
+  jsaSetParagraphText(soleP(3, 1), 'RISK TO TRIP, No: ' + form.riskToTrip);
 
-  // Row 21: Work Period Start/Finish (sel value TERPISAH dari sel label)
-  jsaSetParagraphText(soleP(21, 3), jsaFmtDateTime(form.periodStart));
-  jsaSetParagraphText(soleP(21, 5), jsaFmtDateTime(form.periodFinish));
+  // Row 6/7/8 tc1(Online)/tc2(Offline) -- UNIT/SYSTEM/EQUIPMENT, 1 pilihan
+  // berlaku utk ketiganya sekaligus (mengikuti cara form ini biasa diisi --
+  // ketiga baris SELALU sama, tidak pernah campur).
+  [6, 7, 8].forEach(function(r) {
+    jsaSetGlyphCheckbox(tc(r, 1), form.onlineOffline === 'online');
+    jsaSetGlyphCheckbox(tc(r, 2), form.onlineOffline === 'offline');
+  });
 
-  // Row 23: nama Signature (Applicant/Op.Supervisor/Health&Safety/RIC/Maint.Supervisor)
-  // -- kolom label perannya ada di row 22 pada index tc yang SAMA.
-  jsaSetParagraphText(soleP(23, 2), form.sigApplicant);
-  jsaSetParagraphText(soleP(23, 3), form.sigOpSupervisor);
-  jsaSetParagraphText(soleP(23, 4), form.sigHealthSafety);
-  jsaSetParagraphText(soleP(23, 5), form.sigRic);
-  jsaSetParagraphText(soleP(23, 6), form.sigMaintSupervisor);
+  // Row 9/10 tc[2]: toggle Risk Category LOW/HIGH (☒/☐, karakter unicode
+  // polos -- BEDA dari template lama yang pakai huruf 'x'/'o' polos).
+  jsaSetGlyphCheckbox(tc(9, 2), form.riskCategory === 'LOW');
+  jsaSetGlyphCheckbox(tc(10, 2), form.riskCategory === 'HIGH');
+
+  // Checklist Plant Process Hazard Identification + Risk detail (42 item,
+  // lihat JSA_CHECKLIST_ITEMS) -- SEMUA di-set eksplisit (checked ATAU
+  // unchecked) supaya hasilnya deterministik, tidak tercampur sisa checklist
+  // dari job REAL yang jadi sumber template ini.
+  JSA_CHECKLIST_ITEMS.forEach(function(item) {
+    jsaSetGlyphCheckbox(tc(item.row, item.cbCol), !!form.checklist[item.key]);
+  });
+
+  // Row 22: WO / Priority / EPAS App (masing-masing "Label: value" 1 paragraf)
+  jsaSetParagraphText(soleP(22, 2), 'WO : ' + form.wo);
+  jsaSetParagraphText(soleP(22, 3), 'Priority no.: ' + form.priority);
+  jsaSetParagraphText(soleP(22, 4), 'EPAS App: ' + form.epas);
+
+  // Row 23: Work Period Start/Finish (sel value TERPISAH dari sel label)
+  jsaSetParagraphText(soleP(23, 3), jsaFmtDateTime(form.periodStart));
+  jsaSetParagraphText(soleP(23, 5), jsaFmtDateTime(form.periodFinish));
+
+  // Row 25: nama Signature -- kolom label perannya ada di row 24 pada index
+  // tc yang SAMA. tc3 (RIC) punya 2 paragraf (bekas lokasi tanda tangan asli
+  // yang sudah disanitasi -- lihat CLAUDE.md), makanya pakai lastP bukan soleP.
+  jsaSetParagraphText(lastP(25, 2), form.sigOpSupervisor);
+  jsaSetParagraphText(lastP(25, 3), form.sigRic);
+  jsaSetParagraphText(lastP(25, 4), form.sigMaintSupervisor);
+  jsaSetParagraphText(lastP(25, 5), form.sigHealthSafety);
+  jsaSetParagraphText(lastP(25, 6), form.sigIntersectionSpv);
+
+  // Row 27: nama Approval Tambahan -- HANYA salah satu tc (4/5/6) yang
+  // diisi, sesuai Risk Level yang dipilih user (lihat JSA_RISK_LEVEL_APPROVAL).
+  // Low/Medium/kosong -> tidak ada yang diisi (approval tambahan memang
+  // tidak dibutuhkan, bukan lupa).
+  var approvalTcByLevel = {high: 4, extreme1: 5, extreme2: 6};
+  var approvalTcIdx = approvalTcByLevel[form.riskLevel];
+  if (approvalTcIdx) jsaSetParagraphText(lastP(27, approvalTcIdx), form.sigAdditionalApproval);
 }
 
 // ── Table 2 (JOB SAFETY ANALYSIS) -- row0 (judul abu-abu) & row1 (header
@@ -530,7 +855,11 @@ function jsaFillTable1(tbl1, form) {
 //    -- SEMUA baris pakai border top/bottom dotted seragam (bukan
 //    double/single khusus baris terakhir seperti template JSA_Standard.docx
 //    yang lama), jauh lebih sederhana. ──
-var JSA_COLW = [306, 4031, 2713, 2943, 5316];
+// 4 kolom (Work Sequence|Hazards|Risk|Control) -- template BARU ini TIDAK
+// PUNYA kolom "No." terpisah (beda dari template lama). Penomoran step
+// ("6. Housekeeping area kerja", dst -- lihat contoh asli di dokumen)
+// ditulis manual sebagai bagian dari teks Work Sequence itu sendiri.
+var JSA_COLW = [4765, 2610, 2700, 5220];
 
 function jsaBorders(doc, spec) {
   var b = jsaMk(doc, 'w:tcBorders');
@@ -598,29 +927,28 @@ function jsaSectionHeaderRow(doc, code, title) {
   p.appendChild(arialRun(code + '.'));
   p.appendChild(arialRun(title));
   var borders = jsaBorders(doc, {right: ['single', 4]});
-  var cell = jsaCell(doc, 15309, borders, [p], 5);
+  var cell = jsaCell(doc, 15295, borders, [p], 4);
   return jsaRow(doc, [cell]);
 }
 function jsaHazardTableRow(stepNo, stepText, hazardText, riskLines, controlLines, doc) {
   var isFirst = stepNo !== null;
-  var noBorders = jsaBorders(doc, isFirst ? {bottom:['dotted',4]} : {top:['dotted',4], bottom:['dotted',4]});
-  var noCell = jsaCell(doc, JSA_COLW[0], noBorders, [jsaCellP(doc, isFirst ? stepNo : '', {bold:true})]);
+  var wsText = isFirst ? (stepNo + '. ' + stepText) : '';
 
   var wsBorders = jsaBorders(doc, {top:['dotted',4], left:['single',4], bottom:['dotted',4], right:['double',6]});
-  var wsCell = jsaCell(doc, JSA_COLW[1], wsBorders, [jsaCellP(doc, isFirst ? stepText : '', {bold:true})]);
+  var wsCell = jsaCell(doc, JSA_COLW[0], wsBorders, [jsaCellP(doc, wsText, {bold:true})]);
 
   var hzBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['double',6]});
-  var hzCell = jsaCell(doc, JSA_COLW[2], hzBorders, [jsaCellP(doc, hazardText, {})]);
+  var hzCell = jsaCell(doc, JSA_COLW[1], hzBorders, [jsaCellP(doc, hazardText, {})]);
 
   var riskBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['double',6]});
   var riskParas = (riskLines.length ? riskLines : ['']).map(function(l){ return jsaCellP(doc, l, {jc:'center'}); });
-  var riskCell = jsaCell(doc, JSA_COLW[3], riskBorders, riskParas);
+  var riskCell = jsaCell(doc, JSA_COLW[2], riskBorders, riskParas);
 
   var ctrlBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['single',4]});
   var ctrlParas = (controlLines.length ? controlLines : ['']).map(function(l){ return jsaCellP(doc, l, {}); });
-  var ctrlCell = jsaCell(doc, JSA_COLW[4], ctrlBorders, ctrlParas);
+  var ctrlCell = jsaCell(doc, JSA_COLW[3], ctrlBorders, ctrlParas);
 
-  return jsaRow(doc, [noCell, wsCell, hzCell, riskCell, ctrlCell]);
+  return jsaRow(doc, [wsCell, hzCell, riskCell, ctrlCell]);
 }
 
 function jsaRebuildTable2(tbl2) {
@@ -661,18 +989,103 @@ function jsaCollectFormValues() {
     workToBeDone: document.getElementById('jsaWorkToBeDone').value || '',
     workMethod: document.getElementById('jsaWorkMethod').value || '',
     hiraRef: document.getElementById('jsaHiraRef').value || '',
+    riskToTrip: document.getElementById('jsaRiskToTrip').value || '',
     riskCategory: document.getElementById('jsaRiskCategory').value || 'LOW',
+    riskLevel: document.getElementById('jsaRiskLevel').value || '',
     wo: document.getElementById('jsaWo').value || '',
     priority: document.getElementById('jsaPriority').value || '',
     epas: document.getElementById('jsaEpas').value || '',
     periodStart: document.getElementById('jsaPeriodStart').value || '',
     periodFinish: document.getElementById('jsaPeriodFinish').value || '',
-    sigApplicant: document.getElementById('jsaSigApplicant').value || '',
+    onlineOffline: document.getElementById('jsaOnlineOffline').value || '',
     sigOpSupervisor: document.getElementById('jsaSigOpSupervisor').value || '',
-    sigHealthSafety: document.getElementById('jsaSigHealthSafety').value || '',
     sigRic: document.getElementById('jsaSigRic').value || '',
-    sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || ''
+    sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || '',
+    sigHealthSafety: document.getElementById('jsaSigHealthSafety').value || '',
+    sigIntersectionSpv: document.getElementById('jsaSigIntersectionSpv').value || '',
+    sigAdditionalApproval: document.getElementById('jsaSigAdditionalApproval').value || '',
+    addMeasures: [
+      document.getElementById('jsaAddMeasure1').value || '',
+      document.getElementById('jsaAddMeasure2').value || '',
+      document.getElementById('jsaAddMeasure3').value || '',
+      document.getElementById('jsaAddMeasure4').value || ''
+    ],
+    checklist: jsaState.checklist,
+    controlMeasures: jsaState.controlMeasures
   };
+}
+
+// ── Table 3 (CONTROL MEASURES SELECTION + Additional Control Measures +
+//    Warning and Instruction to RIC) -- SEMUANYA ada di dalam SATU tabel
+//    BERSARANG (nested <w:tbl>) di dalam sel tunggal Table 3 luar, lihat
+//    CLAUDE.md. "Warning and Instruction to RIC" (baris 24-28 tabel
+//    bersarang) SENGAJA TIDAK PERNAH disentuh fungsi ini sama sekali --
+//    permintaan eksplisit user, tetap standar perusahaan apa adanya. ──
+var JSA_W14_NS = 'http://schemas.microsoft.com/office/word/2010/wordml';
+
+function jsaGetNestedControlTable(tbl3) {
+  var outerTc = jsaDirectChildren(jsaDirectChildren(tbl3, 'tr')[0], 'tc')[0];
+  return jsaDirectChildren(outerTc, 'tbl')[0];
+}
+// Logical cells 1 baris tabel bersarang: campuran <w:tc> polos DAN
+// <w:tc> yang dibungkus <w:sdt><w:sdtContent> (checkbox Word asli) --
+// keduanya harus dikembalikan dalam urutan yang sama seperti tampilannya,
+// beserta elemen <w:sdt> pembungkusnya (null kalau bukan sdt) supaya
+// jsaSetSdtCheckbox tahu w14:checkbox mana yang harus diupdate.
+function jsaLogicalCells(tr) {
+  var out = [];
+  for (var i = 0; i < tr.childNodes.length; i++) {
+    var n = tr.childNodes[i];
+    if (n.nodeType !== 1 || n.namespaceURI !== JSA_W_NS) continue;
+    if (n.localName === 'tc') { out.push({tc: n, sdt: null}); }
+    else if (n.localName === 'sdt') {
+      var content = jsaDirectChildren(n, 'sdtContent')[0];
+      var tc = content ? jsaDirectChildren(content, 'tc')[0] : null;
+      if (tc) out.push({tc: tc, sdt: n});
+    }
+  }
+  return out;
+}
+// Toggle checkbox content-control Word asli (<w14:checkbox>) -- update DUA
+// hal sekaligus (harus konsisten, salah satu saja tidak cukup): atribut
+// w14:checked (dibaca Word sendiri kalau nanti dibuka lagi & tombolnya
+// diklik ulang) DAN karakter run yang benar-benar tampil (☒/☐, yang dibaca
+// mata manusia & ikut ke PDF/print). Kalau bukan sdt (fallback ke
+// jsaSetGlyphCheckbox saja).
+function jsaSetSdtCheckbox(cellInfo, checked) {
+  if (cellInfo.sdt) {
+    var sdtPr = jsaDirectChildren(cellInfo.sdt, 'sdtPr')[0];
+    var cb = sdtPr ? sdtPr.getElementsByTagNameNS(JSA_W14_NS, 'checkbox')[0] : null;
+    var checkedEl = cb ? cb.getElementsByTagNameNS(JSA_W14_NS, 'checked')[0] : null;
+    if (checkedEl) checkedEl.setAttributeNS(JSA_W14_NS, 'w14:val', checked ? '1' : '0');
+  }
+  jsaSetGlyphCheckbox(cellInfo.tc, checked);
+}
+
+function jsaFillTable3(tbl3, form) {
+  var nested = jsaGetNestedControlTable(tbl3);
+  var rows = jsaDirectChildren(nested, 'tr');
+
+  // Control Measures Selection: 36 item, row 1-18, side 0 (cell index 0-1)
+  // atau side 1 (cell index 2-3) -- lihat JSA_CONTROL_MEASURES_ITEMS.
+  JSA_CONTROL_MEASURES_ITEMS.forEach(function(item) {
+    var cells = jsaLogicalCells(rows[item.row]);
+    var cbCell = cells[item.side * 2 + 1];
+    if (cbCell) jsaSetSdtCheckbox(cbCell, !!form.controlMeasures[item.key]);
+  });
+
+  // Additional Control Measures: baris 20-23 tabel bersarang, 1 paragraf
+  // per baris, format "N. <isi>" (nomor tetap ada meski isi dikosongkan,
+  // persis pola template aslinya).
+  for (var i = 0; i < 4; i++) {
+    var cells = jsaLogicalCells(rows[20 + i]);
+    var p = jsaDirectChildren(cells[0].tc, 'p')[0];
+    var text = form.addMeasures[i] ? (i + 1) + '. ' + form.addMeasures[i] : (i + 1) + '.';
+    jsaSetParagraphText(p, text);
+  }
+  // Baris 24-28 (Warning and Instruction to RIC) SENGAJA tidak disebut di
+  // fungsi ini sama sekali -- jangan tambahkan kode utk baris itu di masa
+  // depan tanpa izin eksplisit user.
 }
 
 function jsaDownloadBlob(blob, filename) {
@@ -700,9 +1113,10 @@ function jsaGenerateWord() {
       if (xdoc.getElementsByTagName('parsererror').length) throw new Error('Template XML rusak/tidak valid.');
       var body = jsaDirectChildren(xdoc.documentElement, 'body')[0];
       var topTbls = jsaDirectChildren(body, 'tbl');
-      if (topTbls.length < 3) throw new Error('Struktur template tidak sesuai (tabel kurang dari 3).');
+      if (topTbls.length < 4) throw new Error('Struktur template tidak sesuai (tabel kurang dari 4).');
       jsaFillTable1(topTbls[1], form);
       jsaRebuildTable2(topTbls[2]);
+      jsaFillTable3(topTbls[3], form);
       var newXml = new XMLSerializer().serializeToString(xdoc);
       zip.file('word/document.xml', newXml);
       return zip.generateAsync({type: 'blob'});
@@ -720,6 +1134,9 @@ function jsaGenerateWord() {
 
 jsaLoadHazardBank();
 jsaRenderSections();
+jsaRenderChecklist();
+jsaRenderControlMeasures();
+jsaRenderApprovalHint();
 </script>
 </body>
 </html>

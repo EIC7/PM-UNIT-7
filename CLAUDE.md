@@ -1305,3 +1305,130 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   sama seperti `GENERATOR_STATOR_LEAK` vs `FEGT`). `raModulToUrl()` diarahkan
   ke `jsa_report.html?id=`. Tombol filter "JSA" ditambahkan di
   `history.html`, card baru ditambahkan di `index.html`.
+
+## JSA Report v2: ganti template ke "FORMAT JSA BARU.docx" + checklist lengkap (2026-09-03)
+
+- **Template diganti TOTAL** — user kirim `JSA/FORMAT JSA BARU.docx` (taruh
+  langsung di folder repo, bukan lewat upload chat) sebagai pengganti resmi
+  `jsa_template.docx` v1 (`JSA_BUILD_DISMANTLE_SCAFFOLDING_FINAL_CONTOH_BERSIH.docx`).
+  Struktur formulirnya BEDA CUKUP JAUH dari v1 — footer/referensi PI berubah
+  dari `PI-05-02-07-F01` ke `PI-05-03-01-F01`, Table 1 (info-header) naik
+  dari 25 jadi 28 baris, Table 2 (JSA) kehilangan kolom "No." terpisah.
+  **Ditemukan & disanitasi 2 tanda tangan asli lagi** sebelum dipakai
+  (standar privasi yang sama seperti template-template sebelumnya): scan
+  tanda tangan "Fajar ds." (dipakai 2x, `rId9`→`media/image2.png`) dan 1
+  scan tanpa nama di sebelah nama asli "Kurniawan" (RIC, `rId10`→
+  `media/image3.png`) — keduanya dihapus total dari file (bukan cuma
+  disembunyikan), lihat `sanitize_new_jsa_template.py` di riwayat kerja kalau
+  perlu reproduce untuk template berikutnya. `image4.png` (diagram logic
+  alarm furnace, konten teknis job asli, BUKAN data pribadi) sengaja
+  dibiarkan — toh ada di dalam Table 2 yang selalu dibongkar ulang oleh
+  `jsaRebuildTable2()`, jadi otomatis tidak pernah ikut ke output mana pun.
+- **🔴 Pelajaran penting (lagi) soal riset struktur XML sebelum coding**:
+  riset awal mengira checkbox Risk Level (Low/Medium/High/Extreme, row 2
+  tc1-4) TIDAK BISA ditoggle otomatis karena tc High/Extreme kelihatannya
+  "tidak punya checkbox sama sekali" (dicari lewat teks ☐/☒ polos, nihil).
+  Investigasi lebih dalam (cek `w14:checked` langsung, bukan cuma teks
+  visual) membuktikan itu SALAH — keempatnya (Low/Medium/High/Extreme)
+  SAMA-SAMA punya Word content-control (`<w:sdt><w14:checkbox>`) TERSISIP
+  DI TENGAH paragraf (beda dari Table 3 yang sdt-nya membungkus SELURUH
+  sel) — cuma glyph run-nya (☐/☒ yang tampil) KOSONG untuk High/Extreme di
+  dokumen sumber, padahal `w14:checked` attribute-nya `val="1"` — Word/
+  LibreOffice tetap merender kotak tercentang dari metadata itu, TIDAK
+  peduli isi run-nya kosong. **Kalau mencari checkbox di masa depan, WAJIB
+  cek `w14:checked` langsung (via `element.getElementsByTagNameNS`), JANGAN
+  simpulkan "tidak ada checkbox" cuma dari pencarian teks ☐/☒ yang nihil.**
+  `jsaToggleInlineSdtCheckbox()` (beda dari `jsaSetSdtCheckbox()` yang punya
+  Table 3 — itu untuk sdt yang membungkus SELURUH `<w:tc>`) menangani pola
+  "sdt tersisip di tengah paragraf" ini: update `w14:checked` attribute DAN
+  karakter run yang tampil sekaligus. Extreme (tc4) unik — py 2 sdt terpisah
+  dalam 1 sel (range 18-22 dan 23-25 digabung teks "or") — dipetakan ke 2
+  opsi state terpisah (`extreme1`/`extreme2`) lewat index sdt ke-0/ke-1.
+- **Table 2 (JSA) turun jadi 4 kolom** (Work Sequence|Hazards|Risk|Control
+  Measures, `JSA_COLW = [4765,2610,2700,5220]`) — kolom "No." terpisah yang
+  ada di v1 SUDAH TIDAK ADA. Nomor step sekarang ditulis MANUAL sebagai
+  bagian dari teks Work Sequence sendiri (lihat contoh asli di dokumen
+  sumber: "6. Housekeeping area kerja", "7. Manual Handling Peralatan") —
+  `jsaHazardTableRow()` mengikuti pola ini (`stepNo + '. ' + stepText`).
+  Border/font tetap sama persis polanya (dotted seragam, dll) cuma index
+  kolom bergeser semua (WorkSeq sekarang index 0, bukan 1).
+- **Table 1 v2**: field baru yang ditambahkan jadi dinamis — RISK TO TRIP
+  No. (row 3 tc1, 1 paragraf gabungan label+value), Risk Level (lihat poin
+  di atas), Online/Offline utk baris UNIT/SYSTEM/EQUIPMENT (row 6/7/8
+  tc1/tc2, 1 pilihan berlaku sekaligus utk ketiganya — user TIDAK PERNAH
+  mengisi campur di form aslinya). **Signature role "Applicant" HILANG dari
+  template v2** (diganti render row baru: Operation Supervisor/POC, RIC,
+  Maintenance Supervisor/ENG/Call Out Leader, Health & Safety, Intersection
+  Spv (FA/Chem) — 5 role, bukan lagi termasuk Applicant terpisah).
+- **🆕 Insight "Additional Approval" otomatis dari Risk Level**: template
+  v2 punya baris "Additional Approval: Dept. Manager (11-17) / Sr. Manager
+  (18-22) / President Director (23-25)" (row 26/27) — RANGE-nya PERSIS SAMA
+  dengan opsi Risk Level (row 2). Artinya pilihan approval tambahan bisa
+  DITURUNKAN OTOMATIS dari Risk Level yang dipilih user (Low/Medium -> tidak
+  butuh approval tambahan sama sekali, High -> Dept. Manager, Extreme
+  18-22 -> Sr. Manager, Extreme 23-25 -> President Director) — TIDAK perlu
+  dropdown terpisah "pilih approver mana". `jsaRiskLevel` (select) +
+  `jsaRenderApprovalHint()` (info banner live) + `jsaSigAdditionalApproval`
+  (nama, cuma 1 input, diisi ke slot row 27 yang sesuai) mengimplementasikan
+  ini. `JSA_RISK_LEVEL_APPROVAL` (map level->label) satu-satunya tempat yang
+  perlu diubah kalau range risiko/approver berubah di masa depan.
+- **Checklist Table 1 (Plant Process Hazard Identification + Risk detail)**
+  — 42 item dinamis (`JSA_CHECKLIST_ITEMS`, tiap entry `{key,label,row,
+  labelCol,cbCol}` hasil pembacaan XML mentah SATU PER SATU, BUKAN tebakan)
+  dirender generik lewat loop (`jsaRenderChecklist()`) supaya tidak perlu
+  nulis ~40 blok HTML/JS berulang. **Item yang SENGAJA dilewati** (bukan
+  kelupaan): sel-sel yang ternyata HEADER GRUP (mis. "Hazardous Substances",
+  "Work Environment", "Fire Risk", "Electrical Hazard", "Others" — masing-
+  masing punya sub-kolom "YES"/"NO" sendiri tanpa checkbox tunggal yang
+  jelas) dan slot hazard placeholder `"…"` (belum diisi nama hazard apa pun
+  di dokumen sumber). **Kalau nambah item checklist baru ke sini**, WAJIB
+  verifikasi row/col-nya dulu lewat baca XML mentah `jsa_template.docx`
+  (`jsaDirectChildren(row,'tc')[idx]`) — JANGAN tebak dari tampilan visual
+  Word/PDF, kolom sering bergeser antar baris karena grup header vs item
+  biasa punya jumlah sel berbeda (lihat riwayat percakapan untuk mapping
+  lengkap per baris kalau perlu verifikasi ulang).
+- **Table 3 (CONTROL MEASURES SELECTION + Additional Control Measures +
+  Warning and Instruction to RIC) ternyata SATU TABEL BERSARANG** (nested
+  `<w:tbl>`) di dalam SATU sel Table 3 luar yang cuma 1 baris — python-docx
+  `document.tables` TIDAK mendeteksi tabel bersarang ini sebagai tabel
+  terpisah (makanya riset awal sempat salah kira Table 3 "kosong, 1 baris
+  doang"). `jsaGetNestedControlTable()` mengambilnya via
+  `jsaDirectChildren(outerTc,'tbl')[0]`.
+  - **Control Measures Selection** (36 item, row 1-18 tabel bersarang) pakai
+    Word content-control ASLI yang membungkus SELURUH `<w:tc>` (`<w:sdt>`
+    sebagai DIRECT CHILD `<w:tr>`, bukan `<w:tc>` biasa) — `jsaLogicalCells()`
+    membaca campuran `<w:tc>` polos dan `<w:sdt><w:sdtContent><w:tc>` dalam
+    urutan yang benar, `jsaSetSdtCheckbox()` update `w14:checked` + glyph
+    run sekaligus (BEDA fungsi dari `jsaToggleInlineSdtCheckbox()` di atas
+    yang untuk sdt-di-tengah-paragraf, Table 3 sdt-nya membungkus SELURUH
+    sel). `JSA_CONTROL_MEASURES_ITEMS` (36 entry, `{key,label,row,side}`,
+    `side` 0=kolom kiri/1=kolom kanan) + `jsaRenderControlMeasures()`
+    generik seperti checklist Table 1.
+  - **Additional Control Measures** (row 20-23 tabel bersarang, 4 slot)
+    dinamis lewat 4 input teks + tombol **"⚡ Isi Otomatis dari Control
+    Measures di Step"** (`jsaAutoFillAdditionalMeasures()`) — SESUAI
+    PERMINTAAN EKSPLISIT user. Ambil semua baris Control Measures yang
+    sudah diketik user di step manapun (Table 2), dedupe (case-insensitive),
+    isi ke 4 slot; kalau lebih dari 4 unik, KASIH TAHU user lewat alert
+    berapa yang tidak ikut kepotong (bukan diam-diam buang). Format akhir
+    tiap slot SELALU "N. <isi>" (nomor tetap ada walau kosong, persis pola
+    template asli).
+  - **Warning and Instruction to RIC (row 24-28 tabel bersarang) TIDAK
+    PERNAH disentuh kode apa pun di `jsaFillTable3()`** — SESUAI PERMINTAAN
+    EKSPLISIT user ("kecuali warning dan instruction tidak boleh dirubah").
+    Kalau nanti ada permintaan ubah bagian ini lagi, WAJIB konfirmasi ulang
+    ke user dulu sebelum coding — ini pengecualian yang sengaja, bukan
+    kelupaan.
+- **Diverifikasi lewat selftest otomatis** (pola sama seperti v1 — headless
+  Chrome + local HTTP server sementara, kode selftest dihapus lagi dari
+  `jsa_report.html` setelah lolos): isi SEMUA field baru + checklist +
+  Control Measures + 2 section (A dan C, B sengaja dikosongkan buat
+  verifikasi section-skip masih jalan) + generate, lalu re-parse hasil akhir
+  dan cek: semua field baru benar, `w14:checked` Risk Level PERSIS sesuai
+  pilihan (termasuk 2-sdt-dalam-1-sel Extreme), section B (kosong) tidak
+  tercetak, konten contoh job asli (`7BG-PDSH-545`, dst) hilang total dari
+  Table 1/2, DAN Warning/Instruction (row 24-28) tetap utuh 100%. Hasil
+  akhir juga dirender ke PDF lewat LibreOffice headless **HANYA untuk
+  verifikasi visual internal** (checkbox tercentang benar secara visual,
+  border/layout tidak korup) — TIDAK pernah dikirim ke user sebagai
+  deliverable, sesuai instruksi "tidak butuh PDF sama sekali".

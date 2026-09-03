@@ -2,3 +2,11 @@
 # dipersist lintas run GitHub Actions lewat actions/cache, bukan lewat git.
 # Muncul di working directory kalau script itu dijalankan manual/lokal.
 .health-state.json
+
+# File referensi mentah yang user taruh langsung di folder repo (BUKAN
+# lewat upload chat) sebagai contoh format JSA terbaru -- berisi tanda
+# tangan ASLI (real, belum disanitasi) milik orang sungguhan. Versi
+# bersihnya sudah diekstrak jadi jsa_template.docx (root repo, sudah
+# disanitasi -- lihat CLAUDE.md). Repo ini PUBLIC, jangan pernah commit
+# folder ini apa adanya.
+/JSA/
