@@ -1540,3 +1540,30 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   "Bottle Pressure - Span (psi)"), pindah lewat Next (label ikut berubah ke
   field berikutnya), dan buka field tabel channel (dapat nama tag channel
   dari `<td>` pertama baris itu) — ketiganya benar.
+
+## Numpad: kursor tulis (caret) berkedip dihidupkan lagi + fokus dipertahankan (2026-09-03)
+
+- Setelah fix label nama kolom di atas, user klarifikasi maksudnya beda:
+  yang dicari adalah kursor tulis (garis vertikal berkedip) di DALAM kolom
+  itu sendiri, seperti field teks normal — bukan (cuma) nama kolomnya.
+  Ternyata ini SENGAJA disembunyikan dari awal:
+  `.pm-num-input{ caret-color:transparent; ... }` (shared.css) — kemungkinan
+  supaya tidak "aneh" karena field-nya readonly (tidak bisa diketik lewat
+  keyboard OS). Field `readonly` (BEDA dari `disabled`) tetap bisa fokus
+  seperti biasa, jadi caret sebenarnya bisa jalan normal — cukup hapus
+  override-nya (`caret-color:#159957`, senada warna border `.pm-num-active`).
+- **Ketemu 1 bug turunan waktu implementasi**: nge-tap tombol ANGKA di
+  numpad (bukan field-nya) memindahkan FOKUS BROWSER ke tombol itu (default
+  behavior tombol apa pun yang diklik) — field aktif jadi blur, caret yang
+  baru dihidupkan lang lang langsung hilang lagi di tap PERTAMA. Fix:
+  `pad.addEventListener('mousedown', function(e){ if
+  (e.target.tagName==='BUTTON') e.preventDefault(); })` di `pmNumpadInit()`
+  — `preventDefault()` di `mousedown` (BUKAN `click`) mencegah browser
+  memindah fokus sama sekali, `onclick` tombolnya sendiri tetap jalan normal
+  (event `click` masih terjadi setelah `mousedown`, cuma efek
+  samping-pemindahan-fokusnya yang dicegah).
+- Diverifikasi lewat headless Chrome: `getComputedStyle(field).caretColor`
+  = hijau (bukan transparent) setelah fokus; simulasi mousedown+click
+  SUNGGUHAN (bukan cuma `.click()`) ke tombol "1" lalu cek
+  `document.activeElement` — TETAP field aslinya (bukan tombolnya), caret
+  tidak hilang.

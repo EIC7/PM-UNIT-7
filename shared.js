@@ -3494,6 +3494,17 @@ function pmNumpadInit() {
     '</div>';
   document.body.appendChild(pad);
 
+  // 🆕 Tanpa ini, nge-tap tombol numpad memindahkan FOKUS BROWSER ke tombol
+  // itu (default behavior tombol apa pun) -- field aktif jadi blur, caret
+  // (kursor tulis berkedip, baru diaktifkan lagi -- lihat shared.css
+  // caret-color .pm-num-input) langsung hilang detik itu juga tiap kali user
+  // menekan angka, kelihatan seperti caret "kedip lalu mati". preventDefault
+  // di mousedown (BUKAN click) mencegah browser memindah fokus sama sekali,
+  // field aktif tetap fokus terus selama numpad dipakai.
+  pad.addEventListener('mousedown', function(e) {
+    if (e.target.tagName === 'BUTTON') e.preventDefault();
+  });
+
   document.addEventListener('click', function(e) {
     var t = e.target.closest ? e.target.closest('.pm-num-input') : null;
     if (t) { pmNumpadOpen(t); }

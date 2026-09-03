@@ -325,7 +325,17 @@ input[readonly], textarea[readonly], input:disabled, textarea:disabled, select:d
    tombol Next pindah field, dispatch event 'input' supaya oninput= bawaan
    tetap jalan) ditangani otomatis oleh shared.js. Dark & fixed secara
    sengaja, meniru keyboard OS asli yang juga selalu gelap. ── */
-.pm-num-input{ cursor:pointer; caret-color:transparent; font-size:16px !important; color:#111 !important; }
+/* 🔴 caret-color:transparent DULU DI SINI -- sengaja menyembunyikan kursor
+   tulis (garis vertikal berkedip) karena field ini readonly (diisi lewat
+   numpad custom, bukan keyboard OS). Akibatnya user TIDAK PUNYA penanda
+   visual "posisi tulis saya di sini" yang biasa (beda dari label nama
+   kolom di atas numpad, yang jawab pertanyaan "kolom MANA", bukan "posisi
+   kursor di dalam kolom itu") -- keluhan user: caret hilang total waktu
+   numpad kebuka. Field readonly TETAP bisa fokus (beda dari disabled), jadi
+   cukup HAPUS override ini -- caret otomatis kelihatan cuma di field yang
+   sedang difokus (satu-satunya field yang barusan di-tap user), tidak perlu
+   dibatasi manual ke .pm-num-active. */
+.pm-num-input{ cursor:pointer; caret-color:#159957; font-size:16px !important; color:#111 !important; }
 .pm-num-input.pm-num-active{ border-color:#159957 !important; box-shadow:0 0 0 3px rgba(21,153,87,0.15); }
 #pmNumpad{
   position:fixed; left:0; right:0; bottom:0; z-index:10010;
