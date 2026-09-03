@@ -2220,3 +2220,143 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   (window 1440×3600) juga dikonfirmasi visual -- tabel tampil ringkas
   persis seperti mockup, step dengan 0 hazard menampilkan pesan placeholder
   bukan baris kosong yang membingungkan.
+
+## JSA: rombak besar -- jsa_history.html (2 tab + Preview/Edit/Download/Hapus), fitur Preview Word, fix gap Word, warning sebelum download (2026-09-03)
+
+- **`jsa_history.html` DIROMBAK TOTAL** dari versi sebelumnya (yang cuma 1
+  tabel dengan filter tombol + kolom Modul/Tanggal/PIC/WO/Disimpan/Aksi
+  Edit+Download) jadi sesuai spesifikasi rinci user: judul "JOB SAFETY
+  ANALYSIS (JSA) History", **2 TAB** ("Condition Access"/"Risk To Trip",
+  BUKAN filter tombol biasa), kolom **Asset | Tanggal | Applicant | WO |
+  Risk | EPAS | Aksi**, dan Aksi py **4 tombol: Preview, Edit, Download,
+  Hapus**.
+  - **Query data BEDA dari `dbList()` biasa** -- `dbList()` (shared.js)
+    SENGAJA cuma ambil kolom ringan (bukan `data` JSONB) supaya Riwayat
+    umum tetap cepat, tapi kolom Asset/Applicant/Risk/EPAS yang diminta di
+    sini SEMUANYA ada di dalam `data` JSONB (equipTag/sigApplicant/
+    riskCategory/epas). `jsa_history.html` pakai `supaFetch()` LANGSUNG
+    (bukan `dbList()`) dengan `select=id,modul,tanggal,pic,work_order,
+    updated_at,data&modul=ilike.*JSA*` -- AMAN mengambil `data` penuh
+    karena JSA TIDAK PERNAH punya foto evidence (checklist + teks murni),
+    beda dari modul lain yang bisa puluhan foto per record (itulah
+    sebabnya `dbList()` menghindari `data` sama sekali).
+  - **Kolom "Applicant"**: `jsa_condition_access.html` py field
+    `sigApplicant` asli; `jsa_report.html` (Risk to Trip) **TIDAK PUNYA**
+    field ini sama sekali (5 role signature-nya beda, lihat CLAUDE.md
+    bagian JSA Report v2) -- fallback ke `r.pic` (kolom top-level, ISI-nya
+    `sigOpSupervisor` utk KEDUA varian, lihat `dbCollectData()`) kalau
+    `data.sigApplicant` kosong. Ini APROKSIMASI yang disengaja/disetujui
+    implisit (user minta kolom "Applicant" berlaku utk KEDUA tab walau
+    Risk to Trip secara struktur tidak punya konsep ini).
+  - **Preview**: `window.open(url + '&autopreview=1', '_blank')` -- BEDA
+    dari Download (iframe tersembunyi) karena preview HARUS terlihat user,
+    dibuka tab baru supaya halaman `jsa_history.html` tidak ikut ter-
+    navigasi pergi.
+  - **Hapus**: modal kustom (BUKAN `confirm()` browser polos) --
+    menampilkan ULANG ringkasan data (Asset/Tanggal/Applicant/WO/Risk/
+    EPAS, sama seperti kolom tabel) + wajib ketik **"HAPUS"** (dicek
+    case-INSENSITIVE, `.trim().toUpperCase() === 'HAPUS'`, supaya tidak
+    frustrasi soal kapital) sebelum tombol "Hapus Permanen" aktif. Hapus
+    sungguhan lewat `supaFetch('DELETE', 'pm_records?id=eq.'+id)` (pola
+    sama seperti `historyDelete()` di `history.html`).
+- **Fitur Preview Word (docx-preview.js, BARU)** -- ditambahkan ke KEDUA
+  file modul JSA (bukan cuma dipanggil dari `jsa_history.html`, ada juga
+  tombol "👁 Preview Hasil Word" langsung di halaman form, di atas tombol
+  Generate Word).
+  - `jsaGenerateWord()` DIROMBAK: logic isi-form-ke-XML dipisah jadi
+    fungsi baru **`jsaBuildWordBlob(form)`** (return `Promise<Blob>`) yang
+    dipakai BERSAMA oleh `jsaGenerateWord()` (download) dan
+    **`jsaPreviewWord()`** (BARU, render blob via `docx.renderAsync()` ke
+    modal `#jsaPreviewModal`) -- supaya logic generate XML TIDAK PERNAH
+    duplikat di 2 tempat.
+  - Library: `docx-preview@0.3.5` dari jsdelivr CDN, HARUS dimuat SETELAH
+    JSZip (docx-preview baca `window.JSZip` sebagai global di browser,
+    BUKAN via bundler/require) -- lihat urutan `<script>` tag di `<head>`.
+  - `?autopreview=1` (dipakai jsa_history.html) ditangani di blok "LOAD
+    FROM HISTORY" yang SAMA dengan `?autodownload=1` -- begitu record
+    selesai dimuat, panggil `jsaPreviewWord()` otomatis.
+  - **Preview ini APROKSIMASI, BUKAN Word 100% akurat** (sudah
+    diperingatkan di header modal) -- checkbox Wingdings ('x'/'o' di
+    Condition Access) dan content-control SDT (Control Measures Selection
+    di Table 3) berisiko tidak identik visualnya dgn Word asli, tapi FILE
+    yang di-download tetap dijamin benar (preview cuma baca, tidak pernah
+    mengubah file). Lihat bagian "Rekomendasi preview Word" di atas utk
+    detail trade-off ini.
+- **🔴 Fix bug Word: baris hazard "meninggalkan gap kosong besar" di hasil
+  cetak** -- 2 akar masalah TERPISAH, keduanya ditemukan dari laporan
+  screenshot user:
+  1. **`w:cantSplit` dihapus dari `jsaRow()`** (dipakai
+     `jsaHazardTableRow()`/`jsaSectionHeaderRow()` di Table 2) -- kalau
+     dipasang, 1 baris hazard yang isinya banyak poin (Hazard/Risk/Control
+     Measures beberapa paragraf) dan TIDAK MUAT di sisa halaman akan
+     dipaksa PINDAH SELURUH BARIS ke halaman berikutnya, meninggalkan area
+     kosong besar di halaman sebelumnya. Tanpa `cantSplit`, Word BOLEH
+     memotong baris ANTAR PARAGRAF/POIN -- cuma poin yang tidak muat yang
+     pindah halaman. **Row 0/1 Table 2 (judul+header kolom, DIPERTAHANKAN
+     dari template asli, TIDAK direbuild) sudah TIDAK PERNAH punya
+     `cantSplit` dari awal** -- jadi setelah fix ini, Table 2 hasil
+     generate 100% bebas `cantSplit`. **Table 1 (28 baris) MASIH py
+     `cantSplit`** (tidak disentuh, template asli) -- INI SENGAJA
+     dibiarkan, karena baris-barisnya pendek/tetap (single-line
+     text/checkbox), tidak pernah butuh split, tidak relevan dgn bug yang
+     dilaporkan.
+  2. **29 PARAGRAF KOSONG bawaan template** (BUKAN kita yang tambahkan) di
+     antara Table 2 (JSA steps) dan Table 3 (Control Measures) --
+     ditemukan lewat investigasi XML mentah (`python -c` baca
+     `body`-level children langsung, BUKAN dari dalam tabel manapun).
+     Dikonfirmasi SAMA PERSIS di KEDUA template (`jsa_template.docx` /
+     `jsa_template_condition_access.docx`, 29 paragraf identik) --
+     `jsa_template_condition_access.docx` mewarisi ini karena memang
+     hasil salin body v2 apa adanya (cuma Table 1 yang diganti, lihat
+     riwayat pembuatan template gabungan di atas). Ada JUGA gap lebih
+     kecil (3-4 paragraf kosong) antara Table 3 dan Table 4 (Gas Test
+     PEL). **Fix**: fungsi baru `jsaParagraphIsEmpty(p)` +
+     `jsaTrimEmptyParagraphsBetween(body, tblA, tblB, keep)` dipanggil di
+     `jsaBuildWordBlob()` SETELAH Table1/2/3 diisi -- pangkas SEMUA
+     paragraf kosong di antara 2 tabel jadi `keep=1` (nyisakan 1 spasi
+     kecil, TIDAK berdempetan langsung dgn tabel di atasnya, sesuai
+     permintaan eksplisit user). Paragraf yang BENAR-BENAR py teks (mis.
+     disclaimer Gas Test PEL antara Table3-Table4) TIDAK PERNAH ikut
+     kehapus -- fungsi ini cuma menghitung/menghapus yang **kosong**.
+  - **Kalau nanti ketemu gap kosong serupa di bagian LAIN dokumen** (mis.
+    kalau nanti Table 1 direstrukturisasi dan ternyata py gap serupa),
+    pola investigasi yang sama (baca `body`-level children via lxml,
+    dumpkan tag+teks tiap child, cari runtun `<w:p>` kosong panjang)
+    WAJIB dipakai dulu SEBELUM menebak solusi -- gap kosong di dokumen
+    Word HAMPIR SELALU karena paragraf kosong bawaan yang lolos ke-skip
+    revisi sebelumnya, BUKAN soal margin/spacing halaman.
+- **Peringatan sebelum Download** -- `jsaGenerateWord()` sekarang
+  `confirm('HARAP CEK / EDIT KEMBALI SECARA MANUAL JIKA ADA PENAMBAHAN
+  MANUAL MELALUI OFFICE WORD...')` SEBELUM lanjut generate+download, TAPI
+  **HANYA kalau dipanggil dari KLIK TOMBOL manual** (`btn` truthy, ada
+  `event.target`) -- SENGAJA TIDAK muncul kalau dipanggil otomatis lewat
+  `?autodownload=1` dari `jsa_history.html` (`btn` null di jalur itu),
+  supaya alur unduh otomatis dari riwayat tetap tanpa-interaksi seperti
+  semula. `jsaPreviewWord()` TIDAK pakai warning ini (preview tidak
+  mengubah/menghasilkan file apa pun, cuma tampilan).
+- **Tombol header "RIWAYAT" di kedua modul JSA diganti label jadi "JSA
+  HISTORY"** (target `jsa_history.html` tidak berubah, cuma teks tombol).
+- **Section "Informasi Pekerjaan" dipersempit** -- class baru
+  `.section-box-narrow` (`max-width:900px`) ditambahkan KHUSUS ke section
+  ini (BEDA dari section checklist/tabel hazard yang memang perlu selebar
+  container 1400px) -- supaya field sederhana (WO No./Priority No./EPAS
+  dst di `.row3`) tidak melebar sampai ujung container 1400px yang bikin
+  kolom kelihatan kosong/renggang tak perlu (dikeluhkan user via
+  screenshot).
+- Diverifikasi lewat headless Chrome: (1) `jsaBuildWordBlob`/
+  `jsaPreviewWord`/`jsaTrimEmptyParagraphsBetween` semua terdefinisi, blob
+  berhasil dibuat, docx-preview library termuat (`typeof docx.renderAsync
+  === 'function'`); (2) gap antara Table2-Table3 di XML akhir terpangkas
+  jadi PERSIS 1 paragraf; (3) `jsa_history.html` dgn `supaFetch` di-mock:
+  2 tab dgn hitungan benar, SEMUA 6 kolom (Asset/Tanggal/Applicant/WO/
+  Risk/EPAS) terisi benar utk kedua tab (termasuk fallback Applicant utk
+  Risk to Trip), 4 tombol aksi ada, modal Hapus: disabled sebelum ketik
+  "HAPUS" (case-insensitive, "hapus" huruf kecil tetap diterima), enabled
+  setelahnya, `supaFetch('DELETE',...)` benar-benar terpanggil dgn ID yang
+  benar, modal tertutup + toast muncul setelah hapus. Screenshot visual
+  jsa_history.html juga dikonfirmasi (tabel + tab + badge risk tampil
+  rapi). **BELUM ada verifikasi end-to-end dgn Supabase SUNGGUHAN**
+  (semua test di atas pakai mock `supaFetch`/data statis) -- kalau ada
+  laporan "tombol X tidak jalan" di produksi nanti, cek dulu apakah
+  asumsi struktur `data` JSONB (nama field persis) masih valid sebelum
+  curiga hal lain.

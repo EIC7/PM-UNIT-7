@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JSA Report</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
 <script src="shared.js?v=20260903d"></script>
 <script src="db-helper.js"></script>
 <style>
@@ -32,6 +33,11 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 @media(max-width:600px){.row,.row3{grid-template-columns:1fr}}
 .section-box{background:#12182a;border:1px solid #232c40;border-radius:8px;padding:14px;margin-bottom:12px}
+/* Section "Informasi Pekerjaan" isinya cuma field teks sederhana -- dibatasi
+   lebarnya (BEDA dari section checklist/tabel hazard yang memang perlu
+   selebar container 1400px) supaya kolom row3 (WO/Priority/EPAS dst) tidak
+   melebar tak perlu jadi kelihatan kosong/renggang. */
+.section-box-narrow{max-width:900px}
 .btn{padding:10px 16px;border:none;border-radius:6px;font-size:0.9em;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:opacity 0.2s}
 .btn:active{opacity:0.75}
 .btn-blue{background:#2e6fcc;color:#fff}
@@ -81,6 +87,16 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .hz-item .hz-src{font-size:0.72em;color:#7c8698;margin-top:2px}
 .hz-dialog-footer{padding:12px 16px;border-top:1px solid #2a3348;display:flex;justify-content:flex-end;gap:8px}
 @media print{.no-print{display:none!important}}
+/* ── Modal Preview Word (docx-preview) -- kertas putih standar (BUKAN
+   ikut tema gelap halaman, ini render dokumen Word asli apa adanya). ── */
+.jsa-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:20000;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:14px}
+.jsa-preview-modal.show{display:flex}
+.jsa-preview-dialog{background:#1c2334;border-radius:10px;width:min(96vw,900px);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid #3a4560}
+.jsa-preview-header{padding:12px 16px;border-bottom:1px solid #3a4560;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:0.82em;color:#e3c37a}
+.jsa-preview-header button{flex:none;padding:7px 14px;border:1px solid #3a4560;background:#2a3348;color:#e7ebf2;border-radius:6px;cursor:pointer;font-size:0.95em}
+.jsa-preview-body{overflow:auto;background:#525659;padding:16px}
+.jsa-docx-preview{background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.4)}
+
 /* ── Plant Process & Risk Checklist -- tabel grid meniru tata letak Word asli
    (lihat CLAUDE.md). Prefix jsa-cl- supaya tidak bentrok class umum lain. ── */
 .jsa-cl-progress{display:flex;align-items:center;gap:10px;background:#161d2c;border:1px solid #2a3348;border-radius:999px;padding:6px 14px 6px 6px;margin-bottom:12px;font-size:0.82em;font-weight:700;width:fit-content}
@@ -126,13 +142,13 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div class="live-dot" title="Status Supabase"></div>
       <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
-      <button class="btn-back" onclick="window.location.href='jsa_history.html'">RIWAYAT</button>
+      <button class="btn-back" onclick="window.location.href='jsa_history.html'">JSA HISTORY</button>
     </div>
   </div>
 
   <!-- ══ INFORMASI PEKERJAAN ══ -->
   <div class="section-title">📌 Informasi Pekerjaan</div>
-  <div class="section-box">
+  <div class="section-box section-box-narrow">
     <div class="form-group"><label>Area to be Access / Equipment Tag No. (KKS No.)</label><input type="text" id="jsaEquipTag" placeholder="7TL-MOV-250 / 7TL-MOV-260B"></div>
     <div class="form-group"><label>Work to be Done</label><textarea id="jsaWorkToBeDone" placeholder="Uraian pekerjaan..."></textarea></div>
     <div class="form-group">
@@ -208,6 +224,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 
   <div class="no-print" style="margin-top:20px">
     <button class="btn btn-green btn-full" onclick="jsaSaveDraft()" style="padding:13px;font-size:1em">💾 Simpan Draft</button>
+    <button class="btn btn-gray btn-full" onclick="jsaPreviewWord()" style="padding:13px;font-size:1em">👁 Preview Hasil Word</button>
     <button class="btn btn-blue btn-full" onclick="jsaGenerateWord()" style="padding:13px;font-size:1em">📄 Generate Word (.docx)</button>
   </div>
 </div>
@@ -840,6 +857,13 @@ function restoreDraftData(rec, editingId) {
     if (params.get('autodownload') === '1') {
       setTimeout(function() { jsaGenerateWord(); }, 500);
     }
+    // ?autopreview=1 -- dipakai jsa_history.html (tombol "Preview"), dibuka
+    // di TAB BARU (bukan iframe tersembunyi seperti autodownload, karena
+    // preview memang harus terlihat user) -- begitu record selesai dimuat,
+    // langsung buka modal preview docx-preview otomatis.
+    if (params.get('autopreview') === '1') {
+      setTimeout(function() { jsaPreviewWord(); }, 500);
+    }
   });
 })();
 
@@ -1143,7 +1167,14 @@ function jsaCell(doc, width, borders, paragraphs, gridSpan) {
 function jsaRow(doc, cells) {
   var tr = jsaMk(doc, 'w:tr');
   var trPr = jsaMk(doc, 'w:trPr');
-  trPr.appendChild(jsaMk(doc, 'w:cantSplit'));
+  // SENGAJA TIDAK pakai w:cantSplit -- kalau dipasang, satu baris hazard
+  // yang isinya banyak poin (Hazard/Risk/Control Measures beberapa
+  // paragraf) dan tidak muat di sisa halaman akan dipaksa PINDAH SELURUH
+  // BARIS ke halaman berikutnya, meninggalkan area kosong besar di
+  // halaman sebelumnya (dilaporkan user, lihat CLAUDE.md). Tanpa
+  // cantSplit, Word BOLEH memotong baris di antara paragraf/poin -- cuma
+  // poin yang tidak muat yang pindah halaman, sisanya tetap di halaman
+  // sekarang.
   trPr.appendChild(jsaMk(doc, 'w:trHeight', {'w:val': '240'}));
   trPr.appendChild(jsaMk(doc, 'w:jc', {'w:val': 'center'}));
   tr.appendChild(trPr);
@@ -1376,12 +1407,42 @@ function jsaDownloadBlob(blob, filename) {
   setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
 }
 
-function jsaGenerateWord() {
-  var form = jsaCollectFormValues();
-  var btn = event && event.target ? event.target : null;
-  var origText = btn ? btn.innerHTML : '';
-  if (btn) { btn.innerHTML = '⏳ Membuat Word...'; btn.disabled = true; }
-  fetch('jsa_template.docx').then(function(r) {
+// Cek apakah 1 <w:p> benar-benar kosong (tidak py teks apa pun di semua
+// <w:t> turunannya, termasuk yang di dalam <w:sdt> dst).
+function jsaParagraphIsEmpty(p) {
+  var ts = p.getElementsByTagNameNS(JSA_W_NS, 't');
+  for (var i = 0; i < ts.length; i++) {
+    if (ts[i].textContent && ts[i].textContent.trim()) return false;
+  }
+  return true;
+}
+// Pangkas deretan PARAGRAF KOSONG (bawaan template asli, BUKAN yang kita
+// tambahkan) di antara 2 tabel top-level jadi maks `keep` paragraf --
+// dipakai supaya celah kosong besar bawaan template (mis. 29 paragraf
+// kosong antara Table2 "JSA steps" dan Table3 "Control Measures", lihat
+// CLAUDE.md) tidak bikin gap kosong raksasa di hasil cetak. Paragraf yang
+// BENAR-BENAR py isi teks (mis. disclaimer Gas Test PEL) TIDAK PERNAH
+// disentuh -- cuma yang kosong yang dihitung/dipangkas.
+function jsaTrimEmptyParagraphsBetween(body, tblA, tblB, keep) {
+  keep = keep || 1;
+  var node = tblA.nextSibling;
+  var emptyPs = [];
+  while (node && node !== tblB) {
+    if (node.nodeType === 1 && node.namespaceURI === JSA_W_NS && node.localName === 'p' && jsaParagraphIsEmpty(node)) {
+      emptyPs.push(node);
+    }
+    node = node.nextSibling;
+  }
+  for (var i = keep; i < emptyPs.length; i++) {
+    body.removeChild(emptyPs[i]);
+  }
+}
+
+// Bangun dokumen Word (Blob) dari template -- dipakai BERSAMA oleh
+// jsaGenerateWord() (download) dan jsaPreviewWord() (preview docx-preview)
+// supaya logic isi-form-ke-XML TIDAK PERNAH duplikat di 2 tempat.
+function jsaBuildWordBlob(form) {
+  return fetch('jsa_template.docx').then(function(r) {
     if (!r.ok) throw new Error('jsa_template.docx tidak ditemukan (' + r.status + ')');
     return r.arrayBuffer();
   }).then(function(buf) {
@@ -1397,11 +1458,34 @@ function jsaGenerateWord() {
       jsaFillTable1(topTbls[1], form);
       jsaRebuildTable2(topTbls[2]);
       jsaFillTable3(topTbls[3], form);
+      // Template ASLI py 29 paragraf KOSONG bawaan (bukan kita yang
+      // tambahkan) di antara Table2 (JSA steps) dan Table3 (Control
+      // Measures) -- kalau dibiarkan utuh bikin celah kosong besar di
+      // hasil cetak/PDF (dilaporkan user, screenshot halaman kosong).
+      // Dipangkas jadi 1 paragraf saja (tetap ada sedikit jarak, TIDAK
+      // berdempetan langsung dgn tabel di atasnya) -- lihat CLAUDE.md.
+      if (topTbls[4]) jsaTrimEmptyParagraphsBetween(body, topTbls[3], topTbls[4], 1);
+      jsaTrimEmptyParagraphsBetween(body, topTbls[2], topTbls[3], 1);
       var newXml = new XMLSerializer().serializeToString(xdoc);
       zip.file('word/document.xml', newXml);
       return zip.generateAsync({type: 'blob'});
     });
-  }).then(function(blob) {
+  });
+}
+
+function jsaGenerateWord() {
+  var form = jsaCollectFormValues();
+  var btn = event && event.target ? event.target : null;
+  var origText = btn ? btn.innerHTML : '';
+  // Peringatan sebelum download SUNGGUHAN (klik manual tombol) -- TIDAK
+  // ditampilkan kalau dipanggil otomatis dari jsa_history.html
+  // (?autodownload=1, lihat blok LOAD FROM HISTORY) supaya alur unduh
+  // otomatis dari riwayat tetap tanpa-interaksi seperti sebelumnya.
+  if (btn && !confirm('HARAP CEK / EDIT KEMBALI SECARA MANUAL JIKA ADA PENAMBAHAN MANUAL MELALUI OFFICE WORD.\n\nLanjutkan generate & download Word?')) {
+    return;
+  }
+  if (btn) { btn.innerHTML = '⏳ Membuat Word...'; btn.disabled = true; }
+  jsaBuildWordBlob(form).then(function(blob) {
     jsaDownloadBlob(blob, jsaBuildFilename(form));
     if (typeof dbShowToast === 'function') dbShowToast('✓ Word berhasil dibuat & diunduh');
   }).catch(function(err) {
@@ -1410,6 +1494,53 @@ function jsaGenerateWord() {
   }).then(function() {
     if (btn) { btn.innerHTML = origText; btn.disabled = false; }
   });
+}
+
+// ── Preview Word (docx-preview, render APROKSIMASI -- BUKAN Word asli
+//    100% akurat, lihat CLAUDE.md) -- dipanggil manual (tombol) ATAU
+//    otomatis lewat ?autopreview=1 dari jsa_history.html. ──
+function jsaPreviewWord() {
+  var form = jsaCollectFormValues();
+  var btn = event && event.target ? event.target : null;
+  var origText = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '⏳ Memuat Preview...'; btn.disabled = true; }
+  jsaBuildWordBlob(form).then(function(blob) {
+    return jsaShowWordPreviewModal(blob);
+  }).catch(function(err) {
+    console.error('[jsa] preview word gagal', err);
+    alert('Gagal membuat preview: ' + (err && err.message ? err.message : err));
+  }).then(function() {
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+  });
+}
+function jsaShowWordPreviewModal(blob) {
+  var modal = document.getElementById('jsaPreviewModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'jsaPreviewModal';
+    modal.className = 'jsa-preview-modal';
+    modal.innerHTML =
+      '<div class="jsa-preview-dialog">' +
+        '<div class="jsa-preview-header">' +
+          '<span>📄 Preview Hasil Word — perkiraan tampilan, BUKAN render Word 100% akurat (checkbox/border kompleks bisa sedikit beda)</span>' +
+          '<button type="button" onclick="jsaClosePreviewModal()">✕ Tutup</button>' +
+        '</div>' +
+        '<div class="jsa-preview-body" id="jsaPreviewBody"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) jsaClosePreviewModal(); });
+  }
+  var bodyEl = document.getElementById('jsaPreviewBody');
+  bodyEl.innerHTML = '<div style="padding:24px;color:#7c8698">Merender preview...</div>';
+  modal.classList.add('show');
+  return docx.renderAsync(blob, bodyEl, null, {className: 'jsa-docx-preview', inWrapper: true})
+    .catch(function(err) {
+      bodyEl.innerHTML = '<div style="padding:24px;color:#e5695c">Gagal merender preview: ' + (err && err.message || err) + '</div>';
+    });
+}
+function jsaClosePreviewModal() {
+  var modal = document.getElementById('jsaPreviewModal');
+  if (modal) modal.classList.remove('show');
 }
 
 jsaLoadHazardBank();
