@@ -1954,3 +1954,81 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   skenario page-break sungguhan) — kalau ada laporan lagi soal ini di masa
   depan, verifikasi visual jadi langkah pertama sebelum percaya perbaikan
   ini 100% benar di semua kasus tinggi konten.
+
+## JSA (kedua file): tema gelap lebar + bullet Hazard/Risk/Control + Control Measures grid responsif (2026-09-03)
+
+- **Tema visual GELAP + halaman DILEBARKAN** — `.container` naik dari
+  `max-width:920px` ke `1400px`, dan SELURUH palet warna kedua file
+  (`jsa_report.html` DAN `jsa_condition_access.html`) diganti dari terang
+  (putih/abu muda) jadi gelap (navy `#0f1420`/`#161d2c`, teks `#e7ebf2`,
+  border `#2a3348`, aksen biru `#6fa1e8`) — **SENGAJA BEDA dari SEMUA modul
+  lain di aplikasi ini** (yang semuanya tema terang, lihat referensi pola
+  `so2.html`/`cems_calibration.html` dkk di bagian paling atas dokumen
+  ini) — dikonfirmasi eksplisit oleh user lewat pertanyaan "gelap atau
+  terang" (dipilih gelap), BUKAN kelupaan/inkonsistensi. **Kalau modul JSA
+  direvisi lagi ke depan, JANGAN "perbaiki" balik ke tema terang mengira
+  itu bug konsistensi** — itu keputusan sadar. Kalau modul BARU lain minta
+  tema gelap serupa, tanya dulu ke user (jangan asumsikan semua modul
+  harus ikut gelap, atau sebaliknya jangan asumsikan JSA harus balik
+  terang).
+  - Palet lengkap (dipakai konsisten kedua file): bg halaman `#0f1420`,
+    panel/container `#161d2c`, section-box `#12182a`, border `#2a3348`
+    (atau `#232c40` yang lebih halus), input/textarea bg `#1c2334` border
+    `#3a4560`, teks utama `#e7ebf2`, teks label/muted `#aab4c4`/`#7c8698`,
+    aksen biru `#6fa1e8` (dipakai `border-color`/`section-title` bar),
+    warna label section-title/jsa-cl-title `#bfd6f7`. Warna semantik YES/NO
+    di grid checklist Condition Access TETAP sama (`on-yes`=`#e5695c`
+    merah, `on-no`=`#57b98a` hijau) cuma disesuaikan supaya kontras cukup
+    di atas dasar gelap.
+  - **Kalau menambah elemen baru di kedua file ini**, JANGAN pakai warna
+    terang polos (`#fff`/`#f0f0f0`/`#333` dst) langsung — selalu pakai
+    palet gelap di atas, atau resnya bakal jadi teks gelap di atas
+    background gelap (nyaris tidak terbaca). Sudah ada 1 kejadian warna
+    lupa disesuaikan di revisi ini sendiri (`jsaApprovalHint` amber
+    `#a35c1f` yang aslinya didesain utk background putih, ketahuan lewat
+    audit manual `grep "color:#"` lalu diganti `#e3c37a`) — kalau menambah
+    style baru, jangan lupa audit serupa.
+- **Hazard/Risk/Control Measures sekarang bullet "•" per baris di OUTPUT
+  WORD** (Table 2 "JOB SAFETY ANALYSIS") — meniru contoh dokumen asli yang
+  dikirim user (tabel dengan "1. Persiapan..." bernomor di kolom Work
+  Sequence, lalu "• Material jatuh" dkk berbullet di kolom Hazard/Risk/
+  Control Measures). Step (Work Sequence) SUDAH dari awal pakai format
+  "N. teks" (tidak berubah). **Field Hazard sekarang JUGA "1 baris = 1
+  poin"** (dulu cuma 1 paragraf mentah tanpa split baris sama sekali) --
+  label textarea-nya diupdate jadi "Hazard (1 baris = 1 poin)" di HTML,
+  dan `jsaHazardTableRow()` sekarang terima `hazardLines` (array, sama
+  pola dengan `riskLines`/`controlLines`) bukan `hazardText` (string
+  tunggal). `jsaBulletLine(l)` (fungsi baru, ada di KEDUA file identik) --
+  `return l ? '• ' + l : '';` -- dipanggil utk SEMUA baris di ketiga
+  kolom itu sebelum masuk `jsaCellP()`. Kolom Risk yang tadinya
+  `jc:'center'` (rata tengah) DIHILANGKAN alignment-nya (jadi rata kiri
+  default) supaya bullet-nya tidak aneh kalau di tengah.
+  - Bullet-nya TEKS LITERAL `"• "` di depan tiap paragraf, BUKAN numbering/
+    bullet-list asli Word (`w:numPr`) -- konsisten dengan keputusan desain
+    Table 2 yang sudah ada sejak awal (template ini SENGAJA tidak pakai
+    numId sama sekali, lihat catatan "Table 2 jauh lebih sederhana" di
+    bagian JSA Report v2 di atas). **JANGAN diubah ke numbering asli Word**
+    kecuali diminta eksplisit -- pola literal-teks ini yang sudah
+    terverifikasi jalan & konsisten dengan seluruh Table 2.
+- **Control Measures Selection grid dibuat responsif** -- dari
+  `grid-template-columns:1fr 1fr` (2 kolom TETAP, bikin 36 item jadi 18
+  baris memanjang ke bawah) jadi `repeat(auto-fit,minmax(220px,1fr))` (3-4+
+  kolom otomatis di layar lebar, turun ke 1 kolom di mobile) -- permintaan
+  eksplisit user ("kesamping untuk desktop... jangan kebawah"). **AMAN
+  pakai `auto-fit` di sini** (BEDA dari kasus channel grid O2 Outlet yang
+  butuh kolom TETAP demi urutan baris spesifik, lihat catatan lama di
+  dokumen ini) karena 36 checkbox Control Measures TIDAK punya keterkaitan
+  urutan/posisi antar item apa pun -- item mana pun boleh pindah baris
+  tanpa masalah.
+- Diverifikasi lewat headless Chrome: selftest bullet (`jsaRebuildTable2`
+  dengan 2 baris hazard + 2 baris risk + 2 baris control, semua 6 baris
+  keluar dengan bullet "•" yang benar di XML akhir, step tetap "1. teks");
+  screenshot penuh (`--screenshot`, window 1440×1800) kedua file
+  menampilkan tema gelap + layout lebar dengan benar dan tetap terbaca
+  (kontras cukup di semua elemen yang diperiksa visual).
+- **Belum dikerjakan di sesi ini** (masih pending dari permintaan user yang
+  sama): (1) buat halaman "JSA History" terpisah (bukan digabung ke
+  `history.html` umum) dengan tombol Edit + Download saja (tanpa Submit/
+  Print), ditambahkan ke `index.html` di sebelah tombol Riwayat; (2) fitur
+  preview hasil Word sebelum download (BARU tahap diskusi/rekomendasi,
+  user eksplisit minta belum dikerjakan dulu).

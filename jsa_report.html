@@ -9,62 +9,62 @@
 <script src="db-helper.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;padding:8px;overflow-x:hidden}
-.container{max-width:920px;margin:0 auto;background:#fff;border-radius:10px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.1)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1420;color:#e7ebf2;padding:8px;overflow-x:hidden}
+.container{max-width:1400px;margin:0 auto;background:#161d2c;border-radius:10px;padding:16px;box-shadow:0 2px 16px rgba(0,0,0,0.4);border:1px solid #232c40}
 .header{background:linear-gradient(135deg,#1a3a6b,#2e6fcc);color:#fff;padding:16px;border-radius:8px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .header-content h1{font-size:1.2em;margin-bottom:4px}
 .header-content p{font-size:0.85em;opacity:0.9}
-.header .btn-back{padding:8px 16px;background:#fff;color:#1a3a6b;border:none;border-radius:6px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.9em;transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
-.header .btn-back:hover{background:#f0f0f0}
+.header .btn-back{padding:8px 16px;background:#1c2334;color:#bfd6f7;border:1px solid #3a4560;border-radius:6px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.9em;transition:all 0.2s}
+.header .btn-back:hover{background:#232c40}
 .live-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.85);animation:blinkJS 2s ease-in-out infinite;flex-shrink:0;cursor:default}
 @keyframes blinkJS{0%,100%{opacity:1}50%{opacity:0.35}}
 .live-dot.pm-health-ok{background:#bbf7d0;animation:blinkJS 2s ease-in-out infinite}
 .live-dot.pm-health-warn{background:#fde68a;animation:none;opacity:1}
 .live-dot.pm-health-down{background:#fecaca;animation:none;opacity:1}
-.section-title{background:#e8f0fe;padding:10px 14px;border-left:4px solid #2e6fcc;margin:18px 0 12px 0;font-weight:700;font-size:0.9em;color:#1a3a6b;border-radius:0 4px 4px 0}
+.section-title{background:#1c2a44;padding:10px 14px;border-left:4px solid #6fa1e8;margin:18px 0 12px 0;font-weight:700;font-size:0.9em;color:#bfd6f7;border-radius:0 4px 4px 0}
 .form-group{margin-bottom:14px}
-label{display:block;font-weight:600;margin-bottom:5px;font-size:0.88em;color:#333}
-input,select,textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:1em;font-family:inherit;color:#222;background:#fff}
-input:focus,select:focus,textarea:focus{outline:none;border-color:#2e6fcc;box-shadow:0 0 0 3px rgba(46,111,204,0.15)}
+label{display:block;font-weight:600;margin-bottom:5px;font-size:0.88em;color:#aab4c4}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid #3a4560;border-radius:6px;font-size:1em;font-family:inherit;color:#e7ebf2;background:#1c2334}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#6fa1e8;box-shadow:0 0 0 3px rgba(111,161,232,0.2)}
 textarea{min-height:64px;resize:vertical;line-height:1.5}
-select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%23999'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%237c8698'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 @media(max-width:600px){.row,.row3{grid-template-columns:1fr}}
-.section-box{background:#fafafa;border:1px solid #e0e0e0;border-radius:8px;padding:14px;margin-bottom:12px}
+.section-box{background:#12182a;border:1px solid #232c40;border-radius:8px;padding:14px;margin-bottom:12px}
 .btn{padding:10px 16px;border:none;border-radius:6px;font-size:0.9em;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:opacity 0.2s}
 .btn:active{opacity:0.75}
 .btn-blue{background:#2e6fcc;color:#fff}
-.btn-green{background:#2ecc71;color:#fff}
-.btn-red{background:#e74c3c;color:#fff;padding:6px 12px;font-size:0.82em}
-.btn-gray{background:#e0e0e0;color:#333}
+.btn-green{background:#2ecc71;color:#0b2016}
+.btn-red{background:#e5695c;color:#fff;padding:6px 12px;font-size:0.82em}
+.btn-gray{background:#2a3348;color:#c7cdd6}
 .btn-full{width:100%;justify-content:center;margin-bottom:10px}
 /* ── JSA sections/steps/hazard rows ── */
-.jsa-section{border:1px solid #d7e3f5;border-radius:8px;margin-bottom:16px;overflow:hidden}
-.jsa-section-head{background:#1a3a6b;color:#fff;padding:10px 14px;font-weight:700;font-size:0.92em;display:flex;justify-content:space-between;align-items:center}
-.jsa-section-body{padding:12px}
-.jsa-step{border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:10px;background:#fafcff}
+.jsa-section{border:1px solid #2a3348;border-radius:8px;margin-bottom:16px;overflow:hidden}
+.jsa-section-head{background:#1c2a44;color:#bfd6f7;padding:10px 14px;font-weight:700;font-size:0.92em;display:flex;justify-content:space-between;align-items:center}
+.jsa-section-body{padding:12px;background:#12182a}
+.jsa-step{border:1px solid #2a3348;border-radius:8px;padding:12px;margin-bottom:10px;background:#161d2c}
 .jsa-step-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
 .jsa-step-head input{flex:1}
 .jsa-step-no{background:#2e6fcc;color:#fff;font-weight:700;font-size:0.85em;border-radius:6px;padding:9px 12px;flex-shrink:0}
-.jsa-hazard-row{border:1px dashed #cfd8e3;border-radius:6px;padding:10px;margin:8px 0;background:#fff;position:relative}
+.jsa-hazard-row{border:1px dashed #3a4560;border-radius:6px;padding:10px;margin:8px 0;background:#0f1420;position:relative}
 .jsa-hazard-row .rm-row{position:absolute;top:6px;right:6px}
-.jsa-hazard-row label{font-size:0.78em;color:#5a6b7a}
+.jsa-hazard-row label{font-size:0.78em;color:#7c8698}
 .jsa-hazard-row textarea{min-height:48px;font-size:0.9em}
 .jsa-step-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .jsa-step-actions .btn{font-size:0.82em;padding:7px 12px}
 /* ── Hazard picker modal ── */
-#hazardModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:14px}
+#hazardModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:14px}
 #hazardModal.show{display:flex}
-.hz-dialog{background:#fff;border-radius:10px;width:min(96vw,680px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
-.hz-dialog-header{padding:14px 16px;border-bottom:1px solid #eee}
+.hz-dialog{background:#161d2c;border:1px solid #2a3348;border-radius:10px;width:min(96vw,680px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.hz-dialog-header{padding:14px 16px;border-bottom:1px solid #2a3348}
 .hz-dialog-header input{margin-top:8px}
 .hz-dialog-body{overflow-y:auto;padding:10px 16px;flex:1}
-.hz-item{display:flex;gap:10px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+.hz-item{display:flex;gap:10px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid #232c40;cursor:pointer}
 .hz-item input{width:auto;margin-top:3px}
-.hz-item .hz-name{font-weight:600;font-size:0.9em;color:#222}
-.hz-item .hz-src{font-size:0.72em;color:#999;margin-top:2px}
-.hz-dialog-footer{padding:12px 16px;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:8px}
+.hz-item .hz-name{font-weight:600;font-size:0.9em;color:#e7ebf2}
+.hz-item .hz-src{font-size:0.72em;color:#7c8698;margin-top:2px}
+.hz-dialog-footer{padding:12px 16px;border-top:1px solid #2a3348;display:flex;justify-content:flex-end;gap:8px}
 @media print{.no-print{display:none!important}}
 </style>
 </head>
@@ -178,7 +178,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
   <!-- ══ ADDITIONAL CONTROL MEASURES ══ -->
   <div class="section-title">📝 Additional Control Measures (Please Specify)</div>
   <div class="section-box">
-    <div style="font-size:0.8em;color:#666;margin-bottom:8px">Jumlah baris tidak dibatasi — klik "+ Tambah Baris" kalau perlu lebih banyak. "Warning and Instruction to RIC" TIDAK bisa diubah lewat form ini — tetap standar perusahaan.</div>
+    <div style="font-size:0.8em;color:#9aa4b5;margin-bottom:8px">Jumlah baris tidak dibatasi — klik "+ Tambah Baris" kalau perlu lebih banyak. "Warning and Instruction to RIC" TIDAK bisa diubah lewat form ini — tetap standar perusahaan.</div>
     <button type="button" class="btn btn-gray" style="margin-bottom:10px" onclick="jsaAutoFillAdditionalMeasures()">⚡ Isi Otomatis dari Control Measures di Step</button>
     <div id="jsaAddMeasuresContainer"></div>
     <button type="button" class="btn btn-blue" style="margin-top:4px" onclick="jsaAddAdditionalMeasureRow()">+ Tambah Baris</button>
@@ -400,7 +400,13 @@ function jsaToggleControlMeasure(key, checked) {
 }
 function jsaRenderControlMeasures() {
   var container = document.getElementById('jsaControlMeasuresContainer');
-  container.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">' +
+  // Grid responsif -- di desktop/layar lebar otomatis melebar ke 3-4 kolom
+  // ("kesamping") supaya 36 item Control Measures tidak bikin halaman
+  // memanjang ke bawah, di mobile otomatis turun jadi 1 kolom. auto-fit
+  // aman dipakai di sini (BEDA dari kasus O2 Outlet channel grid yang perlu
+  // jumlah kolom TETAP demi urutan baris tertentu -- checklist Control
+  // Measures tidak punya keterkaitan urutan antar baris/kolom apa pun).
+  container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 16px">' +
     JSA_CONTROL_MEASURES_ITEMS.map(function(item) {
       var checked = jsaState.controlMeasures[item.key] ? 'checked' : '';
       return '<label style="display:flex;align-items:center;gap:8px;font-size:0.85em;padding:4px 0;cursor:pointer">' +
@@ -422,7 +428,7 @@ function jsaRenderApprovalHint() {
   var hint = document.getElementById('jsaApprovalHint');
   var need = JSA_RISK_LEVEL_APPROVAL[level];
   hint.innerHTML = need
-    ? '<span style="font-size:0.8em;color:#a35c1f;font-weight:600">⚠️ Butuh approval tambahan: ' + need + '</span>'
+    ? '<span style="font-size:0.8em;color:#e3c37a;font-weight:600">⚠️ Butuh approval tambahan: ' + need + '</span>'
     : '<span style="font-size:0.8em;color:#2ecc71">Tidak butuh approval tambahan.</span>';
 }
 
@@ -481,7 +487,7 @@ function jsaRenderSections() {
       '<button class="btn btn-blue" style="font-size:0.8em;padding:6px 12px" onclick="jsaAddStep(\'' + meta.code + '\')">+ Tambah Step</button></div>' +
       '<div class="jsa-section-body">';
     if (!steps.length) {
-      html += '<div style="color:#999;font-size:0.85em;padding:8px 0">Belum ada step. Klik "+ Tambah Step" untuk mulai.</div>';
+      html += '<div style="color:#7c8698;font-size:0.85em;padding:8px 0">Belum ada step. Klik "+ Tambah Step" untuk mulai.</div>';
     }
     steps.forEach(function(step, stepIdx) {
       html += '<div class="jsa-step">' +
@@ -493,7 +499,7 @@ function jsaRenderSections() {
       step.hazards.forEach(function(hz, hzIdx) {
         html += '<div class="jsa-hazard-row">' +
           '<button class="btn btn-red rm-row" onclick="jsaRemoveHazardRow(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ')" title="Hapus hazard ini">✕</button>' +
-          '<div class="form-group"><label>Hazard</label><textarea style="min-height:32px" oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'hazard\',this.value)">' + jsaEsc(hz.hazard) + '</textarea></div>' +
+          '<div class="form-group"><label>Hazard (1 baris = 1 poin)</label><textarea style="min-height:32px" oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'hazard\',this.value)">' + jsaEsc(hz.hazard) + '</textarea></div>' +
           '<div class="row">' +
             '<div class="form-group"><label>Risk (1 baris = 1 poin)</label><textarea oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'risk\',this.value)">' + jsaEsc(hz.risk) + '</textarea></div>' +
             '<div class="form-group"><label>Control Measures (1 baris = 1 poin)</label><textarea oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'control\',this.value)">' + jsaEsc(hz.control) + '</textarea></div>' +
@@ -531,7 +537,7 @@ function hzRenderList() {
     return hay.indexOf(q) >= 0;
   });
   if (!items.length) {
-    body.innerHTML = '<div style="color:#999;padding:20px;text-align:center">Tidak ada hazard yang cocok.</div>';
+    body.innerHTML = '<div style="color:#7c8698;padding:20px;text-align:center">Tidak ada hazard yang cocok.</div>';
     return;
   }
   body.innerHTML = items.map(function(hz) {
@@ -540,7 +546,7 @@ function hzRenderList() {
     return '<label class="hz-item">' +
       '<input type="checkbox" ' + checked + ' onchange="hzToggleSelect(\'' + hz.id + '\',this.checked)">' +
       '<div><div class="hz-name">' + jsaEsc(hz.hazard.join(' / ')) + '</div>' +
-      '<div style="font-size:0.78em;color:#666;margin-top:2px">Risk: ' + jsaEsc(hz.risk.join('; ')) + '</div>' +
+      '<div style="font-size:0.78em;color:#9aa4b5;margin-top:2px">Risk: ' + jsaEsc(hz.risk.join('; ')) + '</div>' +
       srcTag + '</div></label>';
   }).join('');
 }
@@ -983,7 +989,15 @@ function jsaSectionHeaderRow(doc, code, title) {
   var cell = jsaCell(doc, 15295, borders, [p], 4);
   return jsaRow(doc, [cell]);
 }
-function jsaHazardTableRow(stepNo, stepText, hazardText, riskLines, controlLines, doc) {
+// Step (Work Sequence) pakai "N. teks" (penomoran), Hazard/Risk/Control
+// Measures masing-masing 1 baris = 1 poin dengan bullet "•" di depan --
+// meniru contoh Word asli yang dikirim user (lihat CLAUDE.md). Bullet-nya
+// TEKS LITERAL "• " di depan tiap paragraf (bukan numbering/bullet
+// list style Word asli/`w:numPr`) -- pola paling sederhana, konsisten
+// dengan cara template ini menghindari numId sama sekali (lihat catatan
+// "Table 2 jauh lebih sederhana" di CLAUDE.md).
+function jsaBulletLine(l) { return l ? '• ' + l : ''; }
+function jsaHazardTableRow(stepNo, stepText, hazardLines, riskLines, controlLines, doc) {
   var isFirst = stepNo !== null;
   var wsText = isFirst ? (stepNo + '. ' + stepText) : '';
 
@@ -991,14 +1005,15 @@ function jsaHazardTableRow(stepNo, stepText, hazardText, riskLines, controlLines
   var wsCell = jsaCell(doc, JSA_COLW[0], wsBorders, [jsaCellP(doc, wsText, {bold:true})]);
 
   var hzBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['double',6]});
-  var hzCell = jsaCell(doc, JSA_COLW[1], hzBorders, [jsaCellP(doc, hazardText, {})]);
+  var hzParas = (hazardLines.length ? hazardLines : ['']).map(function(l){ return jsaCellP(doc, jsaBulletLine(l), {}); });
+  var hzCell = jsaCell(doc, JSA_COLW[1], hzBorders, hzParas);
 
   var riskBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['double',6]});
-  var riskParas = (riskLines.length ? riskLines : ['']).map(function(l){ return jsaCellP(doc, l, {jc:'center'}); });
+  var riskParas = (riskLines.length ? riskLines : ['']).map(function(l){ return jsaCellP(doc, jsaBulletLine(l), {}); });
   var riskCell = jsaCell(doc, JSA_COLW[2], riskBorders, riskParas);
 
   var ctrlBorders = jsaBorders(doc, {top:['dotted',4], left:['double',6], bottom:['dotted',4], right:['single',4]});
-  var ctrlParas = (controlLines.length ? controlLines : ['']).map(function(l){ return jsaCellP(doc, l, {}); });
+  var ctrlParas = (controlLines.length ? controlLines : ['']).map(function(l){ return jsaCellP(doc, jsaBulletLine(l), {}); });
   var ctrlCell = jsaCell(doc, JSA_COLW[3], ctrlBorders, ctrlParas);
 
   return jsaRow(doc, [wsCell, hzCell, riskCell, ctrlCell]);
@@ -1017,12 +1032,13 @@ function jsaRebuildTable2(tbl2) {
     steps.forEach(function(step, stepIdx) {
       var hazards = step.hazards.length ? step.hazards : [jsaNewHazardRow()];
       hazards.forEach(function(hz, hzIdx) {
+        var hazardLines = (hz.hazard || '').split('\n').map(function(s){return s.trim();}).filter(Boolean);
         var riskLines = (hz.risk || '').split('\n').map(function(s){return s.trim();}).filter(Boolean);
         var controlLines = (hz.control || '').split('\n').map(function(s){return s.trim();}).filter(Boolean);
         var row = jsaHazardTableRow(
           hzIdx === 0 ? String(stepIdx + 1) : null,
           hzIdx === 0 ? step.text : null,
-          hz.hazard || '', riskLines, controlLines, doc
+          hazardLines, riskLines, controlLines, doc
         );
         tbl2.appendChild(row);
       });
