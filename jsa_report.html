@@ -139,13 +139,28 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
   <!-- ══ PLANT PROCESS & RISK CHECKLIST (Table 1 matrix) ══ -->
   <div class="section-title">☑️ Plant Process &amp; Risk Checklist</div>
   <div class="section-box">
-    <div class="form-group">
-      <label>Online / Offline (berlaku untuk baris UNIT/SYSTEM/EQUIPMENT)</label>
-      <select id="jsaOnlineOffline">
-        <option value="">— Tidak dipilih —</option>
-        <option value="online">Online</option>
-        <option value="offline">Offline</option>
-      </select>
+    <div class="row3">
+      <div class="form-group"><label>UNIT — Online/Offline</label>
+        <select id="jsaOnlineOfflineUnit">
+          <option value="">— Tidak dipilih —</option>
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
+      <div class="form-group"><label>SYSTEM — Online/Offline</label>
+        <select id="jsaOnlineOfflineSystem">
+          <option value="">— Tidak dipilih —</option>
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
+      <div class="form-group"><label>EQUIPMENT — Online/Offline</label>
+        <select id="jsaOnlineOfflineEquipment">
+          <option value="">— Tidak dipilih —</option>
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+        </select>
+      </div>
     </div>
     <div id="jsaChecklistContainer"></div>
   </div>
@@ -163,12 +178,10 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
   <!-- ══ ADDITIONAL CONTROL MEASURES ══ -->
   <div class="section-title">📝 Additional Control Measures (Please Specify)</div>
   <div class="section-box">
-    <div style="font-size:0.8em;color:#666;margin-bottom:8px">Maksimal 4 baris (mengikuti slot di template Word). "Warning and Instruction to RIC" TIDAK bisa diubah lewat form ini — tetap standar perusahaan.</div>
+    <div style="font-size:0.8em;color:#666;margin-bottom:8px">Jumlah baris tidak dibatasi — klik "+ Tambah Baris" kalau perlu lebih banyak. "Warning and Instruction to RIC" TIDAK bisa diubah lewat form ini — tetap standar perusahaan.</div>
     <button type="button" class="btn btn-gray" style="margin-bottom:10px" onclick="jsaAutoFillAdditionalMeasures()">⚡ Isi Otomatis dari Control Measures di Step</button>
-    <div class="form-group"><label>1.</label><input type="text" id="jsaAddMeasure1"></div>
-    <div class="form-group"><label>2.</label><input type="text" id="jsaAddMeasure2"></div>
-    <div class="form-group"><label>3.</label><input type="text" id="jsaAddMeasure3"></div>
-    <div class="form-group"><label>4.</label><input type="text" id="jsaAddMeasure4"></div>
+    <div id="jsaAddMeasuresContainer"></div>
+    <button type="button" class="btn btn-blue" style="margin-top:4px" onclick="jsaAddAdditionalMeasureRow()">+ Tambah Baris</button>
   </div>
 
   <div class="no-print" style="margin-top:20px">
@@ -217,7 +230,8 @@ var JSA_SECTIONS_META = [
 var jsaState = {
   sections: { A: {steps: []}, B: {steps: []}, C: {steps: []} },
   checklist: {},
-  controlMeasures: {}
+  controlMeasures: {},
+  additionalMeasures: ['']
 };
 
 // ── Item checklist Table 1 (Plant Process Hazard Identification + Risk
@@ -413,9 +427,10 @@ function jsaRenderApprovalHint() {
 }
 
 // "Isi Otomatis" -- kumpulkan SEMUA baris Control Measures yang sudah
-// diketik user di step manapun (Table 2), ambil yang UNIK, isi ke 4 slot
-// Additional Control Measures (kalau lebih dari 4, sisanya dibuang -- kasih
-// tahu user lewat alert supaya tidak diam-diam kepotong).
+// diketik user di step manapun (Table 2), ambil yang UNIK, isi SEMUANYA ke
+// Additional Control Measures -- TIDAK dibatasi 4 lagi (baris dibuat dinamis
+// di jsaFillTable3, lihat catatan di sana), supaya tidak ada yang diam-diam
+// terpotong kalau control measures-nya banyak.
 function jsaAutoFillAdditionalMeasures() {
   var seen = {};
   var unique = [];
@@ -430,9 +445,30 @@ function jsaAutoFillAdditionalMeasures() {
     });
   });
   if (!unique.length) { alert('Belum ada Control Measures yang diisi di step manapun.'); return; }
-  var slots = ['jsaAddMeasure1','jsaAddMeasure2','jsaAddMeasure3','jsaAddMeasure4'];
-  slots.forEach(function(id, i) { document.getElementById(id).value = unique[i] || ''; });
-  if (unique.length > 4) alert('Ada ' + unique.length + ' control measures unik, cuma 4 slot yang tersedia di template -- sisanya (' + (unique.length - 4) + ') tidak ikut diisi. Silakan pilih manual kalau perlu yang lain.');
+  jsaState.additionalMeasures = unique;
+  jsaRenderAdditionalMeasures();
+}
+
+// Daftar baris Additional Control Measures -- dinamis (jumlah baris tidak
+// dibatasi), dirender ulang tiap kali baris ditambah/dihapus/diketik.
+function jsaRenderAdditionalMeasures() {
+  var c = document.getElementById('jsaAddMeasuresContainer');
+  if (!c) return;
+  if (!jsaState.additionalMeasures.length) jsaState.additionalMeasures = [''];
+  c.innerHTML = jsaState.additionalMeasures.map(function(val, i) {
+    return '<div class="form-group" style="display:flex;gap:8px;align-items:center;margin-bottom:6px">' +
+      '<label style="margin:0;min-width:20px">' + (i + 1) + '.</label>' +
+      '<input type="text" style="flex:1" value="' + jsaEsc(val) + '" oninput="jsaUpdateAdditionalMeasure(' + i + ',this.value)">' +
+      (jsaState.additionalMeasures.length > 1 ? '<button type="button" class="btn btn-red" style="padding:6px 10px" onclick="jsaRemoveAdditionalMeasure(' + i + ')">✕</button>' : '') +
+      '</div>';
+  }).join('');
+}
+function jsaUpdateAdditionalMeasure(i, val) { jsaState.additionalMeasures[i] = val; }
+function jsaAddAdditionalMeasureRow() { jsaState.additionalMeasures.push(''); jsaRenderAdditionalMeasures(); }
+function jsaRemoveAdditionalMeasure(i) {
+  jsaState.additionalMeasures.splice(i, 1);
+  if (!jsaState.additionalMeasures.length) jsaState.additionalMeasures.push('');
+  jsaRenderAdditionalMeasures();
 }
 
 function jsaRenderSections() {
@@ -545,17 +581,16 @@ function dbCollectData(modul) {
       epas: document.getElementById('jsaEpas').value || '',
       periodStart: document.getElementById('jsaPeriodStart').value || '',
       periodFinish: document.getElementById('jsaPeriodFinish').value || '',
-      onlineOffline: document.getElementById('jsaOnlineOffline').value || '',
+      onlineOfflineUnit: document.getElementById('jsaOnlineOfflineUnit').value || '',
+      onlineOfflineSystem: document.getElementById('jsaOnlineOfflineSystem').value || '',
+      onlineOfflineEquipment: document.getElementById('jsaOnlineOfflineEquipment').value || '',
       sigOpSupervisor: document.getElementById('jsaSigOpSupervisor').value || '',
       sigRic: document.getElementById('jsaSigRic').value || '',
       sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || '',
       sigHealthSafety: document.getElementById('jsaSigHealthSafety').value || '',
       sigIntersectionSpv: document.getElementById('jsaSigIntersectionSpv').value || '',
       sigAdditionalApproval: document.getElementById('jsaSigAdditionalApproval').value || '',
-      addMeasure1: document.getElementById('jsaAddMeasure1').value || '',
-      addMeasure2: document.getElementById('jsaAddMeasure2').value || '',
-      addMeasure3: document.getElementById('jsaAddMeasure3').value || '',
-      addMeasure4: document.getElementById('jsaAddMeasure4').value || '',
+      additionalMeasures: jsaState.additionalMeasures.map(function(s){return s || '';}).filter(function(s){return s.trim();}),
       checklist: jsaState.checklist,
       controlMeasures: jsaState.controlMeasures,
       sections: jsaState.sections
@@ -577,17 +612,24 @@ function applyRecordToForm(rec) {
   document.getElementById('jsaEpas').value = d.epas || '';
   document.getElementById('jsaPeriodStart').value = d.periodStart || '';
   document.getElementById('jsaPeriodFinish').value = d.periodFinish || '';
-  document.getElementById('jsaOnlineOffline').value = d.onlineOffline || '';
+  document.getElementById('jsaOnlineOfflineUnit').value = d.onlineOfflineUnit || '';
+  document.getElementById('jsaOnlineOfflineSystem').value = d.onlineOfflineSystem || '';
+  document.getElementById('jsaOnlineOfflineEquipment').value = d.onlineOfflineEquipment || '';
   document.getElementById('jsaSigOpSupervisor').value = d.sigOpSupervisor || rec.pic || '';
   document.getElementById('jsaSigRic').value = d.sigRic || '';
   document.getElementById('jsaSigMaintSupervisor').value = d.sigMaintSupervisor || '';
   document.getElementById('jsaSigHealthSafety').value = d.sigHealthSafety || '';
   document.getElementById('jsaSigIntersectionSpv').value = d.sigIntersectionSpv || '';
   document.getElementById('jsaSigAdditionalApproval').value = d.sigAdditionalApproval || '';
-  document.getElementById('jsaAddMeasure1').value = d.addMeasure1 || '';
-  document.getElementById('jsaAddMeasure2').value = d.addMeasure2 || '';
-  document.getElementById('jsaAddMeasure3').value = d.addMeasure3 || '';
-  document.getElementById('jsaAddMeasure4').value = d.addMeasure4 || '';
+  // additionalMeasures: array baru (dinamis, tidak dibatasi 4) -- fallback ke
+  // addMeasure1-4 kalau baca record LAMA yang masih format sebelum revisi ini.
+  if (d.additionalMeasures && d.additionalMeasures.length) {
+    jsaState.additionalMeasures = d.additionalMeasures.slice();
+  } else {
+    var legacy = [d.addMeasure1, d.addMeasure2, d.addMeasure3, d.addMeasure4].filter(function(s){return s && s.trim();});
+    jsaState.additionalMeasures = legacy.length ? legacy : [''];
+  }
+  jsaRenderAdditionalMeasures();
   jsaState.checklist = d.checklist || {};
   jsaState.controlMeasures = d.controlMeasures || {};
   jsaState.sections = (d.sections && d.sections.A && d.sections.B && d.sections.C)
@@ -711,28 +753,37 @@ function jsaToggleInlineSdtCheckbox(sdtEl, checked) {
   }
 }
 
-// Set/insert satu karakter checkbox ☒ (checked) / ☐ (unchecked) sebagai
-// PLAIN TEXT ke direct-child pertama paragraf sebuah sel -- dipakai untuk
-// checkbox Table 1 lainnya (Risk Category, Online/Offline, Plant Process
-// Hazard Identification -- SEMUANYA karakter unicode polos, BUKAN Word
-// content-control). Kalau selnya kosong sama sekali (tidak ada <w:r>, kasus
-// nyata ditemukan di beberapa baris real dokumen ini), BUAT run baru --
-// jangan asumsikan selalu ada run yang tinggal diganti teksnya.
+// Set satu karakter checkbox ☒ (checked) / ☐ (unchecked) sebagai PLAIN TEXT
+// di sebuah sel -- dipakai untuk checkbox Table 1 (Risk Category, Online/
+// Offline, Plant Process Hazard Identification -- SEMUANYA karakter
+// unicode polos, BUKAN Word content-control).
+// 🔴 BUG yang diperbaiki: versi awal cuma ganti <w:t> di run PERTAMA kalau
+// ADA, kalau tidak ADA (mis. run pertama cuma <w:rPr> tanpa teks) langsung
+// nambah run BARU tanpa membuang run-run lama -- akibatnya kalau paragraf
+// itu ternyata py LEBIH dari 1 run (mis. teks glyph asli template kepecah
+// jadi beberapa run, atau ada run kosong sisa), glyph LAMA dan glyph BARU
+// muncul BERBARENGAN ("☑☐" dobel, lihat laporan user). Fix: SELALU buang
+// SEMUA run yang ada dulu (persis pola jsaSetParagraphText yang sudah
+// terbukti benar), baru pasang SATU run baru -- jaminan tidak pernah dobel
+// apa pun struktur run aslinya.
 function jsaSetGlyphCheckbox(tc, checked) {
   if (!tc) return;
   var glyph = checked ? '☒' : '☐'; // ☒ / ☐
   var ps = jsaDirectChildren(tc, 'p');
   var p = ps[0];
   if (!p) { p = jsaMk(tc.ownerDocument, 'w:p'); tc.appendChild(p); }
-  var runs = jsaDirectChildren(p, 'r');
-  if (runs.length) {
-    var ts = jsaDirectChildren(runs[0], 't');
-    if (ts.length) { ts[0].textContent = glyph; return; }
-  }
   var doc = tc.ownerDocument;
-  var r = jsaMk(doc, 'w:r');
-  r.appendChild(jsaTextNode(doc, glyph));
-  p.appendChild(r);
+  var runs = jsaDirectChildren(p, 'r');
+  var firstRpr = null;
+  if (runs.length) {
+    var rprEls = jsaDirectChildren(runs[0], 'rPr');
+    if (rprEls.length) firstRpr = rprEls[0];
+  }
+  runs.forEach(function(r) { p.removeChild(r); });
+  var newR = jsaMk(doc, 'w:r');
+  if (firstRpr) newR.appendChild(firstRpr.cloneNode(true));
+  newR.appendChild(jsaTextNode(doc, glyph));
+  p.appendChild(newR);
 }
 
 function jsaFillTable1(tbl1, form) {
@@ -800,12 +851,14 @@ function jsaFillTable1(tbl1, form) {
   // Row 3 tc1: "RISK TO TRIP, No: ...." -- 1 paragraf gabungan, ganti seluruhnya.
   jsaSetParagraphText(soleP(3, 1), 'RISK TO TRIP, No: ' + form.riskToTrip);
 
-  // Row 6/7/8 tc1(Online)/tc2(Offline) -- UNIT/SYSTEM/EQUIPMENT, 1 pilihan
-  // berlaku utk ketiganya sekaligus (mengikuti cara form ini biasa diisi --
-  // ketiga baris SELALU sama, tidak pernah campur).
-  [6, 7, 8].forEach(function(r) {
-    jsaSetGlyphCheckbox(tc(r, 1), form.onlineOffline === 'online');
-    jsaSetGlyphCheckbox(tc(r, 2), form.onlineOffline === 'offline');
+  // Row 6/7/8 tc1(Online)/tc2(Offline) -- UNIT/SYSTEM/EQUIPMENT SEKARANG
+  // PUNYA PILIHAN MASING-MASING (bukan 1 pilihan berlaku ke ketiganya --
+  // permintaan eksplisit user, sebelumnya SEMPAT digabung jadi 1 dropdown
+  // dengan asumsi ketiganya selalu sama, ternyata salah).
+  [[6, form.onlineOfflineUnit], [7, form.onlineOfflineSystem], [8, form.onlineOfflineEquipment]].forEach(function(pair) {
+    var r = pair[0], val = pair[1];
+    jsaSetGlyphCheckbox(tc(r, 1), val === 'online');
+    jsaSetGlyphCheckbox(tc(r, 2), val === 'offline');
   });
 
   // Row 9/10 tc[2]: toggle Risk Category LOW/HIGH (☒/☐, karakter unicode
@@ -997,19 +1050,16 @@ function jsaCollectFormValues() {
     epas: document.getElementById('jsaEpas').value || '',
     periodStart: document.getElementById('jsaPeriodStart').value || '',
     periodFinish: document.getElementById('jsaPeriodFinish').value || '',
-    onlineOffline: document.getElementById('jsaOnlineOffline').value || '',
+    onlineOfflineUnit: document.getElementById('jsaOnlineOfflineUnit').value || '',
+    onlineOfflineSystem: document.getElementById('jsaOnlineOfflineSystem').value || '',
+    onlineOfflineEquipment: document.getElementById('jsaOnlineOfflineEquipment').value || '',
     sigOpSupervisor: document.getElementById('jsaSigOpSupervisor').value || '',
     sigRic: document.getElementById('jsaSigRic').value || '',
     sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || '',
     sigHealthSafety: document.getElementById('jsaSigHealthSafety').value || '',
     sigIntersectionSpv: document.getElementById('jsaSigIntersectionSpv').value || '',
     sigAdditionalApproval: document.getElementById('jsaSigAdditionalApproval').value || '',
-    addMeasures: [
-      document.getElementById('jsaAddMeasure1').value || '',
-      document.getElementById('jsaAddMeasure2').value || '',
-      document.getElementById('jsaAddMeasure3').value || '',
-      document.getElementById('jsaAddMeasure4').value || ''
-    ],
+    addMeasures: jsaState.additionalMeasures.map(function(s){return s || '';}).filter(function(s){return s.trim();}),
     checklist: jsaState.checklist,
     controlMeasures: jsaState.controlMeasures
   };
@@ -1074,18 +1124,53 @@ function jsaFillTable3(tbl3, form) {
     if (cbCell) jsaSetSdtCheckbox(cbCell, !!form.controlMeasures[item.key]);
   });
 
-  // Additional Control Measures: baris 20-23 tabel bersarang, 1 paragraf
-  // per baris, format "N. <isi>" (nomor tetap ada meski isi dikosongkan,
-  // persis pola template aslinya).
-  for (var i = 0; i < 4; i++) {
-    var cells = jsaLogicalCells(rows[20 + i]);
-    var p = jsaDirectChildren(cells[0].tc, 'p')[0];
-    var text = form.addMeasures[i] ? (i + 1) + '. ' + form.addMeasures[i] : (i + 1) + '.';
-    jsaSetParagraphText(p, text);
+  // Additional Control Measures: JUMLAH BARIS DINAMIS (tidak dibatasi 4
+  // lagi -- permintaan eksplisit user, "additional control measure jangan
+  // dibatasi 4"). Template aslinya (jsa_template.docx, DIAMBIL FRESH tiap
+  // generate lewat fetch()) masih punya 4 baris contoh (row 20-23) di antara
+  // header "Additional Control Measures" (row 19) dan header "Warning and
+  // Instruction to RIC" (row 24) -- cari KEDUA baris header ITU lewat
+  // PENCARIAN TEKS (bukan index tetap) supaya tetap benar walau struktur
+  // template berubah sedikit di masa depan, lalu: (1) simpan clone salah
+  // satu baris contoh SEBELUM dihapus (dipakai sbg cetakan format baris
+  // baru), (2) hapus SEMUA baris contoh lama, (3) sisipkan sebanyak
+  // form.addMeasures.length baris baru PERSIS SEBELUM header Warning --
+  // header Warning sendiri TIDAK PERNAH disentuh/dipindah/dihapus.
+  function rowText(tr) {
+    return jsaDirectChildren(tr, 'tc').concat(
+      jsaDirectChildren(tr, 'sdt').map(function(s){ var c = jsaDirectChildren(s,'sdtContent')[0]; return c ? jsaDirectChildren(c,'tc')[0] : null; }).filter(Boolean)
+    ).map(function(c) {
+      return jsaDirectChildren(c, 'p').map(function(p) {
+        return Array.prototype.slice.call(p.getElementsByTagNameNS(JSA_W_NS, 't')).map(function(t){ return t.textContent; }).join('');
+      }).join('');
+    }).join('');
   }
-  // Baris 24-28 (Warning and Instruction to RIC) SENGAJA tidak disebut di
-  // fungsi ini sama sekali -- jangan tambahkan kode utk baris itu di masa
-  // depan tanpa izin eksplisit user.
+  var addHeaderIdx = -1, warningHeaderIdx = -1;
+  rows.forEach(function(tr, i) {
+    var t = rowText(tr);
+    if (addHeaderIdx === -1 && t.indexOf('Additional Control Measures') >= 0) addHeaderIdx = i;
+    if (warningHeaderIdx === -1 && t.indexOf('Warning and Instruction to RIC') >= 0) warningHeaderIdx = i;
+  });
+  if (addHeaderIdx === -1 || warningHeaderIdx === -1 || warningHeaderIdx <= addHeaderIdx) {
+    throw new Error('Struktur "Additional Control Measures"/"Warning and Instruction to RIC" tidak ditemukan di template.');
+  }
+  var templateRowClone = rows[addHeaderIdx + 1].cloneNode(true);
+  for (var i = warningHeaderIdx - 1; i > addHeaderIdx; i--) {
+    nested.removeChild(rows[i]);
+  }
+  var warningHeaderEl = rows[warningHeaderIdx];
+  var lines = (form.addMeasures || []).map(function(s){return (s || '').trim();}).filter(Boolean);
+  if (!lines.length) lines = [''];
+  lines.forEach(function(line, i) {
+    var newRow = templateRowClone.cloneNode(true);
+    var newTc = jsaDirectChildren(newRow, 'tc')[0];
+    var newP = jsaDirectChildren(newTc, 'p')[0];
+    jsaSetParagraphText(newP, line ? (i + 1) + '. ' + line : (i + 1) + '.');
+    nested.insertBefore(newRow, warningHeaderEl);
+  });
+  // Baris "Warning and Instruction to RIC" itu sendiri SENGAJA tidak
+  // disebut di fungsi ini sama sekali -- jangan tambahkan kode utk baris
+  // itu di masa depan tanpa izin eksplisit user.
 }
 
 function jsaDownloadBlob(blob, filename) {
@@ -1136,6 +1221,7 @@ jsaLoadHazardBank();
 jsaRenderSections();
 jsaRenderChecklist();
 jsaRenderControlMeasures();
+jsaRenderAdditionalMeasures();
 jsaRenderApprovalHint();
 </script>
 </body>

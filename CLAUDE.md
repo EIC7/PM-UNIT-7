@@ -1620,3 +1620,68 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   elemen lama (`dbSavingRingSvg`/`dbSavingEicWrap`) sudah tidak ada,
   toggle normal/error benar. Item 4 diverifikasi baca ulang kode (perubahan
   murni urutan string HTML, risiko rendah).
+
+## JSA Report: Online/Offline per-baris, fix checkbox double, Additional Control Measures tanpa batas (2026-09-03)
+
+- **Online/Offline (`jsa_report.html`)**: dulu 1 dropdown `#jsaOnlineOffline`
+  dipakai buat UNIT/SYSTEM/EQUIPMENT sekaligus (asumsi ketiganya selalu sama
+  — SALAH, dikoreksi eksplisit oleh user: "untuk plant online dan offline.
+  itu pilihannya masing2"). Sekarang 3 dropdown independen
+  (`#jsaOnlineOfflineUnit`/`#jsaOnlineOfflineSystem`/`#jsaOnlineOfflineEquipment`),
+  disimpan sebagai 3 field terpisah di `data` (`onlineOfflineUnit`/
+  `onlineOfflineSystem`/`onlineOfflineEquipment`) dan ditulis independen ke
+  baris 6/7/8 Table 1 di `jsaFillTable1()`. Record lama yang masih pakai
+  field tunggal `onlineOffline` akan tampil kosong di ketiga dropdown baru
+  saat dibuka ulang (tidak ada migrasi otomatis — data historis jumlahnya
+  sedikit, cukup diisi ulang manual kalau perlu dibuka lagi).
+- **Checkbox glyph dobel (`jsaSetGlyphCheckbox()`)**: root cause — versi lama
+  cuma mengganti teks run PERTAMA kalau punya `<w:t>`, kalau tidak malah
+  APPEND run baru TANPA menghapus run lama (yang bisa saja masih membawa
+  glyph lama, artifact run-splitting Word) → ☑ lama dan ☐ baru sama-sama
+  tercetak (dilaporkan user via screenshot: "centang di informasi pekerjaan
+  diatas tidak sesuai dan double"). Fix: SELALU kumpulkan semua run anak
+  langsung paragraf, simpan `rPr` run pertama, HAPUS SEMUA run itu, baru
+  append TEPAT SATU run baru — pola yang sama persis dengan
+  `jsaSetParagraphText()` yang sudah lebih dulu benar (dipakai Control
+  Measures Selection, makanya section itu tidak pernah kena bug ini). Kalau
+  menambah fungsi set-checkbox/set-text baru di file ini ke depan, WAJIB
+  ikuti pola remove-all-then-append-one ini, JANGAN pola "ganti run pertama
+  kalau ada, append kalau tidak ada" — itu pola yang menyebabkan bug ini.
+- **Additional Control Measures tanpa batas jumlah baris**: dulu hardcoded
+  4 slot (`#jsaAddMeasure1`..`4`, field `addMeasure1`..`4` di `data`).
+  Sekarang: `jsaState.additionalMeasures` (array string, render dinamis via
+  `jsaRenderAdditionalMeasures()`, tombol "+ Tambah Baris"/`jsaAddAdditionalMeasureRow()`
+  + tombol hapus per baris/`jsaRemoveAdditionalMeasure(i)`, minimal selalu 1
+  baris). Disimpan ke `data.additionalMeasures` (array, baris kosong
+  di-filter saat simpan) — `applyRecordToForm()` fallback baca
+  `addMeasure1`..`4` LAMA kalau `additionalMeasures` tidak ada (kompatibel
+  buka record lama). `jsaAutoFillAdditionalMeasures()` sekarang isi
+  SEMUA control measures unik ke array (tidak lagi dipotong ke 4 + alert
+  peringatan).
+  - `jsaFillTable3()`: baris Additional Control Measures di tabel bersarang
+    Word TIDAK LAGI diasumsikan selalu row index 20-23 tetap. Sekarang
+    mencari BATAS lewat PENCARIAN TEKS (`rowText(tr)` — baca semua
+    `<w:t>` di baris, termasuk sel yang dibungkus `<w:sdt>`): baris header
+    "Additional Control Measures" dan baris header "Warning and Instruction
+    to RIC" dicari by-text, BUKAN by-index. Baris CONTOH pertama (persis
+    setelah header Additional) di-`cloneNode(true)` DULU (dipakai sbg
+    cetakan format), baru SEMUA baris contoh lama (dari template, biasanya
+    4) dihapus, lalu sebanyak `form.addMeasures.length` baris baru
+    disisipkan (`insertBefore`) TEPAT SEBELUM baris header Warning — baris
+    Warning dan sesudahnya (termasuk isi "Dilarang melakukan pekerjaan
+    diluar...", teksnya SENGAJA terpecah lintas beberapa `<w:r>` di XML
+    asli template, jangan heran kalau grep 1 kalimat utuh tidak ketemu)
+    TIDAK PERNAH disentuh/dipindah — cukup dijadikan titik referensi
+    `insertBefore`, elemen DOM-nya sendiri tidak diapa-apakan.
+  - **Kalau nanti perlu menyisipkan baris dinamis serupa di tabel bersarang
+    Word manapun (bukan cuma Additional Control Measures)**, pola
+    "cari boundary by-text, bukan by-index tetap" ini WAJIB dipakai lagi —
+    index tetap cuma valid kalau jumlah baris sebelumnya PASTI konstan,
+    yang tidak lagi benar begitu ada bagian yang jumlah barisnya dinamis.
+- Diverifikasi lewat headless Chrome + local static-file server (JSZip dari
+  CDN, jadi butuh koneksi network, tidak bisa `file://` murni): selftest
+  generate Word dengan 6 baris Additional Control Measures (lebih dari batas
+  lama 4) — SEMUA 6 baris muncul utuh di XML akhir, tidak ada glyph
+  berdekatan ganda (☒☐/☐☒/☒☒), dan section "Warning and Instruction to RIC"
+  tetap muncul PERSIS SATU KALI (tidak terduplikasi/hilang) setelah proses
+  insert/remove baris di sekitarnya.
