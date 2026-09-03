@@ -37,6 +37,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-aksi.download{color:#7fd99a;border-color:#1c3324}
 .btn-aksi.hapus{color:#e5695c;border-color:#5a2420}
 
+.asset-file{display:block;margin-top:3px;font-size:0.78em;color:#7c8698;font-family:'Courier New',monospace}
 .empty-msg{text-align:center;padding:30px;color:#7c8698;font-size:13px}
 .loading-msg{text-align:center;padding:30px;color:#7c8698;font-size:13px}
 
@@ -143,6 +144,16 @@ function jsaRiskBadge(risk) {
   return '<span class="badge-risk badge-none">-</span>';
 }
 
+// Meniru persis jsaBuildFilename() di jsa_report.html/jsa_condition_access.html
+// (WO_Asset, tanpa ekstensi disini) -- SEKEDAR PREVIEW nama file yang akan
+// didownload, ditampilkan di bawah kolom Asset. Kalau logic penamaan di
+// kedua file modul itu berubah lagi, WAJIB disamakan lagi di sini.
+function jsaBuildFilenamePreview(wo, equipTag) {
+  var parts = [wo, equipTag].filter(Boolean);
+  if (!parts.length) return '';
+  return parts.join('_').replace(/\s+/g, '_').replace(/[\\/:*?"<>|]+/g, '') + '.docx';
+}
+
 function jsaHistRender() {
   var rows = jsaHistCurrentTab === 'JSA_CONDITION_ACCESS' ? jsaHistRowsCA : jsaHistRowsRT;
   var container = document.getElementById('jsaHistList');
@@ -159,8 +170,11 @@ function jsaHistRender() {
     var url = raModulToUrl(r.modul, r.id);
     var previewUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'autopreview=1';
     var dlUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'autodownload=1';
+    var fileName = jsaBuildFilenamePreview(r.work_order, d.equipTag);
     html += '<tr>' +
-      '<td>' + jsaEscHtml(d.equipTag || '-') + '</td>' +
+      '<td>' + jsaEscHtml(d.equipTag || '-') +
+        (fileName ? '<span class="asset-file">📄 ' + jsaEscHtml(fileName) + '</span>' : '') +
+      '</td>' +
       '<td>' + (r.tanggal || '-') + '</td>' +
       '<td>' + jsaEscHtml(applicant) + '</td>' +
       '<td>' + jsaEscHtml(r.work_order || '-') + '</td>' +
