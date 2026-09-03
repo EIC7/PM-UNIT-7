@@ -39,20 +39,35 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .btn-red{background:#e5695c;color:#fff;padding:6px 12px;font-size:0.82em}
 .btn-gray{background:#2a3348;color:#c7cdd6}
 .btn-full{width:100%;justify-content:center;margin-bottom:10px}
-/* ── JSA sections/steps/hazard rows ── */
+/* ── JSA sections/steps/hazard table ── */
 .jsa-section{border:1px solid #2a3348;border-radius:8px;margin-bottom:16px;overflow:hidden}
 .jsa-section-head{background:#1c2a44;color:#bfd6f7;padding:10px 14px;font-weight:700;font-size:0.92em;display:flex;justify-content:space-between;align-items:center}
 .jsa-section-body{padding:12px;background:#12182a}
-.jsa-step{border:1px solid #2a3348;border-radius:8px;padding:12px;margin-bottom:10px;background:#161d2c}
-.jsa-step-head{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
-.jsa-step-head input{flex:1}
-.jsa-step-no{background:#2e6fcc;color:#fff;font-weight:700;font-size:0.85em;border-radius:6px;padding:9px 12px;flex-shrink:0}
-.jsa-hazard-row{border:1px dashed #3a4560;border-radius:6px;padding:10px;margin:8px 0;background:#0f1420;position:relative}
-.jsa-hazard-row .rm-row{position:absolute;top:6px;right:6px}
-.jsa-hazard-row label{font-size:0.78em;color:#7c8698}
-.jsa-hazard-row textarea{min-height:48px;font-size:0.9em}
-.jsa-step-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-.jsa-step-actions .btn{font-size:0.82em;padding:7px 12px}
+.jsa-step-no{display:inline-block;background:#2e6fcc;color:#fff;font-weight:700;font-size:0.85em;border-radius:6px;padding:5px 10px;margin-bottom:6px}
+/* Tabel Step/Hazard/Risk/Control Measures -- ringkas berdampingan (BUKAN
+   kartu bertumpuk) supaya halaman tidak memanjang drastis begitu banyak
+   hazard ditambahkan. Kolom Control Measures dibuat PALING LEBAR (isinya
+   biasa paling panjang), tiap textarea py tinggi TETAP + scroll internal
+   sendiri (BUKAN row yang tambah tinggi mengikuti isi). ── */
+.jsa-hz-table-wrap{overflow-x:auto}
+.jsa-hz-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.jsa-hz-table col.col-step{width:17%}
+.jsa-hz-table col.col-hz{width:20%}
+.jsa-hz-table col.col-risk{width:20%}
+.jsa-hz-table col.col-ctrl{width:35%}
+.jsa-hz-table col.col-act{width:34px}
+.jsa-hz-table th{background:#1c2334;color:#aab4c4;font-size:0.76em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:7px 8px;text-align:left;border-bottom:1px solid #2a3348}
+.jsa-hz-table td{padding:6px;border-bottom:1px solid #232c40;vertical-align:top}
+.jsa-hz-table td.step-cell{background:#161d2c;border-right:1px solid #2a3348}
+.jsa-hz-table td.step-cell input{width:100%;margin:6px 0;font-size:0.85em;padding:7px 8px}
+.jsa-hz-ta{width:100%;min-height:34px;max-height:110px;overflow-y:auto;resize:vertical;font-size:0.82em;line-height:1.4}
+.jsa-hz-ta-wide{min-height:34px}
+.jsa-hz-empty{color:#7c8698;font-size:0.82em;font-style:italic;padding:14px 10px}
+.rm-hz-btn{border:1px solid #3a4560;background:#1c2334;color:#7c8698;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:0.72em}
+.rm-hz-btn:hover{color:#e5695c;border-color:#e5695c}
+.btn-step-rm{font-size:0.72em;padding:5px 8px;width:100%;justify-content:center}
+.jsa-hz-actions-row td{background:#12182a;padding:8px}
+.jsa-hz-actions-row .btn{font-size:0.78em;padding:6px 11px;margin-right:6px}
 /* ── Hazard picker modal ── */
 #hazardModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:14px}
 #hazardModal.show{display:flex}
@@ -613,6 +628,19 @@ function jsaRemoveAdditionalMeasure(i) {
   jsaRenderAdditionalMeasures();
 }
 
+// ── Render "Langkah Pekerjaan & Hazard" sebagai TABEL ringkas (Step/Hazard/
+//    Risk/Control Measures berdampingan, kolom Control Measures dibuat
+//    lebih lebar + tiap sel textarea scroll SENDIRI kalau isinya panjang)
+//    -- BUKAN lagi kartu bertumpuk vertikal (Hazard di atas, Risk+Control di
+//    bawahnya) yang bikin halaman memanjang drastis begitu banyak hazard
+//    ditambahkan. Kolom "Step" pakai rowspan (1 sel meliputi SEMUA baris
+//    hazard milik step itu) -- meniru pola yang sama dgn tabel Word Table 2
+//    aslinya (step cuma dicetak sekali per grup hazard). Handler
+//    (jsaUpdateStepText/jsaUpdateHazardField/jsaRemoveHazardRow/dst) TIDAK
+//    berubah sama sekali, cuma wadah HTML-nya yang berubah. ──
+function jsaHzTextarea(meta, stepIdx, hzIdx, field, val, extraClass) {
+  return '<textarea class="jsa-hz-ta' + (extraClass ? ' ' + extraClass : '') + '" oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'' + field + '\',this.value)">' + jsaEsc(val) + '</textarea>';
+}
 function jsaRenderSections() {
   var container = document.getElementById('jsaSectionsContainer');
   var html = '';
@@ -624,29 +652,39 @@ function jsaRenderSections() {
       '<div class="jsa-section-body">';
     if (!steps.length) {
       html += '<div style="color:#7c8698;font-size:0.85em;padding:8px 0">Belum ada step. Klik "+ Tambah Step" untuk mulai.</div>';
-    }
-    steps.forEach(function(step, stepIdx) {
-      html += '<div class="jsa-step">' +
-        '<div class="jsa-step-head">' +
+    } else {
+      html += '<div class="jsa-hz-table-wrap"><table class="jsa-hz-table"><colgroup>' +
+        '<col class="col-step"><col class="col-hz"><col class="col-risk"><col class="col-ctrl"><col class="col-act">' +
+        '</colgroup><thead><tr><th>Step</th><th>Hazard</th><th>Risk</th><th>Control Measures</th><th></th></tr></thead><tbody>';
+      steps.forEach(function(step, stepIdx) {
+        var hazards = step.hazards;
+        var dataRowCount = Math.max(hazards.length, 1);
+        var stepCell = '<td class="step-cell" rowspan="' + (dataRowCount + 1) + '">' +
           '<div class="jsa-step-no">' + (stepIdx + 1) + '</div>' +
-          '<input type="text" placeholder="Deskripsi step (mis. PTW Preparation & Toolbox Meeting)" value="' + jsaEsc(step.text) + '" oninput="jsaUpdateStepText(\'' + meta.code + '\',' + stepIdx + ',this.value)">' +
-          '<button class="btn btn-red" onclick="jsaRemoveStep(\'' + meta.code + '\',' + stepIdx + ')">🗑</button>' +
-        '</div>';
-      step.hazards.forEach(function(hz, hzIdx) {
-        html += '<div class="jsa-hazard-row">' +
-          '<button class="btn btn-red rm-row" onclick="jsaRemoveHazardRow(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ')" title="Hapus hazard ini">✕</button>' +
-          '<div class="form-group"><label>Hazard (1 baris = 1 poin)</label><textarea style="min-height:32px" oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'hazard\',this.value)">' + jsaEsc(hz.hazard) + '</textarea></div>' +
-          '<div class="row">' +
-            '<div class="form-group"><label>Risk (1 baris = 1 poin)</label><textarea oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'risk\',this.value)">' + jsaEsc(hz.risk) + '</textarea></div>' +
-            '<div class="form-group"><label>Control Measures (1 baris = 1 poin)</label><textarea oninput="jsaUpdateHazardField(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ',\'control\',this.value)">' + jsaEsc(hz.control) + '</textarea></div>' +
-          '</div>' +
-        '</div>';
+          '<input type="text" placeholder="Deskripsi step..." value="' + jsaEsc(step.text) + '" oninput="jsaUpdateStepText(\'' + meta.code + '\',' + stepIdx + ',this.value)">' +
+          '<button class="btn btn-red btn-step-rm" onclick="jsaRemoveStep(\'' + meta.code + '\',' + stepIdx + ')">🗑 Step</button>' +
+        '</td>';
+        if (!hazards.length) {
+          html += '<tr>' + stepCell +
+            '<td colspan="4" class="jsa-hz-empty">Belum ada hazard. Pakai tombol di bawah untuk menambah.</td>' +
+          '</tr>';
+        } else {
+          hazards.forEach(function(hz, hzIdx) {
+            html += '<tr>' + (hzIdx === 0 ? stepCell : '') +
+              '<td>' + jsaHzTextarea(meta, stepIdx, hzIdx, 'hazard', hz.hazard) + '</td>' +
+              '<td>' + jsaHzTextarea(meta, stepIdx, hzIdx, 'risk', hz.risk) + '</td>' +
+              '<td>' + jsaHzTextarea(meta, stepIdx, hzIdx, 'control', hz.control, 'jsa-hz-ta-wide') + '</td>' +
+              '<td class="col-act"><button class="rm-hz-btn" onclick="jsaRemoveHazardRow(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ')" title="Hapus hazard ini">✕</button></td>' +
+            '</tr>';
+          });
+        }
+        html += '<tr class="jsa-hz-actions-row"><td colspan="4">' +
+          '<button class="btn btn-blue" onclick="jsaOpenHazardPicker(\'' + meta.code + '\',' + stepIdx + ')">🔎 Pilih Hazard dari Library</button>' +
+          '<button class="btn btn-gray" onclick="jsaAddManualHazardRow(\'' + meta.code + '\',' + stepIdx + ')">+ Tambah Hazard Manual</button>' +
+        '</td></tr>';
       });
-      html += '<div class="jsa-step-actions">' +
-        '<button class="btn btn-blue" onclick="jsaOpenHazardPicker(\'' + meta.code + '\',' + stepIdx + ')">🔎 Pilih Hazard dari Library</button>' +
-        '<button class="btn btn-gray" onclick="jsaAddManualHazardRow(\'' + meta.code + '\',' + stepIdx + ')">+ Tambah Hazard Manual</button>' +
-      '</div></div>';
-    });
+      html += '</tbody></table></div>';
+    }
     html += '</div></div>';
   });
   container.innerHTML = html;

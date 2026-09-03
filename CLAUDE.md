@@ -2164,3 +2164,59 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   dikonfirmasi visual -- tampilan sekarang identik gaya dengan Condition
   Access (4 panel, warna sama, termasuk section "Informasi Pekerjaan" yang
   masih menampilkan field Risk-to-Trip-khusus di atas grid).
+
+## JSA (kedua file): "Langkah Pekerjaan & Hazard" jadi TABEL ringkas (Step/Hazard/Risk/Control Measures) (2026-09-03)
+
+- User kirim mockup ("FORMAT TAMPILAN PADA HTML SETELAH DIPILIH" -- tabel 4
+  kolom STEP|HAZARD|RISK|CONTROL MEASURE) minta section "Langkah Pekerjaan
+  & Hazard" dibuat ringkas berdampingan, BUKAN lagi kartu bertumpuk vertikal
+  (`.jsa-step` > `.jsa-hazard-row`, Hazard di atas lalu Risk+Control di
+  bawahnya) yang bikin halaman memanjang drastis begitu banyak hazard
+  ditambahkan -- permintaan eksplisit: *"buat ringkas seperti ini agar
+  tidak banyak kolom terlebar control measure karena isinya banyak tapi
+  jangan full tampil sama dengan seperti sekarang scroll langsung di
+  kolom"* (kolom Control Measures dibuat PALING LEBAR, isinya di-scroll
+  SENDIRI di dalam sel -- bukan bikin baris tabel/halaman ikut memanjang).
+- **`jsaRenderSections()` dirombak total jadi tabel HTML asli**
+  (`<table class="jsa-hz-table">`, kolom via `<colgroup>`: Step 17% / Hazard
+  20% / Risk 20% / Control Measures **35%** / Aksi 34px tetap) --
+  diterapkan ke KEDUA file JSA (`jsa_report.html` dan
+  `jsa_condition_access.html`, kode identik karena Table 2 memang shared).
+  Kolom **Step pakai `rowspan`** (1 sel meliputi SEMUA baris hazard milik
+  step itu, `rowspan = jumlah_hazard + 1` -- `+1` utk baris tombol aksi
+  "Pilih dari Library"/"Tambah Hazard Manual" di akhir grup) -- meniru
+  pola yang SAMA PERSIS dengan tabel Word Table 2 aslinya (step cuma
+  dicetak sekali per grup hazard, `jsaHazardTableRow()` yang sudah ada
+  dari awal). Step TANPA hazard sama sekali (edge case, step baru
+  ditambah) dapat 1 baris placeholder ("Belum ada hazard...") + baris aksi
+  (`rowspan=2`).
+- **Setiap sel Hazard/Risk/Control Measures adalah `<textarea class="jsa-hz-
+  ta">`** dengan `max-height:110px; overflow-y:auto` -- kalau isinya
+  banyak baris, SEL ITU SENDIRI yang scroll (bukan tinggi baris tabel
+  membesar mengikuti isi, apalagi halaman). Kolom Control Measures dapat
+  class tambahan `.jsa-hz-ta-wide` (saat ini styling-nya sama dgn
+  `.jsa-hz-ta` biasa -- class terpisah disediakan andai nanti perlu
+  override lebih lanjut, mis. font lebih besar).
+- **Handler JS (`jsaUpdateStepText`/`jsaUpdateHazardField`/
+  `jsaRemoveHazardRow`/`jsaRemoveStep`/`jsaOpenHazardPicker`/
+  `jsaAddManualHazardRow`) TIDAK DIUBAH SAMA SEKALI** -- fungsi-fungsi itu
+  cuma memanipulasi `jsaState` lalu panggil ulang `jsaRenderSections()`,
+  jadi ganti wadah HTML (kartu -> tabel) tidak butuh sentuh logic apa pun
+  di situ, cuma `jsaRenderSections()` sendiri yang ditulis ulang.
+  `jsaRebuildTable2()` (generator Word Table 2) JUGA TIDAK DISENTUH --
+  baca `jsaState.sections` langsung, sama sekali tidak peduli representasi
+  HTML editor-nya.
+- Class CSS lama yang jadi DEAD CODE dihapus (`.jsa-step`, `.jsa-step-head`,
+  `.jsa-hazard-row` beserta turunannya, `.jsa-step-actions`) -- diganti
+  `.jsa-hz-table*`, `.rm-hz-btn`, `.btn-step-rm`. `.jsa-step-no` (badge
+  angka step) DIPERTAHANKAN, dipakai ulang di dalam sel Step yang baru.
+- Diverifikasi lewat headless Chrome (struktur DOM, BUKAN cuma baca kode):
+  2 step (1 dengan 2 hazard, 1 kosong) -> tepat 5 baris `<tr>` dgn
+  `rowspan` masing-masing 3 dan 2 yang benar, 6 textarea (2 hazard x 3
+  field) dengan value yang sesuai state, kolom Control Measures dapat
+  class `jsa-hz-ta-wide`, edit textarea (dispatch event `input`) benar-
+  benar mengubah `jsaState`, hapus 1 hazard via `jsaRemoveHazardRow()`
+  benar mengurangi jumlah baris tabel setelah re-render. Screenshot penuh
+  (window 1440×3600) juga dikonfirmasi visual -- tabel tampil ringkas
+  persis seperti mockup, step dengan 0 hazard menampilkan pesan placeholder
+  bukan baris kosong yang membingungkan.
