@@ -63,7 +63,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="header">
     <div class="header-content">
       <h1>🦺 JOB SAFETY ANALYSIS (JSA) History</h1>
-      <p>Riwayat laporan JSA yang sudah dibuat — Condition Access &amp; Risk To Trip</p>
+      <p>Riwayat laporan JSA yang sudah dibuat — Conditional Access &amp; Risk To Trip</p>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
@@ -71,7 +71,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="JSA_CONDITION_ACCESS" onclick="jsaHistSwitchTab('JSA_CONDITION_ACCESS')">Condition Access <span class="cnt" id="cntCA"></span></button>
+    <button class="tab-btn active" data-tab="JSA_CONDITION_ACCESS" onclick="jsaHistSwitchTab('JSA_CONDITION_ACCESS')">Conditional Access <span class="cnt" id="cntCA"></span></button>
     <button class="tab-btn" data-tab="JSA_REPORT" onclick="jsaHistSwitchTab('JSA_REPORT')">Risk To Trip <span class="cnt" id="cntRT"></span></button>
   </div>
 
@@ -158,7 +158,7 @@ function jsaHistRender() {
   var rows = jsaHistCurrentTab === 'JSA_CONDITION_ACCESS' ? jsaHistRowsCA : jsaHistRowsRT;
   var container = document.getElementById('jsaHistList');
   if (!rows.length) {
-    container.innerHTML = '<div class="empty-msg">Belum ada laporan JSA ' + (jsaHistCurrentTab === 'JSA_CONDITION_ACCESS' ? 'Condition Access' : 'Risk To Trip') + ' tersimpan.</div>';
+    container.innerHTML = '<div class="empty-msg">Belum ada laporan JSA ' + (jsaHistCurrentTab === 'JSA_CONDITION_ACCESS' ? 'Conditional Access' : 'Risk To Trip') + ' tersimpan.</div>';
     return;
   }
   var html = '<table class="manual-table"><thead><tr>' +

@@ -2467,3 +2467,26 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   perlu pengecualian JSA serupa -- pola generiknya: filter
   `normalizeModul(r.modul)` terhadap `'JSA_REPORT'`/`'JSA_CONDITION_ACCESS'`
   (client-side) atau `modul=not.ilike.*JSA*` (query PostgREST langsung).
+
+## Rename "Condition Access" -> "Conditional Access" (2026-09-03)
+
+- Permintaan eksplisit user: semua nama "Condition Access" yang berhubungan
+  JSA diganti jadi **"Conditional Access"** -- diterapkan ke `<title>`/`<h1>`
+  di `jsa_condition_access.html`, popup kartu JSA di `index.html`, teks
+  deskripsi + label tab di `jsa_history.html`, DAN nilai modul yang
+  BENAR-BENAR disimpan ke `pm_records.modul`
+  (`window.CURRENT_MODUL`/`dbCollectData()`/`dbSave()` di
+  `jsa_condition_access.html`, sekarang literal `'JSA Conditional Access'`).
+- **Identifier INTERNAL SENGAJA TIDAK diubah** (verified aman, bukan
+  kelupaan): nama file `jsa_condition_access.html`, kunci normalisasi
+  `JSA_CONDITION_ACCESS` (`normalizeModul()`/`raModulToUrl()` di
+  `shared.js`), `data-tab="JSA_CONDITION_ACCESS"` & variabel
+  `jsaHistCurrentTab` di `jsa_history.html`. Ini aman karena
+  `normalizeModul()` cuma cek substring `'CONDITION'` (`n.indexOf
+  ('CONDITION')>=0`) -- string baru `'JSA CONDITIONAL ACCESS'` (setelah
+  di-uppercase) TETAP mengandung substring `'CONDITION'` di awal kata
+  `'CONDITIONAL'`, jadi routing/normalisasi tetap benar tanpa perlu
+  sentuh `shared.js` sama sekali. **Kalau nanti mau rename serupa lagi
+  (nama modul lain diubah)**, cek dulu apakah nama baru masih mengandung
+  substring yang dipakai `normalizeModul()` sebelum asumsikan aman
+  ikut pola yang sama.

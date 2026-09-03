@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JSA Condition Access</title>
+<title>JSA Conditional Access</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
 <script src="shared.js?v=20260903e"></script>
@@ -144,7 +144,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 <div class="container">
   <div class="no-print header">
     <div class="header-content">
-      <h1>🦺 JSA Condition Access</h1>
+      <h1>🦺 JSA Conditional Access</h1>
       <p>Job Safety Analysis — Plant Process &amp; Risk Checklist, generate langsung ke Word (.docx)</p>
       <span id="jsaStatusBadge" style="display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.25);color:#fff">📝 DRAFT</span>
     </div>
@@ -241,7 +241,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 // ══════════════════════════════════════════════════════════════════════════
 // JSA REPORT — state, render, hazard bank, docx generator
 // ══════════════════════════════════════════════════════════════════════════
-window.CURRENT_MODUL = 'JSA Condition Access';
+window.CURRENT_MODUL = 'JSA Conditional Access';
 
 // Section A/B/C TETAP (bukan bisa ditambah/dihapus user) -- mengikuti pola
 // tetap 3 section di template Word (jsa_template.docx, Table 2 "JOB SAFETY
@@ -762,7 +762,7 @@ function hzConfirmSelection() {
 function dbCollectData(modul) {
   if (!modul || modul.toUpperCase().indexOf('JSA') === -1) return null;
   return {
-    modul: 'JSA Condition Access',
+    modul: 'JSA Conditional Access',
     tanggal: new Date().toISOString().split('T')[0],
     pic: document.getElementById('jsaSigOpSupervisor').value || null,
     work_order: document.getElementById('jsaWo').value || null,
@@ -849,7 +849,7 @@ function applyRecordToForm(rec) {
 }
 
 function jsaSaveDraft() {
-  dbSave('JSA Condition Access');
+  dbSave('JSA Conditional Access');
 }
 
 // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
