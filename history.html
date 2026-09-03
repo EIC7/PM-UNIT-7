@@ -12,6 +12,11 @@
 <script src="storage-helper.js"></script>
 <script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css?v=20260903d">
+<style>
+/* ── Modal konfirmasi Hapus (ketik "HAPUS") ── */
+.hist-del-confirm{background:#f3d4ce;color:#b0472f;cursor:not-allowed;opacity:0.75}
+.hist-del-confirm.ready{background:var(--fail);color:#fff;cursor:pointer;opacity:1}
+</style>
 </head>
 <body>
 
@@ -68,6 +73,24 @@
     </div>
     <div style="font-size:11.5px;color:#8fae9d;margin-bottom:14px">Menampilkan laporan yang pernah terkirim ulang ke Review Approval Dashboard TANPA ditekan user (otomatis di latar belakang) — bukan yang kamu resubmit manual sendiri.</div>
     <div id="pmDiagContent">Memeriksa...</div>
+  </div>
+</div>
+
+<!-- Modal konfirmasi Hapus (ketik "HAPUS") -- ditampilkan sebelum menghapus
+     record apa pun dari Riwayat, menampilkan ULANG ringkasan data yang sama
+     dengan yang tampil di tabel (Modul/Tanggal/PIC/Work Order/Status/Area)
+     supaya user yakin data mana yang akan hilang. Pola sama persis dengan
+     jsa_history.html, disesuaikan ke tema terang halaman ini. -->
+<div id="histDelModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:12px;width:min(94vw,420px);padding:20px;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
+    <div style="font-size:16px;font-weight:700;color:var(--fail);margin-bottom:14px">⚠️ Hapus Laporan Ini?</div>
+    <div id="histDelSummary" style="background:#f4f6fa;border:1px solid #dde4ef;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12.5px"></div>
+    <label style="display:block;font-size:0.85em;color:var(--text3);margin-bottom:6px;font-weight:600">Ketik <b>HAPUS</b> untuk konfirmasi:</label>
+    <input type="text" id="histDelConfirmInput" placeholder="HAPUS" autocomplete="off" oninput="histDelCheckInput()" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:1em;margin-bottom:14px;box-sizing:border-box">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="histDelCloseModal()" style="padding:9px 16px;border-radius:6px;border:none;font-weight:600;cursor:pointer;font-size:0.9em;background:#e5e9f0;color:#333">Batal</button>
+      <button id="histDelConfirmBtn" class="hist-del-confirm" onclick="histDelConfirmDo()" disabled style="padding:9px 16px;border-radius:6px;border:none;font-weight:600;font-size:0.9em">🗑 Hapus Permanen</button>
+    </div>
   </div>
 </div>
 
@@ -168,7 +191,16 @@ function historyRowsToTableHtml(rows) {
     var saved = dbFmtLocalDateTime(r.updated_at);
     var openUrl = modulToUrl(r.modul, r.id);
     var printUrl = modulToPrintUrl(r.modul, r.id);
-    var delBtn = '<button onclick="historyDelete(\''+r.id+'\')" style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>';
+    var delTarget = {
+      id: r.id,
+      modul: historyReportName(r),
+      tanggal: r.tanggal || '-',
+      pic: r.pic || '-',
+      wo: r.work_order || '-',
+      status: historyStatusPlainLabel(r.status, r.firebase_synced_at),
+      area: historyAreaLabel(r)
+    };
+    var delBtn = '<button onclick=\'historyDelOpenModal(' + JSON.stringify(JSON.stringify(delTarget)) + ')\' style="padding:4px 10px;font-size:11px;background:var(--fail);color:#fff;border:none;border-radius:4px;cursor:pointer">&#128465;</button>';
     // Tombol Submit buat laporan yang masih DRAFT. Tombol Resubmit (beda
     // warna, oranye) khusus laporan yang SUDAH SUBMITTED tapi BELUM
     // sukses nyampe ke Review Approval Dashboard (firebase_synced_at
@@ -479,15 +511,66 @@ function historyRaStatusBadge(appr) {
   return '<span style="display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:700;background:'+s.bg+';color:'+s.fg+'" title="Status sungguhan dari Review Approval Dashboard.">'+s.label+'</span>'+tsHtml;
 }
 
-function historyDelete(id) {
-  if (!confirm('Hapus data ini?')) return;
+// Label status POLOS (bukan HTML badge) -- dipakai ringkasan modal Hapus.
+// Logic label SENGAJA disamakan persis dengan historyStatusBadge() di atas
+// -- kalau label status di sana berubah, samakan juga di sini.
+function historyStatusPlainLabel(status, firebaseSyncedAt) {
+  var up = (status || 'DRAFT').toUpperCase();
+  if (up === 'SUBMITTED') return firebaseSyncedAt ? 'Submitted' : 'Menunggu Feedback';
+  return 'Draft';
+}
+
+function historyEscHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var histDelTarget = null;
+function historyDelOpenModal(jsonStr) {
+  histDelTarget = JSON.parse(jsonStr);
+  var t = histDelTarget;
+  document.getElementById('histDelSummary').innerHTML =
+    '<div style="padding:3px 0;display:flex;justify-content:space-between;gap:10px"><b style="color:var(--text3)">Modul</b><span>' + historyEscHtml(t.modul) + '</span></div>' +
+    '<div style="padding:3px 0;display:flex;justify-content:space-between;gap:10px"><b style="color:var(--text3)">Tanggal</b><span>' + historyEscHtml(t.tanggal) + '</span></div>' +
+    '<div style="padding:3px 0;display:flex;justify-content:space-between;gap:10px"><b style="color:var(--text3)">PIC</b><span>' + historyEscHtml(t.pic) + '</span></div>' +
+    '<div style="padding:3px 0;display:flex;justify-content:space-between;gap:10px"><b style="color:var(--text3)">Work Order</b><span>' + historyEscHtml(t.wo) + '</span></div>' +
+    '<div style="padding:3px 0;display:flex;justify-content:space-between;gap:10px"><b style="color:var(--text3)">Status</b><span>' + historyEscHtml(t.status) + '</span></div>' +
+    '<div style="padding:3px 0;display:flex;justify-content:space-between;gap:10px"><b style="color:var(--text3)">Area</b><span>' + historyEscHtml(t.area) + '</span></div>';
+  document.getElementById('histDelConfirmInput').value = '';
+  histDelCheckInput();
+  document.getElementById('histDelModal').style.display = 'flex';
+}
+function historyDelCloseModal() {
+  document.getElementById('histDelModal').style.display = 'none';
+  histDelTarget = null;
+}
+function histDelCheckInput() {
+  var val = (document.getElementById('histDelConfirmInput').value || '').trim().toUpperCase();
+  var btn = document.getElementById('histDelConfirmBtn');
+  var ready = val === 'HAPUS';
+  btn.disabled = !ready;
+  btn.classList.toggle('ready', ready);
+}
+function histDelConfirmDo() {
+  if (!histDelTarget) return;
+  var id = histDelTarget.id;
+  var btn = document.getElementById('histDelConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Menghapus...';
   supaFetch('DELETE', SUPA_TABLE + '?id=eq.' + id)
     .then(function() {
+      historyDelCloseModal();
       dbShowToast('Data berhasil dihapus');
-      setTimeout(function(){ loadHistory(''); }, 500);
+      loadHistory(pmHistCurrentFilter);
     })
-    .catch(function(err){ alert('Gagal hapus: ' + (err.message||err)); });
+    .catch(function(err) {
+      alert('Gagal hapus: ' + (err.message || err));
+      btn.textContent = '🗑 Hapus Permanen';
+      btn.disabled = false;
+    });
 }
+document.getElementById('histDelModal').addEventListener('click', function(e) {
+  if (e.target === this) historyDelCloseModal();
+});
 
 /* ── SUBMIT LANGSUNG DARI RIWAYAT (tab biasa, bukan iframe tersembunyi) ──
    Versi awal fitur ini pakai iframe TERSEMBUNYI (display:none) supaya
