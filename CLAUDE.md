@@ -2433,3 +2433,37 @@ Supabase sebagai backend, jsPDF untuk export PDF).
 - `shared.js?v=` dinaikkan ke `20260903e` di SEMUA 37 file yang
   memuatnya (wajib per konvensi cache-busting -- lihat bagian "shared.js/
   shared.css TIDAK PERNAH punya cache-busting" di atas).
+
+## Item Hazard Group 1/2/3 tanpa pilihan otomatis jadi NO + JSA dikeluarkan dari history.html (2026-09-03)
+
+- **Default NO utk item Hazard Group yang belum dipilih**: item `pair:true`
+  (panel "Hazard Group 1/2/3" di grid checklist, BUKAN panel kiri "Plant &
+  Risk Category" yang checkbox tunggal) sebelumnya ditulis KOSONG KEDUANYA
+  (YES dan NO sama-sama unchecked) ke Word kalau user belum sempat memilih
+  sama sekali. Sekarang: NO otomatis tercentang kalau `v !== 'yes'`
+  (mencakup baik 'no' eksplisit maupun belum dipilih) -- permintaan
+  eksplisit user, supaya hasil cetak selalu punya jawaban pasti per item.
+  Diterapkan di KEDUA varian (`jsa_report.html` pakai `jsaSetGlyphCheckbox`
+  ☐/☒, `jsa_condition_access.html` pakai `jsaSetSoleCheckboxText` Wingdings
+  x/o) -- cari `cbCol + 1` di kedua file kalau perlu verifikasi/ubah lagi.
+  Section "Others/Specific Hazard" (dinamis, `JSA_OTHERS_ROWS`) SENGAJA
+  TIDAK ikut kena aturan ini -- baris kosong di situ tetap berarti "hazard
+  ini tidak dipakai", bukan "NO".
+- **JSA dikeluarkan dari `history.html`** -- karena `jsa_history.html`
+  sudah jadi halaman riwayat khusus JSA (2 tab, 4 aksi, lihat bagian di
+  atas), 2 tombol filter "JSA Risk to Trip"/"JSA Condition Access" yang
+  sempat ditambahkan di `history.html` DIHAPUS, dan fungsi baru
+  `pmHistExcludeJsa(rows)` dipasang di SEMUA 3 titik yang menerima hasil
+  `dbList()` di file itu (`loadHistory`, `pmHistRefresh`,
+  `pmHistUpdateFilterCounts`) supaya record JSA juga tidak ikut muncul di
+  filter "Semua" atau di hitungan counter. **Data JSA TETAP tersimpan
+  normal ke `pm_records`** (`dbSave()` modul JSA TIDAK diubah) -- ini
+  murni soal TAMPILAN di `history.html`, bukan mengubah cara penyimpanan.
+  Widget "Riwayat PM Terkini" di `index.html` (query `supaFetch` langsung,
+  BUKAN lewat `dbList()`) juga ditambah filter `modul=not.ilike.*JSA*`
+  supaya konsisten -- laporan JSA yang baru dibuat tidak nongol di situ
+  juga. **Kalau ke depan ada tempat lain yang menampilkan ringkasan/daftar
+  record PM lintas modul** (bukan modul spesifik), WAJIB cek juga apakah
+  perlu pengecualian JSA serupa -- pola generiknya: filter
+  `normalizeModul(r.modul)` terhadap `'JSA_REPORT'`/`'JSA_CONDITION_ACCESS'`
+  (client-side) atau `modul=not.ilike.*JSA*` (query PostgREST langsung).
