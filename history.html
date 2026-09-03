@@ -89,8 +89,6 @@
       <button class="btn btn-outline" data-modul-filter="SO2" onclick="loadHistory('SO2')" style="font-size:12px;padding:6px 14px;flex:none">SO2<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="OPACITY" onclick="loadHistory('OPACITY')" style="font-size:12px;padding:6px 14px;flex:none">Opacity<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="MAINTENANCE_REPORT" onclick="loadHistory('MAINTENANCE_REPORT')" style="font-size:12px;padding:6px 14px;flex:none">Maintenance<span class="hist-count"></span></button>
-      <button class="btn btn-outline" data-modul-filter="JSA_REPORT" onclick="loadHistory('JSA_REPORT')" style="font-size:12px;padding:6px 14px;flex:none">JSA Risk to Trip<span class="hist-count"></span></button>
-      <button class="btn btn-outline" data-modul-filter="JSA_CONDITION_ACCESS" onclick="loadHistory('JSA_CONDITION_ACCESS')" style="font-size:12px;padding:6px 14px;flex:none">JSA Condition Access<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR E4-E5" onclick="loadHistory('BELT CONVEYOR E4-E5')" style="font-size:12px;padding:6px 14px;flex:none">Belt E4/E5<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR E2-E3" onclick="loadHistory('BELT CONVEYOR E2-E3')" style="font-size:12px;padding:6px 14px;flex:none">Belt E2/E3<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="BELT CONVEYOR B1-B2" onclick="loadHistory('BELT CONVEYOR B1-B2')" style="font-size:12px;padding:6px 14px;flex:none">Belt B1/B2<span class="hist-count"></span></button>
@@ -221,11 +219,25 @@ function historyRowsToTableHtml(rows) {
 var pmHistCurrentFilter = '';
 var pmHistLastRefreshed = null;
 
+// JSA (Risk to Trip & Condition Access) py halaman riwayat sendiri
+// (jsa_history.html, tombol "JSA HISTORY" di header index.html) --
+// SENGAJA dikeluarkan dari history.html supaya tidak dobel/membingungkan.
+// Data JSA TETAP tersimpan normal ke pm_records (dbSave() modul JSA tidak
+// diubah), cuma TIDAK IKUT ditampilkan di sini. Dipanggil di SETIAP tempat
+// yang menerima hasil dbList() di file ini.
+function pmHistExcludeJsa(rows) {
+  return (rows || []).filter(function(r) {
+    var m = normalizeModul(r.modul);
+    return m !== 'JSA_REPORT' && m !== 'JSA_CONDITION_ACCESS';
+  });
+}
+
 function loadHistory(modul) {
   pmHistCurrentFilter = modul;
   var container = document.getElementById('historyList');
   container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)">Memuat...</div>';
   dbList(modul, function(rows) {
+    rows = pmHistExcludeJsa(rows);
     pmHistLastRefreshed = new Date();
     pmHistUpdateRefreshLabel();
     if (!rows.length) {
@@ -241,6 +253,7 @@ function pmHistRefresh() {
   var btn = document.getElementById('pmHistRefreshBtn');
   if (btn) btn.classList.add('pm-spin');
   dbList(pmHistCurrentFilter, function(rows) {
+    rows = pmHistExcludeJsa(rows);
     if (btn) btn.classList.remove('pm-spin');
     pmHistLastRefreshed = new Date();
     pmHistUpdateRefreshLabel();
@@ -271,6 +284,7 @@ setInterval(function(){
    otomatis dapat total yang sebenarnya -- bukan cuma yang lagi tampil. */
 function pmHistUpdateFilterCounts() {
   dbList('', function(rows) {
+    rows = pmHistExcludeJsa(rows);
     var counts = {};
     var total = (rows || []).length;
     (rows || []).forEach(function(r) {
