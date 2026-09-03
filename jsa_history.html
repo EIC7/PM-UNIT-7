@@ -233,7 +233,9 @@ function jsaDelCloseModal() {
   jsaDelTarget = null;
 }
 function jsaDelCheckInput() {
-  var val = (document.getElementById('jsaDelConfirmInput').value || '').trim().toUpperCase();
+  // Case-SENSITIVE sengaja -- WAJIB huruf kapital semua "HAPUS", "hapus"/
+  // "Hapus" tidak dianggap valid (permintaan eksplisit user).
+  var val = (document.getElementById('jsaDelConfirmInput').value || '').trim();
   var btn = document.getElementById('jsaDelConfirmBtn');
   var ready = val === 'HAPUS';
   btn.disabled = !ready;

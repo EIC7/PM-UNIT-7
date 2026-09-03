@@ -544,7 +544,9 @@ function historyDelCloseModal() {
   histDelTarget = null;
 }
 function histDelCheckInput() {
-  var val = (document.getElementById('histDelConfirmInput').value || '').trim().toUpperCase();
+  // Case-SENSITIVE sengaja -- WAJIB huruf kapital semua "HAPUS", "hapus"/
+  // "Hapus" tidak dianggap valid (permintaan eksplisit user).
+  var val = (document.getElementById('histDelConfirmInput').value || '').trim();
   var btn = document.getElementById('histDelConfirmBtn');
   var ready = val === 'HAPUS';
   btn.disabled = !ready;
