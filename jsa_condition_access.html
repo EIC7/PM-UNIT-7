@@ -1065,16 +1065,19 @@ function jsaFillTable1(tbl1, form) {
   // di-set eksplisit (YES/NO/unchecked) supaya hasilnya deterministik,
   // tidak tercampur sisa checklist dari job REAL yang jadi sumber template
   // ini. Item `pair:true` (32 item) py kolom YES **dan** NO terpisah --
-  // KEDUANYA ditulis (mutually exclusive, keduanya 'o' kalau belum dipilih
-  // sama sekali). Item `pair:false` (9 item, kolom kiri tabel) cuma py 1
-  // kolom checkbox tunggal -- JANGAN PERNAH tulis ke cbCol+1 punya item ini,
-  // itu kolom milik hazard grup lain sama sekali (lihat komentar
-  // JSA_CHECKLIST_ITEMS di atas).
+  // KEDUANYA ditulis (mutually exclusive). Kalau item BELUM dipilih sama
+  // sekali, NO otomatis dianggap terpilih saat dicetak (permintaan
+  // eksplisit user, khusus panel "Hazard Group 1/2/3" -- pair:true HANYA
+  // dipakai item2 di panel itu, tidak pernah item panel kiri). Item
+  // `pair:false` (9 item, kolom kiri tabel) cuma py 1 kolom checkbox
+  // tunggal -- JANGAN PERNAH tulis ke cbCol+1 punya item ini, itu kolom
+  // milik hazard grup lain sama sekali (lihat komentar JSA_CHECKLIST_ITEMS
+  // di atas).
   JSA_CHECKLIST_ITEMS.forEach(function(item) {
     if (item.pair) {
       var v = form.checklist[item.key];
       jsaSetSoleCheckboxText(tc(item.row, item.cbCol), v === 'yes' ? 'x' : 'o');
-      jsaSetSoleCheckboxText(tc(item.row, item.cbCol + 1), v === 'no' ? 'x' : 'o');
+      jsaSetSoleCheckboxText(tc(item.row, item.cbCol + 1), v !== 'yes' ? 'x' : 'o');
     } else {
       jsaSetSoleCheckboxText(tc(item.row, item.cbCol), form.checklist[item.key] ? 'x' : 'o');
     }
