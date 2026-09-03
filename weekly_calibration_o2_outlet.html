@@ -2089,7 +2089,30 @@ function downloadPdf(){
           var catatan = catEl ? catEl.value : '';
           var evImgs = o2Images['reading_'+ck].evidence.filter(imgFilter);
           if (!catatan && !evImgs.length) return;
-          checkPage(14);
+          // Hitung TOTAL tinggi minimum judul channel + isi PERTAMA yang
+          // menyertainya (baris Keterangan + baris pertama Evidence) SEBELUM
+          // menggambar apa pun, lalu checkPage() SATU KALI di awal -- supaya
+          // judul TIDAK PERNAH tercetak sendirian di ujung halaman lalu
+          // isinya baru muncul di halaman berikutnya (lihat CLAUDE.md,
+          // "Judul section harus tetap 1 halaman dengan isi pertamanya").
+          var blockH = 10; // tinggi bar judul (rect 7 + y+=10)
+          if (catatan) {
+            doc.setFont('helvetica','italic'); doc.setFontSize(8);
+            var catLinesPeek = doc.splitTextToSize('Keterangan: '+safe(catatan), contentW-4);
+            blockH += catLinesPeek.length*4 + 5;
+          }
+          if (evImgs.length) {
+            var peekE1 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
+            var peekE2 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
+            var peekRowH = Math.max(peekE1?peekE1.h:0, peekE2?peekE2.h:0, 20);
+            blockH += 5 + peekRowH + 9; // label "EVIDENCE" + baris foto pertama
+          }
+          // Guard sama seperti printEvidenceGallery(): cuma paksa pindah
+          // halaman kalau blockH BENAR-BENAR muat di halaman kosong -- kalau
+          // blockH sendiri lebih besar dari 1 halaman penuh (catatan sangat
+          // panjang dsb), checkPage(blockH) akan SELALU true walau y sudah di
+          // marginTop dan bikin halaman kosong sia-sia sebelum konten mulai.
+          if (blockH <= (ph - marginTop - marginBottom)) checkPage(blockH); else checkPage(10);
           doc.setFillColor(60, 90, 70);
           doc.rect(marginX, y, contentW, 7, 'F');
           doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);

@@ -1877,3 +1877,80 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   (v2 template py baris Risk Level tambahan yang menggeser semua offset),
   dan perlu dicek ulang apakah v2 juga punya pembagian pair/single yang
   sama atau beda — JANGAN asumsikan sama persis dengan Condition Access.
+
+## 🔴 PDF: judul section/channel jangan sampai "yatim" (orphan) terpisah dari isi pertamanya (2026-09-03)
+
+- User lapor (screenshot Preview PDF `weekly_calibration_o2_outlet.html`):
+  bar judul channel ("7BG-AI-572 (Channel 3)") tercetak SENDIRIAN di ujung
+  bawah halaman, lalu foto evidence-nya baru muncul di halaman BERIKUTNYA —
+  secara visual judulnya kelihatan "nyasar"/tidak nyambung ke isinya.
+- **Akar masalah**: pola umum di banyak fungsi PDF repo ini (jsPDF manual,
+  bukan `autoTable`) — sebelum menggambar bar judul section/channel, cuma
+  dicek `checkPage(14)` atau semacamnya (angka kecil, cuma cukup utk TINGGI
+  BAR JUDUL ITU SENDIRI). Konten yang menyertai judul (tabel/`printCatatan`/
+  `printEvidenceGallery`) py logika `checkPage`/pindah-halaman SENDIRI-
+  SENDIRI yang TIDAK TAHU judul barusan sudah dicetak duluan di halaman
+  sebelumnya — jadi kalau ISI-nya ternyata tidak muat di sisa halaman
+  (walau JUDULNYA sendiri muat), isi itu pindah halaman sendirian sementara
+  judul sudah kadung tercetak di halaman lama. Hasilnya: judul "yatim"
+  tanpa isi apa pun menyertainya di halaman yang sama.
+- **Pola fix WAJIB dipakai di SEMUA fungsi PDF manual (bukan cuma O2)**:
+  SEBELUM menggambar bar judul apa pun yang punya isi menyertai (tabel 1
+  baris, `printCatatan`, `printEvidenceGallery`, dst), **hitung dulu total
+  tinggi minimum "judul + isi PERTAMA yang bakal langsung terlihat setelah
+  judul"** (bar judul + estimasi baris pertama tabel/catatan/evidence),
+  BARU panggil `checkPage()` SATU KALI dengan total itu SEBELUM
+  menggambar apa pun sama sekali. Ini menjamin keputusan pindah halaman
+  dibuat DI AWAL (judul ikut pindah kalau perlu), bukan dibiarkan tiap
+  potongan konten memutuskan sendiri-sendiri setelah judul sudah kadung
+  tercetak. Contoh implementasi nyata: `weekly_calibration_o2_outlet.html`
+  (channel loop, Section "O2 Reading & Cell Measurements") dan
+  `weekly_calibration_o2_inlet.html` (channel loop, Section "Calibration
+  Readings") — cari komentar "Hitung TOTAL tinggi minimum" di kedua file
+  itu sebagai referensi pola yang sudah dipakai & terverifikasi jalan.
+  - Estimasi baris pertama Evidence: `iePhotoDrawSize(imgArr[0]/[1], evColW,
+    maxPhotoH)` lalu `5 (label "EVIDENCE") + rowH + 9 (jarak bawah)` — PERSIS
+    rumus yang sudah dipakai `printEvidenceGallery()` sendiri utk proteksi
+    serupa di level evidence (lihat `firstEvBlockH` di fungsi itu), supaya
+    dua lapis proteksi (level judul & level evidence) konsisten angkanya.
+  - Estimasi baris pertama Catatan: `doc.splitTextToSize('Keterangan: '+
+    text, contentW-4).length*4 + 5` — PERSIS rumus yang dipakai
+    `printCatatan()` sendiri.
+  - Kalau ada tabel (`autoTable`) di antara judul dan catatan/evidence
+    (seperti "Calibration Readings" di Inlet, py tabel 1 baris), tambahkan
+    estimasi tinggi tabel itu juga (perkiraan cukup — header+1 baris data
+    font kecil ≈ 14mm, tidak perlu presisi mm, ini cuma buat keputusan
+    pindah-halaman bukan buat menggambar).
+  - **WAJIB pasang guard supaya tidak bikin halaman kosong sia-sia**: kalau
+    total tinggi hasil hitungan itu SENDIRI lebih besar dari 1 halaman
+    kosong penuh (`ph - marginTop - marginBottom`) — misal catatan sangat
+    panjang — JANGAN paksa `checkPage(totalTinggi)` (yang PASTI selalu
+    true bahkan di halaman baru kosong, bikin 1 halaman blank sia-sia
+    sebelum konten mulai dicetak). Fallback ke `checkPage(<tinggi bar
+    judul saja>)` kalau kasus ini terjadi — biarkan isinya sendiri yang
+    pecah ke beberapa halaman secara alami (itu bukan bug, judulnya tetap
+    dapat isi PARSIAL di halaman yang sama). Pola guard ini SAMA PERSIS
+    dengan yang sudah ada di `printEvidenceGallery()` (`if (firstEvBlockH
+    <= (ph - marginTop - marginBottom) && ...)`) — jangan lupakan syarat
+    ini kalau menerapkan pola serupa di file lain.
+- **Scope perbaikan ini BARU 2 file** (O2 Inlet & Outlet, sesuai laporan
+  user) — file PDF manual lain di repo (SO2, FEGT, CEMS, dst., yang juga
+  punya pola section/channel-title + evidence serupa per
+  `FITUR_REUSABLE_REFERENCE.md`) **BELUM diaudit/diperbaiki**. Kalau nanti
+  ada laporan bug serupa ("judul kepotong/terpisah dari isinya di PDF") di
+  modul lain, pola fix di atas itu yang harus diterapkan — cari dulu semua
+  titik `doc.rect(...); doc.text(...judul...); y += N;` yang diikuti
+  `printCatatan`/`printEvidenceGallery`/`autoTable` TANPA perhitungan
+  tinggi gabungan di depannya.
+- Diverifikasi: (1) logika dibaca ulang manual — pola precompute-lalu-
+  checkPage-sekali ini SECARA KONSTRUKSI menjamin judul+isi-pertama selalu
+  di halaman yang sama (kalau tidak muat, KEDUANYA pindah bersama karena
+  belum ada yang digambar sama sekali saat keputusan diambil); (2) smoke
+  test headless Chrome kedua file (`downloadPdf` tetap terdefinisi, nol
+  error JS) untuk memastikan tidak ada salah ketik/typo scope variabel
+  (`evColW`/`maxPhotoH`/`iePhotoDrawSize` semuanya sudah didefinisikan
+  lebih awal di closure yang sama, dikonfirmasi lewat pembacaan kode).
+  **Belum ada verifikasi visual PDF-akhir** (screenshot preview PDF dengan
+  skenario page-break sungguhan) — kalau ada laporan lagi soal ini di masa
+  depan, verifikasi visual jadi langkah pertama sebelum percaya perbaikan
+  ini 100% benar di semua kasus tinggi konten.
