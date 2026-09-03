@@ -6,7 +6,7 @@
 <title>JSA Report</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
-<script src="shared.js?v=20260903d"></script>
+<script src="shared.js?v=20260903e"></script>
 <script src="db-helper.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -1468,7 +1468,11 @@ function jsaBuildWordBlob(form) {
       jsaTrimEmptyParagraphsBetween(body, topTbls[2], topTbls[3], 1);
       var newXml = new XMLSerializer().serializeToString(xdoc);
       zip.file('word/document.xml', newXml);
-      return zip.generateAsync({type: 'blob'});
+      // mimeType WAJIB di-set eksplisit -- default JSZip 'application/zip'
+      // bikin browser (terutama Chrome Android) mendeteksi isi Blob sbg zip
+      // dan menambahkan ekstensi '.zip' lagi di belakang nama file yang
+      // sudah '.docx' (jadi 'Nama.docx.zip') walau <a download> sudah benar.
+      return zip.generateAsync({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
     });
   });
 }

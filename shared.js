@@ -2231,7 +2231,20 @@ document.addEventListener('click', function(e) {
   var el = e.target.closest ? e.target.closest('a[href], [onclick]') : null;
   if (!el) return;
   var href = el.tagName === 'A' ? el.getAttribute('href') : null;
-  var isNavLink = !!href && href.indexOf('#') !== 0 && href.indexOf('javascript:') !== 0;
+  // blob:/data: BUKAN navigasi keluar halaman -- ini pola standar repo ini
+  // buat trigger download file (PDF/Word/CSV) lewat <a href="blob:..."
+  // download="...">document.body.appendChild(a);a.click()` (lihat
+  // jsaDownloadBlob() di jsa_report.html/jsa_condition_access.html, juga
+  // dipakai jsPDF doc.save() secara internal). Tanpa pengecualian ini,
+  // a.click() sintetis itu ikut kena intercept listener ini kalau
+  // window._raDirty true, popup "Yakin akan meninggalkan halaman?" muncul
+  // MENGGANTIKAN proses download (preventDefault membatalkan a.click()-nya),
+  // dan kalau user pilih "Ya" malah location.href diarahkan ke blob: URL
+  // (menavigasi halaman ke isi file mentah, bukan mendownloadnya) --
+  // dikonfirmasi dari laporan bug nyata (nama file jadi "X.docx.zip" krn
+  // proses download blob yang benar tidak pernah selesai wajar).
+  var isNavLink = !!href && href.indexOf('#') !== 0 && href.indexOf('javascript:') !== 0 &&
+    href.indexOf('blob:') !== 0 && href.indexOf('data:') !== 0;
   var onclickStr = el.getAttribute('onclick') || '';
   var isNavOnclick = /location\.href\s*=|location\.assign\s*\(|location\.replace\s*\(/.test(onclickStr);
   if (!isNavLink && !isNavOnclick) return; // bukan tombol navigasi (mis. Simpan/Submit) -- biarkan jalan normal
