@@ -2116,3 +2116,51 @@ Supabase sebagai backend, jsPDF untuk export PDF).
     (bukan PDF) dirender di dalam modal, BUKAN true-PDF.
   - Belum ada keputusan final -- ini murni rekomendasi, tunggu konfirmasi
     user sebelum implementasi.
+
+## Grid checklist Plant Process & Risk juga diterapkan ke `jsa_report.html` (Risk to Trip) (2026-09-03)
+
+- Redesain grid+YES/NO yang sebelumnya CUMA diterapkan ke
+  `jsa_condition_access.html` sekarang JUGA diterapkan ke `jsa_report.html`
+  -- user sempat bingung ("kok sekarang berubah lagi") melihat screenshot
+  live site yang masih pakai tampilan checklist lama, ternyata memang
+  belum dikerjakan di file ini (SENGAJA discope demikian di commit
+  sebelumnya, tapi user memang menghendaki KEDUANYA).
+- **Row/col-nya BEDA dari Condition Access** (v2 template py baris Risk
+  Level yang menggeser semua offset +1) -- Online/Offline di row6/7/8,
+  Risk Category di row9/10 (BUKAN row5/6/7 dan row8/9 seperti Condition
+  Access). Checkbox pakai `jsaSetGlyphCheckbox()` (☐/☒ unicode, BUKAN
+  `jsaSetSoleCheckboxText()` Wingdings 'x'/'o' punya Condition Access).
+- **Grouping visual SAMA PERSIS untuk 9 item kolom kiri** (Mandatory
+  Lifting Plan/Pre-Evacuation Plan/HOT WORK/dst, `JSA_PANEL_LEFT_GROUPS`)
+  dengan Condition Access -- tapi **3 kolom hazard KANAN py isi item BEDA**
+  karena v2 py beberapa item TAMBAHAN yang tidak ada di v1/Condition
+  Access: **X-Ray/Radiografi** (Hazard Group 1), **High Voltage + Low
+  Voltage** (Hazard Group 2, header "Electrical Hazard" -- BUKAN "Work
+  Environment" yang menaungi Height/Falls dkk), sehingga total item jadi
+  **44** (35 `pair:true` + 9 `pair:false`) BUKAN 41 seperti Condition
+  Access. TIDAK ADA "Others/Specific Hazard" dinamis di
+  sini -- semua item v2 py isi tetap/tidak ada slot kosong "..." yang
+  perlu diisi manual seperti punya Condition Access ("Specific Hazard"
+  header di row15 memang py 1 slot "..." tapi TIDAK PERNAH diisi apa pun
+  di template sumbernya, sengaja dilewati sama seperti sebelumnya).
+- Online/Offline & Risk Category (`jsaState.plant`/`jsaState.riskCategory`)
+  pindah dari 4 `<select>` terpisah (3 di section "Plant Process & Risk
+  Checklist" + 1 "Risk Category" di section "Informasi Pekerjaan") ke
+  bagian dari grid, PERSIS pola yang sama dengan Condition Access. Field
+  Risk-to-Trip-KHUSUS (`Risk To Trip No.`, `Risk Level` + approval
+  tambahan otomatis, `Intersection Spv`, `Nama Approval Tambahan`) TETAP
+  di section "Informasi Pekerjaan" sebagai `<input>`/`<select>` biasa --
+  TIDAK ikut masuk ke grid, karena itu bukan bagian dari matrix Plant
+  Process Hazard Identification yang di-redesain, murni field tambahan v2
+  yang letaknya di baris LAIN Table 1.
+- Diverifikasi lewat headless Chrome + inspeksi langsung ke sel XML akhir:
+  Online/Offline 3 baris independen, Risk Category, item pair YES DAN NO
+  (termasuk 2 item YANG CUMA ADA DI v2 -- X-Ray dan Low Voltage --
+  utk memastikan grouping baru ini benar, bukan cuma nyalin grouping
+  Condition Access mentah-mentah), item unset tetap unchecked kedua sisi,
+  item single checkbox tidak merusak label hazard tetangga, Risk To Trip
+  No. tetap tersimpan benar, dan Warning/Instruction (Table 3, tidak
+  disentuh) tetap utuh. Screenshot penuh (window 1440×1900) juga
+  dikonfirmasi visual -- tampilan sekarang identik gaya dengan Condition
+  Access (4 panel, warna sama, termasuk section "Informasi Pekerjaan" yang
+  masih menampilkan field Risk-to-Trip-khusus di atas grid).

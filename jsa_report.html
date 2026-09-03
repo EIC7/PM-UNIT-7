@@ -66,6 +66,38 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .hz-item .hz-src{font-size:0.72em;color:#7c8698;margin-top:2px}
 .hz-dialog-footer{padding:12px 16px;border-top:1px solid #2a3348;display:flex;justify-content:flex-end;gap:8px}
 @media print{.no-print{display:none!important}}
+/* ── Plant Process & Risk Checklist -- tabel grid meniru tata letak Word asli
+   (lihat CLAUDE.md). Prefix jsa-cl- supaya tidak bentrok class umum lain. ── */
+.jsa-cl-progress{display:flex;align-items:center;gap:10px;background:#161d2c;border:1px solid #2a3348;border-radius:999px;padding:6px 14px 6px 6px;margin-bottom:12px;font-size:0.82em;font-weight:700;width:fit-content}
+.jsa-cl-ring{width:30px;height:30px;border-radius:50%;flex:none;background:conic-gradient(#6fa1e8 calc(var(--pct,0)*1%),#2a3348 0);display:flex;align-items:center;justify-content:center}
+.jsa-cl-ring::after{content:'';width:21px;height:21px;border-radius:50%;background:#161d2c}
+.jsa-cl-progress small{display:block;font-weight:500;color:#7c8698;font-size:0.78em}
+.jsa-cl-grid{display:grid;grid-template-columns:1.05fr 1fr 1fr 1fr;gap:12px}
+@media(max-width:980px){.jsa-cl-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.jsa-cl-grid{grid-template-columns:1fr}}
+.jsa-cl-panel{background:#161d2c;border:1px solid #2a3348;border-radius:10px;overflow:hidden}
+.jsa-cl-title{background:#1c2a44;color:#bfd6f7;font-weight:700;font-size:0.76em;letter-spacing:.03em;text-transform:uppercase;padding:8px 12px}
+.jsa-cl-plant-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #232c40}
+.jsa-cl-plant-row .lbl{font-weight:700;font-size:0.8em;color:#e7ebf2}
+.jsa-cl-seg{display:inline-flex;border:1px solid #3a4560;border-radius:7px;overflow:hidden;flex:none}
+.jsa-cl-seg button{border:none;background:#1c2334;color:#aab4c4;cursor:pointer;font:inherit;font-weight:700;font-size:0.72em;padding:5px 10px;letter-spacing:.02em}
+.jsa-cl-seg button+button{border-left:1px solid #3a4560}
+.jsa-cl-seg button.on-online,.jsa-cl-seg button.on-low{background:#2e6fcc;color:#fff}
+.jsa-cl-seg button.on-offline,.jsa-cl-seg button.on-high{background:#e5695c;color:#fff}
+.jsa-cl-seg button.on-yes{background:#e5695c;color:#fff}
+.jsa-cl-seg button.on-no{background:#57b98a;color:#0b2016}
+.jsa-cl-subhead{background:#2c2716;color:#e3c37a;font-weight:700;font-size:0.72em;padding:6px 12px;border-top:1px solid #232c40;border-bottom:1px solid #232c40;display:flex;justify-content:space-between;letter-spacing:.01em}
+.jsa-cl-subhead span:last-child{font-size:0.85em;opacity:.85}
+.jsa-cl-item-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:6px 12px;border-bottom:1px dashed #232c40;font-size:0.78em;color:#dbe1ea}
+.jsa-cl-item-row:last-child{border-bottom:none}
+.jsa-cl-item-row.indent .lbl{padding-left:12px}
+.jsa-cl-item-row .lbl small{display:block;color:#7c8698;font-weight:400;font-size:0.85em;margin-top:1px}
+.jsa-cl-single-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:6px 12px;border-bottom:1px dashed #232c40;font-size:0.78em;color:#dbe1ea}
+.jsa-cl-single-row:last-child{border-bottom:none}
+.jsa-cl-single-row input[type=checkbox]{width:auto}
+.jsa-cl-group-header-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:6px 12px;font-weight:700;font-size:0.76em;color:#aab4c4;background:#1c2334;border-bottom:1px solid #232c40}
+.jsa-cl-leaf-block{border-bottom:1px solid #232c40}
+.jsa-cl-leaf-block:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -92,15 +124,9 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
       <label>Work Method (1 baris = 1 poin, tekan Enter untuk poin baru)</label>
       <textarea id="jsaWorkMethod" placeholder="Mobilisasi material...&#10;Pemasangan...&#10;dst" style="min-height:88px"></textarea>
     </div>
-    <div class="row3">
+    <div class="row">
       <div class="form-group"><label>HIRA Reference No.</label><input type="text" id="jsaHiraRef" placeholder="Opsional"></div>
       <div class="form-group"><label>Risk To Trip, No.</label><input type="text" id="jsaRiskToTrip" placeholder="Opsional"></div>
-      <div class="form-group"><label>Risk Category</label>
-        <select id="jsaRiskCategory">
-          <option value="LOW">LOW</option>
-          <option value="HIGH">HIGH</option>
-        </select>
-      </div>
     </div>
     <div class="form-group">
       <label>Risk Level (HIRA) — menentukan approval tambahan otomatis</label>
@@ -139,30 +165,11 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
   <!-- ══ PLANT PROCESS & RISK CHECKLIST (Table 1 matrix) ══ -->
   <div class="section-title">☑️ Plant Process &amp; Risk Checklist</div>
   <div class="section-box">
-    <div class="row3">
-      <div class="form-group"><label>UNIT — Online/Offline</label>
-        <select id="jsaOnlineOfflineUnit">
-          <option value="">— Tidak dipilih —</option>
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-        </select>
-      </div>
-      <div class="form-group"><label>SYSTEM — Online/Offline</label>
-        <select id="jsaOnlineOfflineSystem">
-          <option value="">— Tidak dipilih —</option>
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-        </select>
-      </div>
-      <div class="form-group"><label>EQUIPMENT — Online/Offline</label>
-        <select id="jsaOnlineOfflineEquipment">
-          <option value="">— Tidak dipilih —</option>
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-        </select>
-      </div>
+    <div class="jsa-cl-progress">
+      <div class="jsa-cl-ring" id="jsaClRing"></div>
+      <div><span id="jsaClProgressText">0 / 44</span><small id="jsaClProgressSub">sudah dipilih (YES atau NO)</small></div>
     </div>
-    <div id="jsaChecklistContainer"></div>
+    <div class="jsa-cl-grid" id="jsaChecklistContainer"></div>
   </div>
 
   <!-- ══ STEPS + HAZARD ══ -->
@@ -230,6 +237,8 @@ var JSA_SECTIONS_META = [
 var jsaState = {
   sections: { A: {steps: []}, B: {steps: []}, C: {steps: []} },
   checklist: {},
+  plant: {unit:'', system:'', equipment:''},
+  riskCategory: '',
   controlMeasures: {},
   additionalMeasures: ['']
 };
@@ -243,52 +252,90 @@ var jsaState = {
 //    Risk", "Electrical Hazard", "Others") yang punya sub-kolom "YES"/"NO"
 //    sendiri TANPA checkbox tunggal yang jelas -- SENGAJA dilewati, bukan
 //    kelupaan.
+//    `pair:true` = item ini PUNYA kolom YES **dan** NO terpisah persis
+//    sebelah-sebelahan di tabel Word (cbCol=YES, cbCol+1=NO) -- kedua-duanya
+//    ditulis eksplisit tiap generate (lihat jsaFillTable1). `pair:false`
+//    (default kalau tidak ditulis) = item di KOLOM PALING KIRI (PLANT/RISK
+//    CATEGORY JOB/Mandatory Lifting/Pre-Evacuation Plan/HOT WORK/dst) yang
+//    di tabel asli CUMA py 1 kolom checkbox tunggal -- JANGAN PERNAH tulis
+//    ke cbCol+1 punya item ini, itu kolom milik hazard grup lain sama
+//    sekali (lihat pola sama di jsa_condition_access.html, CLAUDE.md).
 var JSA_CHECKLIST_ITEMS = [
-  {key:'traffic', label:'Traffic (Pedestrian)', row:11, labelCol:4, cbCol:5},
+  {key:'traffic', label:'Traffic (Pedestrian)', row:11, labelCol:4, cbCol:5, pair:true},
   {key:'general_lifting', label:'General Lifting', row:12, labelCol:0, cbCol:1},
-  {key:'chlorine', label:'Chlorine (Cl2)', row:12, labelCol:2, cbCol:3},
-  {key:'heat', label:'Heat', row:12, labelCol:5, cbCol:6},
-  {key:'class_c', label:'Class C (energized elect. equipment)', row:12, labelCol:8, cbCol:9},
+  {key:'chlorine', label:'Chlorine (Cl2)', row:12, labelCol:2, cbCol:3, pair:true},
+  {key:'heat', label:'Heat', row:12, labelCol:5, cbCol:6, pair:true},
+  {key:'class_c', label:'Class C (energized elect. equipment)', row:12, labelCol:8, cbCol:9, pair:true},
   {key:'heavy_lifting', label:'Heavy/Complex Lifting', row:13, labelCol:0, cbCol:1},
-  {key:'h2s', label:'Hydrogen Sulfide (H2S)', row:13, labelCol:2, cbCol:3},
-  {key:'slippery', label:'Slippery Surfaces', row:13, labelCol:5, cbCol:6},
-  {key:'class_b', label:'Class B (flammable liquid or gas)', row:13, labelCol:8, cbCol:9},
-  {key:'ammonia', label:'Ammonia (NH3)', row:14, labelCol:1, cbCol:2},
-  {key:'cold', label:'Cold', row:14, labelCol:4, cbCol:5},
-  {key:'class_a', label:'Class A (combustible solid material)', row:14, labelCol:7, cbCol:8},
+  {key:'h2s', label:'Hydrogen Sulfide (H2S)', row:13, labelCol:2, cbCol:3, pair:true},
+  {key:'slippery', label:'Slippery Surfaces', row:13, labelCol:5, cbCol:6, pair:true},
+  {key:'class_b', label:'Class B (flammable liquid or gas)', row:13, labelCol:8, cbCol:9, pair:true},
+  {key:'ammonia', label:'Ammonia (NH3)', row:14, labelCol:1, cbCol:2, pair:true},
+  {key:'cold', label:'Cold', row:14, labelCol:4, cbCol:5, pair:true},
+  {key:'class_a', label:'Class A (combustible solid material)', row:14, labelCol:7, cbCol:8, pair:true},
   {key:'confined_space', label:'Confined Space', row:15, labelCol:0, cbCol:1},
-  {key:'co', label:'Carbon Monoxide (CO)', row:15, labelCol:2, cbCol:3},
-  {key:'lighting', label:'Lighting', row:15, labelCol:5, cbCol:6},
+  {key:'co', label:'Carbon Monoxide (CO)', row:15, labelCol:2, cbCol:3, pair:true},
+  {key:'lighting', label:'Lighting', row:15, labelCol:5, cbCol:6, pair:true},
   {key:'excavation', label:'Excavation', row:16, labelCol:0, cbCol:1},
-  {key:'ozone', label:'Ozone (O3)', row:16, labelCol:2, cbCol:3},
-  {key:'humidity', label:'Humidity', row:16, labelCol:5, cbCol:6},
+  {key:'ozone', label:'Ozone (O3)', row:16, labelCol:2, cbCol:3, pair:true},
+  {key:'humidity', label:'Humidity', row:16, labelCol:5, cbCol:6, pair:true},
   {key:'underwater', label:'Underwater Work', row:17, labelCol:0, cbCol:1},
-  {key:'so2', label:'Sulfur Dioxide (SO2)', row:17, labelCol:2, cbCol:3},
+  {key:'so2', label:'Sulfur Dioxide (SO2)', row:17, labelCol:2, cbCol:3, pair:true},
   {key:'hot_work', label:'HOT WORK', row:18, labelCol:0, cbCol:1},
-  {key:'xray', label:'X-Ray / Radiografi', row:18, labelCol:2, cbCol:3},
-  {key:'high_voltage', label:'High Voltage', row:18, labelCol:5, cbCol:6},
-  {key:'entrapment', label:'Entrapment', row:18, labelCol:8, cbCol:9},
+  {key:'xray', label:'X-Ray / Radiografi', row:18, labelCol:2, cbCol:3, pair:true},
+  {key:'high_voltage', label:'High Voltage', row:18, labelCol:5, cbCol:6, pair:true},
+  {key:'entrapment', label:'Entrapment', row:18, labelCol:8, cbCol:9, pair:true},
   {key:'working_at_high', label:'WORKING AT HIGH', row:19, labelCol:0, cbCol:1},
-  {key:'co2', label:'Carbon Dioxide (CO2)', row:19, labelCol:2, cbCol:3},
-  {key:'low_voltage', label:'Low Voltage', row:19, labelCol:5, cbCol:6},
-  {key:'manual_handling', label:'Manual Handling', row:19, labelCol:8, cbCol:9},
+  {key:'co2', label:'Carbon Dioxide (CO2)', row:19, labelCol:2, cbCol:3, pair:true},
+  {key:'low_voltage', label:'Low Voltage', row:19, labelCol:5, cbCol:6, pair:true},
+  {key:'manual_handling', label:'Manual Handling', row:19, labelCol:8, cbCol:9, pair:true},
   {key:'online_voltage', label:'Online Low & High Voltage', row:20, labelCol:0, cbCol:1},
-  {key:'chem_contaminant', label:'Chemical Contaminant', row:20, labelCol:2, cbCol:3},
-  {key:'env_impact', label:'Environmental Impact', row:20, labelCol:8, cbCol:9},
+  {key:'chem_contaminant', label:'Chemical Contaminant', row:20, labelCol:2, cbCol:3, pair:true},
+  {key:'env_impact', label:'Environmental Impact', row:20, labelCol:8, cbCol:9, pair:true},
   {key:'offline_voltage', label:'Offline High Voltage', row:21, labelCol:0, cbCol:1},
-  {key:'dust', label:'Dust', row:21, labelCol:2, cbCol:3},
-  {key:'steam', label:'Steam', row:7, labelCol:3, cbCol:4},
-  {key:'oxygen_deficiency', label:'Oxygen Deficiency', row:7, labelCol:6, cbCol:7},
-  {key:'hydrogen_gas', label:'Hydrogen gas', row:7, labelCol:9, cbCol:10},
-  {key:'hot_water', label:'Hot Water', row:8, labelCol:3, cbCol:4},
-  {key:'fumes_vapors', label:'Fumes/Vapors', row:8, labelCol:6, cbCol:7},
-  {key:'fuel_oil', label:'Fuel Oil', row:8, labelCol:9, cbCol:10},
-  {key:'pressurized_water', label:'Pressurized Water', row:9, labelCol:3, cbCol:4},
-  {key:'lube_oil', label:'Lube Oil', row:9, labelCol:9, cbCol:10},
-  {key:'rotating_parts', label:'Rotating Parts', row:10, labelCol:3, cbCol:4},
-  {key:'height_falls', label:'Height/Falls', row:10, labelCol:6, cbCol:7},
-  {key:'coal', label:'Coal', row:10, labelCol:9, cbCol:10}
+  {key:'dust', label:'Dust', row:21, labelCol:2, cbCol:3, pair:true},
+  {key:'steam', label:'Steam', row:7, labelCol:3, cbCol:4, pair:true},
+  {key:'oxygen_deficiency', label:'Oxygen Deficiency', row:7, labelCol:6, cbCol:7, pair:true},
+  {key:'hydrogen_gas', label:'Hydrogen gas', row:7, labelCol:9, cbCol:10, pair:true},
+  {key:'hot_water', label:'Hot Water', row:8, labelCol:3, cbCol:4, pair:true},
+  {key:'fumes_vapors', label:'Fumes/Vapors', row:8, labelCol:6, cbCol:7, pair:true},
+  {key:'fuel_oil', label:'Fuel Oil', row:8, labelCol:9, cbCol:10, pair:true},
+  {key:'pressurized_water', label:'Pressurized Water', row:9, labelCol:3, cbCol:4, pair:true},
+  {key:'lube_oil', label:'Lube Oil', row:9, labelCol:9, cbCol:10, pair:true},
+  {key:'rotating_parts', label:'Rotating Parts', row:10, labelCol:3, cbCol:4, pair:true},
+  {key:'height_falls', label:'Height/Falls', row:10, labelCol:6, cbCol:7, pair:true},
+  {key:'coal', label:'Coal', row:10, labelCol:9, cbCol:10, pair:true}
 ];
+var JSA_CHECKLIST_MAP = {};
+JSA_CHECKLIST_ITEMS.forEach(function(it) { JSA_CHECKLIST_MAP[it.key] = it; });
+
+// ── Grouping VISUAL saja (render grid), MURNI utk tampilan -- row/col Word
+//    tetap dari JSA_CHECKLIST_ITEMS/JSA_CHECKLIST_MAP di atas. ──
+var JSA_PANEL_LEFT_GROUPS = [
+  {key:'general_lifting', group:'Mandatory need Lifting Plan'},
+  {key:'heavy_lifting', group:'Mandatory need Lifting Plan'},
+  {key:'confined_space', group:'Mandatory Emergency Pre-Evacuation Plan'},
+  {key:'excavation', group:'Mandatory Emergency Pre-Evacuation Plan'},
+  {key:'underwater', group:'Mandatory Emergency Pre-Evacuation Plan'},
+  {key:'hot_work', group:null},
+  {key:'working_at_high', group:null},
+  {key:'online_voltage', group:null},
+  {key:'offline_voltage', group:null}
+];
+var JSA_PANEL_B = {title:'Hazard Group 1', sections:[
+  {head:'Plant Process Hazards', keys:['steam','hot_water','pressurized_water','rotating_parts']},
+  {head:'Hazardous Substances', keys:['chlorine','h2s','ammonia','co','ozone','so2','xray','co2','chem_contaminant','dust']}
+]};
+var JSA_PANEL_C = {title:'Hazard Group 2', sections:[
+  {head:'Unsafe Oxygen Levels', keys:['oxygen_deficiency','fumes_vapors']},
+  {head:'Work Environment', keys:['height_falls','traffic','heat','slippery','cold','lighting','humidity']},
+  {head:'Electrical Hazard', keys:['high_voltage','low_voltage']}
+]};
+var JSA_PANEL_D = {title:'Hazard Group 3', sections:[
+  {head:'Flammable Contaminants', keys:['hydrogen_gas','fuel_oil','lube_oil','coal']},
+  {head:'Fire Risk', keys:['class_c','class_b','class_a']},
+  {head:'Others', keys:['entrapment','manual_handling','env_impact']}
+]};
 
 // ── Item Control Measures Selection (Table 3, tabel BERSARANG di dalam
 //    Table 3 -- lihat jsaGetNestedControlTable()). Checkbox di sini pakai
@@ -381,18 +428,84 @@ function jsaEsc(s) {
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function jsaToggleChecklist(key, checked) {
-  jsaState.checklist[key] = checked;
+// ── Render "Plant Process & Risk Checklist" sebagai GRID 4-panel meniru
+//    posisi kolom tabel Word asli -- SAMA persis pola dgn
+//    jsa_condition_access.html (lihat CLAUDE.md), cuma grouping/isi item
+//    beda mengikuti template v2 (Risk to Trip) yang punya beberapa item
+//    ekstra (X-Ray, High/Low Voltage) yang tidak ada di Condition Access.
+//    Tidak ada "Others" dinamis di sini -- semua item v2 sudah tetap/tidak
+//    ada slot kosong "..." yang perlu diisi manual seperti di Condition
+//    Access.
+function jsaToggleChecklist(key, val) {
+  var it = JSA_CHECKLIST_MAP[key];
+  jsaState.checklist[key] = (it && it.pair) ? val : !!val;
+  jsaRenderChecklist();
+}
+function jsaSetPlant(pkey, val) { jsaState.plant[pkey] = val; jsaRenderChecklist(); }
+function jsaSetRiskCategory(val) { jsaState.riskCategory = val; jsaRenderChecklist(); }
+
+function jsaClPairRow(item) {
+  var v = jsaState.checklist[item.key] || '';
+  var small = item.small ? ('<small>' + jsaEsc(item.small) + '</small>') : '';
+  return '<div class="jsa-cl-item-row"><div class="lbl">' + jsaEsc(item.label) + small + '</div>' +
+    '<span class="jsa-cl-seg">' +
+    '<button type="button" class="' + (v === 'yes' ? 'on-yes' : '') + '" onclick="jsaToggleChecklist(\'' + item.key + '\',\'yes\')">YES</button>' +
+    '<button type="button" class="' + (v === 'no' ? 'on-no' : '') + '" onclick="jsaToggleChecklist(\'' + item.key + '\',\'no\')">NO</button>' +
+    '</span></div>';
+}
+function jsaClSingleRow(item) {
+  var checked = jsaState.checklist[item.key] ? 'checked' : '';
+  return '<label class="jsa-cl-single-row"><span class="lbl">' + jsaEsc(item.label) + '</span>' +
+    '<input type="checkbox" ' + checked + ' onchange="jsaToggleChecklist(\'' + item.key + '\',this.checked)"></label>';
+}
+function jsaClHazardPanel(panel) {
+  var html = '<div class="jsa-cl-panel"><div class="jsa-cl-title">' + panel.title + '</div>';
+  panel.sections.forEach(function(s) {
+    html += '<div class="jsa-cl-leaf-block"><div class="jsa-cl-subhead"><span>' + jsaEsc(s.head) + '</span><span>YES&nbsp;&nbsp;NO</span></div>';
+    s.keys.forEach(function(k) { html += jsaClPairRow(JSA_CHECKLIST_MAP[k]); });
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+function jsaClLeftPanel() {
+  function plantRow(label, pkey) {
+    var v = jsaState.plant[pkey];
+    return '<div class="jsa-cl-plant-row"><div class="lbl">' + label + '</div><span class="jsa-cl-seg">' +
+      '<button type="button" class="' + (v === 'online' ? 'on-online' : '') + '" onclick="jsaSetPlant(\'' + pkey + '\',\'online\')">ONLINE</button>' +
+      '<button type="button" class="' + (v === 'offline' ? 'on-offline' : '') + '" onclick="jsaSetPlant(\'' + pkey + '\',\'offline\')">OFFLINE</button>' +
+      '</span></div>';
+  }
+  var html = '<div class="jsa-cl-panel"><div class="jsa-cl-title">Plant &amp; Risk Category</div>' +
+    plantRow('UNIT', 'unit') + plantRow('SYSTEM', 'system') + plantRow('EQUIPMENT', 'equipment') +
+    '<div class="jsa-cl-group-header-row"><span>RISK CATEGORY JOB</span><span class="jsa-cl-seg">' +
+    '<button type="button" class="' + (jsaState.riskCategory === 'LOW' ? 'on-low' : '') + '" onclick="jsaSetRiskCategory(\'LOW\')">LOW</button>' +
+    '<button type="button" class="' + (jsaState.riskCategory === 'HIGH' ? 'on-high' : '') + '" onclick="jsaSetRiskCategory(\'HIGH\')">HIGH</button>' +
+    '</span></div>';
+  var curGroup = null;
+  JSA_PANEL_LEFT_GROUPS.forEach(function(g) {
+    if (g.group && g.group !== curGroup) {
+      curGroup = g.group;
+      html += '<div class="jsa-cl-subhead"><span>' + jsaEsc(curGroup) + '</span><span></span></div>';
+    }
+    html += jsaClSingleRow(JSA_CHECKLIST_MAP[g.key]);
+  });
+  html += '</div>';
+  return html;
 }
 function jsaRenderChecklist() {
   var container = document.getElementById('jsaChecklistContainer');
-  container.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">' +
-    JSA_CHECKLIST_ITEMS.map(function(item) {
-      var checked = jsaState.checklist[item.key] ? 'checked' : '';
-      return '<label style="display:flex;align-items:center;gap:8px;font-size:0.85em;padding:4px 0;cursor:pointer">' +
-        '<input type="checkbox" style="width:auto" ' + checked + ' onchange="jsaToggleChecklist(\'' + item.key + '\',this.checked)">' +
-        jsaEsc(item.label) + '</label>';
-    }).join('') + '</div>';
+  container.innerHTML = jsaClLeftPanel() + jsaClHazardPanel(JSA_PANEL_B) + jsaClHazardPanel(JSA_PANEL_C) + jsaClHazardPanel(JSA_PANEL_D);
+  jsaUpdateChecklistProgress();
+}
+function jsaUpdateChecklistProgress() {
+  var total = JSA_CHECKLIST_ITEMS.length;
+  var done = JSA_CHECKLIST_ITEMS.filter(function(it) { return !!jsaState.checklist[it.key]; }).length;
+  var textEl = document.getElementById('jsaClProgressText');
+  var ringEl = document.getElementById('jsaClRing');
+  if (!textEl) return;
+  textEl.textContent = done + ' / ' + total;
+  ringEl.style.setProperty('--pct', Math.round(done / total * 100));
 }
 
 function jsaToggleControlMeasure(key, checked) {
@@ -581,15 +694,13 @@ function dbCollectData(modul) {
       workMethod: document.getElementById('jsaWorkMethod').value || '',
       hiraRef: document.getElementById('jsaHiraRef').value || '',
       riskToTrip: document.getElementById('jsaRiskToTrip').value || '',
-      riskCategory: document.getElementById('jsaRiskCategory').value || 'LOW',
+      riskCategory: jsaState.riskCategory || '',
       riskLevel: document.getElementById('jsaRiskLevel').value || '',
       priority: document.getElementById('jsaPriority').value || '',
       epas: document.getElementById('jsaEpas').value || '',
       periodStart: document.getElementById('jsaPeriodStart').value || '',
       periodFinish: document.getElementById('jsaPeriodFinish').value || '',
-      onlineOfflineUnit: document.getElementById('jsaOnlineOfflineUnit').value || '',
-      onlineOfflineSystem: document.getElementById('jsaOnlineOfflineSystem').value || '',
-      onlineOfflineEquipment: document.getElementById('jsaOnlineOfflineEquipment').value || '',
+      plant: jsaState.plant,
       sigOpSupervisor: document.getElementById('jsaSigOpSupervisor').value || '',
       sigRic: document.getElementById('jsaSigRic').value || '',
       sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || '',
@@ -611,16 +722,18 @@ function applyRecordToForm(rec) {
   document.getElementById('jsaWorkMethod').value = d.workMethod || '';
   document.getElementById('jsaHiraRef').value = d.hiraRef || '';
   document.getElementById('jsaRiskToTrip').value = d.riskToTrip || '';
-  document.getElementById('jsaRiskCategory').value = d.riskCategory || 'LOW';
   document.getElementById('jsaRiskLevel').value = d.riskLevel || '';
   document.getElementById('jsaWo').value = rec.work_order || '';
   document.getElementById('jsaPriority').value = d.priority || '';
   document.getElementById('jsaEpas').value = d.epas || '';
   document.getElementById('jsaPeriodStart').value = d.periodStart || '';
   document.getElementById('jsaPeriodFinish').value = d.periodFinish || '';
-  document.getElementById('jsaOnlineOfflineUnit').value = d.onlineOfflineUnit || '';
-  document.getElementById('jsaOnlineOfflineSystem').value = d.onlineOfflineSystem || '';
-  document.getElementById('jsaOnlineOfflineEquipment').value = d.onlineOfflineEquipment || '';
+  jsaState.riskCategory = d.riskCategory || '';
+  if (d.plant) {
+    jsaState.plant = {unit: d.plant.unit || '', system: d.plant.system || '', equipment: d.plant.equipment || ''};
+  } else {
+    jsaState.plant = {unit: d.onlineOfflineUnit || '', system: d.onlineOfflineSystem || '', equipment: d.onlineOfflineEquipment || ''};
+  }
   document.getElementById('jsaSigOpSupervisor').value = d.sigOpSupervisor || rec.pic || '';
   document.getElementById('jsaSigRic').value = d.sigRic || '';
   document.getElementById('jsaSigMaintSupervisor').value = d.sigMaintSupervisor || '';
@@ -636,7 +749,19 @@ function applyRecordToForm(rec) {
     jsaState.additionalMeasures = legacy.length ? legacy : [''];
   }
   jsaRenderAdditionalMeasures();
-  jsaState.checklist = d.checklist || {};
+  // checklist: record LAMA (sebelum grid YES/NO) simpan boolean per item --
+  // migrasi ke 'yes'/'no' utk item pair:true (true lama = "hazard berlaku"
+  // = YES sekarang), item pair:false tetap boolean seperti semula.
+  var rawChecklist = d.checklist || {};
+  jsaState.checklist = {};
+  JSA_CHECKLIST_ITEMS.forEach(function(it) {
+    var v = rawChecklist[it.key];
+    if (it.pair) {
+      jsaState.checklist[it.key] = (v === 'yes' || v === 'no') ? v : (v ? 'yes' : '');
+    } else {
+      jsaState.checklist[it.key] = !!v;
+    }
+  });
   jsaState.controlMeasures = d.controlMeasures || {};
   jsaState.sections = (d.sections && d.sections.A && d.sections.B && d.sections.C)
     ? d.sections
@@ -869,7 +994,7 @@ function jsaFillTable1(tbl1, form) {
   // PUNYA PILIHAN MASING-MASING (bukan 1 pilihan berlaku ke ketiganya --
   // permintaan eksplisit user, sebelumnya SEMPAT digabung jadi 1 dropdown
   // dengan asumsi ketiganya selalu sama, ternyata salah).
-  [[6, form.onlineOfflineUnit], [7, form.onlineOfflineSystem], [8, form.onlineOfflineEquipment]].forEach(function(pair) {
+  [[6, form.plant.unit], [7, form.plant.system], [8, form.plant.equipment]].forEach(function(pair) {
     var r = pair[0], val = pair[1];
     jsaSetGlyphCheckbox(tc(r, 1), val === 'online');
     jsaSetGlyphCheckbox(tc(r, 2), val === 'offline');
@@ -880,12 +1005,22 @@ function jsaFillTable1(tbl1, form) {
   jsaSetGlyphCheckbox(tc(9, 2), form.riskCategory === 'LOW');
   jsaSetGlyphCheckbox(tc(10, 2), form.riskCategory === 'HIGH');
 
-  // Checklist Plant Process Hazard Identification + Risk detail (42 item,
-  // lihat JSA_CHECKLIST_ITEMS) -- SEMUA di-set eksplisit (checked ATAU
-  // unchecked) supaya hasilnya deterministik, tidak tercampur sisa checklist
-  // dari job REAL yang jadi sumber template ini.
+  // Checklist Plant Process Hazard Identification + Risk detail -- SEMUA
+  // di-set eksplisit (YES/NO/unchecked) supaya hasilnya deterministik,
+  // tidak tercampur sisa checklist dari job REAL yang jadi sumber template
+  // ini. Item `pair:true` py kolom YES **dan** NO terpisah -- KEDUANYA
+  // ditulis (mutually exclusive, keduanya ☐ kalau belum dipilih). Item
+  // `pair:false` (kolom kiri tabel) cuma py 1 kolom checkbox tunggal --
+  // JANGAN PERNAH tulis ke cbCol+1 punya item ini (lihat komentar
+  // JSA_CHECKLIST_ITEMS di atas).
   JSA_CHECKLIST_ITEMS.forEach(function(item) {
-    jsaSetGlyphCheckbox(tc(item.row, item.cbCol), !!form.checklist[item.key]);
+    if (item.pair) {
+      var v = form.checklist[item.key];
+      jsaSetGlyphCheckbox(tc(item.row, item.cbCol), v === 'yes');
+      jsaSetGlyphCheckbox(tc(item.row, item.cbCol + 1), v === 'no');
+    } else {
+      jsaSetGlyphCheckbox(tc(item.row, item.cbCol), !!form.checklist[item.key]);
+    }
   });
 
   // Row 22: WO / Priority / EPAS App (masing-masing "Label: value" 1 paragraf)
@@ -1067,16 +1202,14 @@ function jsaCollectFormValues() {
     workMethod: document.getElementById('jsaWorkMethod').value || '',
     hiraRef: document.getElementById('jsaHiraRef').value || '',
     riskToTrip: document.getElementById('jsaRiskToTrip').value || '',
-    riskCategory: document.getElementById('jsaRiskCategory').value || 'LOW',
+    riskCategory: jsaState.riskCategory || '',
     riskLevel: document.getElementById('jsaRiskLevel').value || '',
     wo: document.getElementById('jsaWo').value || '',
     priority: document.getElementById('jsaPriority').value || '',
     epas: document.getElementById('jsaEpas').value || '',
     periodStart: document.getElementById('jsaPeriodStart').value || '',
     periodFinish: document.getElementById('jsaPeriodFinish').value || '',
-    onlineOfflineUnit: document.getElementById('jsaOnlineOfflineUnit').value || '',
-    onlineOfflineSystem: document.getElementById('jsaOnlineOfflineSystem').value || '',
-    onlineOfflineEquipment: document.getElementById('jsaOnlineOfflineEquipment').value || '',
+    plant: jsaState.plant,
     sigOpSupervisor: document.getElementById('jsaSigOpSupervisor').value || '',
     sigRic: document.getElementById('jsaSigRic').value || '',
     sigMaintSupervisor: document.getElementById('jsaSigMaintSupervisor').value || '',
