@@ -1685,3 +1685,112 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   berdekatan ganda (☒☐/☐☒/☒☒), dan section "Warning and Instruction to RIC"
   tetap muncul PERSIS SATU KALI (tidak terduplikasi/hilang) setelah proses
   insert/remove baris di sekitarnya.
+
+## Modul baru: JSA Condition Access (`jsa_condition_access.html`, 2026-09-03) —
+## header versi LAMA (v1) + badan (Table 2/3) versi BARU (v2)
+
+- User minta JSA jadi **2 varian**, dipilih lewat popup di `index.html` (klik
+  kartu JSA) sebelum masuk ke modul: **"JSA Condition Access"** (background
+  biru, `jsa_condition_access.html`) dan **"JSA Risk To Trip"** (background
+  merah, `jsa_report.html` yang sudah ada). Perintah eksplisit user: *"untuk
+  condition acces: hanya merubah pada bagian header nya seperti contoh jsa
+  dan gambar diatas. tanpa merubah step of work dan bawahnya"* dan *"ingat
+  merefer ke jsa kita yang sudah jadi ya. jadi yang berubah hanya bagian
+  atas. yang bagian kebawah mengikuti jsa yang sudah jadi pada risk to
+  trip"* — jadi Table 2 (Langkah Pekerjaan & Hazard) dan Table 3 (Control
+  Measures Selection + Additional Control Measures + Warning and Instruction
+  to RIC) **byte-identik** dengan `jsa_report.html`, TIDAK diubah sama
+  sekali. Yang beda HANYA Table 1 (header/"Informasi Pekerjaan").
+- **Header "Condition Access" = struktur TEMPLATE LAMA (v1, sebelum "FORMAT
+  JSA BARU.docx" masuk)** — dikonfirmasi dari commit git `ee9b125` (jsa_report
+  versi PALING AWAL, sebelum diganti ke v2 di commit `b301d3e`) DAN dari
+  screenshot Word asli + file referensi baru yang dikirim user
+  (`JSA_BUILD_DISMANTLE_SCAFFOLDING_7TLMOV250_260_STEAM_SEAL_ADMISSION_FINAL.docx`,
+  **file ini TERNYATA punya 2 scan tanda tangan asli** — `image2.png`/
+  `image3.jpeg`, nama "Fajar ds." — dan **TIDAK PERNAH disalin ke repo**,
+  cuma dibaca read-only dari folder upload chat murni untuk verifikasi
+  struktur, sesuai kebijakan privasi tanda tangan yang sudah berulang kali
+  diterapkan di modul JSA ini). Field yang v1 PUNYA tapi v2 TIDAK: signature
+  role **"Applicant"** (v2 menggantinya dengan role lain). Field yang v2
+  PUNYA tapi v1 TIDAK (dan karenanya TIDAK ADA di Condition Access): Risk To
+  Trip No., Risk Level (Low/Medium/High/Extreme) + approval tambahan
+  otomatis, Intersection Spv (FA/Chem).
+- **Template Word digabung dari 2 sumber via Python (lxml), BUKAN ditulis
+  ulang manual**: `jsa_template_condition_access.docx` = Table 0/2/3/4 dari
+  `jsa_template.docx` (v2, current — supaya Table 2/3 PERSIS sama strukturnya
+  dengan yang sudah dipakai `jsaRebuildTable2()`/`jsaFillTable3()` yang
+  sudah teruji) + Table 1 (index 1) diganti PERSIS dari template v1 lama
+  (diambil via `git show ee9b125:jsa_template.docx`, BUKAN dari file upload
+  user yang belum sanitasi). Teknik: parse KEDUA document.xml lewat lxml,
+  `copy.deepcopy()` Table1 v1, `addprevious()`+`remove()` untuk menukar posisi
+  di tree v2, serialize balik, replace `word/document.xml` di dalam salinan
+  ZIP v2. **Diverifikasi visual via LibreOffice headless** (`--convert-to
+  png`) sebelum dipakai — hasil render PERSIS sama dengan screenshot
+  referensi user (checklist Plant Process Hazard Identification, Risk
+  Category, Mandatory Lifting Plan, dll, dengan checkbox Wingdings ☒/☐
+  ter-render benar dari karakter 'x'/'o' polos). **Kalau template v1 atau v2
+  berubah lagi di masa depan, script gabungan ini (`build_ca_template.py`,
+  sudah dihapus lagi dari repo — cuma dipakai sekali, reproduce dari
+  deskripsi ini kalau perlu ulang) perlu dijalankan ulang** — JANGAN edit
+  `jsa_template_condition_access.docx` manual di Word, nanti pola gabungan
+  Table 1 lama + Table 2/3 baru ini gampang tidak sinkron lagi kalau salah
+  satu sumbernya diedit terpisah.
+- **🔴 Checkbox template LAMA (v1) pakai mekanisme BEDA TOTAL dari v2**:
+  bukan glyph unicode ☐/☒ polos (seperti v2), tapi HURUF LITERAL **'x'
+  (checked) / 'o' (unchecked) di font Wingdings** (`<w:rFonts w:ascii=
+  "Wingdings">`) — Wingdings me-render huruf itu jadi kotak centang/kosong
+  secara visual, TAPI di level XML isinya cuma huruf biasa. Setiap sel
+  checkbox SELALU cuma 1 paragraf + 1 run + 1 `<w:t>` (dikonfirmasi baca
+  XML mentah satu-per-satu via lxml, `rFonts` di-dump per run) — jadi
+  helper barunya, **`jsaSetSoleCheckboxText(tc, val)`**, CUKUP menimpa
+  `textContent` run yang SUDAH ADA (`ts[0].textContent = val`), TIDAK PERNAH
+  menambah/membuang run sama sekali — otomatis kebal dari kelas bug
+  "checkbox dobel" yang pernah terjadi di v2 (`jsaSetGlyphCheckbox`, lihat
+  bagian atas dokumen ini). **JANGAN pernah pakai `jsaSetGlyphCheckbox`
+  (☐/☒) untuk sel manapun di Table 1 Condition Access** — hasilnya akan
+  jadi glyph unicode nyasar di font Wingdings, bukan checkbox yang benar.
+  `jsaSetGlyphCheckbox` TETAP ada di file ini (dipakai `jsaSetSdtCheckbox`
+  untuk Table 3, yang templatenya dari v2 dan checkbox-nya SDT+☐/☒ seperti
+  biasa) — jangan dihapus.
+- **42-item checklist Plant Process Hazard Identification SAMA JUMLAHNYA**
+  (42) dengan v2, tapi row/col index-nya BEDA TOTAL (offset lebih kecil,
+  karena v1 tidak punya baris Risk Level yang disisipkan v2 di atas matrix
+  ini) DAN beberapa ITEM-nya beda: v1 punya **"ELECTRICAL"** sebagai 1 item
+  tunggal (row15 labelCol8/cbCol9) yang di v2 malah dipecah jadi 3 item
+  terpisah (X-Ray/Radiografi, High Voltage, Low Voltage). `JSA_CHECKLIST_ITEMS`
+  di `jsa_condition_access.html` adalah array TERPISAH dari punya
+  `jsa_report.html` — **JANGAN disamakan/di-share**, isinya sengaja beda
+  mengikuti template masing-masing (lihat komentar di atas array itu utk
+  hasil pembacaan XML lengkap kalau perlu verifikasi ulang).
+- Online/Offline UNIT/SYSTEM/EQUIPMENT (row5/6/7 tc1/tc2) dan Risk Category
+  LOW/HIGH (row8/9 tc2) sama-sama pakai `jsaSetSoleCheckboxText()` dengan
+  'x'/'o' (BUKAN `jsaSetGlyphCheckbox()` seperti di v2) — pola UI-nya (3
+  dropdown independen utk online/offline) tetap sama persis dengan v2, cuma
+  cara nulis ke XML-nya yang beda mengikuti mekanisme checkbox template lama.
+- Modul: `window.CURRENT_MODUL = 'JSA Condition Access'`, `dbSave('JSA
+  Condition Access')`, `dbCollectData()` return `modul: 'JSA Condition
+  Access'`. `normalizeModul()` (shared.js) cek substring `'JSA'` **DAN**
+  `'CONDITION'` **SEBELUM** cek generik `'JSA'` polos (yang match `jsa_report.html`)
+  — pola proteksi yang sama seperti kasus-kasus substring-collision lain di
+  fungsi ini (GENERATOR_STATOR_LEAK vs FEGT, dst). `raModulToUrl()` diarahkan
+  ke `jsa_condition_access.html?id=`. Tombol filter "JSA Risk to Trip" (dulu
+  cuma "JSA") dan "JSA Condition Access" ditambahkan di `history.html`.
+- `index.html`: kartu JSA yang dulu `onclick="window.location.href='jsa_report.html'"`
+  (langsung buka Risk to Trip) diganti `onclick="openJsaPopup()"` — popup baru
+  (`#jsaPopupOverlay`, pola generik SAMA PERSIS dengan popup O2 yang sudah ada,
+  `openJsaPopup()`/`closeJsaPopup()`) dengan 2 opsi: `.pm-popup-option-blue`
+  (Condition Access) dan `.pm-popup-option-red` (Risk to Trip) — 2 class CSS
+  baru (background+border+icon+title tint) ditambahkan supaya kartu popup ini
+  bisa beda warna dari popup O2 yang netral, TANPA mengubah struktur
+  `.pm-popup-option` dasarnya (hover/layout tetap ikut yang sudah ada).
+- Diverifikasi lewat headless Chrome: selftest generate Word (equipTag, WO,
+  signature Applicant/OpSupervisor/HealthSafety/RIC/MaintSupervisor, Online/
+  Offline PER ROW independen, Risk Category, 4 checklist item tersebar di
+  baris berbeda dicentang + 3 item lain sengaja TIDAK dicentang untuk
+  memastikan tidak ada sisa centang dari job asli sumber template nyangkut,
+  5 baris Additional Control Measures) — SEMUA field muncul benar via
+  inspeksi langsung ke sel XML akhir (bukan cuma cari substring polos, yang
+  tidak reliable utk verifikasi 'x'/'o' karena huruf itu muncul di mana-mana
+  di dokumen), dan "Warning and Instruction to RIC" tetap utuh. Screenshot
+  popup index.html juga diverifikasi visual (headless Chrome
+  `--screenshot`) — kartu biru/merah tampil sesuai desain yang diminta.

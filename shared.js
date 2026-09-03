@@ -1541,6 +1541,10 @@ function normalizeModul(name) {
   // jadi kalau urutan dibalik bakal ke-normalize salah jadi
   // MAINTENANCE_REPORT (kebuka lewat maintenance_report_form.html, file
   // salah -- pola proteksi yang sama seperti GENERATOR_STATOR_LEAK vs FEGT).
+  // 'JSA Condition Access' (jsa_condition_access.html) HARUS dicek DULUAN
+  // sebelum cek generik 'JSA' di bawahnya -- keduanya sama-sama mengandung
+  // substring 'JSA', kalau dibalik CA akan ke-normalize salah jadi JSA_REPORT.
+  if (n.indexOf('JSA')>=0 && n.indexOf('CONDITION')>=0) return 'JSA_CONDITION_ACCESS';
   if (n.indexOf('JSA')>=0) return 'JSA_REPORT';
   if (n.indexOf('MAINTENANCE')>=0 || n.indexOf('REPORT')>=0) return 'MAINTENANCE_REPORT';
   if (n.indexOf('SILO')>=0) return 'COAL_SILO_LEVEL';
@@ -1592,6 +1596,7 @@ function raModulToUrl(modul, id) {
   if (norm === 'CEC_CONSOLE_CHCB')      return 'dcs-console-chcb.html?id=' + id;
   if (norm === 'CEC_CONSOLE_WWTP')      return 'dcs-console-wwtp.html?id=' + id;
   if (norm === 'JSA_REPORT')            return 'jsa_report.html?id=' + id;
+  if (norm === 'JSA_CONDITION_ACCESS')  return 'jsa_condition_access.html?id=' + id;
   return 'index.html';
 }
 function raModulToPrintUrl(modul, id) {
