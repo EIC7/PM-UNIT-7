@@ -1074,12 +1074,25 @@ function dbFmtLocalDateTime(iso) {
 }
 
 /* ── TOAST NOTIFICATION ── */
+// 🔴 BUG: elemen ini dulu TIDAK punya pointer-events:none -- posisinya
+// (bottom:24px, center horizontal) tepat menutupi baris terakhir numpad
+// custom (tombol 0/minus, lihat "NUMPAD CUSTOM" di bawah) kalau toast ini
+// tampil SAAT numpad lagi terbuka. BEDA dari #autosaveIndicator (yang sudah
+// pointer-events:none dari awal, cuma soal reposisi) -- toast ini BENERAN
+// MEMBLOKIR KLIK ke tombol di bawahnya selama 3 detik dia tampil. Skenario
+// nyata: buka halaman -> restoreDraftData() panggil dbShowToast('Draft
+// sebelumnya berhasil dipulihkan ✓') -> user langsung ketuk numpad buat
+// lanjut isi data -> 3 detik pertama, tap ke tombol yang ketutup toast
+// (paling sering kena "0", digit paling sering diketik) SAMA SEKALI TIDAK
+// TERDAFTAR sebagai klik pada tombol numpad, kelihatan seperti "0 susah
+// dipencet". Toast ini murni informational (tidak pernah butuh diklik),
+// jadi pointer-events:none aman 100% -- tidak ada fungsi yang hilang.
 function dbShowToast(msg) {
   var t = document.getElementById('dbToast');
   if (!t) {
     t = document.createElement('div');
     t.id = 'dbToast';
-    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#16a085;color:#fff;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.3s;white-space:nowrap;max-width:90vw;text-align:center';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#16a085;color:#fff;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.3s;white-space:nowrap;max-width:90vw;text-align:center;pointer-events:none';
     // Hide toast during print (pages define @media print .no-print{display:none})
     try { t.classList.add('no-print'); } catch(e){}
     document.body.appendChild(t);
@@ -1397,6 +1410,12 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         // _editingId hanya boleh direset ke null lewat tombol Reset/mulai entri baru.
         window._editingId = savedId || null;
         if (typeof autosaveClear === 'function') autosaveClear();
+        // Reset _raDirty di sini juga (bukan cuma di dbSaveSilent()) -- kalau
+        // tidak, popup "Yakin akan meninggalkan halaman?" (lihat
+        // pmConfirmLeaveIfDirty di bawah) akan tetap muncul walau user BARU
+        // SAJA berhasil Simpan manual, karena flag-nya masih true dari
+        // sebelumnya.
+        window._raDirty = false;
         dbShowToast(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
         pmMarkRevisionSaved();
         if (callback) callback(savedId);
@@ -2051,15 +2070,29 @@ function _autosaveKey() {
   var modul = window.CURRENT_MODUL || location.pathname.split('/').pop().replace(/\.html$/,'') || 'unknown';
   return 'draft_' + modul;
 }
+// 🔴 Dulu SELALU bottom:14px;right:14px -- persis di atas baris terakhir
+// numpad custom (lihat "NUMPAD CUSTOM" di bawah, tombol 0/minus) kalau
+// numpad itu lagi terbuka. Walau elemen ini pointer-events:none (secara
+// teknis tidak menghalangi klik), popup yang muncul MENDADAK tepat di area
+// jari user lagi mengetik (autosave debounce 2.5 detik -- lihat
+// AUTOSAVE_DELAY -- gampang jatuh pas jeda antar ketuk digit) bikin tap
+// berikutnya meleset/kepencet 2x -- keluhan user: "0 susah dipencet" (paling
+// kena karena "0" paling sering diketik utk nilai kalibrasi seperti 10.0,
+// 20.0). Sekarang cek dulu apakah #pmNumpad lagi kebuka, kalau iya geser ke
+// atas numpad-nya (bukan cuma di O2 Weekly -- numpad ini dipakai file
+// manapun yang panggil pmNumpadInit(), jadi fix di sini generik).
 function _autosaveIndicator() {
   var el = document.getElementById('autosaveIndicator');
   if (!el) {
     el = document.createElement('div');
     el.id = 'autosaveIndicator';
     el.className = 'no-print';
-    el.style.cssText = 'position:fixed;bottom:14px;right:14px;background:rgba(0,0,0,0.65);color:#cfe3f7;font-size:11px;padding:5px 11px;border-radius:14px;z-index:99998;pointer-events:none;opacity:0;transition:opacity .35s';
+    el.style.cssText = 'position:fixed;bottom:14px;right:14px;background:rgba(0,0,0,0.65);color:#cfe3f7;font-size:11px;padding:5px 11px;border-radius:14px;z-index:99998;pointer-events:none;opacity:0;transition:opacity .35s, bottom .2s';
     document.body.appendChild(el);
   }
+  var pad = document.getElementById('pmNumpad');
+  var numpadOpen = pad && pad.classList.contains('open');
+  el.style.bottom = numpadOpen ? (pad.offsetHeight + 14) + 'px' : '14px';
   el.textContent = '💾 Draft tersimpan otomatis';
   el.style.opacity = '1';
   clearTimeout(el._t);
@@ -2170,6 +2203,75 @@ setInterval(function() {
 function autosaveClear() {
   autosaveDelete(_autosaveKey()).catch(function(){});
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   KONFIRMASI SEBELUM MENINGGALKAN HALAMAN (data belum tersimpan) --
+   generik, berlaku semua modul yang punya window._raDirty (di-set true oleh
+   autosaveTrigger() di atas setiap ada input/change, di-reset false lagi
+   setelah dbSave()/dbSaveSilent() benar-benar sukses -- lihat kedua tempat
+   itu). Popup KUSTOM ("Yakin akan meninggalkan halaman?" + tombol Ya/Lanjut
+   Edit) cuma bisa dipasang utk navigasi YANG KITA KONTROL SENDIRI (klik
+   tombol/link di dalam halaman ini, mis. "Kembali ke Dashboard"/"RIWAYAT")
+   -- browser modern TIDAK MENGIZINKAN teks kustom di dialog beforeunload
+   (tutup tab/refresh/ketik URL baru), itu SELALU jadi prompt generik bawaan
+   browser ("Leave site?" dsb, teks kita di returnValue diabaikan) -- lihat
+   pmWireBeforeUnload di bawah utk jalur itu, sekadar jaring pengaman
+   tambahan, bukan bisa dikustomisasi.
+   ══════════════════════════════════════════════════════════════════════════ */
+function pmShowLeaveConfirm(onConfirm) {
+  var existing = document.getElementById('pmLeaveConfirmOverlay');
+  if (existing) existing.remove();
+  var ov = document.createElement('div');
+  ov.id = 'pmLeaveConfirmOverlay';
+  ov.className = 'no-print';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2147482000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:12px;max-width:340px;width:100%;padding:22px 20px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.3)">' +
+      '<div style="font-size:32px;margin-bottom:10px">⚠️</div>' +
+      '<div style="font-weight:700;font-size:16px;color:#222;margin-bottom:8px">Yakin akan meninggalkan halaman?</div>' +
+      '<div style="font-size:13px;color:#666;margin-bottom:18px;line-height:1.4">Ada perubahan yang belum tersimpan. Kalau keluar sekarang, perubahan ini bisa hilang.</div>' +
+      '<div style="display:flex;gap:10px">' +
+        '<button id="pmLeaveConfirmStay" style="flex:1;padding:11px;border:none;border-radius:8px;background:#e0e0e0;color:#333;font-weight:600;font-size:13.5px;cursor:pointer">Lanjut Edit</button>' +
+        '<button id="pmLeaveConfirmGo" style="flex:1;padding:11px;border:none;border-radius:8px;background:#e74c3c;color:#fff;font-weight:600;font-size:13.5px;cursor:pointer">Ya</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('pmLeaveConfirmStay').onclick = function() { ov.remove(); };
+  document.getElementById('pmLeaveConfirmGo').onclick = function() { ov.remove(); onConfirm(); };
+}
+
+// Capture phase (argumen ke-3 `true`) SENGAJA -- supaya interceptor ini
+// jalan SEBELUM onclick inline elemen yang diklik sempat dieksekusi.
+// stopImmediatePropagation() menghentikan event di fase capture ini juga,
+// jadi onclick asli elemen target TIDAK PERNAH jalan sampai user benar-benar
+// pilih "Ya" di popup (baru dieksekusi manual lewat `new Function`).
+document.addEventListener('click', function(e) {
+  if (!window._raDirty) return;
+  var el = e.target.closest ? e.target.closest('a[href], [onclick]') : null;
+  if (!el) return;
+  var href = el.tagName === 'A' ? el.getAttribute('href') : null;
+  var isNavLink = !!href && href.indexOf('#') !== 0 && href.indexOf('javascript:') !== 0;
+  var onclickStr = el.getAttribute('onclick') || '';
+  var isNavOnclick = /location\.href\s*=|location\.assign\s*\(|location\.replace\s*\(/.test(onclickStr);
+  if (!isNavLink && !isNavOnclick) return; // bukan tombol navigasi (mis. Simpan/Submit) -- biarkan jalan normal
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  pmShowLeaveConfirm(function() {
+    window._raDirty = false;
+    if (isNavLink) { window.location.href = href; }
+    else { (new Function(onclickStr)).call(el); }
+  });
+}, true);
+
+// Jaring pengaman jalur yang TIDAK BISA dicegat interceptor klik di atas
+// (tutup tab, refresh, ketik URL baru, tombol Back HP paling luar sesudah
+// numpad -- lihat catatan pmNumpadOpen soal itu). Teks kustom TIDAK
+// didukung browser modern manapun, ini cuma trigger prompt generik bawaan.
+window.addEventListener('beforeunload', function(e) {
+  if (!window._raDirty) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
 function autosaveCheckAndPrompt() {
   // Jangan tawarkan draft kalau memang sedang buka record dari RIWAYAT (?id=...)
   var params = new URLSearchParams(window.location.search);
@@ -3413,6 +3515,20 @@ function pmNumpadUpdateNextLabel() {
   if (hint) hint.textContent = isLast ? 'Kolom terakhir — tekan ✓ untuk selesai' : 'Next → pindah ke kolom berikutnya';
 }
 
+// 🆕 Tombol Back HP (browser back / gesture Android) dulu langsung
+// menavigasi keluar dari halaman modul kalau numpad lagi terbuka --
+// user mengeluh "numpad yang tertutup, bukan kembali ke halaman
+// sebelumnya" (maksudnya: mereka INGIN Back cuma menutup numpad, bukan
+// pindah halaman). Fix-nya: tiap kali numpad dibuka, sisipkan 1 entry
+// history "dummy" (pushState) -- begitu back ditekan, browser mundur ke
+// entry dummy itu (popstate event), yang kita tangkap utk menutup numpad
+// SAJA tanpa benar-benar pindah halaman. Back KEDUA (numpad sudah
+// tertutup, tidak ada entry dummy lagi) baru benar-benar keluar halaman
+// seperti biasa -- perilaku ini SUDAH SESUAI ekspektasi user.
+window.addEventListener('popstate', function() {
+  if (pmNumpadActiveEl) pmNumpadCloseUI();
+});
+
 function pmNumpadOpen(el) {
   pmNumpadActiveEl = el;
   document.querySelectorAll('.pm-num-input').forEach(function(i) {
@@ -3422,6 +3538,7 @@ function pmNumpadOpen(el) {
   document.getElementById('pmNumpadBackdrop').classList.add('open');
   pmNumpadUpdateNextLabel();
   pmNumpadEnsureVisible(el);
+  try { history.pushState({pmNumpadOpen: true}, ''); } catch (e) {}
 }
 
 // Field aktif (juga dipakai tombol "Next") bisa ketutup numpad yang muncul
@@ -3443,12 +3560,25 @@ function pmNumpadEnsureVisible(el) {
   });
 }
 
-function pmNumpadClose() {
+// Hanya tutup TAMPILANNYA -- TIDAK menyentuh history sama sekali. Dipanggil
+// dari popstate handler di atas (history SUDAH mundur duluan sebelum handler
+// ini jalan, jangan history.back() lagi di sini -- bakal mundur 2x/nyasar).
+function pmNumpadCloseUI() {
   if (!pmNumpadActiveEl) return;
   document.getElementById('pmNumpad').classList.remove('open');
   document.getElementById('pmNumpadBackdrop').classList.remove('open');
   document.querySelectorAll('.pm-num-input').forEach(function(i) { i.classList.remove('pm-num-active'); });
   pmNumpadActiveEl = null;
+}
+// Dipanggil dari tombol backdrop/"✓ Selesai" (user MENUTUP numpad sendiri,
+// bukan lewat tombol Back HP) -- selain menutup tampilan, WAJIB "membuang"
+// entry history dummy yang disisipkan pmNumpadOpen() (lihat catatan di
+// sana), supaya tombol Back HP berikutnya tidak nyangkut di entry kosong
+// itu (yang efeknya numpad kebuka lagi/tidak terjadi apa-apa, membingungkan).
+function pmNumpadClose() {
+  if (!pmNumpadActiveEl) return;
+  pmNumpadCloseUI();
+  try { if (history.state && history.state.pmNumpadOpen) history.back(); } catch (e) {}
 }
 
 function pmNumpadPress(k) {

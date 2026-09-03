@@ -1432,3 +1432,82 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   verifikasi visual internal** (checkbox tercentang benar secara visual,
   border/layout tidak korup) — TIDAK pernah dikirim ke user sebagai
   deliverable, sesuai instruksi "tidak butuh PDF sama sekali".
+
+## 🔴 Bug numpad "0 susah dipencet" + back-HP + konfirmasi tinggalkan halaman (2026-09-03)
+
+- **Akar masalah SEBENARNYA (ditemukan lewat elementFromPoint di headless
+  Chrome, bukan tebakan)**: `#dbToast` (`dbShowToast()`, shared.js) —
+  notifikasi umum yang dipakai LUSINAN tempat di semua modul (termasuk
+  "Draft sebelumnya berhasil dipulihkan ✓" yang muncul OTOMATIS saat halaman
+  dibuka kalau ada draft tersimpan) — **TIDAK PERNAH punya `pointer-events:
+  none`**. Posisinya (`bottom:24px`, center horizontal) PERSIS menutupi
+  baris terakhir numpad custom (tombol 0/minus, lihat "NUMPAD CUSTOM" di
+  bawah) kalau toast ini tampil SAAT numpad lagi terbuka — dan karena toast
+  ini BENERAN memblokir klik (beda dari `#autosaveIndicator` yang sejak awal
+  sudah `pointer-events:none`), tap ke tombol yang ketutup selama toast
+  tampil (3 detik) sama sekali tidak terdaftar. **"0" kena paling parah**
+  BUKAN karena ada yang salah spesifik di tombolnya sendiri, tapi karena
+  (a) posisinya (kolom 2 dari 4) pas di rentang horizontal toast yang
+  center-aligned, dan (b) "0" adalah digit yang paling sering diketik untuk
+  nilai kalibrasi (10.0, 20.0, dst) jadi user paling sering "kena" window 3
+  detik itu. **Fix: tambahkan `pointer-events:none` ke `#dbToast`** — toast
+  ini murni informational, tidak pernah butuh diklik, jadi tidak ada fungsi
+  yang hilang. **Kalau nambah toast/notifikasi baru di masa depan yang
+  posisinya bisa tumpang tindih dengan UI interaktif lain (numpad, bottom
+  sheet apa pun) — WAJIB pointer-events:none dari awal**, jangan tunggu ada
+  laporan bug serupa lagi.
+- **Perbaikan tambahan (defense in depth, bukan akar masalah utama)**:
+  `#autosaveIndicator` ("💾 Draft tersimpan otomatis") sudah `pointer-events:
+  none` sejak awal jadi TIDAK PERNAH benar-benar memblokir klik, tapi tetap
+  diperbaiki supaya TIDAK VISUAL menutupi numpad juga — `_autosaveIndicator()`
+  sekarang cek `#pmNumpad.open` dan geser `bottom` ke atas numpad (bukan
+  `14px` tetap) kalau numpad lagi terbuka.
+- **🆕 Tombol Back HP menutup numpad, bukan navigasi keluar halaman**:
+  `pmNumpadOpen()` sekarang `history.pushState({pmNumpadOpen:true}, '')`
+  tiap kali dibuka. `popstate` listener global menutup TAMPILAN numpad saja
+  (`pmNumpadCloseUI()`, fungsi baru — MURNI UI, tidak menyentuh history sama
+  sekali) kalau numpad lagi aktif saat event itu terjadi. `pmNumpadClose()`
+  (dipanggil user sendiri lewat backdrop/tombol "✓ Selesai") sekarang
+  memanggil `pmNumpadCloseUI()` + `history.back()` (membuang entry dummy
+  yang disisipkan tadi) — supaya Back HP BERIKUTNYA (numpad sudah tertutup
+  duluan lewat cara lain) tidak nyangkut di entry kosong. **Kalau nambah
+  fungsi close numpad baru di masa depan, WAJIB pakai `pmNumpadCloseUI()`
+  (bukan langsung modifikasi class `.open`)** supaya konsisten dengan pola
+  history ini.
+- **🆕 Konfirmasi "Yakin akan meninggalkan halaman?" (Ya/Lanjut Edit)** —
+  GENERIK, berlaku SEMUA modul (bukan cuma O2, sesuai pola shared.js yang
+  sudah mapan di repo ini) lewat `window._raDirty` (flag yang SUDAH ADA
+  sejak fitur "AUTOSAVE SERVER", di-set `true` oleh `autosaveTrigger()`
+  setiap ada input/change, di-reset `false` setelah `dbSave()`/
+  `dbSaveSilent()` BENAR-BENAR sukses — `dbSave()` sebelumnya TIDAK
+  me-reset flag ini sama sekali, cuma `dbSaveSilent()`, sudah diperbaiki
+  juga supaya popup ini tidak muncul salah setelah user BARU SAJA berhasil
+  Simpan manual).
+  - **Klik tombol/link navigasi DI DALAM halaman** (`<a href>` atau
+    `onclick` yang mengandung `location.href=`/`location.assign(`/
+    `location.replace(`, mis. tombol "Kembali ke Dashboard"/"RIWAYAT" yang
+    ADA DI SEMUA modul) — dicegat lewat 1 listener global di CAPTURE phase
+    (`document.addEventListener('click', ..., true)`), `stopImmediatePropagation()`
+    supaya onclick asli elemen itu TIDAK PERNAH jalan sebelum user pilih
+    "Ya" di popup kustom (`pmShowLeaveConfirm()`). **TIDAK PERLU edit
+    tombol di file modul manapun** — deteksinya generik lewat pola
+    href/onclick, bukan lewat ID/class spesifik.
+  - **TIDAK BISA dicegat dengan teks kustom**: tutup tab, refresh, ketik
+    URL baru — browser modern SELALU pakai prompt generik bawaan sendiri
+    untuk `beforeunload` (teks di `event.returnValue` diabaikan total sejak
+    beberapa tahun terakhir, ini pembatasan keamanan browser, bukan bug di
+    kode kita). `beforeunload` listener tetap dipasang sebagai jaring
+    pengaman jalur ini (`e.preventDefault(); e.returnValue='';`), TAPI
+    JANGAN PERNAH berharap teksnya bisa disesuaikan jadi "Yakin akan
+    meninggalkan halaman?" — itu di luar kendali kita sepenuhnya.
+- **Diverifikasi lewat headless Chrome + `document.elementFromPoint()`**
+  (BUKAN cuma baca kode) — dites: (1) titik tengah `#dbToast` sebelum fix
+  mengembalikan `#dbToast` sendiri dari `elementFromPoint` (klik ketelan),
+  setelah fix mengembalikan elemen DI BAWAHNYA (`#pmNumpadBackdrop`); (2)
+  `history.state` benar berisi `{pmNumpadOpen:true}` setelah numpad dibuka,
+  dispatch event `popstate` sintetis menutup numpad TANPA pindah halaman
+  (`location.pathname` tidak berubah); (3) klik tombol "Dashboard" dengan
+  `window._raDirty=true` memunculkan popup DAN mencegah `location.href`
+  berubah sampai user pilih salah satu tombol, "Lanjut Edit" menutup popup
+  tanpa navigasi dan TIDAK mereset `_raDirty` (supaya popup muncul lagi
+  kalau dicoba lagi).
