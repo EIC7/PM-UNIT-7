@@ -164,6 +164,26 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
+        .btn-jsa-history {
+            padding: 8px 16px;
+            border: 1.5px solid #b45309;
+            border-radius: 8px;
+            background: transparent;
+            color: #b45309;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-jsa-history:hover {
+            background: #b45309;
+            color: white;
+            box-shadow: 0 4px 12px rgba(180, 83, 9, 0.3);
+        }
+
         .btn-eic7 {
             padding: 8px 18px;
             border: 2.5px solid #7c3aed;
@@ -1031,6 +1051,7 @@
                 </div>
                 <a class="btn-eic7" href="https://eenputra.github.io/EIC7-PORTAL/index.html#" target="_blank" rel="noopener">🔗 EIC7 PORTAL</a>
                 <button class="btn-history" onclick="window.location.href='history.html'">📋 RIWAYAT</button>
+                <button class="btn-jsa-history" onclick="window.location.href='jsa_history.html'">🦺 JSA HISTORY</button>
                 <div class="clock-box" id="clock">--:--:--</div>
             </div>
         </div>
@@ -1509,9 +1530,8 @@
             </div>
         </div>
 
-        <div style="text-align: center; margin-top: 12px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <div style="text-align: center; margin-top: 12px;">
             <button class="btn-view-all" onclick="window.location.href='history.html'">Lihat Semua Riwayat →</button>
-            <button class="btn-view-all" onclick="window.location.href='jsa_history.html'">🦺 JSA History →</button>
         </div>
     </div>
 
