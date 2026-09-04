@@ -2604,12 +2604,26 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   repo tujuan push** -- permintaan eksplisit user ("tidak ada yang
   default. intinya setiap mau push ditanyakan. mau push ke yang mana bisa
   salah satu atau keduanya"). **SETIAP KALI mau push (sesudah commit siap,
-  sebelum `git push` dijalankan), WAJIB tanya dulu ke user: push ke
-  `origin` (Mahfudjtf) saja, `eic7` saja, atau KEDUANYA** -- untuk commit
-  INI juga, bukan cuma sekali di awal lalu dianggap berlaku seterusnya.
-  JANGAN PERNAH asumsikan salah satu (termasuk `origin`) sebagai default
-  diam-diam walau kelihatannya "jelas" dari konteks (mis. perubahan yang
-  cuma relevan ke 1 repo) -- tetap tanya dulu.
+  sebelum `git push` dijalankan), WAJIB tanya dulu ke user** -- untuk
+  commit INI juga, bukan cuma sekali di awal lalu dianggap berlaku
+  seterusnya. JANGAN PERNAH asumsikan salah satu sebagai default diam-diam
+  walau kelihatannya "jelas" dari konteks (mis. perubahan yang cuma
+  relevan ke 1 repo) -- tetap tanya dulu.
+  - **Pilihan pertanyaannya WAJIB pakai nama repo LENGKAP** (`pemilik/nama-
+    repo`), BUKAN cuma nama akun ("Mahfudjtf"/"eic7" saja) -- akun `eic7`
+    punya BEBERAPA repo (`eic7/PM-UNIT-7`, `eic7/EIC7-PORTAL`,
+    `eic7/CHECK-SHEET-POMI-ELEKTRIK-ONLINE`,
+    `eic7/MIgrasi-Electric-check-sheet-to-google-drive` -- lihat bagian
+    "Konsolidasi repo ke akun GitHub EIC7" di atas), jadi "push ke eic7"
+    saja AMBIGU. Format pilihan yang benar: 3 opsi single-select persis
+    `Mahfudjtf/PM-UNIT-7` / `eic7/PM-UNIT-7` / `Keduanya` (utk working
+    directory PM-UNIT-7 ini -- nama repo di opsi menyesuaikan kalau
+    working directory-nya beda, mis. kalau nanti ngerjain clone terpisah
+    `EIC7-PORTAL`, opsinya jadi `eic7/EIC7-PORTAL` dst, BUKAN generik
+    "eic7"). Working directory PM-UNIT-7 ini ONLY PERNAH relevan ke
+    `eic7/PM-UNIT-7` (3 repo eic7 lainnya kodenya beda total & belum ada
+    clone-nya di sini) -- tidak akan pernah tertukar repo eic7 yang mana,
+    tapi TETAP tulis nama lengkapnya di pilihan, jangan disingkat.
   Konfigurasi remote saat ini: `origin` = `Mahfudjtf/PM-UNIT-7`
   (fetch+push) -- dipakai jalur prosedur wajib "git fetch origin" di
   paling atas dokumen ini SAAT MEMANG diputuskan push ke situ. `eic7` =
