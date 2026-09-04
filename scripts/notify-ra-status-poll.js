@@ -32,8 +32,8 @@ const fs = require('fs');
 const SUPA_URL = 'https://xzjayhjierilqxwucnkn.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6amF5aGppZXJpbHF4d3VjbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MzM4NTMsImV4cCI6MjEwNDEwOTg1M30.KX0iL0IAf0uWDj0yb_YFyRDu3pINNzYo36ZSmFXn-nI';
 
-const FIREBASE_PROJECT_ID = 'pomi-checksheet-e7';
-const FIREBASE_API_KEY = 'AIzaSyB2c5ZFYRH8rKRcYlza175wTM36O8jwDGw';
+const FIREBASE_PROJECT_ID = 'database-eic7';
+const FIREBASE_API_KEY = 'AIzaSyDXEMaTgz3DDM8DtJyrk5p46vQLW-gFZIc';
 
 const VALID_STATUSES = ['reviewed', 'approved', 'returned_to_technician', 'revision_resubmitted'];
 
@@ -57,7 +57,12 @@ const HEALTH_STATE_FILE = '.health-state.json';
 // trigger eksternal ini berhenti diam-diam (fallback `schedule:` bawaan
 // tetap ada tapi kembali ke masalah telat berjam-jam di atas). Tanggal di
 // bawah ini HARUS diupdate manual tiap kali token di-regenerate/diperbarui.
-const PAT_EXPIRY_DATE = '2026-12-03'; // token "AUTO REFRESH HISTORY", dibuat 2026-09-04
+const PAT_EXPIRY_DATE = '2026-12-03'; // token "AUTO REFRESH HISTORY EIC7", scope khusus
+// repo EIC7/PM-UNIT-7, dibuat 2026-09-05 -- KEBETULAN expired di tanggal yang sama
+// dengan PAT punya Mahfudjtf/PM-UNIT-7 (juga 2026-12-03, dibuat 2026-09-04), karena
+// durasi 90 hari dipilih di kedua PAT. Ini 2 PAT TERPISAH (beda repo, beda cron-job.org
+// job) yang cuma kebetulan sama tanggal -- kalau salah satu diperpanjang/diganti nanti,
+// jangan asumsikan yang lain otomatis ikut sinkron.
 const PAT_REMINDER_DAYS = [3, 2, 1]; // cuma alert kalau SISA hari PERSIS salah satu ini
 
 function daysUntil(isoDateStr) {
