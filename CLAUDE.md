@@ -2587,34 +2587,46 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   dipindah/digandakan ke akun `EIC7` yang sama: `EIC7/EIC7-PORTAL`,
   `EIC7/CHECK-SHEET-POMI-ELEKTRIK-ONLINE`, dan
   `EIC7/MIgrasi-Electric-check-sheet-to-google-drive`.
-- **Working directory lokal ini (`C:\Users\Administrator\Documents\
-  PM-UNIT-7`) sekarang push ke DUA remote sekaligus** lewat 1 `git push
-  origin main` -- `origin` dikonfigurasi dgn 2 push URL:
-  `https://github.com/Mahfudjtf/PM-UNIT-7.git` (lama, TETAP dipertahankan
-  sbg arsip/cermin, bukan dihapus) dan `https://github.com/EIC7/
-  PM-UNIT-7.git` (baru, dgn akun `Mahfudjtf` ditambahkan sbg
-  **collaborator** di sana supaya bisa push tanpa token terpisah).
-  `git fetch`/pull TETAP dari `Mahfudjtf/PM-UNIT-7` saja (default,
-  hanya push yg dobel) -- kalau CLAUDE.md wajib "git fetch origin" sebelum
-  push (lihat bagian paling atas dokumen ini), itu tetap cukup cek versi
-  `Mahfudjtf/PM-UNIT-7` seperti biasa, TIDAK perlu fetch dari `EIC7` juga
-  (keduanya SELALU didorong bersamaan dari sini, jadi tidak akan divergen
-  selama SEMUA perubahan lewat sesi/alur ini -- kalau ada yang push
-  LANGSUNG ke `EIC7/PM-UNIT-7` dari luar sesi ini, WAJIB `git fetch
-  https://github.com/EIC7/PM-UNIT-7.git` juga sebelum push berikutnya
-  buat cek divergensi, jangan asumsikan otomatis sinkron lagi).
-- **Semua link cross-repo yang tadinya `eenputra.github.io` diganti jadi
-  `eic7.github.io`** (permintaan eksplisit user, "sinkronkan semuanya" --
-  domain lama `eenputra.github.io` masih hidup TAPI sengaja tidak dipakai
-  lagi supaya konsisten dgn konsolidasi akun): tombol "🔗 EIC7 PORTAL" dan
-  2 kartu "Review Approval Dashboard"/"MOD-09 Maintenance Report Form" di
-  `index.html`. **Diverifikasi live** (`curl` HTTP 200) sebelum diganti --
-  `eic7.github.io/EIC7-PORTAL` dan
-  `eic7.github.io/CHECK-SHEET-POMI-ELEKTRIK-ONLINE` sudah benar-benar aktif
-  sebelum link lama dihapus, supaya tidak ada link putus.
-- Komentar di `shared.js` yang menyebut `mahfudjtf.github.io` (penjelasan
-  kenapa `fetch()` ke `lh3.googleusercontent.com` kena CORS) diupdate jadi
-  `eic7.github.io` -- cuma teks komentar, TIDAK ada logic yang berubah.
+- **🔴 SEMPAT (tapi sudah DIBATALKAN) push otomatis ke DUA remote
+  sekaligus lewat `git push origin main`** -- `origin` sempat dikonfigurasi
+  dgn 2 push URL (Mahfudjtf + EIC7). **User MEMBATALKAN pola ini** setelah
+  ketahuan 1 commit (ganti link `eenputra.github.io` -> `eic7.github.io`
+  di `index.html`) ikut ter-push ke `Mahfudjtf/PM-UNIT-7` juga, padahal
+  repo itu **MASIH DIPAKAI SEBAGAI SITUS PRODUKSI AKTIF** -- perubahan
+  yang cuma relevan buat konsolidasi akun `EIC7` TIDAK seharusnya otomatis
+  ikut ke situs produksi yang sedang dipakai orang. Commit itu SUDAH
+  DI-REVERT lagi khusus di `Mahfudjtf/PM-UNIT-7` (link balik ke
+  `eenputra.github.io`), TAPI `EIC7/PM-UNIT-7` TETAP di commit yang PUNYA
+  link `eic7.github.io` (tidak ikut di-revert di sana) -- **KEDUA REPO
+  SEKARANG SENGAJA BERBEDA ISI** (divergen dgn tujuan), bukan lagi cermin
+  identik satu sama lain.
+- **🔴 ATURAN WAJIB mulai sekarang: TIDAK ADA DEFAULT sama sekali soal
+  repo tujuan push** -- permintaan eksplisit user ("tidak ada yang
+  default. intinya setiap mau push ditanyakan. mau push ke yang mana bisa
+  salah satu atau keduanya"). **SETIAP KALI mau push (sesudah commit siap,
+  sebelum `git push` dijalankan), WAJIB tanya dulu ke user: push ke
+  `origin` (Mahfudjtf) saja, `eic7` saja, atau KEDUANYA** -- untuk commit
+  INI juga, bukan cuma sekali di awal lalu dianggap berlaku seterusnya.
+  JANGAN PERNAH asumsikan salah satu (termasuk `origin`) sebagai default
+  diam-diam walau kelihatannya "jelas" dari konteks (mis. perubahan yang
+  cuma relevan ke 1 repo) -- tetap tanya dulu.
+  Konfigurasi remote saat ini: `origin` = `Mahfudjtf/PM-UNIT-7`
+  (fetch+push) -- dipakai jalur prosedur wajib "git fetch origin" di
+  paling atas dokumen ini SAAT MEMANG diputuskan push ke situ. `eic7` =
+  remote terpisah ke `EIC7/PM-UNIT-7`
+  (`git remote add eic7 https://github.com/EIC7/PM-UNIT-7.git`).
+- Karena kedua repo sekarang boleh berbeda isi, **`git fetch`/perbandingan
+  divergensi WAJIB dicek per-remote sesuai tujuan push** -- kalau user
+  minta push ke `eic7`, jalankan `git fetch eic7` dulu (bukan cuma
+  `git fetch origin`) sebelum push ke situ, supaya perbandingan
+  divergensi (`git log eic7/main..HEAD` dst.) benar-benar akurat terhadap
+  remote yang DITUJU, bukan asumsi dari status `origin`.
+- Komentar di `shared.js` yang menyebut `mahfudjtf.github.io`/
+  `eic7.github.io` (penjelasan kenapa `fetch()` ke
+  `lh3.googleusercontent.com` kena CORS) -- versi `Mahfudjtf/PM-UNIT-7`
+  TETAP `mahfudjtf.github.io` (sudah di-revert), versi `EIC7/PM-UNIT-7`
+  TETAP `eic7.github.io` -- SENGAJA beda per repo sekarang, jangan
+  disamakan lagi tanpa diminta.
 - **Folder `GITHUB CONFIG BARU/`** (isi ZIP export ke-4 repo di atas,
   dipakai user buat riset/analisa manual) **SENGAJA TIDAK PERNAH disentuh
   Claude** -- selalu muncul sbg untracked (`??`) di `git status`, JANGAN
