@@ -16,3 +16,11 @@
 # 20MB+, berisi SELURUH data mentah pm_records/outage_assets. Repo ini
 # PUBLIC, jangan pernah commit dump database apa pun.
 backup_full.sql
+
+# Backup koleksi Firestore project pomi-checksheet-e7 (approvals/checksheets
+# -- backend Review Approval Dashboard, repo terpisah), dibuat 2026-09-04
+# lewat REST API publik sebagai cadangan data, BUKAN migrasi (dashboard
+# tetap pakai project Firebase yang sama). Berisi data mentah submission
+# (nama PIC, WO, dst). Repo ini PUBLIC, jangan pernah commit.
+firebase_backup_approvals.json
+firebase_backup_checksheets.json
