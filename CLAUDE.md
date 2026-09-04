@@ -2554,3 +2554,26 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   diam-diam" muncul nanti, cek DULU apakah Apps Script-nya benar-benar sudah
   diupdate+redeploy (Deploy → Manage deployments → Edit → Deploy ulang,
   BUKAN cuma disimpan di editor) sebelum curiga kode sisi client.
+
+## 🔴 Fitur "Konfirmasi Sebelum Meninggalkan Halaman" DIHAPUS TOTAL (2026-09-04)
+
+- Fitur ini ditambahkan 2026-09-03 (lihat bagian "Bug numpad... + konfirmasi
+  tinggalkan halaman" di atas) -- popup kustom "Yakin akan meninggalkan
+  halaman?" (`pmShowLeaveConfirm()`) + interceptor klik navigasi
+  (`document.addEventListener('click', ..., true)` yang cek
+  `window._raDirty`) + jaring pengaman `beforeunload`. Sempat diperbaiki
+  sekali (2026-09-03, exclude `blob:`/`data:` supaya tidak ikut mencegat
+  trigger download file).
+- **User melaporkan popup ini tetap sangat mengganggu** (screenshot: muncul
+  di tengah alur kerja, JSA Conditional Access) dan minta **dihapus total**
+  dari `shared.js` -- bukan diperbaiki lagi. Ketiga bagian (fungsi
+  `pmShowLeaveConfirm()`, interceptor klik, listener `beforeunload`) sudah
+  dihapus semua. **`window._raDirty` SENDIRI TIDAK dihapus** -- flag ini
+  tetap dipakai fitur AUTOSAVE SERVER (`setInterval`/`autosaveTrigger()`)
+  yang independen dari fitur leave-confirm ini, cuma konsumen UI-nya
+  (popup + interceptor) yang dihapus.
+- **JANGAN pasang lagi fitur serupa di masa depan tanpa diminta ulang** --
+  sudah 2x iterasi (tambah lalu perbaiki lalu dihapus total) dalam 1 hari,
+  ini keputusan final user per tanggal ini, bukan sekadar belum sempat
+  diperbaiki.
+- `shared.js?v=` dinaikkan ke `20260904a` di semua 37 file yang memuatnya.

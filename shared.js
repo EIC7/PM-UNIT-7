@@ -2216,86 +2216,18 @@ function autosaveClear() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   KONFIRMASI SEBELUM MENINGGALKAN HALAMAN (data belum tersimpan) --
-   generik, berlaku semua modul yang punya window._raDirty (di-set true oleh
-   autosaveTrigger() di atas setiap ada input/change, di-reset false lagi
-   setelah dbSave()/dbSaveSilent() benar-benar sukses -- lihat kedua tempat
-   itu). Popup KUSTOM ("Yakin akan meninggalkan halaman?" + tombol Ya/Lanjut
-   Edit) cuma bisa dipasang utk navigasi YANG KITA KONTROL SENDIRI (klik
-   tombol/link di dalam halaman ini, mis. "Kembali ke Dashboard"/"RIWAYAT")
-   -- browser modern TIDAK MENGIZINKAN teks kustom di dialog beforeunload
-   (tutup tab/refresh/ketik URL baru), itu SELALU jadi prompt generik bawaan
-   browser ("Leave site?" dsb, teks kita di returnValue diabaikan) -- lihat
-   pmWireBeforeUnload di bawah utk jalur itu, sekadar jaring pengaman
-   tambahan, bukan bisa dikustomisasi.
+   Fitur "Konfirmasi Sebelum Meninggalkan Halaman" (popup "Yakin akan
+   meninggalkan halaman?" + intercept klik navigasi + beforeunload) SUDAH
+   DIHAPUS TOTAL (2026-09-04, permintaan eksplisit user -- dirasa sangat
+   mengganggu). Sebelumnya ada di sini: pmShowLeaveConfirm(), interceptor
+   document.addEventListener('click', ..., true) yang cek window._raDirty,
+   dan window.addEventListener('beforeunload', ...). JANGAN dipasang lagi
+   tanpa diminta ulang -- riwayat lengkap kenapa dulu dibuat & kenapa
+   dihapus ada di CLAUDE.md.
+   window._raDirty SENDIRI TIDAK dihapus -- flag ini tetap dipakai
+   AUTOSAVE SERVER (lihat setInterval di atas & autosaveTrigger()), cuma
+   konsumen UI-nya (popup ini) yang dihapus.
    ══════════════════════════════════════════════════════════════════════════ */
-function pmShowLeaveConfirm(onConfirm) {
-  var existing = document.getElementById('pmLeaveConfirmOverlay');
-  if (existing) existing.remove();
-  var ov = document.createElement('div');
-  ov.id = 'pmLeaveConfirmOverlay';
-  ov.className = 'no-print';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:2147482000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
-  ov.innerHTML =
-    '<div style="background:#fff;border-radius:12px;max-width:340px;width:100%;padding:22px 20px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.3)">' +
-      '<div style="font-size:32px;margin-bottom:10px">⚠️</div>' +
-      '<div style="font-weight:700;font-size:16px;color:#222;margin-bottom:8px">Yakin akan meninggalkan halaman?</div>' +
-      '<div style="font-size:13px;color:#666;margin-bottom:18px;line-height:1.4">Ada perubahan yang belum tersimpan. Kalau keluar sekarang, perubahan ini bisa hilang.</div>' +
-      '<div style="display:flex;gap:10px">' +
-        '<button id="pmLeaveConfirmStay" style="flex:1;padding:11px;border:none;border-radius:8px;background:#e0e0e0;color:#333;font-weight:600;font-size:13.5px;cursor:pointer">Lanjut Edit</button>' +
-        '<button id="pmLeaveConfirmGo" style="flex:1;padding:11px;border:none;border-radius:8px;background:#e74c3c;color:#fff;font-weight:600;font-size:13.5px;cursor:pointer">Ya</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(ov);
-  document.getElementById('pmLeaveConfirmStay').onclick = function() { ov.remove(); };
-  document.getElementById('pmLeaveConfirmGo').onclick = function() { ov.remove(); onConfirm(); };
-}
-
-// Capture phase (argumen ke-3 `true`) SENGAJA -- supaya interceptor ini
-// jalan SEBELUM onclick inline elemen yang diklik sempat dieksekusi.
-// stopImmediatePropagation() menghentikan event di fase capture ini juga,
-// jadi onclick asli elemen target TIDAK PERNAH jalan sampai user benar-benar
-// pilih "Ya" di popup (baru dieksekusi manual lewat `new Function`).
-document.addEventListener('click', function(e) {
-  if (!window._raDirty) return;
-  var el = e.target.closest ? e.target.closest('a[href], [onclick]') : null;
-  if (!el) return;
-  var href = el.tagName === 'A' ? el.getAttribute('href') : null;
-  // blob:/data: BUKAN navigasi keluar halaman -- ini pola standar repo ini
-  // buat trigger download file (PDF/Word/CSV) lewat <a href="blob:..."
-  // download="...">document.body.appendChild(a);a.click()` (lihat
-  // jsaDownloadBlob() di jsa_report.html/jsa_condition_access.html, juga
-  // dipakai jsPDF doc.save() secara internal). Tanpa pengecualian ini,
-  // a.click() sintetis itu ikut kena intercept listener ini kalau
-  // window._raDirty true, popup "Yakin akan meninggalkan halaman?" muncul
-  // MENGGANTIKAN proses download (preventDefault membatalkan a.click()-nya),
-  // dan kalau user pilih "Ya" malah location.href diarahkan ke blob: URL
-  // (menavigasi halaman ke isi file mentah, bukan mendownloadnya) --
-  // dikonfirmasi dari laporan bug nyata (nama file jadi "X.docx.zip" krn
-  // proses download blob yang benar tidak pernah selesai wajar).
-  var isNavLink = !!href && href.indexOf('#') !== 0 && href.indexOf('javascript:') !== 0 &&
-    href.indexOf('blob:') !== 0 && href.indexOf('data:') !== 0;
-  var onclickStr = el.getAttribute('onclick') || '';
-  var isNavOnclick = /location\.href\s*=|location\.assign\s*\(|location\.replace\s*\(/.test(onclickStr);
-  if (!isNavLink && !isNavOnclick) return; // bukan tombol navigasi (mis. Simpan/Submit) -- biarkan jalan normal
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  pmShowLeaveConfirm(function() {
-    window._raDirty = false;
-    if (isNavLink) { window.location.href = href; }
-    else { (new Function(onclickStr)).call(el); }
-  });
-}, true);
-
-// Jaring pengaman jalur yang TIDAK BISA dicegat interceptor klik di atas
-// (tutup tab, refresh, ketik URL baru, tombol Back HP paling luar sesudah
-// numpad -- lihat catatan pmNumpadOpen soal itu). Teks kustom TIDAK
-// didukung browser modern manapun, ini cuma trigger prompt generik bawaan.
-window.addEventListener('beforeunload', function(e) {
-  if (!window._raDirty) return;
-  e.preventDefault();
-  e.returnValue = '';
-});
 function autosaveCheckAndPrompt() {
   // Jangan tawarkan draft kalau memang sedang buka record dari RIWAYAT (?id=...)
   var params = new URLSearchParams(window.location.search);
