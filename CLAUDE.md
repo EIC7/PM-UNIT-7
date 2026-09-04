@@ -2789,3 +2789,146 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   masih dipakai orang di antara waktu backup dan waktu cutover) **TIDAK
   ikut pindah** ke database baru dan perlu di-backup+restore ulang secara
   terpisah kalau tidak mau hilang.
+
+## Migrasi backend Firebase ke project `database-eic7` (2026-09-05)
+
+- Lanjutan konsolidasi akun (setelah Supabase) — Firestore project
+  `pomi-checksheet-e7` (backend **Review Approval Dashboard**, repo terpisah
+  `EIC7/CHECK-SHEET-POMI-ELEKTRIK-ONLINE`, akun Google **milik teman user,
+  user TIDAK punya akses console-nya**) dimigrasikan penuh ke project
+  Firebase baru **`database-eic7`** (region `asia-southeast2`/Jakarta, akun
+  Google tunggal milik user, plan Spark/gratis).
+- **5 collection ter-migrasi** (ID dokumen dipertahankan — PENTING karena
+  `approvals.checksheetId` mereferensi `checksheets` by-id):
+  `checksheets` (200), `approvals` (64), `dashboard_users` (16),
+  `checksheet_drafts` (11), `weekly_dashboard` (2 dokumen top-level +
+  sub-collection `workOrders` di masing-masing: `eic7_jobarrangement` 297
+  dok, `eic7_weekly` 112 dok).
+  - **🔴 5 collection ini BUKAN ditemukan sekaligus di awal** — riset
+    pertama cuma grep beberapa file yang "kelihatan jelas" pakai Firestore
+    (`db-helper.js`/`approval-helper.js`/`technician-auth.js`/
+    `admin-users.html`), ketemu 3 collection (`checksheets`/`approvals`/
+    `dashboard_users`), rules sudah dipublish, migrasi dianggap selesai —
+    BARU ketahuan ada 4 collection lagi (`checksheet_drafts`,
+    `dashboard_config`, `weekly_dashboard`, `workOrders`) setelah audit
+    ulang dengan `grep -rho ".collection('...')" SELURUH file` (bukan
+    subset) di seluruh repo dashboard. **Pelajaran: kalau riset Firestore
+    collection di repo manapun ke depan, WAJIB grep pola
+    `.collection\(` ke SEMUA file (`--include="*.js" --include="*.html"`),
+    JANGAN cuma file yang "kelihatan relevan"** — banyak file checksheet
+    individual (`Motor_Witness_Test_Vendor.html`, 2 file "Weekly Report
+    Dashboard EIC7*.html`, dst.) ternyata punya akses Firestore sendiri
+    yang gampang kelewat.
+  - `workOrders` yang awalnya dikira collection top-level TERNYATA
+    **sub-collection** di `weekly_dashboard/{docId}/workOrders/{woId}` —
+    ketahuan dari 403 yang salah diagnosis awal sebagai "izin belum
+    propagate", ternyata memang path top-level itu tidak pernah ada.
+    Migrasi sub-collection perlu langkah terpisah (fetch tiap
+    `weekly_dashboard` doc dulu, baru fetch sub-collection-nya).
+  - **`dashboard_config` (khususnya doc `registration`, berisi kode akses
+    role elevated techop2/supervisor) SENGAJA TIDAK dimigrasikan** — akses
+    publik ke collection ini DITOLAK bahkan di project LAMA (403 juga di
+    sana, bukan bug kita), dan kode di `Review_Approval_Dashboard.html`
+    sendiri sudah punya try/catch + fallback hardcoded
+    (`ELEVATED_REG_CODE = 'POMI-EIC7-2026'`) kalau collection ini tidak
+    terbaca — jadi TIDAK ADA regresi fungsional, cuma kalau kode akses
+    pernah di-override lewat Firestore (bukan fallback), override itu
+    tidak ikut pindah. Tidak bisa diperbaiki tanpa akses admin project
+    lama (bukan milik user).
+- **Security Rules dibuat ULANG dari observasi perilaku, BUKAN copy-paste
+  teks asli** — user tidak punya akses console project lama untuk lihat
+  rules aslinya. Rules baru: `allow read, write: if true` untuk kelima
+  collection di atas (termasuk wildcard `weekly_dashboard/{document=**}`
+  biar sub-collection ikut), `if false` untuk selainnya. Disimpulkan dari
+  observasi (semua request dari browser TANPA `firebase.auth()` sama
+  sekali di seluruh codebase dashboard) bahwa akses memang publik/terbuka
+  dari awal. **Rules asli project lama mungkin punya nuansa tambahan**
+  (validasi field, dst.) yang tidak ter-replikasi persis — kalau nanti ada
+  laporan "field X yang dulu tervalidasi sekarang bisa diisi sembarangan",
+  ini kemungkinan penyebabnya.
+- **Publish rules programatik lewat Firebase Rules API** (`firebaserules.
+  googleapis.com`, endpoint `rulesets.create` + `releases.patch`) pakai
+  service account, BUKAN lewat `firebase deploy` CLI (butuh `firebase
+  login` interaktif) atau copy-paste manual di Console (user tidak akses
+  project lama, tapi project BARU miliknya sendiri jadi bisa). **Service
+  account default (`firebase-adminsdk-fbsvc@...`) TERNYATA TIDAK otomatis
+  punya izin `firebaserules.releases.create`** (cuma dapat izin Firestore
+  data R/W + token-creator) — user perlu tambah role **"Firebase Rules
+  Admin"** manual lewat Google Cloud Console IAM
+  (`console.cloud.google.com/iam-admin/iam?project=database-eic7`) di
+  project barunya sendiri. Endpoint `releases.patch` juga py format body
+  yang tidak intuitif: `{release: {name, rulesetName}, updateMask:
+  'rulesetName'}` (bukan flat `{name, rulesetName}` seperti dugaan awal,
+  py 1x salah tebak format sebelum ketemu yang benar).
+- **`firebase-config.js` diupdate di 2 repo**: `EIC7/PM-UNIT-7`
+  (`shared.js` TIDAK terpengaruh — itu untuk Supabase, beda sistem) dan
+  `EIC7/CHECK-SHEET-POMI-ELEKTRIK-ONLINE` (+ `.firebaserc` + 1 label teks
+  kosmetik "Terhubung ke Firebase (...)" di `GEN_BrushGear_PM_Checksheet.
+  html`). `scripts/notify-ra-status-poll.js` (`FIREBASE_PROJECT_ID`/
+  `FIREBASE_API_KEY`) di `EIC7/PM-UNIT-7` juga diupdate — dipakai buat
+  query koleksi `approvals` lewat REST tanpa auth (lihat bagian "Poller
+  notifikasi RA" di atas), sama seperti sebelumnya cuma project-nya ganti.
+  - **🔴 `firebase-config.js` di PM-UNIT-7 SEMPAT TERLEWAT tidak ke-commit**
+    setelah di-edit (edit lokal berhasil, tapi lupa `git add`+commit di
+    tengah kerjaan lain) — situs LIVE `eic7.github.io/PM-UNIT-7` sempat
+    beberapa saat submit checksheet ke Firebase project LAMA padahal
+    Supabase-nya sudah ke project baru, sampai ketahuan lewat audit
+    menyeluruh (`git status` menunjukkan file itu masih `M` alias belum
+    di-commit) dan langsung diperbaiki (commit `74e8723`). **Pelajaran:
+    "Edit tool berhasil" TIDAK SAMA DENGAN "sudah di-commit+push" — WAJIB
+    `git status`/`git diff` di akhir sesi kerja multi-file yang panjang
+    untuk pastikan tidak ada file yang kelewat, terutama kalau kerjaan
+    sempat melompat ke repo/task lain di tengah jalan.**
+- **Akses migrasi programatik (Node.js + `firebase-admin` SDK) dipakai
+  buat menulis data** (baca dari project lama via REST publik tanpa auth,
+  tulis ke project baru via Admin SDK + service account, batch max 400
+  per commit) — service account key (.json) SELALU dihapus dari disk
+  segera setelah dipakai (2x generate ulang karena dihapus di antara sesi
+  kerja terpisah), TIDAK PERNAH disalin ke lokasi lain selain path
+  upload asli, TIDAK PERNAH masuk git.
+- **Diverifikasi end-to-end** (bukan cuma teori dari teks rules): baca
+  publik semua 5 collection sukses, DAN test tulis+hapus dokumen dummy
+  langsung ke `checksheets` lewat REST publik (tanpa kredensial apa pun)
+  sukses — membuktikan rules benar-benar mengizinkan submit dari browser
+  biasa seperti yang dipakai app aslinya, bukan cuma readable dari sisi
+  admin.
+- **GitHub Actions `EIC7/PM-UNIT-7` juga dibenahi bersamaan** (ternyata
+  belum pernah jalan sekali pun sejak repo dibuat, 0 histori run padahal
+  `schedule:` seharusnya tiap 5 menit): (1) trigger manual sekali lewat
+  GitHub UI utk `ra-notify-poll.yml` dan `retry-drive-upload.yml`,
+  keduanya sukses; (2) GitHub Secret `TELEGRAM_BOT_TOKEN` dipasang (untuk
+  fitur alert-kesehatan Supabase + reminder PAT expired, BUKAN untuk
+  notifikasi reviewed/approved utama yang lewat RPC Postgres — itu tidak
+  butuh secret ini sama sekali); (3) PAT fine-grained baru **"AUTO REFRESH
+  HISTORY EIC7"** (scope khusus `EIC7/PM-UNIT-7`, TERPISAH dari PAT
+  `Mahfudjtf/PM-UNIT-7` yang sudah ada, expired `2026-12-03` — KEBETULAN
+  sama tanggal dengan PAT satunya, BUKAN PAT yang sama, lihat komentar di
+  `scripts/notify-ra-status-poll.js`) + job baru di cron-job.org yang
+  memicu `workflow_dispatch` tiap 5 menit — pola identik dengan yang sudah
+  ada di `Mahfudjtf/PM-UNIT-7`, sekarang `EIC7/PM-UNIT-7` py infrastruktur
+  polling yang sepenuhnya independen.
+- **🔴 Belum/tidak dikerjakan (di luar scope sesi ini, perlu keputusan/
+  akses lebih lanjut)**:
+  1. **2 Google Apps Script Drive proxy** (`GDRIVE_WEB_APP_URL` di
+     `shared.js` untuk foto evidence PM-UNIT-7, `DRIVE_PROXY_URL` di
+     `storage-helper.js` untuk PDF final dashboard) **MASIH di akun Google
+     yang lama** (bukan akun konsolidasi baru) — migrasi Firebase/Supabase
+     TIDAK menyentuh ini sama sekali. Kalau tujuan akhirnya benar-benar
+     SATU akun Google untuk SEMUA, kedua Apps Script ini juga perlu
+     dibuat ulang/dipindah kepemilikannya — belum dibahas/dikerjakan.
+  2. **Belum ada keputusan soal `mahfudjtf.github.io` vs `eic7.github.io`**
+     — kalau KEDUANYA tetap dipakai bersamaan oleh orang berbeda, data
+     akan PECAH permanen (submission baru masuk ke Supabase/Firebase
+     project yang beda-beda tergantung situs mana yang dibuka, tidak ada
+     sinkronisasi apa pun antara keduanya). Ini keputusan bisnis/strategis
+     yang HARUS diambil user (situs mana yang jadi satu-satunya yang
+     dipakai teknisi & reviewer ke depannya) sebelum masalah data
+     terpecah benar-benar terjadi di lapangan.
+  3. **Belum ada uji fungsional lewat browser sungguhan** (isi form, klik
+     submit, lihat riwayat) di `eic7.github.io` pasca migrasi Firebase —
+     semua verifikasi sejauh ini lewat `curl`/REST API langsung, bukan
+     lewat UI aslinya.
+  4. Project lama (`pomi-checksheet-e7`, `ruvvximnnacpvvoogbzs`) TIDAK
+     dihapus (di luar akses user juga) — tetap ada sebagai jalur mundur,
+     tapi juga berarti data di sana terus "beku" di titik migrasi diambil
+     kalau situs lama sempat masih dipakai sesudahnya.
