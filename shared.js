@@ -350,7 +350,7 @@ function _pmRestoreBase64AfterLoad(obj) {
       // Dulu di sini fetch() LANGSUNG ke o.driveUrl (lh3.googleusercontent.com)
       // -- itu gagal kena CORS, karena domain CDN Google itu tidak kirim
       // header Access-Control-Allow-Origin buat fetch() cross-origin dari
-      // mahfudjtf.github.io (beda dengan <img src> yang boleh-boleh aja).
+      // eic7.github.io (beda dengan <img src> yang boleh-boleh aja).
       // Sekarang dilewatkan Apps Script yang sama (action:'get') yang SUDAH
       // terbukti CORS-nya lolos, sama seperti upload/delete foto.
       if (o.driveFileId) {

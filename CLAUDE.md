@@ -2577,3 +2577,51 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   ini keputusan final user per tanggal ini, bukan sekadar belum sempat
   diperbaiki.
 - `shared.js?v=` dinaikkan ke `20260904a` di semua 37 file yang memuatnya.
+
+## Konsolidasi repo ke akun GitHub `EIC7` (2026-09-04)
+
+- User memindahkan/menggandakan repo ini ke akun GitHub baru **`EIC7`**
+  (repo `EIC7/PM-UNIT-7`, sempat sebentar bernama "INSTRUMENT-UNIT-7" saat
+  proses import, lalu di-rename balik ke "PM-UNIT-7" oleh user). Selain
+  itu, 3 repo terkait yang tadinya milik akun `EenPutra` **JUGA** sudah
+  dipindah/digandakan ke akun `EIC7` yang sama: `EIC7/EIC7-PORTAL`,
+  `EIC7/CHECK-SHEET-POMI-ELEKTRIK-ONLINE`, dan
+  `EIC7/MIgrasi-Electric-check-sheet-to-google-drive`.
+- **Working directory lokal ini (`C:\Users\Administrator\Documents\
+  PM-UNIT-7`) sekarang push ke DUA remote sekaligus** lewat 1 `git push
+  origin main` -- `origin` dikonfigurasi dgn 2 push URL:
+  `https://github.com/Mahfudjtf/PM-UNIT-7.git` (lama, TETAP dipertahankan
+  sbg arsip/cermin, bukan dihapus) dan `https://github.com/EIC7/
+  PM-UNIT-7.git` (baru, dgn akun `Mahfudjtf` ditambahkan sbg
+  **collaborator** di sana supaya bisa push tanpa token terpisah).
+  `git fetch`/pull TETAP dari `Mahfudjtf/PM-UNIT-7` saja (default,
+  hanya push yg dobel) -- kalau CLAUDE.md wajib "git fetch origin" sebelum
+  push (lihat bagian paling atas dokumen ini), itu tetap cukup cek versi
+  `Mahfudjtf/PM-UNIT-7` seperti biasa, TIDAK perlu fetch dari `EIC7` juga
+  (keduanya SELALU didorong bersamaan dari sini, jadi tidak akan divergen
+  selama SEMUA perubahan lewat sesi/alur ini -- kalau ada yang push
+  LANGSUNG ke `EIC7/PM-UNIT-7` dari luar sesi ini, WAJIB `git fetch
+  https://github.com/EIC7/PM-UNIT-7.git` juga sebelum push berikutnya
+  buat cek divergensi, jangan asumsikan otomatis sinkron lagi).
+- **Semua link cross-repo yang tadinya `eenputra.github.io` diganti jadi
+  `eic7.github.io`** (permintaan eksplisit user, "sinkronkan semuanya" --
+  domain lama `eenputra.github.io` masih hidup TAPI sengaja tidak dipakai
+  lagi supaya konsisten dgn konsolidasi akun): tombol "🔗 EIC7 PORTAL" dan
+  2 kartu "Review Approval Dashboard"/"MOD-09 Maintenance Report Form" di
+  `index.html`. **Diverifikasi live** (`curl` HTTP 200) sebelum diganti --
+  `eic7.github.io/EIC7-PORTAL` dan
+  `eic7.github.io/CHECK-SHEET-POMI-ELEKTRIK-ONLINE` sudah benar-benar aktif
+  sebelum link lama dihapus, supaya tidak ada link putus.
+- Komentar di `shared.js` yang menyebut `mahfudjtf.github.io` (penjelasan
+  kenapa `fetch()` ke `lh3.googleusercontent.com` kena CORS) diupdate jadi
+  `eic7.github.io` -- cuma teks komentar, TIDAK ada logic yang berubah.
+- **Folder `GITHUB CONFIG BARU/`** (isi ZIP export ke-4 repo di atas,
+  dipakai user buat riset/analisa manual) **SENGAJA TIDAK PERNAH disentuh
+  Claude** -- selalu muncul sbg untracked (`??`) di `git status`, JANGAN
+  ikut di-`git add` kapan pun, bukan bagian repo PM-UNIT-7 ini.
+- **Kalau ke depan diminta mengerjakan sesuatu di salah satu dari 3 repo
+  lain** (EIC7-PORTAL/CHECK-SHEET-POMI-ELEKTRIK-ONLINE/MIgrasi...) --
+  working directory ini (`Documents\PM-UNIT-7`) BUKAN clone repo-repo itu,
+  perlu clone terpisah dulu (folder lain) sebelum bisa diedit, TIDAK bisa
+  diedit dari sini walau remote push origin sekarang menyentuh akun `EIC7`
+  yang sama.
