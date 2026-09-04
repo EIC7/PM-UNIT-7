@@ -48,6 +48,44 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_ALERT_CHAT_ID = '-1004351464598'; // grup "Submit Report EIC7" -- chat id, bukan rahasia
 const HEALTH_STATE_FILE = '.health-state.json';
 
+// ── Pengingat expired token PAT "AUTO REFRESH HISTORY" (cron-job.org) ──
+// GitHub Actions `schedule:` TIDAK bisa diandalkan tepat waktu (terbukti
+// telat 1.5-5+ jam terus-menerus, lihat CLAUDE.md) -- makanya workflow ini
+// sekarang DIPICU LANGSUNG oleh cron-job.org (eksternal) tiap 5 menit lewat
+// API workflow_dispatch, pakai GitHub fine-grained PAT scope Actions:R/W
+// khusus repo ini. PAT itu PUNYA TANGGAL EXPIRED -- kalau lupa diperpanjang,
+// trigger eksternal ini berhenti diam-diam (fallback `schedule:` bawaan
+// tetap ada tapi kembali ke masalah telat berjam-jam di atas). Tanggal di
+// bawah ini HARUS diupdate manual tiap kali token di-regenerate/diperbarui.
+const PAT_EXPIRY_DATE = '2026-12-03'; // token "AUTO REFRESH HISTORY", dibuat 2026-09-04
+const PAT_REMINDER_DAYS = [3, 2, 1]; // cuma alert kalau SISA hari PERSIS salah satu ini
+
+function daysUntil(isoDateStr) {
+  const now = new Date();
+  const todayUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const targetMs = new Date(isoDateStr + 'T00:00:00Z').getTime();
+  return Math.round((targetMs - todayUtcMs) / 86400000);
+}
+
+// Alert cuma SEKALI per hari yang cocok (dedup via state.patReminderSentDate
+// -- pola sama dengan state.state buat health Supabase, sama-sama nyimpen
+// di HEALTH_STATE_FILE lewat actions/cache, lihat readState/writeState).
+async function checkAndAlertPatExpiry(state) {
+  const days = daysUntil(PAT_EXPIRY_DATE);
+  if (PAT_REMINDER_DAYS.indexOf(days) === -1) return;
+  const today = new Date().toISOString().slice(0, 10);
+  if (state.patReminderSentDate === today) {
+    console.log('Reminder PAT sudah dikirim hari ini, skip.');
+    return;
+  }
+  await sendTelegramDirect(
+    '⏰ PENGINGAT\nToken GitHub "AUTO REFRESH HISTORY" (dipakai cron-job.org buat memicu workflow RA Status Notify Poll tiap 5 menit) akan EXPIRED dalam ' + days + ' hari (' + PAT_EXPIRY_DATE + ').\n\n' +
+    'Segera perbarui: buat/regenerate Fine-grained Personal Access Token baru di GitHub (scope Actions: Read and write, dibatasi ke repo PM-UNIT-7 saja), lalu update header Authorization di job "AUTO REFRESH HISTORY" di cron-job.org. Kalau lewat tanpa diperbarui, notifikasi Telegram reviewed/approved akan kembali telat berjam-jam seperti sebelum fitur ini dipasang.'
+  );
+  state.patReminderSentDate = today;
+  console.log('Reminder PAT expiry terkirim (' + days + ' hari lagi).');
+}
+
 async function sendTelegramDirect(text) {
   if (!TELEGRAM_BOT_TOKEN) {
     console.error('TELEGRAM_BOT_TOKEN belum di-set sebagai GitHub Secret -- tidak bisa kirim alert kesehatan Supabase.');
@@ -83,19 +121,25 @@ async function checkSupabaseHealth() {
   }
 }
 
-function readPrevHealthState() {
-  try { return JSON.parse(fs.readFileSync(HEALTH_STATE_FILE, 'utf8')).state; } catch (e) { return 'ok'; }
+// State gabungan (health Supabase + reminder PAT expiry) disimpan SATU
+// file yang sama (HEALTH_STATE_FILE, dipersist lintas run lewat
+// actions/cache -- lihat ra-notify-poll.yml). Dulu cuma {state, updatedAt}
+// buat health Supabase; sekarang objek bebas field, dibaca/ditulis SEKALI
+// di main() supaya kedua fitur tidak saling menimpa field satu sama lain.
+function readState() {
+  try { return JSON.parse(fs.readFileSync(HEALTH_STATE_FILE, 'utf8')); } catch (e) { return {}; }
 }
 
-function writeHealthState(state) {
-  try { fs.writeFileSync(HEALTH_STATE_FILE, JSON.stringify({ state: state, updatedAt: new Date().toISOString() })); } catch (e) {}
+function writeState(state) {
+  state.updatedAt = new Date().toISOString();
+  try { fs.writeFileSync(HEALTH_STATE_FILE, JSON.stringify(state)); } catch (e) {}
 }
 
 // true kalau Supabase down -- caller HARUS berhenti, sisa proses (query
 // pm_records dkk) pasti gagal juga kalau Supabase-nya sendiri tidak sehat.
-async function checkAndAlertSupabaseHealth() {
+async function checkAndAlertSupabaseHealth(state) {
   const health = await checkSupabaseHealth();
-  const prev = readPrevHealthState();
+  const prev = state.state || 'ok';
 
   if (health !== 'ok') {
     if (prev === 'ok') {
@@ -108,7 +152,7 @@ async function checkAndAlertSupabaseHealth() {
     } else {
       console.log('Supabase masih bermasalah, sudah pernah dialert -- skip supaya tidak spam.');
     }
-    writeHealthState('down');
+    state.state = 'down';
     return true;
   }
 
@@ -116,7 +160,7 @@ async function checkAndAlertSupabaseHealth() {
     await sendTelegramDirect('✅ Supabase sudah kembali normal.');
     console.log('Alert pemulihan Supabase terkirim.');
   }
-  writeHealthState('ok');
+  state.state = 'ok';
   return false;
 }
 
@@ -189,7 +233,15 @@ async function notify(record, status) {
 }
 
 async function main() {
-  const supabaseDown = await checkAndAlertSupabaseHealth();
+  const state = readState();
+
+  // Cek reminder PAT expiry DULUAN -- independen dari Supabase, tetap
+  // harus jalan walau Supabase sedang down (poller ini bisa saja jadi
+  // satu-satunya kesempatan cek hari ini kalau schedule bawaan telat).
+  await checkAndAlertPatExpiry(state);
+
+  const supabaseDown = await checkAndAlertSupabaseHealth(state);
+  writeState(state);
   if (supabaseDown) {
     console.log('Supabase tidak sehat -- lewati proses cek notifikasi RA (pasti gagal juga).');
     return;

@@ -13,6 +13,21 @@ name: RA Status Notify Poll
 # bisa kirim -- TANPA secret itu bagian itu cuma nge-log error, bagian
 # notifikasi reviewed/approved tetap jalan normal (itu lewat RPC Supabase,
 # tidak butuh token di sini).
+#
+# 🔴 `schedule:` di bawah TERBUKTI TIDAK BISA DIANDALKAN (telat 1.5-5+ jam
+# terus-menerus di praktiknya, bukan tiap 5 menit -- lihat CLAUDE.md 2026-
+# 09-04). Trigger UTAMA yang sebenarnya sekarang: layanan cron EKSTERNAL
+# (cron-job.org, job "AUTO REFRESH HISTORY") yang memanggil REST API
+# workflow_dispatch tiap 5 menit pakai GitHub fine-grained PAT (scope
+# Actions:R/W, dibatasi ke repo ini saja) -- trigger via API jalan LANGSUNG
+# tanpa antre, beda dari `schedule:` yang dijadwalkan GitHub sendiri.
+# `schedule:` di bawah SENGAJA TETAP DIBIARKAN sebagai fallback kalau
+# cron-job.org/token-nya bermasalah -- aman jalan berbarengan (idempotent,
+# lihat catatan klaim atomik RPC di atas). PAT itu PUNYA TANGGAL EXPIRED --
+# `scripts/notify-ra-status-poll.js` (PAT_EXPIRY_DATE) kirim reminder
+# Telegram H-3/H-2/H-1 otomatis, TAPI kalau lewat tanpa diperpanjang,
+# trigger eksternal berhenti diam-diam dan notifikasi balik telat berjam-
+# jam seperti sebelum ini dipasang.
 on:
   schedule:
     - cron: '*/5 * * * *'

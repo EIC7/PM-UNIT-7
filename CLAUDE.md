@@ -2651,3 +2651,66 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   perlu clone terpisah dulu (folder lain) sebelum bisa diedit, TIDAK bisa
   diedit dari sini walau remote push origin sekarang menyentuh akun `EIC7`
   yang sama.
+
+## 🔴 GitHub Actions `schedule:` TERBUKTI SELALU TELAT -- dipicu via cron eksternal (cron-job.org) (2026-09-04)
+
+- User curiga (dan terbukti benar) notifikasi Telegram reviewed/approved
+  sering telat/tidak terkirim kalau tidak ada yang buka `history.html` --
+  padahal `ra-notify-poll.yml` sudah dijadwalkan `cron: '*/5 * * * *'`
+  sejak 30 Agustus, sebagai jaring pengaman independen dari browser (lihat
+  bagian "Poller notifikasi RA" di atas). **Dicek langsung ke GitHub
+  Actions API** (`GET /repos/Mahfudjtf/PM-UNIT-7/actions/workflows/
+  345704911/runs`) -- dari 32 run pertama (30 Agustus - 4 September),
+  jarak antar run **KONSISTEN 1.5-5.5 JAM**, BUKAN 5 menit sama sekali.
+  Ini BUKAN bug di file workflow (isinya sudah benar), tapi keterbatasan
+  platform GitHub Actions yang sudah dikenal luas: trigger `schedule:`
+  TIDAK dijamin tepat waktu -- diprioritaskan rendah dibanding trigger lain
+  (push/PR/manual), makin parah untuk interval sangat sering (`*/5`) di
+  repo publik dengan aktivitas rendah. **Tidak bisa diperbaiki dengan
+  mengubah kode workflow/script ini** -- akar masalahnya di infrastruktur
+  penjadwalan GitHub sendiri.
+- **Solusi**: layanan cron EKSTERNAL **cron-job.org** (gratis), job
+  bernama **"AUTO REFRESH HISTORY"**, memanggil REST API GitHub
+  `POST /repos/Mahfudjtf/PM-UNIT-7/actions/workflows/345704911/dispatches`
+  tiap 5 menit (body `{"ref":"main"}`, header `Authorization: Bearer
+  <fine-grained PAT>` + `Accept: application/vnd.github+json` +
+  `Content-Type: application/json`). Trigger via API (`workflow_dispatch`)
+  jalan **LANGSUNG** tanpa antrean penjadwalan GitHub -- **diverifikasi
+  terbukti jalan** (test run cron-job.org sukses 204, run #33 langsung
+  tercatat di GitHub Actions dgn `event: workflow_dispatch` PERSIS di
+  waktu yang sama). Trigger `schedule:` di `.github/workflows/
+  ra-notify-poll.yml` **SENGAJA TETAP DIBIARKAN** sebagai fallback kalau
+  cron-job.org/token bermasalah -- aman jalan berbarengan, RPC Supabase-nya
+  sudah pakai klaim atomik jadi tidak ada notif dobel biar dipicu dari 2
+  jalur sekaligus.
+- **Token PAT ("AUTO REFRESH HISTORY")**: GitHub Fine-grained Personal
+  Access Token, dibuat 2026-09-04, **dibatasi HANYA ke repo
+  `Mahfudjtf/PM-UNIT-7`** (bukan semua repo), permission **Actions: Read
+  and write** saja (+ Metadata: Read-only, otomatis wajib) -- scope
+  sekecil mungkin supaya kalau bocor, blast radius-nya terbatas. Expired
+  **2026-12-03**. **Token TIDAK PERNAH ditulis ke file mana pun di repo
+  ini** -- cuma ditempel langsung ke form cron-job.org (di luar repo).
+  Sempat KEPOTONG/salah salin sekali waktu setup awal (403 Unauthorized di
+  test run pertama) -- fix-nya generate ulang token & copy-paste ulang
+  utuh, BUKAN masalah di sisi cron-job.org/GitHub.
+- **🆕 Reminder otomatis H-3/H-2/H-1 sebelum PAT expired** -- ditambahkan
+  ke `scripts/notify-ra-status-poll.js` (`PAT_EXPIRY_DATE`,
+  `checkAndAlertPatExpiry()`), kirim Telegram ke grup yang sama kalau sisa
+  hari PERSIS 3/2/1 (dedup per-hari via field baru `patReminderSentDate`
+  di `HEALTH_STATE_FILE`/`.health-state.json`, file state YANG SAMA dipakai
+  alert kesehatan Supabase -- `readState()`/`writeState()` digeneralisasi
+  dari `readPrevHealthState()`/`writeHealthState()` lama supaya kedua fitur
+  berbagi 1 file tanpa saling menimpa field). **`PAT_EXPIRY_DATE` WAJIB
+  diupdate manual tiap kali token di-regenerate/diperpanjang** -- tidak ada
+  cara otomatis membaca tanggal expired token dari GitHub API tanpa token
+  itu sendiri (ciri khas PAT, bukan diambil dari API terpisah). Kalau
+  reminder ini berhenti muncul padahal PAT sudah dekat expired, curigai
+  `PAT_EXPIRY_DATE` di script belum diupdate sejak token terakhir
+  diperpanjang.
+- **CronCreate (tool Claude Code) SENGAJA TIDAK DIPAKAI** untuk reminder
+  ini -- sempat dipertimbangkan, tapi job-nya cuma hidup di 1 sesi Claude
+  Code (hilang kalau sesi ditutup) DAN auto-expire 7 hari, sama sekali
+  tidak cukup buat reminder yang perlu tetap jalan 3 bulan ke depan sampai
+  tanggal expired PAT. Pola yang benar buat reminder jangka panjang
+  semacam ini: taruh di infrastruktur yang SUDAH jalan independen dari
+  sesi Claude manapun (GitHub Actions + Telegram, seperti di atas).
