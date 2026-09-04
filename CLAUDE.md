@@ -24,8 +24,9 @@ Supabase sebagai backend, jsPDF untuk export PDF).
 
 ## Konvensi teknis proyek (ringkas)
 
-- Backend: Supabase (`ruvvximnnacpvvoogbzs.supabase.co`), tabel `outage_records` /
-  `outage_assets`.
+- Backend: Supabase (`xzjayhjierilqxwucnkn.supabase.co`, project "EIC7's Project" —
+  migrasi dari `ruvvximnnacpvvoogbzs.supabase.co` per 2026-09-04, lihat bagian "Migrasi
+  backend Supabase" di bawah), tabel `outage_records` / `outage_assets`.
 - `shared.js` — dependency bersama: database, kompresi gambar, overlay anotasi, autosave.
 - Export PDF pakai jsPDF + jspdf-autotable, dengan pola standar `drawBg` / `willDrawPage`
   untuk background/header/footer tiap halaman. Saat pakai `autoTable`, selalu set
@@ -2714,3 +2715,77 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   tanggal expired PAT. Pola yang benar buat reminder jangka panjang
   semacam ini: taruh di infrastruktur yang SUDAH jalan independen dari
   sesi Claude manapun (GitHub Actions + Telegram, seperti di atas).
+
+## 🔴 Migrasi backend Supabase ke project baru `xzjayhjierilqxwucnkn` (2026-09-04)
+
+- Database production lama (`ruvvximnnacpvvoogbzs.supabase.co`, akun
+  Mahfudjtf) **di-backup penuh** via `pg_dump` (lewat Session Pooler,
+  `aws-1-ap-southeast-2.pooler.supabase.com:5432`, karena direct connection
+  `db.<ref>.supabase.co` sekarang **IPv6-only** dan jaringan kerja tidak
+  punya konektivitas IPv6 keluar — kalau ketemu lagi error `pg_dump: could
+  not translate host name`, ini penyebabnya, solusinya SELALU pakai
+  connection pooler bukan direct connection) lalu **di-restore penuh** ke
+  project Supabase BARU **"EIC7's Project"** (ref `xzjayhjierilqxwucnkn`,
+  region `ap-northeast-1`, akun `EIC7` — lihat bagian "Konsolidasi repo ke
+  akun GitHub EIC7" di atas untuk konteks pemindahan akun ini secara umum).
+- **Restore dilakukan lewat `psql -f backup_full.sql`** ke database KOSONG
+  (project baru belum pernah dipakai) — aman, bukan menimpa data yang
+  sedang dipakai. Muncul banyak error `permission denied to change default
+  privileges` / `Non-superuser owned event trigger must execute a
+  non-superuser owned function` saat restore — **ini NORMAL dan tidak
+  berbahaya** untuk restore lintas-project Supabase: error itu cuma
+  menyangkut objek infrastruktur internal Supabase sendiri (event trigger
+  `pgrst_ddl_watch`/`pgrst_drop_watch`/dst., default privileges schema
+  `extensions`) yang dimiliki `supabase_admin` dan SUDAH otomatis
+  ter-provision benar di setiap project Supabase baru — pg_dump ikut
+  men-dump `ALTER` terhadap objek-objek itu tapi role `postgres` biasa
+  memang tidak punya izin mengubahnya (dan tidak perlu, sudah benar dari
+  awal). **Diverifikasi lengkap setelah restore** (lihat riwayat sesi ini
+  kalau perlu ulang query verifikasi): 13 tabel aplikasi ter-restore penuh
+  (`pm_records` 156 baris, `outage_assets` 130 baris, dst.), fungsi
+  `notify_telegram_submission`/`notify_telegram_review_status` beserta
+  trigger-nya di `pm_records` utuh + ter-grant ke `anon`/`authenticated`/
+  `service_role`, extension `pg_net` terpasang (wajib untuk `net.http_post`
+  di kedua fungsi notif itu), RLS + seluruh policy ter-restore, dan
+  `NOTIFY pgrst, 'reload schema';` sudah dijalankan supaya PostgREST
+  langsung kenal skema barunya.
+- **`SUPA_URL`/`SUPA_KEY` (dan variasi nama sejenis) diganti ke project
+  baru di 12 file kode** — ternyata BUKAN cuma di `shared.js`, ada salinan
+  manual (vendored, pola yang sama seperti masalah lain di dokumen ini)
+  di: `cleanup_workgroup.py`, `checksheet-temperature.html`
+  (`TS_SUPA_URL`/`TS_SUPA_KEY`), `checksheet-level-switch.html`,
+  `outage-input.html`, `outage-indexa.html`, `outage-index.html`,
+  `outage-history.html`, `material-warehouse.html`,
+  `trend/config/system-config.js` (`SUPABASE.URL`/`SUPABASE.ANON_KEY` —
+  komentarnya tadinya bilang "sengaja sama dengan shared.js" karena emang
+  desainnya begitu, ikut diupdate biar tidak menyesatkan), dan 2 script
+  Node GitHub Actions (`scripts/retry-drive-upload.js`,
+  `scripts/notify-ra-status-poll.js`). **Kalau nanti ada file modul baru
+  yang bikin salinan `SUPA_URL`/`SUPA_KEY` sendiri lagi (bukan makai
+  `shared.js`), pastikan ikut disamakan** — pola duplikasi kredensial ini
+  belum dibenahi jadi 1 sumber shared, cuma disamakan manual tiap kali
+  ketahuan beda.
+- **REST API project baru sudah dites langsung** (`curl` ke
+  `/rest/v1/pm_records` pakai anon key baru) — HTTP 200, data asli ter-
+  return, jadi jalur PostgREST + RLS + anon key sudah confirmed jalan
+  end-to-end, bukan cuma asumsi dari hasil restore SQL saja.
+- **🔴 PENTING — migrasi ini BARU di working copy lokal, BELUM di-commit/
+  push/deploy** — working directory ini bahkan bukan git repo aktif
+  (`git status` return "not a git repository") per saat migrasi ini
+  dikerjakan. Artinya: situs yang SEDANG LIVE (baik
+  `mahfudjtf.github.io`/`eic7.github.io`, ATAU workflow GitHub Actions yang
+  sudah jalan duluan di kedua repo remote) **MASIH nunjuk ke database LAMA
+  `ruvvximnnacpvvoogbzs`** sampai perubahan 12 file ini benar-benar
+  di-commit ke sebuah repo git DAN dipush DAN (untuk GitHub Pages)
+  ter-deploy ulang. **Database LAMA (`ruvvximnnacpvvoogbzs`) TIDAK
+  dihapus/dimatikan** — restore ini murni menyalin, bukan memindahkan,
+  jadi kedua database sekarang hidup berdampingan dengan isi yang SAMA
+  per momen backup diambil. **Kalau nanti diminta lanjutkan proses cutover
+  ini** (commit+push+deploy), WAJIB ingat aturan wajib "tanya dulu setiap
+  mau push, sebut repo lengkap" di bagian "Konsolidasi repo ke akun GitHub
+  EIC7" di atas — migrasi backend TIDAK mengubah aturan itu. Juga
+  perhatikan: begitu cutover live, SEMUA data yang ditulis ke database LAMA
+  SETELAH momen backup diambil (submission baru, dst. — kalau situs lama
+  masih dipakai orang di antara waktu backup dan waktu cutover) **TIDAK
+  ikut pindah** ke database baru dan perlu di-backup+restore ulang secara
+  terpisah kalau tidak mau hilang.

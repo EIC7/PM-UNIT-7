@@ -10,3 +10,9 @@
 # disanitasi -- lihat CLAUDE.md). Repo ini PUBLIC, jangan pernah commit
 # folder ini apa adanya.
 /JSA/
+
+# Full pg_dump database production (dibuat 2026-09-04 untuk migrasi
+# backend Supabase, lihat CLAUDE.md bagian "Migrasi backend Supabase") --
+# 20MB+, berisi SELURUH data mentah pm_records/outage_assets. Repo ini
+# PUBLIC, jangan pernah commit dump database apa pun.
+backup_full.sql

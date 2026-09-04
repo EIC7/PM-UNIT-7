@@ -90,8 +90,8 @@ if (!Number.isNaN) { Number.isNaN = function(v) { return typeof v === 'number' &
 if (!Number.isInteger) { Number.isInteger = function(v) { return typeof v === 'number' && Math.floor(v) === v; }; }
 
 /* ── SUPABASE CONFIG ── */
-var SUPA_URL   = 'https://ruvvximnnacpvvoogbzs.supabase.co';
-var SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1dnZ4aW1ubmFjcHZ2b29nYnpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDE1NDAsImV4cCI6MjA5NDYxNzU0MH0.GRu5n0Jl2fP0V8L_QLN2Tkmd0Aw0JbMRu25I7t-R7l8';
+var SUPA_URL   = 'https://xzjayhjierilqxwucnkn.supabase.co';
+var SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6amF5aGppZXJpbHF4d3VjbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MzM4NTMsImV4cCI6MjEwNDEwOTg1M30.KX0iL0IAf0uWDj0yb_YFyRDu3pINNzYo36ZSmFXn-nI';
 var SUPA_TABLE = 'pm_records';
 
 /* ── SUPABASE REALTIME CLIENT (lazy-loaded) ──
