@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PM HG Analyzer — Unit 7</title>
-<script src="shared.js?v=20260904b"></script>
+<script src="shared.js?v=20260904c"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -1553,7 +1553,7 @@ function closePdfPreview() {
 /* freq: bulan-bulan di mana step ini muncul (3/6/9/12). replace: true => kolom
    "Sparepart Replacement" berupa dropdown Ready/Kosong. false => checkbox "Sudah Dikerjakan". */
 var STEP_DATA = [
-  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[2,3,6,9,12]},
+  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[2,6,12]},
   {no:2,  label:"Replace the particle protection filter (13) upstream from the photometer", ref:"", refImg:"assets/hg-step2-ref.png", replace:true,  freq:[3,6,9,12]},
   {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", refImg:"assets/hg-step3-ref.png", replace:true,  freq:[3,6,9,12], proc:'iodine'},
   {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", refImg:"assets/hg-step4-ref.png", replace:false, freq:[2,3,6,9,12]},
