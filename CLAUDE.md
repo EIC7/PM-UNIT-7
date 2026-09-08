@@ -3075,3 +3075,63 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   terbukti benar dipakai fitur numpad).
 - `shared.js?v=` dinaikkan ke `20260908a` di semua 38 file yang
   memuatnya (termasuk `find-asset-detail.html` yang baru).
+
+## Tombol "Portal EIC7" di JSA + textarea Step auto-grow + rename "Dashboard" -> "Dashboard PM I&C" + rapikan jsa_history.html (2026-09-08)
+
+- **Tombol "🔗 Portal EIC7"** ditambahkan ke header `jsa_report.html` DAN
+  `jsa_condition_access.html` (di samping tombol "JSA HISTORY") -- style
+  baru `.btn-eic7-portal` (aksen ungu transparan, konsisten dgn warna
+  tombol EIC7 Portal di `index.html`, disesuaikan supaya kontras di atas
+  gradient biru header JSA). Link `eenputra.github.io/EIC7-PORTAL` di
+  `Mahfudjtf/PM-UNIT-7`, `eic7.github.io/EIC7-PORTAL` di `EIC7/PM-UNIT-7`
+  -- SAMA PERSIS pola divergensi link yang sudah ada di `index.html`
+  (lihat "Konsolidasi repo ke akun GitHub EIC7" di atas), WAJIB dijaga
+  tetap beda saat sync ke eic7 (JANGAN full-file-checkout, lihat aturan
+  wajib sync ke eic7).
+- **Kolom Step (tabel Langkah Pekerjaan & Hazard) diubah dari `<input>`
+  polos jadi `<textarea>` auto-grow** -- sebelumnya teks panjang di kolom
+  Step di-scroll HORIZONTAL oleh `<input>` (bagian depan teks ketutup
+  begitu ngetik lebih dari lebar kolom, 17% dari tabel). Sekarang pakai
+  `jsaAutoGrow(el)` (helper baru, `el.style.height='auto'` lalu
+  `=el.scrollHeight+'px'`) dipanggil tiap `oninput` DAN sekali lagi
+  setelah `jsaRenderSections()` (`container.querySelectorAll('.step-cell
+  textarea').forEach(jsaAutoGrow)` -- WAJIB, krn `oninput` cuma jalan pas
+  user ngetik, textarea baru dari `innerHTML` py tinggi default sampai
+  ada trigger manual, penting terutama pas BUKA record lama yang teks
+  step-nya udah panjang dari awal). CSS: `resize:none;overflow:hidden`
+  (tinggi diatur JS, bukan drag-resize manual atau scrollbar internal
+  spt kolom Hazard/Risk/Control yang punya `max-height` tetap). Handler
+  `jsaUpdateStepText()` (nyimpen ke state) TIDAK berubah sama sekali,
+  cuma dipanggil bareng `jsaAutoGrow(this)` di `oninput` yang sama.
+  Diterapkan identik ke KEDUA file JSA (Table 2 memang shared/byte-
+  identik antar keduanya).
+- **"Dashboard" diganti "Dashboard PM I&C"** di SEMUA tempat yang sudah
+  menyebut kata itu sbg label navigasi balik (6 file:
+  `find-asset-detail.html`, `jsa_condition_access.html`,
+  `jsa_history.html`, `jsa_report.html`, `maintenance_report_form.html`,
+  `trend/index_trend.html` -- yang terakhir tadinya "DASHBOARD UTAMA",
+  kata "Utama" DIHILANGKAN diganti "PM I&C" biar konsisten pola sama
+  dgn 5 file lain, bukan digabung jadi "PM I&C UTAMA"). SENGAJA TIDAK
+  diperluas ke modul lain yang belum pernah pakai kata "Dashboard" sama
+  sekali (banyak modul checksheet biasa cuma py tombol "← Kembali" polos
+  tanpa kata itu) -- kalau nanti diminta perluas lagi, cari dulu
+  `grep -rl "Kembali ke Dashboard\|← Dashboard\|>Dashboard<"` sebelum
+  nebak file mana saja yang perlu diubah.
+- **`jsa_history.html`**: tombol **"👁 Preview"** (docx-preview.js via
+  `?autopreview=1`) DIHAPUS TOTAL dari kolom Aksi (permintaan eksplisit
+  user -- tombol Drive dianggap sudah lebih baik utk kebutuhan yang
+  sama). Tombol **"📎 Drive"** (muncul kalau `d.wordDriveUrl` ada)
+  labelnya diganti jadi **"📎 Preview in Drive"** -- fungsinya TIDAK
+  berubah (masih buka link Google Drive di tab baru). Fitur preview
+  in-browser ITU SENDIRI (`jsaPreviewWord()`, tombol "👁 Preview Hasil
+  Word" di form `jsa_report.html`/`jsa_condition_access.html`,
+  `?autopreview=1` handler) **TIDAK ikut dihapus** -- cuma pintasan dari
+  halaman riwayat yang dibuang, fitur intinya tetap ada dan bisa dipakai
+  langsung dari halaman modul JSA.
+- Diverifikasi lewat headless Chrome, 3 file terpisah, 15/15 skenario
+  lolos: tombol Portal EIC7 (ada, label & href benar), label Dashboard,
+  textarea Step ada & tumbuh tinggi sesuai isi panjang (`jsa_report.html`
+  scrollHeight 395px, `jsa_condition_access.html` 299px, keduanya start
+  dari min-height 38px) & nilai tersimpan benar, DAN di `jsa_history.html`
+  (`supaFetch` di-mock): tombol Preview sudah tidak ada, tombol Drive ada
+  dgn label baru "📎 Preview in Drive".
