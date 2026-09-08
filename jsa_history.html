@@ -67,7 +67,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <p>Riwayat laporan JSA yang sudah dibuat — Conditional Access &amp; Risk To Trip</p>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
+      <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard PM I&amp;C</button>
     </div>
   </div>
 
@@ -169,15 +169,21 @@ function jsaHistRender() {
     var d = r.data || {};
     var applicant = d.sigApplicant || r.pic || '-';
     var url = raModulToUrl(r.modul, r.id);
-    var previewUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'autopreview=1';
     var dlUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'autodownload=1';
     var fileName = jsaBuildFilenamePreview(r.work_order, d.equipTag);
     // Link Drive HANYA muncul kalau laporan ini SUDAH PERNAH di-generate
     // Word setelah fitur upload-ke-Drive ini ada (jsaUploadWordToDrive() di
     // jsa_report.html/jsa_condition_access.html) -- laporan lama/yang belum
     // pernah di-generate tidak punya d.wordDriveUrl sama sekali, wajar.
+    // Tombol "👁 Preview" (docx-preview.js, ?autopreview=1) SENGAJA DIHAPUS
+    // dari sini (2026-09-08, permintaan eksplisit user) -- tombol Drive di
+    // bawah ini sudah dianggap lebih baik utk kebutuhan yang sama, makanya
+    // labelnya diganti "Preview in Drive". Fitur preview-nya SENDIRI (tombol
+    // "👁 Preview Hasil Word" langsung di jsa_report.html/
+    // jsa_condition_access.html, dan ?autopreview=1 handler-nya) TIDAK ikut
+    // dihapus -- cuma pintasannya dari halaman riwayat ini yang dibuang.
     var driveBtn = d.wordDriveUrl
-      ? '<button class="btn-aksi drive" onclick="window.open(\'' + jsaEscHtml(d.wordDriveUrl) + '\',\'_blank\')">📎 Drive</button>'
+      ? '<button class="btn-aksi drive" onclick="window.open(\'' + jsaEscHtml(d.wordDriveUrl) + '\',\'_blank\')">📎 Preview in Drive</button>'
       : '';
     html += '<tr>' +
       '<td>' + jsaEscHtml(d.equipTag || '-') +
@@ -189,7 +195,6 @@ function jsaHistRender() {
       '<td>' + jsaRiskBadge(d.riskCategory) + '</td>' +
       '<td>' + jsaEscHtml(d.epas || '-') + '</td>' +
       '<td style="white-space:nowrap">' +
-        '<button class="btn-aksi preview" onclick="window.open(\'' + previewUrl + '\',\'_blank\')">👁 Preview</button>' +
         '<button class="btn-aksi edit" onclick="window.location.href=\'' + url + '\'">✎ Edit</button>' +
         '<button class="btn-aksi download" onclick="jsaHistDownload(\'' + dlUrl + '\', this)">⬇ Download</button>' +
         driveBtn +

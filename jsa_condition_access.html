@@ -17,6 +17,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .header-content p{font-size:0.85em;opacity:0.9}
 .header .btn-back{padding:8px 16px;background:#1c2334;color:#bfd6f7;border:1px solid #3a4560;border-radius:6px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.9em;transition:all 0.2s}
 .header .btn-back:hover{background:#232c40}
+.header .btn-eic7-portal{padding:8px 16px;background:rgba(124,58,237,0.18);border:1.5px solid #b794f6;color:#fff;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:0.9em;transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.header .btn-eic7-portal:hover{background:rgba(124,58,237,0.34)}
 .live-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.85);animation:blinkJS 2s ease-in-out infinite;flex-shrink:0;cursor:default}
 @keyframes blinkJS{0%,100%{opacity:1}50%{opacity:0.35}}
 .live-dot.pm-health-ok{background:#bbf7d0;animation:blinkJS 2s ease-in-out infinite}
@@ -65,7 +67,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .jsa-hz-table th{background:#1c2334;color:#aab4c4;font-size:0.76em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:7px 8px;text-align:left;border-bottom:1px solid #2a3348}
 .jsa-hz-table td{padding:6px;border-bottom:1px solid #232c40;vertical-align:top}
 .jsa-hz-table td.step-cell{background:#161d2c;border-right:1px solid #2a3348}
-.jsa-hz-table td.step-cell input{width:100%;margin:6px 0;font-size:0.85em;padding:7px 8px}
+.jsa-hz-table td.step-cell textarea{width:100%;margin:6px 0;font-size:0.85em;padding:7px 8px;resize:none;overflow:hidden;min-height:38px;line-height:1.4;font-family:inherit}
 .jsa-hz-ta{width:100%;min-height:34px;max-height:110px;overflow-y:auto;resize:vertical;font-size:0.82em;line-height:1.4}
 .jsa-hz-ta-wide{min-height:34px}
 .jsa-hz-empty{color:#7c8698;font-size:0.82em;font-style:italic;padding:14px 10px}
@@ -150,7 +152,8 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div class="live-dot" title="Status Supabase"></div>
-      <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard</button>
+      <a class="btn-eic7-portal" href="https://eic7.github.io/EIC7-PORTAL/index.html#" target="_blank" rel="noopener">🔗 Portal EIC7</a>
+      <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard PM I&amp;C</button>
       <button class="btn-back" onclick="window.location.href='jsa_history.html'">JSA HISTORY</button>
     </div>
   </div>
@@ -420,6 +423,16 @@ function jsaRemoveStep(code, stepIdx) {
 function jsaUpdateStepText(code, stepIdx, val) {
   jsaState.sections[code].steps[stepIdx].text = val;
 }
+// Textarea kolom Step melebar ke BAWAH otomatis mengikuti isi (bukan
+// scroll horizontal kayak <input> polos sebelumnya) -- supaya teks yang
+// sudah diketik tidak ketutup/kegeser pas ngetik lanjut. Dipanggil tiap
+// oninput DAN sekali lagi setelah render ulang (lihat jsaRenderSections)
+// krn textarea baru dari innerHTML belum otomatis menyesuaikan tinggi ke
+// isinya sendiri.
+function jsaAutoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
 function jsaAddManualHazardRow(code, stepIdx) {
   jsaState.sections[code].steps[stepIdx].hazards.push(jsaNewHazardRow());
   jsaRenderSections();
@@ -678,7 +691,7 @@ function jsaRenderSections() {
         var dataRowCount = Math.max(hazards.length, 1);
         var stepCell = '<td class="step-cell" rowspan="' + (dataRowCount + 1) + '">' +
           '<div class="jsa-step-no">' + (stepIdx + 1) + '</div>' +
-          '<input type="text" placeholder="Deskripsi step..." value="' + jsaEsc(step.text) + '" oninput="jsaUpdateStepText(\'' + meta.code + '\',' + stepIdx + ',this.value)">' +
+          '<textarea rows="1" placeholder="Deskripsi step..." oninput="jsaUpdateStepText(\'' + meta.code + '\',' + stepIdx + ',this.value);jsaAutoGrow(this)">' + jsaEsc(step.text) + '</textarea>' +
           '<button class="btn btn-red btn-step-rm" onclick="jsaRemoveStep(\'' + meta.code + '\',' + stepIdx + ')">🗑 Step</button>' +
         '</td>';
         if (!hazards.length) {
@@ -705,6 +718,10 @@ function jsaRenderSections() {
     html += '</div></div>';
   });
   container.innerHTML = html;
+  // Tinggi awal textarea Step (mis. data lama yg teksnya panjang) --
+  // input event cuma jalan pas user ngetik, jadi perlu dipanggil manual
+  // sekali di sini juga.
+  container.querySelectorAll('.step-cell textarea').forEach(jsaAutoGrow);
 }
 
 // ── HAZARD PICKER MODAL ──────────────────────────────────────────────────
