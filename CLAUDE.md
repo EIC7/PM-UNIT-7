@@ -3013,3 +3013,65 @@ Supabase sebagai backend, jsPDF untuk export PDF).
      SEBELUM melakukan apa pun -- jangan asumsikan dari ingatan/daftar
      di atas, karena daftar itu bisa basi kalau ada migrasi/perubahan
      konsolidasi baru yang belum tercatat di sini.
+
+
+## Navigasi panah Atas/Bawah/Kiri/Kanan antar field -- KHUSUS DESKTOP (2026-09-08)
+
+- Permintaan eksplisit user: di layar desktop, panah keyboard (bukan cuma
+  Tab) bisa langsung memindahkan fokus ke field lain berdasarkan **posisi
+  visual di layar** (field yg paling dekat tepat di atas/bawah/kiri/kanan),
+  berlaku GENERIK ke SEMUA modul (38 file yang load `shared.js`) tanpa
+  perlu init per file -- otomatis aktif begitu `shared.js` dimuat, sama
+  seperti `pmInitGate()`.
+- **Kenapa cuma desktop**: dicek via `PM_IS_TOUCH_DEVICE` (variabel yang
+  SAMA dipakai fitur numpad custom, `matchMedia('pointer: coarse')`) --
+  di HP numpad custom sudah py mekanisme "Next ->" sendiri buat pindah
+  field, dua sistem navigasi field akan saling tabrakan kalau fitur ini
+  ikut aktif di situ.
+- **Algoritma 2 TAHAP** (`pmArrowNavFindTarget()`) -- BUKAN cuma 1 rumus
+  jarak gabungan, itu sempat dicoba duluan tapi TERBUKTI SALAH lewat uji
+  coba headless (panah Kanan/Kiri kadang lompat ke baris lain yg kebetulan
+  sedikit lebih dekat scr diagonal drpd kolom sebelah di baris yg sama):
+  1. Cari kandidat yang BENAR-BENAR overlap dgn field sekarang di sumbu
+     tegak lurus arah panah (mis. utk Kanan/Kiri, overlap VERTIKAL) DAN
+     overlap-nya > 30% dari lebar/tinggi elemen terkecil (bukan cuma
+     >0px -- kolom tabel BERSEBELAHAN kadang overlap horizontal 1-5px
+     doang gara-gara artefak border/spacing antar `<td>`, ambang 30% ini
+     yang membedakan "beneran sekolom" dari "cuma nempel dikit"). Kalau
+     ada, pilih yang primary distance (jarak searah panah) PALING KECIL.
+  2. Kalau TIDAK ADA satu pun yg overlap (loncat ke section lain yg tidak
+     sejajar sama sekali), fallback ke rumus jarak gabungan
+     `primary + secondary*2.5`.
+- **2 konflik dgn kursor teks bawaan browser, SENGAJA ditangani (BUKAN
+  ditimpa)**:
+  - Kiri/Kanan di field yang SUDAH ADA ISINYA: baru lompat field kalau
+    kursor SUDAH di paling awal (Kiri)/akhir (Kanan) isi field itu
+    (`pmArrowNavAtTextBoundary`) -- kalau masih di tengah teks, geser
+    kursor jalan normal dulu seperti biasa.
+  - Atas/Bawah di `<textarea>` multi-baris: baru lompat field kalau
+    kursor sudah di baris PERTAMA (Atas)/TERAKHIR (Bawah)
+    (`pmArrowNavTextareaAtEdge`) -- kalau masih ada baris lain, pindah
+    baris jalan normal dulu.
+- **2 perilaku bawaan browser SENGAJA DITIMPA** (keputusan sadar,
+  dikonfirmasi eksplisit ke user sebelum dikerjakan, BUKAN bug): Atas/
+  Bawah di `<input type="number">` (bawaan: naik-turun angka via spinner)
+  dan `<select>` (bawaan: ganti opsi terpilih) -- SEKARANG SELALU lompat
+  field kalau ada tujuan yg valid.
+- **`<input type="checkbox">`/`"radio"` DIKECUALIKAN TOTAL** (bukan cuma
+  tidak jadi target lompatan, juga tidak pernah jadi pemicu) -- radio
+  group native sudah py navigasi panah bawaan sendiri (pindah SEKALIGUS
+  toggle pilihan dalam 1 grup `name`), menimpa itu berisiko regresi
+  aksesibilitas yang sudah berjalan baik.
+- **Diverifikasi lewat headless Chrome** (bukan cuma baca kode) -- 13
+  skenario di halaman uji buatan sendiri (grid flex, tabel 2 baris x 3
+  kolom campur input/select/number, textarea multi-baris, checkbox) HASIL
+  13/13 lolos & stabil di 2x run ulang, DAN diverifikasi juga langsung di
+  halaman modul produksi sungguhan (`so2.html`, 27 field asli) -- 0 error
+  JS, navigasi berfungsi benar, `PM_IS_TOUCH_DEVICE` terbaca `false` di
+  mode desktop headless standar (emulasi touch lewat flag CLI Chrome tidak
+  cukup buat mengubah hasil `matchMedia(pointer:coarse)`, jadi cabang
+  mobile-nya diverifikasi lewat baca kode -- guard-nya cuma 1 baris
+  `if (PM_IS_TOUCH_DEVICE) return;`, variabel yg SAMA yg sudah lama
+  terbukti benar dipakai fitur numpad).
+- `shared.js?v=` dinaikkan ke `20260908a` di semua 38 file yang
+  memuatnya (termasuk `find-asset-detail.html` yang baru).
