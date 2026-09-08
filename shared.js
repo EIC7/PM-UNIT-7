@@ -3642,6 +3642,162 @@ function pmNumpadPress(k) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   NAVIGASI PANAH ATAS/BAWAH/KIRI/KANAN ANTAR FIELD -- KHUSUS DESKTOP
+   (2026-09-08, permintaan eksplisit user, generik berlaku SEMUA modul lewat
+   shared.js -- tidak perlu init per file, auto-jalan begitu shared.js
+   dimuat, sama seperti pmInitGate()).
+
+   KENAPA KHUSUS DESKTOP (PM_IS_TOUCH_DEVICE dicek di paling atas handler):
+   di HP, numpad custom sendiri sudah py tombol "Next ->" buat pindah field
+   (lihat pmNumpadInit() di atas) -- fitur ini justru akan SALING TABRAKAN
+   kalau ikut aktif di situ (dua mekanisme "pindah field" beda logika jalan
+   bersamaan). Laptop/PC TIDAK PERNAH pakai numpad custom (dilepas total di
+   pmNumpadInit()), jadi aman/generik dipasang di sini.
+
+   ALGORITMA: BUKAN berdasar urutan Tab di HTML, tapi POSISI VISUAL di
+   layar (getBoundingClientRect) -- cari elemen focusable LAIN yang pusatnya
+   paling dekat searah panah yang ditekan (bawah/atas/kanan/kiri), diberi
+   skor gabungan jarak sejajar (arah panah) + jarak menyilang (misalignment)
+   supaya tetap prioritaskan "kolom yang sama" walau lurus sempurna jarang
+   terjadi di layout flex/grid/table. Pola ini otomatis benar utk SEMUA
+   struktur (grid checklist, tabel channel per baris, form flex biasa) TANPA
+   perlu tahu struktur DOM-nya sama sekali.
+
+   2 KONFLIK YANG SENGAJA DITANGANI (lihat pmArrowNavAtTextBoundary/
+   pmArrowNavTextareaAtEdge di bawah):
+   - Kiri/Kanan di field teks yang SUDAH ADA ISINYA: browser pakai ini utk
+     geser kursor ketik. Baru lompat field kalau kursor SUDAH di paling
+     awal (Kiri) atau paling akhir (Kanan) isi field itu -- kalau masih di
+     tengah teks, biarkan geser kursor jalan normal dulu.
+   - Atas/Bawah di <textarea> multi-baris: baru lompat field kalau kursor
+     sudah di baris PERTAMA (Atas) atau baris TERAKHIR (Bawah) dari isi
+     textarea -- kalau masih ada baris lain di atas/bawahnya, biarkan
+     pindah baris jalan normal dulu.
+   2 PERILAKU BAWAAN BROWSER YANG SENGAJA DITIMPA (bukan bug, keputusan
+   sadar sesuai permintaan user "atas bawah bisa pindah ke kolom" secara
+   eksplisit, dikonfirmasi user sebelum dikerjakan):
+   - Atas/Bawah di <input type="number">: bawaan browser menaik-turunkan
+     angka (spinner) -- sekarang SELALU pindah field kalau ada field
+     tujuan (spinner tidak lagi bisa dipakai lewat panah, cuma lewat klik
+     tombol spinner-nya sendiri kalau browser menampilkannya).
+   - Atas/Bawah di <select>: bawaan browser mengganti opsi terpilih --
+     sekarang SELALU pindah field kalau ada field tujuan.
+   <input type="checkbox"/"radio"> SENGAJA DIKECUALIKAN TOTAL (bukan cuma
+   tidak jadi TARGET, juga tidak PERNAH jadi TRIGGER) -- radio group native
+   sudah punya navigasi panah bawaannya sendiri (pindah + toggle pilihan
+   sekaligus dalam 1 grup `name`), menimpa itu berisiko regresi
+   aksesibilitas yang sudah berjalan baik.
+   ══════════════════════════════════════════════════════════════════════════ */
+var PM_ARROWNAV_SELECTOR = 'input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled]):not([readonly])';
+var PM_ARROWNAV_DIRS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+
+function pmArrowNavAtTextBoundary(el, dir) {
+  var start, end;
+  try {
+    start = el.selectionStart;
+    end = el.selectionEnd;
+  } catch (e) {
+    return true; // tipe input tidak dukung selection (mis. date/color/file) -- selalu boleh lompat
+  }
+  if (start == null) return true;
+  if (dir === 'left') return start === 0 && end === 0;
+  return start === el.value.length && end === el.value.length;
+}
+
+function pmArrowNavTextareaAtEdge(el, dir) {
+  var val = el.value;
+  if (dir === 'up') {
+    return val.lastIndexOf('\n', Math.max(0, el.selectionStart - 1)) === -1;
+  }
+  return val.indexOf('\n', el.selectionEnd) === -1;
+}
+
+// Dua tahap (BUKAN 1 rumus jarak gabungan -- versi awal pakai itu, ternyata
+// panah Kanan/Kiri kadang salah lompat ke baris LAIN yang kebetulan sedikit
+// lebih dekat scr diagonal drpd kolom sebelah di baris yg sama, karena bobot
+// penalti jarak menyilang tidak pernah cukup besar utk semua kombinasi
+// ukuran field -- ketauan dari uji coba headless, bukan cuma teori):
+//   Tahap 1 -- cari di antara kandidat yang BENAR-BENAR overlap dgn field
+//   sekarang di sumbu tegak lurus arah panah (mis. utk Kanan/Kiri, overlap
+//   VERTIKAL -- artinya "beneran di baris yang sama"). Overlap sekecil apa
+//   pun (>0px) dianggap "sebaris/sekolom", dipilih yang primary distance
+//   (jarak searah panah) PALING KECIL di antara mereka.
+//   Tahap 2 -- KALAU tidak ada satu pun yang overlap (mis. loncat ke
+//   section lain yang tidak sejajar sama sekali), baru fallback ke rumus
+//   jarak gabungan (primary + secondary*2.5) spt sebelumnya.
+function pmArrowNavFindTarget(current, dir) {
+  var rect = current.getBoundingClientRect();
+  var cx = rect.left + rect.width / 2;
+  var cy = rect.top + rect.height / 2;
+  var candidates = document.querySelectorAll(PM_ARROWNAV_SELECTOR);
+  var EPS = 2; // px -- toleransi elemen di baris/kolom yg sama persis
+  var bestOverlap = null, bestOverlapPrimary = Infinity;
+  var bestFallback = null, bestFallbackScore = Infinity;
+  for (var i = 0; i < candidates.length; i++) {
+    var el = candidates[i];
+    if (el === current) continue;
+    if (el.offsetParent === null) continue; // tersembunyi (display:none/di modal yg tertutup)
+    var r = el.getBoundingClientRect();
+    var ex = r.left + r.width / 2;
+    var ey = r.top + r.height / 2;
+    var primary, secondary, overlaps;
+    if (dir === 'down' || dir === 'up') {
+      if (dir === 'down') { if (ey <= cy + EPS) continue; primary = ey - cy; }
+      else { if (ey >= cy - EPS) continue; primary = cy - ey; }
+      secondary = Math.abs(ex - cx);
+      // Ambang 30% (bukan cuma ">0px") -- kolom tabel BERSEBELAHAN (bukan
+      // sama) kadang overlap horizontal 1-5px doang gara-gara artefak
+      // border/spacing antar <td>, itu HARUS dianggap TIDAK sekolom
+      // (ketauan dari uji coba: tanpa ambang ini, panah Bawah/Atas kadang
+      // salah lompat ke kolom sebelah yg kebetulan overlap dikit).
+      var hOverlap = Math.min(rect.right, r.right) - Math.max(rect.left, r.left);
+      overlaps = hOverlap > Math.min(rect.width, r.width) * 0.3;
+    } else {
+      if (dir === 'right') { if (ex <= cx + EPS) continue; primary = ex - cx; }
+      else { if (ex >= cx - EPS) continue; primary = cx - ex; }
+      secondary = Math.abs(ey - cy);
+      var vOverlap = Math.min(rect.bottom, r.bottom) - Math.max(rect.top, r.top);
+      overlaps = vOverlap > Math.min(rect.height, r.height) * 0.3;
+    }
+    if (overlaps) {
+      if (primary < bestOverlapPrimary) { bestOverlapPrimary = primary; bestOverlap = el; }
+    } else {
+      var score = primary + secondary * 2.5;
+      if (score < bestFallbackScore) { bestFallbackScore = score; bestFallback = el; }
+    }
+  }
+  return bestOverlap || bestFallback;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (PM_IS_TOUCH_DEVICE) return;
+  var dir = PM_ARROWNAV_DIRS[e.key];
+  if (!dir) return;
+  var el = e.target;
+  var tag = el.tagName;
+  if (tag !== 'INPUT' && tag !== 'SELECT' && tag !== 'TEXTAREA') return;
+  if (el.type === 'checkbox' || el.type === 'radio') return;
+  if (el.disabled || el.readOnly) return;
+
+  if (tag === 'TEXTAREA' && (dir === 'up' || dir === 'down') && !pmArrowNavTextareaAtEdge(el, dir)) return;
+  if ((tag === 'INPUT' || tag === 'TEXTAREA') && (dir === 'left' || dir === 'right') && !pmArrowNavAtTextBoundary(el, dir)) return;
+
+  var target = pmArrowNavFindTarget(el, dir);
+  if (!target) return; // tidak ada tujuan -- biarkan perilaku bawaan (scroll/spinner/cycle select) jalan
+  e.preventDefault();
+  target.focus();
+  if (typeof target.select === 'function' && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+    // Kursor ditaruh SESUAI arah datangnya (bukan select-all) supaya panah
+    // Kiri/Kanan berturut-turut lintas field terasa seperti 1 garis kursor
+    // yang jalan terus, bukan lompat-lompat memilih seluruh teks tujuan.
+    try {
+      if (dir === 'left') target.setSelectionRange(target.value.length, target.value.length);
+      else if (dir === 'right') target.setSelectionRange(0, 0);
+    } catch (e2) {}
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
    STATUS KESEHATAN SUPABASE -- ditarik ke elemen .live-dot yang sudah ada
    di topbar HAMPIR SEMUA halaman (dulu cuma dekorasi, selalu blink biru).
    Dicek dari BROWSER yang lagi buka halaman (bukan server eksternal), jadi
