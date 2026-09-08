@@ -2932,3 +2932,84 @@ Supabase sebagai backend, jsPDF untuk export PDF).
      dihapus (di luar akses user juga) — tetap ada sebagai jalur mundur,
      tapi juga berarti data di sana terus "beku" di titik migrasi diambil
      kalau situs lama sempat masih dipakai sesudahnya.
+
+## 🔴🔴 WAJIB BACA sebelum sync file apa pun ke `eic7` -- JANGAN PERNAH `git checkout <commit> -- <file>` UTUH utk file yang SUDAH DIKETAHUI berbeda isi (2026-09-08)
+
+- **Insiden nyaris terjadi**: saat sync fitur "Find Asset Detail" (kartu
+  baru MOD-24 di `index.html`) ke `eic7/PM-UNIT-7`, teknik baku yang
+  dipakai sepanjang sesi ini (`git checkout <commit-lokal> -- index.html`
+  ke branch sementara dari `eic7/main`) HAMPIR menimpa balik link
+  `eic7.github.io` di `index.html` milik `eic7` jadi `eenputra.github.io`
+  lagi -- karena commit lokal yang jadi sumber checkout itu based on
+  lineage `Mahfudjtf` (yang SUDAH di-revert ke `eenputra.github.io`,
+  lihat bagian "Konsolidasi repo ke akun EIC7" di atas). **Ketahuan &
+  dibatalkan SEBELUM sempat di-push** (`git checkout HEAD -- index.html`
+  buat undo, lalu insert manual cuma bagian kartu barunya) -- tapi ini
+  jelas rawan lolos kalau tidak dicek ulang setiap kali.
+- **Akar masalah teknik lama**: pola `git checkout <commit> -- <file>`
+  (dipakai berulang kali sesi ini utk sync file YANG TIDAK PERNAH beda
+  antar 2 repo, mis. `pm-hg-analyzer.html`, `CLAUDE.md` sebelum ada
+  bagian eic7-spesifik) MENGGANTI SELURUH ISI FILE tujuan dengan versi
+  dari commit sumber -- aman HANYA kalau file itu 100% identik di kedua
+  lineage sampai titik itu. Begitu SATU BAGIAN SAJA di file itu sudah
+  sengaja dibuat beda (link, config, dll), teknik ini akan diam-diam
+  menghapus perbedaan itu tanpa peringatan apa pun -- git tidak akan
+  komplain karena secara teknis ini valid "ganti isi file A dengan isi
+  file A dari commit lain", cuma actually WRONG secara konten.
+- **Daftar file yang SUDAH DIKETAHUI berbeda isi antara `Mahfudjtf/
+  PM-UNIT-7` dan `eic7/PM-UNIT-7`** (per tanggal ini -- WAJIB dicek ulang
+  daftar ini kalau ada perubahan konsolidasi baru ke depan, jangan
+  anggap statis selamanya):
+  1. **`index.html`** -- link `eenputra.github.io` (Mahfudjtf) vs
+     `eic7.github.io` (eic7), di 3 tempat (tombol EIC7 Portal, 2 kartu
+     Review Approval Dashboard/MOD-09).
+  2. **`shared.js`** -- 1 baris komentar `mahfudjtf.github.io` vs
+     `eic7.github.io` (kosmetik, cuma teks penjelasan CORS) — TAPI JUGA
+     kemungkinan besar `SUPA_URL`/`SUPA_KEY` SEKARANG BEDA TOTAL kalau
+     migrasi Supabase (`58ac07d` di eic7) sudah benar-benar mengubah
+     `shared.js` juga (belum diverifikasi ulang isi persisnya dari sesi
+     ini -- WAJIB `git show eic7/main:shared.js | grep SUPA_URL` dulu
+     sebelum sync file ini ke eic7 kapan pun).
+  3. **`firebase-config.js`** -- project Firebase beda total
+     (`pomi-checksheet-e7` lama vs `database-eic7` baru di eic7, lihat
+     bagian "Migrasi backend Firebase" di atas).
+  4. **`scripts/notify-ra-status-poll.js`** -- `SUPA_URL`/`SUPA_KEY`
+     (migrasi Supabase) DAN `FIREBASE_PROJECT_ID`/`FIREBASE_API_KEY`
+     (migrasi Firebase) DAN `PAT_EXPIRY_DATE`/komentar PAT (PAT eic7
+     "AUTO REFRESH HISTORY EIC7" terpisah dari punya Mahfudjtf) --
+     KEMUNGKINAN BESAR file ini sekarang jauh berbeda antara 2 repo,
+     JANGAN PERNAH full-file-checkout file ini ke eic7 tanpa baca dulu.
+  5. **11 file lain yang punya hardcoded `SUPA_URL`/`SUPA_KEY` duplikat**
+     (lihat daftar di bagian "Migrasi backend Firebase" / cek ulang
+     dgn `grep -rl SUPA_URL` kapan pun perlu) -- semuanya berpotensi
+     sudah diupdate di eic7 kalau migrasi Supabase memang menyentuh
+     semua duplikat itu (belum dikonfirmasi satu-satu dari sesi ini).
+  6. **CLAUDE.md sendiri** -- SUDAH DIKETAHUI beda (eic7 py bagian
+     "Migrasi backend Supabase"/"Migrasi backend Firebase" yang tidak
+     ada di Mahfudjtf, dan sebaliknya) -- kalau perlu sync dokumentasi
+     baru ke eic7, JANGAN full-file-checkout, tempel PARAGRAF barunya
+     saja ke posisi yang sesuai di isi CLAUDE.md eic7 yang sudah ada.
+- **🔴 ATURAN WAJIB mulai sekarang, SEBELUM sync file apa pun ke `eic7`
+  (baik lewat teknik `git checkout <commit> -- <file>` MAUPUN cara
+  lain)**:
+  1. Cek dulu: apakah file ini ADA di daftar 6 poin di atas (atau
+     terlihat berpotensi masuk kategori serupa -- config/link/kredensial
+     apa pun)? Kalau TIDAK ADA satu pun kaitan dgn Supabase/Firebase/link
+     situs/token, full-file-checkout tetap aman seperti biasa (mis.
+     `pm-hg-analyzer.html`, file modul checksheet murni lainnya).
+  2. Kalau ADA potensi kaitan: JANGAN full-file-checkout. Ambil hanya
+     bagian yang BENAR-BENAR baru/berubah lewat `git diff <commit-lama>
+     <commit-baru> -- <file>` dari sisi Mahfudjtf, lalu terapkan diff
+     itu MANUAL (Edit tool, insert/ubah bagian spesifik saja) ke versi
+     file eic7 yang sudah di-checkout ke branch sementara -- BUKAN
+     menimpa filenya.
+  3. SETELAH staged (sebelum commit di branch sementara), WAJIB
+     `git diff` hasil staging itu dan baca ulang -- pastikan HANYA
+     perubahan yang dimaksud yang masuk, tidak ada baris
+     `eenputra.github.io`/`SUPA_URL` lama/dll yang ikut "kebawa balik"
+     tanpa disadari.
+  4. Kalau ragu apakah suatu file sudah divergen atau belum, `git diff
+     origin/main eic7/main -- <file>` (bandingkan LANGSUNG kedua remote)
+     SEBELUM melakukan apa pun -- jangan asumsikan dari ingatan/daftar
+     di atas, karena daftar itu bisa basi kalau ada migrasi/perubahan
+     konsolidasi baru yang belum tercatat di sini.
