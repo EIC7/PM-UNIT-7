@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Find Asset Detail</title>
+<script src="shared.js?v=20260904c"></script>
+<style>
+/* ═══════════════ Palet & tipografi disamakan dgn index.html (dashboard utama) ═══════════════ */
+:root{
+  --bg:#f8fafb; --bg2:#ffffff; --bg3:#f3f4f6;
+  --border:#e5e7eb; --border-light:#f3f4f6;
+  --blue:#2563eb; --blue-light:#eff6ff; --blue-dark:#1d4ed8;
+  --green:#059669; --green-light:#ecfdf5;
+  --gray:#6b7280; --gray-light:#f3f4f6;
+  --purple:#8b5cf6; --purple-light:#f5f3ff;
+  --red:#ef4444; --red-light:#fef2f2;
+  --amber:#f59e0b; --amber-light:#fffbeb;
+  --cyan:#06b6d4; --cyan-light:#ecfeff;
+  --text-dark:#1f2937; --text-mid:#4b5563; --text-light:#9ca3af;
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md:0 4px 6px rgba(0,0,0,0.07);
+  --shadow-lg:0 10px 25px rgba(0,0,0,0.12);
+  --radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--text-dark);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto','Oxygen','Ubuntu','Cantarell',sans-serif;
+  min-height:100vh; line-height:1.55;
+}
+@media (prefers-reduced-motion: reduce){ *{animation-duration:0.001ms !important; transition-duration:0.001ms !important} }
+
+/* ── Topbar ── */
+header{background:var(--bg2); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:40}
+.header-inner{max-width:1100px; margin:0 auto; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:12px; min-width:0}
+.brand-icon{width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg,var(--blue),#4f46e5); display:flex; align-items:center; justify-content:center; font-size:20px; flex:none; box-shadow:var(--shadow-md)}
+.brand-text{min-width:0}
+.brand-title{font-size:16px; font-weight:800; color:var(--text-dark); white-space:nowrap}
+.brand-sub{font-size:11.5px; color:var(--text-light); letter-spacing:0.4px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.header-right{display:flex; align-items:center; gap:10px; flex:none}
+.btn-back{padding:8px 16px; border:1.5px solid var(--border); border-radius:8px; background:var(--bg2); color:var(--text-mid); font-size:12.5px; font-weight:700; cursor:pointer; text-decoration:none; white-space:nowrap; transition:all .15s}
+.btn-back:hover{background:var(--bg3); border-color:#c7cdd6}
+.count-pill{padding:6px 12px; border-radius:999px; background:var(--blue-light); color:var(--blue-dark); font-size:11.5px; font-weight:800; letter-spacing:0.2px; white-space:nowrap}
+
+.wrap{max-width:1100px; margin:0 auto; padding:20px 20px 60px}
+
+/* ── Search hero ── */
+.search-hero{background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow-sm); margin-bottom:18px}
+.search-box{position:relative; margin-bottom:14px}
+.search-box input{
+  width:100%; padding:15px 46px 15px 46px; font-size:16px; border:1.5px solid var(--border);
+  border-radius:10px; background:var(--bg3); color:var(--text-dark); font-family:inherit;
+  transition:border-color .15s, background .15s;
+}
+.search-box input:focus{outline:none; border-color:var(--blue); background:var(--bg2); box-shadow:0 0 0 3px var(--blue-light)}
+.search-box .icon-search{position:absolute; left:15px; top:50%; transform:translateY(-50%); font-size:18px; opacity:0.5; pointer-events:none}
+.search-box .icon-clear{
+  position:absolute; right:10px; top:50%; transform:translateY(-50%); width:26px; height:26px;
+  border:none; border-radius:50%; background:var(--bg3); color:var(--text-mid); font-size:14px;
+  cursor:pointer; display:none; align-items:center; justify-content:center;
+}
+.search-box .icon-clear:hover{background:var(--border)}
+.search-box.has-value .icon-clear{display:flex}
+.search-hint{font-size:11px; color:var(--text-light); margin-top:8px}
+.search-hint kbd{background:var(--bg3); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-family:'Courier New',monospace; font-size:10.5px}
+
+.filters-row{display:flex; gap:10px; flex-wrap:wrap}
+.filter-field{flex:1; min-width:150px}
+.filter-field label{display:block; font-size:10.5px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px}
+.filter-field select{
+  width:100%; padding:9px 10px; border:1.5px solid var(--border); border-radius:8px;
+  background:var(--bg2); color:var(--text-dark); font-family:inherit; font-size:13px; cursor:pointer;
+}
+.filter-field select:focus{outline:none; border-color:var(--blue)}
+
+/* ── Result meta bar ── */
+.result-meta{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap}
+.result-count{font-size:13px; color:var(--text-mid); font-weight:600}
+.result-count b{color:var(--text-dark)}
+.reset-filters{font-size:12px; color:var(--blue); background:none; border:none; cursor:pointer; font-weight:700; padding:4px 0}
+.reset-filters:hover{text-decoration:underline}
+
+/* ── Welcome / stats state ── */
+.welcome{padding:8px 0 4px}
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:22px}
+.stat-card{background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow-sm)}
+.stat-card .num{font-size:26px; font-weight:800; color:var(--text-dark); font-variant-numeric:tabular-nums}
+.stat-card .lbl{font-size:11.5px; color:var(--text-light); margin-top:2px; font-weight:600; text-transform:uppercase; letter-spacing:0.3px}
+.stat-card.accent-blue .num{color:var(--blue)}
+.stat-card.accent-green .num{color:var(--green)}
+.stat-card.accent-purple .num{color:var(--purple)}
+
+.suggest-title{font-size:12.5px; font-weight:700; color:var(--text-mid); margin-bottom:10px}
+.suggest-chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px}
+.chip{
+  padding:8px 16px; border-radius:999px; border:1.5px solid var(--border); background:var(--bg2);
+  color:var(--text-mid); font-size:12.5px; font-weight:700; cursor:pointer; transition:all .15s;
+}
+.chip:hover{border-color:var(--blue); color:var(--blue); background:var(--blue-light)}
+.chip .n{opacity:0.6; font-weight:600; margin-left:4px}
+
+.empty-illustration{text-align:center; padding:50px 20px; color:var(--text-light)}
+.empty-illustration .big-icon{font-size:44px; margin-bottom:14px; opacity:0.55}
+.empty-illustration .msg{font-size:14.5px; font-weight:700; color:var(--text-mid); margin-bottom:6px}
+.empty-illustration .sub{font-size:12.5px}
+
+/* ── Result list ── */
+.result-list{display:flex; flex-direction:column; gap:8px}
+.result-card{
+  background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:13px 16px;
+  cursor:pointer; text-align:left; width:100%; font-family:inherit; display:flex; gap:12px;
+  align-items:center; transition:border-color .12s, box-shadow .12s, transform .12s;
+  animation:fadeSlideIn .25s ease both;
+}
+.result-card:hover, .result-card:focus-visible{border-color:var(--blue); box-shadow:var(--shadow-md); outline:none; transform:translateY(-1px)}
+@keyframes fadeSlideIn{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:translateY(0)}}
+.result-main{flex:1; min-width:0}
+.result-tag{font-family:'Courier New',monospace; font-weight:800; font-size:13.5px; color:var(--blue-dark); word-break:break-word}
+.result-tag mark{background:#fef08a; color:inherit; border-radius:2px; padding:0 1px}
+.result-desc{font-size:13px; color:var(--text-dark); margin-top:3px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical}
+.result-desc mark{background:#fef08a; color:inherit; border-radius:2px; padding:0 1px}
+.result-loc{font-size:11.5px; color:var(--text-light); margin-top:4px; display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+.result-badges{display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex:none}
+.result-arrow{color:var(--text-light); font-size:16px; flex:none}
+
+.badge{display:inline-flex; align-items:center; padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:800; letter-spacing:0.2px; white-space:nowrap}
+.badge-OPERATING{background:var(--blue-light); color:var(--blue-dark)}
+.badge-ACTIVE{background:var(--green-light); color:var(--green)}
+.badge-INACTIVE{background:var(--gray-light); color:var(--gray)}
+.badge-SEALED{background:var(--purple-light); color:var(--purple)}
+.badge-DECOMMISSIONED{background:var(--red-light); color:var(--red)}
+.badge-NOTREADY{background:var(--amber-light); color:#92400e}
+.badge-default{background:var(--gray-light); color:var(--gray)}
+.badge-wg-MNTE7{background:var(--cyan-light); color:#0e7490}
+.badge-wg-MNTC7{background:#eef2ff; color:#4338ca}
+.badge-outline{background:transparent; border:1.2px solid var(--border); color:var(--text-mid)}
+
+.load-more-wrap{text-align:center; margin-top:16px}
+.load-more-btn{padding:10px 22px; border-radius:999px; border:1.5px solid var(--border); background:var(--bg2); color:var(--text-mid); font-weight:700; font-size:12.5px; cursor:pointer}
+.load-more-btn:hover{border-color:var(--blue); color:var(--blue)}
+
+/* ── Loading / error state ── */
+.loading-state{display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 20px; color:var(--text-light); gap:14px}
+.spinner{width:34px; height:34px; border:3px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-state{background:var(--red-light); border:1px solid #fecaca; border-radius:var(--radius); padding:22px; text-align:center; color:#991b1b}
+.error-state button{margin-top:12px; padding:8px 18px; border-radius:8px; border:none; background:var(--red); color:#fff; font-weight:700; cursor:pointer; font-size:12.5px}
+
+/* ── Detail modal ── */
+.modal-overlay{
+  display:none; position:fixed; inset:0; background:rgba(17,24,39,0.55); z-index:200;
+  align-items:flex-end; justify-content:center; padding:0;
+}
+.modal-overlay.show{display:flex}
+@media(min-width:640px){ .modal-overlay{align-items:center; padding:20px} }
+.modal-card{
+  background:var(--bg2); width:100%; max-width:640px; max-height:92vh; overflow-y:auto;
+  border-radius:20px 20px 0 0; box-shadow:var(--shadow-lg); animation:slideUp .25s ease;
+}
+@media(min-width:640px){ .modal-card{border-radius:16px; animation:popIn .18s ease} }
+@keyframes slideUp{from{transform:translateY(100%)} to{transform:translateY(0)}}
+@keyframes popIn{from{opacity:0; transform:scale(0.97)} to{opacity:1; transform:scale(1)}}
+.modal-handle{width:40px; height:4px; background:var(--border); border-radius:2px; margin:10px auto 0}
+@media(min-width:640px){ .modal-handle{display:none} }
+.modal-head{padding:18px 20px 14px; border-bottom:1px solid var(--border-light); position:sticky; top:0; background:var(--bg2); z-index:2; border-radius:20px 20px 0 0}
+@media(min-width:640px){ .modal-head{border-radius:16px 16px 0 0} }
+.modal-head-row{display:flex; align-items:flex-start; justify-content:space-between; gap:12px}
+.modal-tag{font-family:'Courier New',monospace; font-weight:800; font-size:19px; color:var(--text-dark); word-break:break-word}
+.modal-close{flex:none; width:32px; height:32px; border-radius:50%; border:none; background:var(--bg3); color:var(--text-mid); font-size:16px; cursor:pointer}
+.modal-close:hover{background:var(--border)}
+.modal-badges{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+.modal-desc{font-size:14px; color:var(--text-mid); margin-top:10px; line-height:1.5}
+.modal-body{padding:16px 20px 24px}
+.detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 16px}
+@media(max-width:480px){ .detail-grid{grid-template-columns:1fr} }
+.detail-item{min-width:0}
+.detail-item.full{grid-column:1/-1}
+.detail-label{font-size:10.5px; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px}
+.detail-value{font-size:13.5px; color:var(--text-dark); font-weight:600; word-break:break-word}
+.detail-value.mono{font-family:'Courier New',monospace}
+.detail-value.empty{color:var(--text-light); font-weight:400; font-style:italic}
+.copy-row{display:flex; align-items:center; gap:8px}
+.copy-btn{
+  flex:none; border:1.2px solid var(--border); background:var(--bg3); color:var(--text-mid);
+  border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:700;
+}
+.copy-btn:hover{border-color:var(--blue); color:var(--blue)}
+.copy-btn.copied{border-color:var(--green); color:var(--green); background:var(--green-light)}
+.modal-footer-note{padding:12px 20px; border-top:1px solid var(--border-light); font-size:11px; color:var(--text-light)}
+
+/* ── Page footer ── */
+.page-footer{text-align:center; padding:26px 20px 10px; color:var(--text-light); font-size:11.5px; line-height:1.7}
+.page-footer b{color:var(--text-mid)}
+
+.no-print{}
+@media print{ .no-print, header, .search-hero, .filters-row{display:none !important} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon">🔎</div>
+      <div class="brand-text">
+        <div class="brand-title">Find Asset Detail</div>
+        <div class="brand-sub">Master Asset Register — Unit 7</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="count-pill" id="headerCount">Memuat...</span>
+      <a class="btn-back" href="index.html">← Dashboard</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="search-hero no-print">
+    <div class="search-box" id="searchBoxWrap">
+      <span class="icon-search">🔍</span>
+      <input type="text" id="searchInput" placeholder="Cari asset tag, deskripsi, lokasi, custodian, atau serial number…" autocomplete="off" spellcheck="false" disabled>
+      <button class="icon-clear" id="clearBtn" type="button" title="Bersihkan pencarian">✕</button>
+    </div>
+    <div class="filters-row">
+      <div class="filter-field">
+        <label for="filterStatus">Status</label>
+        <select id="filterStatus" disabled><option value="">Semua Status</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="filterWorkgroup">Default Workgroup</label>
+        <select id="filterWorkgroup" disabled><option value="">Semua Workgroup</option></select>
+      </div>
+      <div class="filter-field">
+        <label for="filterLevel">Level</label>
+        <select id="filterLevel" disabled><option value="">Semua Level</option></select>
+      </div>
+    </div>
+    <div class="search-hint">Tekan <kbd>/</kbd> untuk fokus ke pencarian, <kbd>Esc</kbd> untuk membersihkan. Hasil diurutkan: tag persis cocok → diawali kata kunci → mengandung kata kunci.</div>
+  </div>
+
+  <div id="mainArea">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div>Memuat database aset…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Modal Detail Asset ── -->
+<div class="modal-overlay no-print" id="detailModal">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTagText">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <div class="modal-head-row">
+        <div style="min-width:0">
+          <div class="modal-tag" id="modalTagText">—</div>
+        </div>
+        <button class="modal-close" id="modalCloseBtn" type="button" aria-label="Tutup">✕</button>
+      </div>
+      <div class="modal-badges" id="modalBadges"></div>
+      <div class="modal-desc" id="modalDesc"></div>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid" id="modalGrid"></div>
+    </div>
+    <div class="modal-footer-note">Data induk aset (Maximo Asset Export) — bukan riwayat pemeliharaan. Untuk riwayat PM, buka modul checksheet terkait dari Dashboard.</div>
+  </div>
+</div>
+
+<div class="page-footer no-print" id="pageFooter"></div>
+
+<script>
+var ASSETS = [];
+var RESULT_CAP = 150;
+var currentResults = [];
+var shownCount = RESULT_CAP;
+var FIELDS_SEARCHABLE = ['asset','description','location','locationDesc','custodian','serial','pid'];
+
+var FIELD_LABELS = {
+  asset: 'Asset Tag', description: 'Description', location: 'Location Code',
+  locationDesc: 'Location Description', custodian: 'Custodian', workgroup: 'Default Workgroup',
+  mpi: 'Maintenance Priority Index (MPI)', level: 'Level', serial: 'Serial Number',
+  pid: 'P / ID Number', status: 'Status'
+};
+
+function escHtml(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function badgeClassForStatus(status){
+  var key = 'badge-' + String(status || '').toUpperCase().replace(/[^A-Z]/g, '');
+  return key;
+}
+function badgeClassForWorkgroup(wg){
+  var key = 'badge-wg-' + String(wg || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return key;
+}
+
+function statusBadgeHtml(status){
+  if (!status) return '';
+  var cls = badgeClassForStatus(status);
+  return '<span class="badge ' + cls + '">' + escHtml(status) + '</span>';
+}
+function workgroupBadgeHtml(wg){
+  if (!wg) return '';
+  var cls = badgeClassForWorkgroup(wg);
+  return '<span class="badge ' + cls + '">' + escHtml(wg) + '</span>';
+}
+function levelBadgeHtml(level){
+  if (!level) return '';
+  return '<span class="badge badge-outline">' + escHtml(level) + '</span>';
+}
+
+/* ── Load data ── */
+function loadData(){
+  fetch('asset-database.json', {cache:'no-cache'})
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data){
+      ASSETS = data;
+      onDataLoaded();
+    })
+    .catch(function(err){ showLoadError(err); });
+}
+
+function showLoadError(err){
+  document.getElementById('mainArea').innerHTML =
+    '<div class="error-state">' +
+      '<div style="font-size:28px;margin-bottom:6px">⚠️</div>' +
+      '<div style="font-weight:700;margin-bottom:4px">Gagal memuat database aset</div>' +
+      '<div style="font-size:12.5px">' + escHtml(err && err.message ? err.message : String(err)) + '</div>' +
+      '<div style="font-size:11.5px;margin-top:8px;opacity:0.8">Pastikan file <code>asset-database.json</code> ada di folder yang sama, lalu coba lagi.</div>' +
+      '<button onclick="location.reload()">🔄 Coba Lagi</button>' +
+    '</div>';
+}
+
+function distinctCounts(field){
+  var counts = {};
+  for (var i = 0; i < ASSETS.length; i++){
+    var v = ASSETS[i][field] || '';
+    counts[v] = (counts[v] || 0) + 1;
+  }
+  var arr = [];
+  for (var k in counts) arr.push({value:k, count:counts[k]});
+  arr.sort(function(a,b){ return b.count - a.count; });
+  return arr;
+}
+
+function populateFilterSelect(id, field, emptyLabel){
+  var sel = document.getElementById(id);
+  var counts = distinctCounts(field);
+  var html = '<option value="">' + emptyLabel + '</option>';
+  counts.forEach(function(c){
+    if (!c.value) return;
+    html += '<option value="' + escHtml(c.value) + '">' + escHtml(c.value) + ' (' + c.count.toLocaleString('id-ID') + ')</option>';
+  });
+  sel.innerHTML = html;
+  sel.disabled = false;
+}
+
+function onDataLoaded(){
+  document.getElementById('headerCount').textContent = ASSETS.length.toLocaleString('id-ID') + ' aset';
+  document.getElementById('searchInput').disabled = false;
+  populateFilterSelect('filterStatus', 'status', 'Semua Status');
+  populateFilterSelect('filterWorkgroup', 'workgroup', 'Semua Workgroup');
+  populateFilterSelect('filterLevel', 'level', 'Semua Level');
+  renderFooter();
+
+  var params = new URLSearchParams(location.search);
+  var hashQ = '';
+  if (location.hash.indexOf('#q=') === 0) hashQ = decodeURIComponent(location.hash.slice(3));
+  if (hashQ) document.getElementById('searchInput').value = hashQ;
+
+  doSearch();
+
+  var directAsset = params.get('asset');
+  if (directAsset) openDetail(directAsset);
+}
+
+function renderFooter(){
+  var wgCounts = distinctCounts('workgroup');
+  var wgText = wgCounts.map(function(c){ return c.value + ' (' + c.count.toLocaleString('id-ID') + ')'; }).join(' · ');
+  document.getElementById('pageFooter').innerHTML =
+    'Data induk: <b>' + ASSETS.length.toLocaleString('id-ID') + ' aset</b> — ' + escHtml(wgText) + '<br>' +
+    'Sumber: Export Maximo Asset Register, digabung dari 2 workgroup. Perbarui data dengan mengganti isi <code>asset-database.json</code>.';
+}
+
+/* ── Search & render ── */
+function currentFilters(){
+  return {
+    q: document.getElementById('searchInput').value.trim(),
+    status: document.getElementById('filterStatus').value,
+    workgroup: document.getElementById('filterWorkgroup').value,
+    level: document.getElementById('filterLevel').value
+  };
+}
+
+function matchScore(a, qLower){
+  var tag = a.asset.toLowerCase();
+  if (tag === qLower) return 0;
+  if (tag.indexOf(qLower) === 0) return 1;
+  if (tag.indexOf(qLower) >= 0) return 2;
+  return 3;
+}
+
+function doSearch(){
+  var f = currentFilters();
+  document.getElementById('searchBoxWrap').classList.toggle('has-value', !!f.q);
+  var qLower = f.q.toLowerCase();
+
+  var results = ASSETS.filter(function(a){
+    if (f.status && a.status !== f.status) return false;
+    if (f.workgroup && a.workgroup !== f.workgroup) return false;
+    if (f.level && a.level !== f.level) return false;
+    if (!qLower) return true;
+    for (var i = 0; i < FIELDS_SEARCHABLE.length; i++){
+      var v = a[FIELDS_SEARCHABLE[i]];
+      if (v && v.toLowerCase().indexOf(qLower) >= 0) return true;
+    }
+    return false;
+  });
+
+  if (qLower){
+    results = results.slice().sort(function(x, y){ return matchScore(x, qLower) - matchScore(y, qLower); });
+  }
+
+  currentResults = results;
+  shownCount = RESULT_CAP;
+  renderResults();
+}
+
+function highlight(text, qLower){
+  var safe = escHtml(text);
+  if (!qLower) return safe;
+  var idx = text.toLowerCase().indexOf(qLower);
+  if (idx < 0) return safe;
+  return escHtml(text.slice(0, idx)) + '<mark>' + escHtml(text.slice(idx, idx + qLower.length)) + '</mark>' + escHtml(text.slice(idx + qLower.length));
+}
+
+var SUGGEST_TERMS = ['MOTOR','PUMP','TRANSMITTER','CONVEYOR','FAN','BEARING'];
+
+function renderResults(){
+  var f = currentFilters();
+  var mainArea = document.getElementById('mainArea');
+  var hasAnyFilter = !!(f.q || f.status || f.workgroup || f.level);
+
+  if (!hasAnyFilter){
+    renderWelcome(mainArea);
+    return;
+  }
+
+  var html = '<div class="result-meta">' +
+    '<div class="result-count">Menampilkan <b>' + Math.min(shownCount, currentResults.length).toLocaleString('id-ID') + '</b> dari <b>' + currentResults.length.toLocaleString('id-ID') + '</b> hasil</div>' +
+    '<button class="reset-filters" onclick="resetAllFilters()">✕ Reset semua filter</button>' +
+  '</div>';
+
+  if (currentResults.length === 0){
+    html += '<div class="empty-illustration">' +
+      '<div class="big-icon">🗂️</div>' +
+      '<div class="msg">Tidak ada aset yang cocok</div>' +
+      '<div class="sub">Coba kata kunci lain, periksa ejaan, atau longgarkan filter yang aktif.</div>' +
+    '</div>';
+    mainArea.innerHTML = html;
+    return;
+  }
+
+  var qLower = f.q.toLowerCase();
+  html += '<div class="result-list">';
+  var slice = currentResults.slice(0, shownCount);
+  slice.forEach(function(a, i){
+    html += '<button type="button" class="result-card" style="animation-delay:' + Math.min(i,20)*12 + 'ms" onclick="openDetail(\'' + a.asset.replace(/'/g,"\\'") + '\')">' +
+      '<div class="result-main">' +
+        '<div class="result-tag">' + highlight(a.asset, qLower) + '</div>' +
+        '<div class="result-desc">' + (a.description ? highlight(a.description, qLower) : '<span style="color:var(--text-light);font-style:italic">Tanpa deskripsi</span>') + '</div>' +
+        '<div class="result-loc">' +
+          (a.location ? '📍 ' + highlight(a.location, qLower) : '') +
+          (a.locationDesc ? ' — ' + highlight(a.locationDesc, qLower) : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="result-badges">' + statusBadgeHtml(a.status) + workgroupBadgeHtml(a.workgroup) + '</div>' +
+      '<div class="result-arrow">›</div>' +
+    '</button>';
+  });
+  html += '</div>';
+
+  if (currentResults.length > shownCount){
+    html += '<div class="load-more-wrap"><button class="load-more-btn" onclick="loadMore()">Tampilkan ' + Math.min(RESULT_CAP, currentResults.length - shownCount).toLocaleString('id-ID') + ' hasil berikutnya ↓</button></div>';
+  }
+
+  mainArea.innerHTML = html;
+}
+
+function loadMore(){
+  shownCount += RESULT_CAP;
+  renderResults();
+}
+
+function renderWelcome(mainArea){
+  var statusCounts = distinctCounts('status');
+  var wgCounts = distinctCounts('workgroup');
+
+  var html = '<div class="welcome">' +
+    '<div class="stat-grid">' +
+      '<div class="stat-card accent-blue"><div class="num">' + ASSETS.length.toLocaleString('id-ID') + '</div><div class="lbl">Total Aset</div></div>';
+  wgCounts.forEach(function(c){
+    html += '<div class="stat-card accent-purple"><div class="num">' + c.count.toLocaleString('id-ID') + '</div><div class="lbl">' + escHtml(c.value) + '</div></div>';
+  });
+  var operatingCount = 0;
+  statusCounts.forEach(function(c){ if (c.value === 'OPERATING' || c.value === 'ACTIVE') operatingCount += c.count; });
+  html += '<div class="stat-card accent-green"><div class="num">' + operatingCount.toLocaleString('id-ID') + '</div><div class="lbl">Operating / Active</div></div>';
+  html += '</div>';
+
+  html += '<div class="suggest-title">🔥 Kata kunci populer</div><div class="suggest-chips">';
+  SUGGEST_TERMS.forEach(function(t){
+    html += '<button type="button" class="chip" onclick="quickSearch(\'' + t + '\')">' + t + '</button>';
+  });
+  html += '</div>';
+
+  html += '<div class="suggest-title">Status aset</div><div class="suggest-chips">';
+  statusCounts.forEach(function(c){
+    if (!c.value) return;
+    html += '<button type="button" class="chip" onclick="setStatusFilter(\'' + escHtml(c.value) + '\')">' + escHtml(c.value) + '<span class="n">' + c.count.toLocaleString('id-ID') + '</span></button>';
+  });
+  html += '</div>';
+
+  html += '<div class="empty-illustration">' +
+    '<div class="big-icon">🔍</div>' +
+    '<div class="msg">Ketik untuk mencari aset</div>' +
+    '<div class="sub">Bisa cari lewat asset tag, deskripsi, lokasi, custodian, atau serial number.</div>' +
+  '</div>';
+
+  html += '</div>';
+  mainArea.innerHTML = html;
+}
+
+function quickSearch(term){
+  document.getElementById('searchInput').value = term;
+  doSearch();
+  document.getElementById('searchInput').focus();
+}
+function setStatusFilter(status){
+  document.getElementById('filterStatus').value = status;
+  doSearch();
+}
+function resetAllFilters(){
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('filterWorkgroup').value = '';
+  document.getElementById('filterLevel').value = '';
+  doSearch();
+}
+
+/* ── Detail modal ── */
+function openDetail(assetTag){
+  var a = null;
+  for (var i = 0; i < ASSETS.length; i++){ if (ASSETS[i].asset === assetTag) { a = ASSETS[i]; break; } }
+  if (!a) return;
+
+  document.getElementById('modalTagText').textContent = a.asset;
+  document.getElementById('modalDesc').textContent = a.description || '(Tanpa deskripsi)';
+  document.getElementById('modalBadges').innerHTML = statusBadgeHtml(a.status) + levelBadgeHtml(a.level) + workgroupBadgeHtml(a.workgroup);
+
+  var order = ['location','locationDesc','custodian','mpi','serial','pid'];
+  var gridHtml = '';
+  order.forEach(function(field){
+    var val = a[field];
+    var isMono = (field === 'serial' || field === 'pid' || field === 'location');
+    var hasCopy = (field === 'serial' || field === 'pid') && val;
+    gridHtml += '<div class="detail-item">' +
+      '<div class="detail-label">' + escHtml(FIELD_LABELS[field]) + '</div>' +
+      (hasCopy
+        ? '<div class="copy-row"><div class="detail-value mono">' + escHtml(val) + '</div><button class="copy-btn" onclick="copyValue(this,\'' + escHtml(val).replace(/'/g,"\\'") + '\')">Salin</button></div>'
+        : '<div class="detail-value' + (isMono ? ' mono' : '') + (val ? '' : ' empty') + '">' + (val ? escHtml(val) : '—') + '</div>'
+      ) +
+    '</div>';
+  });
+  document.getElementById('modalGrid').innerHTML = gridHtml;
+
+  var url = new URL(location.href);
+  url.searchParams.set('asset', a.asset);
+  history.pushState({assetModal:a.asset}, '', url);
+
+  document.getElementById('detailModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetail(skipHistory){
+  document.getElementById('detailModal').classList.remove('show');
+  document.body.style.overflow = '';
+  if (!skipHistory){
+    var url = new URL(location.href);
+    if (url.searchParams.has('asset')){
+      url.searchParams.delete('asset');
+      history.pushState({}, '', url);
+    }
+  }
+}
+
+window.addEventListener('popstate', function(){
+  var params = new URLSearchParams(location.search);
+  var tag = params.get('asset');
+  if (tag) openDetail(tag); else closeDetail(true);
+});
+
+function copyValue(btn, val){
+  var done = function(){
+    var orig = btn.textContent;
+    btn.textContent = '✓ Tersalin';
+    btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(val).then(done).catch(function(){ fallbackCopy(val); done(); });
+  } else {
+    fallbackCopy(val); done();
+  }
+}
+function fallbackCopy(val){
+  var ta = document.createElement('textarea');
+  ta.value = val; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+}
+
+/* ── Events ── */
+var debounceTimer = null;
+document.getElementById('searchInput').addEventListener('input', function(){
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(doSearch, 150);
+});
+document.getElementById('searchInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter'){
+    clearTimeout(debounceTimer);
+    doSearch();
+    if (currentResults.length === 1) openDetail(currentResults[0].asset);
+  }
+});
+document.getElementById('clearBtn').addEventListener('click', function(){
+  document.getElementById('searchInput').value = '';
+  doSearch();
+  document.getElementById('searchInput').focus();
+});
+['filterStatus','filterWorkgroup','filterLevel'].forEach(function(id){
+  document.getElementById(id).addEventListener('change', doSearch);
+});
+document.getElementById('modalCloseBtn').addEventListener('click', function(){ closeDetail(); });
+document.getElementById('detailModal').addEventListener('click', function(e){ if (e.target === this) closeDetail(); });
+
+document.addEventListener('keydown', function(e){
+  var tag = (document.activeElement && document.activeElement.tagName) || '';
+  if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT'){
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  } else if (e.key === 'Escape'){
+    if (document.getElementById('detailModal').classList.contains('show')){
+      closeDetail();
+    } else if (document.activeElement === document.getElementById('searchInput') && document.getElementById('searchInput').value){
+      document.getElementById('searchInput').value = '';
+      doSearch();
+    }
+  }
+});
+
+loadData();
+</script>
+</body>
+</html>
