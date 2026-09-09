@@ -3135,3 +3135,168 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   dari min-height 38px) & nilai tersimpan benar, DAN di `jsa_history.html`
   (`supaFetch` di-mock): tombol Preview sudah tidak ada, tombol Drive ada
   dgn label baru "📎 Preview in Drive".
+
+## JSA: upload tanda tangan (nama → gambar, dipakai lintas record) + embed sebagai gambar di Word (2026-09-09)
+
+- **Tabel Supabase baru `jsa_signatures`** (belum pernah dibuat -- migrasi
+  SQL WAJIB dijalankan user dulu sebelum fitur ini bisa jalan di produksi):
+  `id uuid primary key default gen_random_uuid()`, `name text unique`,
+  `drive_url text`, `drive_file_id text`, `updated_at timestamptz`. Isi
+  BYTE gambar tanda tangan TIDAK disimpan di Supabase sama sekali -- lewat
+  `uploadFileToGDrive()` (fungsi generik yang sama dgn upload backup Word,
+  lihat bagian "file Word hasil generate diupload juga ke Google Drive" di
+  atas) ke Google Drive, Supabase cuma nyimpen link+fileId (pola sama
+  dgn foto evidence modul lain -- byte besar TIDAK PERNAH masuk `pm_records`
+  atau tabel lain manapun).
+- **`shared.js`**: `jsaLoadSignatureLibrary()`/`jsaFindSignatureEntry()`/
+  `jsaSaveSignature()`/`jsaProcessSignatureImage()` -- data layer generik,
+  dipakai KEDUA file JSA. `jsaProcessSignatureImage(file)` bikin background
+  putih TRANSPARAN otomatis (canvas, pixel dgn R/G/B semua >= 235 di-set
+  alpha=0) sebelum upload -- user tinggal foto/scan tanda tangan di kertas
+  putih, tidak perlu edit background manual dulu.
+- **UI**: tiap field signature (Op Supervisor/RIC/Maint Supervisor/Health
+  Safety/Intersection Spv/Additional Approval, +Applicant khusus Conditional
+  Access) sekarang py `<input list="jsaSigDatalist">` (autocomplete nama
+  dari tanda tangan yang SUDAH PERNAH diupload siapa pun) + tombol
+  "✍️ TTD" (buka file picker) + kotak preview kecil. Ketik nama yang
+  SUDAH ADA di library -> preview otomatis muncul (debounce 350ms) TANPA
+  perlu upload ulang -- ini yang membuat tanda tangan "dipakai lintas
+  record" (nama yang sama = gambar yang sama, disimpan SEKALI, dipakai
+  berkali-kali oleh siapa saja yang tahu/ketik nama itu).
+- **Embed ke Word BUKAN base64/data-URI tertanam di teks, tapi GAMBAR
+  ASLI OOXML** (`<w:drawing>`/`<pic:pic>`) -- `jsaZipAddSignatureImage()`
+  menambah file PNG baru ke `word/media/` di dalam zip + relationship baru
+  di `word/_rels/document.xml.rels` (`rIdSig` + counter, SENGAJA beda
+  prefix dari `rId1`-`rId14` bawaan template supaya tidak pernah bentrok),
+  `jsaBuildSignatureDrawingXml()` bikin fragment XML lengkap (semua
+  namespace `w:`/`wp:`/`a:`/`pic:`/`r:` dideklarasikan inline di root
+  fragment) yang di-`importNode()` ke dokumen utama -- BUKAN dibangun
+  node-per-node via `createElementNS` (lebih gampang salah prefix
+  namespace utk fragment multi-namespace sekali-pakai begini). Ukuran
+  gambar diskalakan proporsional max ~3.53cm x ~1.25cm (EMU, 9525
+  EMU/px @96dpi) via `jsaSigEmuSize()`. Nama yang TIDAK punya tanda tangan
+  tersimpan tetap jadi teks biasa (fallback, perilaku lama tidak berubah).
+- `jsaFillTable1(tbl1, form, sigMap, zipCtx)` -- signature 2 parameter baru
+  (`sigMap` dari `jsaPrefetchSignatureImages()`, `zipCtx` state
+  zip+relasi+counter) ditambahkan ke SEMUA pemanggil, `jsaSetParagraphSignature()`
+  (bukan `jsaSetParagraphText()` polos) dipakai utk ke-6/5 field signature.
+- Diverifikasi 3 lapis: (1) inspeksi XML+zip mentah via Python+lxml (PNG
+  media valid, relationship benar, EMU benar, fallback teks utk nama tanpa
+  tanda tangan benar), (2) LibreOffice headless convert-to-pdf (no
+  corruption), (3) render halaman spesifik ke PNG (visual: 2 tanda tangan
+  tampil sbg gambar transparan, 1 nama tanpa tanda tangan tampil sbg teks).
+  **BELUM diverifikasi end-to-end dgn Supabase/Drive SUNGGUHAN** (semua tes
+  pakai mock jaringan) -- kalau ada laporan "upload tanda tangan gagal
+  diam-diam" di produksi, pastikan dulu migrasi SQL tabel `jsa_signatures`
+  di atas SUDAH dijalankan sebelum curiga hal lain (lihat juga bug Drive-
+  upload generik yang mirip di bagian JSA berikutnya di bawah).
+
+## 4 revisi JSA: fix link Drive tidak konsisten, library hazard dari input manual, preview Word full-screen, warna tombol (2026-09-09)
+
+- **Item 1 -- link "📎 Preview in Drive" kadang muncul kadang tidak di
+  `jsa_history.html`**: root cause `jsaUploadWordToDrive()` (kedua file
+  JSA) SKIP TOTAL upload ke Drive kalau `window._editingId` masih kosong
+  -- kejadian tiap kali user klik "📄 Generate Word" SEBELUM PERNAH klik
+  "💾 Simpan Draft" sama sekali (form baru, belum ada baris di Supabase
+  sama sekali utk nyimpen `wordDriveUrl`-nya). **Fix**: fungsi baru
+  `jsaEnsureSaved()` (kedua file, kode IDENTIK) dipanggil di AWAL
+  `jsaUploadWordToDrive()` -- kalau `_editingId` sudah ada, langsung pakai
+  itu (tidak ada perubahan perilaku utk kasus normal); kalau belum ada,
+  POST record BARU SEKARANG JUGA (langsung lewat `supaFetch`, BUKAN lewat
+  `dbSave()` -- JSA tidak pernah punya foto evidence sama sekali jadi
+  pipeline upload-foto wajib milik `dbSave()` tidak relevan/tidak perlu di
+  sini) sebelum lanjut upload Drive. Hasilnya: klik "Generate Word" APAPUN
+  urutannya (sebelum/sesudah Simpan Draft) SELALU berujung record
+  tersimpan + link Drive terisi -- tidak lagi bergantung urutan klik user.
+  Diverifikasi headless Chrome (mock Supabase+Drive): form baru -> 1 POST
+  + link Drive terisi; generate ulang record yang sudah ada -> TIDAK bikin
+  duplikat POST, cuma PATCH + hapus file Drive versi lama.
+- **Item 2 -- hazard/risk/control yang diketik manual bisa disimpan ke
+  library bersama**: tabel Supabase baru `jsa_hazard_library` (migrasi SQL
+  di bawah, WAJIB dijalankan user) -- `id uuid pk`, `hazard text`,
+  `risk text`, `control text`, `created_at timestamptz`. Isinya teks
+  MURNI (tidak ada foto/file), jadi TIDAK lewat Google Drive sama sekali
+  (beda dari tanda tangan/Word backup di atas). `shared.js`:
+  `jsaSaveHazardToLibrary()`/`jsaLoadHazardLibraryFromServer()` (data
+  layer generik). Kedua file JSA: tombol baru **"💾"** (hijau,
+  `.btn-hz-save-lib`) di kolom Aksi SETIAP baris hazard (bukan cuma yang
+  dari "Tambah Hazard Manual" -- digeneralisasi ke semua baris karena
+  fungsinya sama persis apa pun asal barisnya) memanggil
+  `jsaSaveHazardRowToLibrary()`: validasi tidak kosong, POST ke tabel
+  baru, lalu **panggil ulang `jsaLoadHazardBank()`** supaya LANGSUNG
+  kepakai tanpa reload halaman (memenuhi "bisa digunakan langsung
+  nantinya oleh semua user" -- utk user lain, begitu mereka buka/refresh
+  halaman, entry baru otomatis ikut ter-fetch). `jsaLoadHazardBank()`
+  dirombak dari cuma fetch `jsa_hazard_bank.json` (statis) jadi GABUNGAN
+  static + server (`Promise.all`, entry server di-prefix id `usr-` +
+  `source:'Ditambahkan pengguna'` supaya kebeda dari 29 entry bawaan &
+  tampil label sumbernya di picker) -- struktur akhir tetap kompatibel
+  100% dgn kode picker (`hzRenderList`/`hzConfirmSelection`) yang sudah
+  ada, tidak perlu diubah.
+- **Item 2 (warna tombol)**: "+ Tambah Hazard Manual" (`jsaAddManualHazardRow`)
+  diganti class dari `.btn-gray` (navy gelap, kelihatan nyaris hitam di
+  tema gelap JSA -- dikeluhkan user via screenshot) jadi **`.btn-green`**
+  (class YANG SUDAH ADA, `#2ecc71`, sama persis dgn tombol "💾 Simpan
+  Draft" -- reuse warna yang sudah mapan, BUKAN warna baru). `.btn-gray`
+  ITU SENDIRI **TIDAK diubah** (dipakai jg oleh tombol lain -- "Preview
+  Hasil Word"/"Batal"/"Isi Otomatis..." -- yang TIDAK dikeluhkan user,
+  mengubah class induknya akan ikut mengubah semua itu tanpa diminta).
+- **Item 3 -- modal "Preview Hasil Word" terpotong, tidak full-layar di
+  desktop**: 2 bug terpisah di `jsaFitPreviewToWidth()` (kedua file, kode
+  IDENTIK): (a) CSS full-screen SEBENARNYA sudah ditambahkan sesi
+  sebelumnya (`@media (min-width:900px){ .jsa-preview-dialog{width:100vw;
+  height:100vh} }`) tapi (b) selector JS-nya SALAH -- ditulis `.docx-wrapper`
+  (asumsi nama class DEFAULT `docx-preview`), padahal `docx.renderAsync()`
+  dipanggil dgn opsi `{className:'jsa-docx-preview'}` yang mengubah nama
+  wrapper ASLI jadi **`.jsa-docx-preview-wrapper`** (`'<className>-wrapper'`)
+  dan tiap halaman jadi **`<section class="jsa-docx-preview">`** (BUKAN
+  `section, article, div` generik) -- diverifikasi LANGSUNG dari DOM
+  hasil render (headless Chrome `--dump-dom`), bukan tebakan dari
+  dokumentasi library. Selector salah ini bikin `jsaFitPreviewToWidth()`
+  selalu `return` lebih awal (wrapper/page null) TANPA error kelihatan --
+  scale-to-fit tidak pernah jalan sama sekali sejak awal dibuat. **Fix**:
+  selector diganti ke nama yang benar. Diverifikasi headless Chrome 2
+  ukuran viewport: desktop lebar (1440px, halaman lebih sempit dari
+  layar) -> `zoom=1` (tidak diskalakan, sudah muat); viewport sempit
+  (900px, halaman lebih lebar dari layar) -> `zoom=0.705` (diskalakan
+  turun proporsional supaya JSA "fit didalamnya" seperti diminta).
+  **Pelajaran**: kalau nanti ada library pihak ketiga dipanggil dgn opsi
+  penamaan class kustom (`className`/`prefix`/dsb), JANGAN asumsikan nama
+  class internal defaultnya tetap berlaku -- WAJIB verifikasi lgs dari
+  DOM hasil render (`--dump-dom`/devtools), bukan dari nama umum yang
+  "biasanya" dipakai library sejenis.
+- **Migrasi SQL WAJIB dijalankan user** (di Supabase SQL Editor) sebelum
+  Item 1 (tabel `jsa_signatures`, sesi sebelumnya) dan Item 2 (tabel
+  `jsa_hazard_library`, sesi ini) bisa jalan di produksi -- BELUM PERNAH
+  dijalankan per tanggal dokumen ini:
+  ```sql
+  create table if not exists jsa_signatures (
+    id uuid primary key default gen_random_uuid(),
+    name text unique not null,
+    drive_url text,
+    drive_file_id text,
+    updated_at timestamptz default now()
+  );
+  alter table jsa_signatures disable row level security;
+
+  create table if not exists jsa_hazard_library (
+    id uuid primary key default gen_random_uuid(),
+    hazard text,
+    risk text,
+    control text,
+    created_at timestamptz default now()
+  );
+  alter table jsa_hazard_library disable row level security;
+
+  notify pgrst, 'reload schema';
+  ```
+  RLS DISABLED sengaja mengikuti pola tabel-tabel kecil serupa yang sudah
+  ada (mis. `pm_sync_log`) -- semua akses tabel ini dari client lewat anon
+  key, tidak ada layer auth terpisah di app ini. Tanpa migrasi ini,
+  `jsaLoadSignatureLibrary()`/`jsaLoadHazardLibraryFromServer()` akan
+  gagal dgn error `PGRST205` (table not found) yang di-catch diam-diam
+  (fallback ke array kosong, TIDAK bikin fitur lain rusak) -- fitur upload
+  tanda tangan & simpan-ke-library-hazard akan tampak seperti "tidak
+  berfungsi" (gagal simpan) sampai migrasi ini dijalankan.
+- `shared.js?v=` dinaikkan ke `20260909a` di semua 38 file yang
+  memuatnya.

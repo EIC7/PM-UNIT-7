@@ -6,7 +6,7 @@
 <title>JSA Report</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
-<script src="shared.js?v=20260908a"></script>
+<script src="shared.js?v=20260909a"></script>
 <script src="db-helper.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -27,6 +27,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .section-title{background:#1c2a44;padding:10px 14px;border-left:4px solid #6fa1e8;margin:18px 0 12px 0;font-weight:700;font-size:0.9em;color:#bfd6f7;border-radius:0 4px 4px 0}
 .form-group{margin-bottom:14px}
 label{display:block;font-weight:600;margin-bottom:5px;font-size:0.88em;color:#aab4c4}
+/* ── Tanda tangan digital (2026-09-09) -- lihat CLAUDE.md ── */
+.jsa-sig-input-row{display:flex;gap:6px;align-items:stretch}
+.jsa-sig-input-row input{flex:1;min-width:0}
+.jsa-sig-upload-btn{flex:none;padding:0 12px;font-size:0.78em;font-weight:700;white-space:nowrap;background:#2a3348;border:1px solid #3a4560;color:#bfd6f7;border-radius:6px;cursor:pointer}
+.jsa-sig-upload-btn:hover{background:#333f5c}
+.jsa-sig-preview-box{margin-top:6px;width:170px;max-width:100%;height:56px;border:1.5px dashed #3a4560;border-radius:6px;background:#12182a;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.jsa-sig-preview-box img{max-width:100%;max-height:100%;object-fit:contain}
+.jsa-sig-empty{font-size:0.68em;color:#7c8698;text-align:center;padding:4px;line-height:1.3}
+.jsa-sig-preview-box.jsa-sig-loading .jsa-sig-empty{color:#6fa1e8}
 input,select,textarea{width:100%;padding:10px 12px;border:1px solid #3a4560;border-radius:6px;font-size:1em;font-family:inherit;color:#e7ebf2;background:#1c2334}
 input:focus,select:focus,textarea:focus{outline:none;border-color:#6fa1e8;box-shadow:0 0 0 3px rgba(111,161,232,0.2)}
 textarea{min-height:64px;resize:vertical;line-height:1.5}
@@ -64,6 +73,9 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .jsa-hz-table col.col-risk{width:20%}
 .jsa-hz-table col.col-ctrl{width:35%}
 .jsa-hz-table col.col-act{width:34px}
+.jsa-hz-table td.col-act{text-align:center}
+.jsa-hz-table td.col-act .col-act-inner{display:flex;flex-direction:column;gap:4px;align-items:center}
+.jsa-hz-table td.col-act .btn-hz-save-lib{margin-right:0}
 .jsa-hz-table th{background:#1c2334;color:#aab4c4;font-size:0.76em;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:7px 8px;text-align:left;border-bottom:1px solid #2a3348}
 .jsa-hz-table td{padding:6px;border-bottom:1px solid #232c40;vertical-align:top}
 .jsa-hz-table td.step-cell{background:#161d2c;border-right:1px solid #2a3348}
@@ -73,6 +85,8 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .jsa-hz-empty{color:#7c8698;font-size:0.82em;font-style:italic;padding:14px 10px}
 .rm-hz-btn{border:1px solid #3a4560;background:#1c2334;color:#7c8698;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:0.72em}
 .rm-hz-btn:hover{color:#e5695c;border-color:#e5695c}
+.btn-hz-save-lib{border:1px solid #2ecc71;background:rgba(46,204,113,0.16);color:#7be8a4;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:0.78em;margin-right:4px}
+.btn-hz-save-lib:hover{background:#2ecc71;color:#0b2016}
 .btn-step-rm{font-size:0.72em;padding:5px 8px;width:100%;justify-content:center}
 .jsa-hz-actions-row td{background:#12182a;padding:8px}
 .jsa-hz-actions-row .btn{font-size:0.78em;padding:6px 11px;margin-right:6px}
@@ -94,9 +108,16 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .jsa-preview-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:20000;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:14px}
 .jsa-preview-modal.show{display:flex}
 .jsa-preview-dialog{background:#1c2334;border-radius:10px;width:min(96vw,900px);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;border:1px solid #3a4560}
+/* Desktop (>=900px): modal Preview FULL LAYAR (bukan cuma "hampir penuh")
+   -- permintaan eksplisit user, dokumen JSA landscape/lebar jadi kepotong
+   scroll horizontal kalau modalnya masih dibatasi 900px. */
+@media (min-width:900px){
+  .jsa-preview-modal{padding:0}
+  .jsa-preview-dialog{width:100vw;height:100vh;max-height:100vh;border-radius:0;border:none}
+}
 .jsa-preview-header{padding:12px 16px;border-bottom:1px solid #3a4560;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:0.82em;color:#e3c37a}
 .jsa-preview-header button{flex:none;padding:7px 14px;border:1px solid #3a4560;background:#2a3348;color:#e7ebf2;border-radius:6px;cursor:pointer;font-size:0.95em}
-.jsa-preview-body{overflow:auto;background:#525659;padding:16px}
+.jsa-preview-body{overflow:auto;background:#525659;padding:16px;flex:1}
 .jsa-docx-preview{background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.4)}
 
 /* ── Plant Process & Risk Checklist -- tabel grid meniru tata letak Word asli
@@ -183,17 +204,61 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
       <div class="form-group"><label>Work Period — Date &amp; Time Start</label><input type="datetime-local" id="jsaPeriodStart"></div>
       <div class="form-group"><label>Work Period — Date &amp; Time Finish</label><input type="datetime-local" id="jsaPeriodFinish"></div>
     </div>
-    <div class="form-group" style="margin-bottom:6px"><label style="margin-bottom:2px">Signature — Nama (ketik nama, tanda tangan fisik dilakukan di file Word setelah dicetak)</label></div>
+    <div class="form-group" style="margin-bottom:6px"><label style="margin-bottom:2px">Signature — Nama (ketik/pilih nama; upload tanda tangan sekali, otomatis kepakai lagi kalau nama yang sama dipilih lain kali)</label></div>
+    <datalist id="jsaSigDatalist"></datalist>
+    <input type="file" id="jsaSigFileInput" accept="image/*" style="display:none" onchange="jsaSigOnFileChosen(event)">
     <div class="row" style="margin-bottom:12px">
-      <div class="form-group"><label>Operation Supervisor / POC</label><input type="text" id="jsaSigOpSupervisor" placeholder="Nama"></div>
-      <div class="form-group"><label>RIC</label><input type="text" id="jsaSigRic" placeholder="Nama"></div>
+      <div class="form-group">
+        <label>Operation Supervisor / POC</label>
+        <div class="jsa-sig-input-row">
+          <input type="text" id="jsaSigOpSupervisor" class="jsa-sig-name-input" list="jsaSigDatalist" placeholder="Nama" oninput="jsaSigHandleNameInput('jsaSigOpSupervisor')" onchange="jsaSigUpdatePreviewForField('jsaSigOpSupervisor')">
+          <button type="button" class="jsa-sig-upload-btn" onclick="jsaSigTriggerUpload('jsaSigOpSupervisor')">✍️ TTD</button>
+        </div>
+        <div class="jsa-sig-preview-box" id="jsaSigOpSupervisor_sigbox"><span class="jsa-sig-empty">Belum ada tanda tangan</span></div>
+      </div>
+      <div class="form-group">
+        <label>RIC</label>
+        <div class="jsa-sig-input-row">
+          <input type="text" id="jsaSigRic" class="jsa-sig-name-input" list="jsaSigDatalist" placeholder="Nama" oninput="jsaSigHandleNameInput('jsaSigRic')" onchange="jsaSigUpdatePreviewForField('jsaSigRic')">
+          <button type="button" class="jsa-sig-upload-btn" onclick="jsaSigTriggerUpload('jsaSigRic')">✍️ TTD</button>
+        </div>
+        <div class="jsa-sig-preview-box" id="jsaSigRic_sigbox"><span class="jsa-sig-empty">Belum ada tanda tangan</span></div>
+      </div>
     </div>
     <div class="row">
-      <div class="form-group"><label>Maintenance Supervisor / ENG / Call Out Leader</label><input type="text" id="jsaSigMaintSupervisor" placeholder="Nama"></div>
-      <div class="form-group"><label>Health &amp; Safety</label><input type="text" id="jsaSigHealthSafety" placeholder="Nama"></div>
+      <div class="form-group">
+        <label>Maintenance Supervisor / ENG / Call Out Leader</label>
+        <div class="jsa-sig-input-row">
+          <input type="text" id="jsaSigMaintSupervisor" class="jsa-sig-name-input" list="jsaSigDatalist" placeholder="Nama" oninput="jsaSigHandleNameInput('jsaSigMaintSupervisor')" onchange="jsaSigUpdatePreviewForField('jsaSigMaintSupervisor')">
+          <button type="button" class="jsa-sig-upload-btn" onclick="jsaSigTriggerUpload('jsaSigMaintSupervisor')">✍️ TTD</button>
+        </div>
+        <div class="jsa-sig-preview-box" id="jsaSigMaintSupervisor_sigbox"><span class="jsa-sig-empty">Belum ada tanda tangan</span></div>
+      </div>
+      <div class="form-group">
+        <label>Health &amp; Safety</label>
+        <div class="jsa-sig-input-row">
+          <input type="text" id="jsaSigHealthSafety" class="jsa-sig-name-input" list="jsaSigDatalist" placeholder="Nama" oninput="jsaSigHandleNameInput('jsaSigHealthSafety')" onchange="jsaSigUpdatePreviewForField('jsaSigHealthSafety')">
+          <button type="button" class="jsa-sig-upload-btn" onclick="jsaSigTriggerUpload('jsaSigHealthSafety')">✍️ TTD</button>
+        </div>
+        <div class="jsa-sig-preview-box" id="jsaSigHealthSafety_sigbox"><span class="jsa-sig-empty">Belum ada tanda tangan</span></div>
+      </div>
     </div>
-    <div class="form-group"><label>Intersection Spv (FA/Chem)</label><input type="text" id="jsaSigIntersectionSpv" placeholder="Nama"></div>
-    <div class="form-group"><label>Nama Approval Tambahan (Dept. Manager / Sr. Manager / President Director — sesuai Risk Level di atas)</label><input type="text" id="jsaSigAdditionalApproval" placeholder="Nama (kosongkan kalau Risk Level Low/Medium)"></div>
+    <div class="form-group">
+      <label>Intersection Spv (FA/Chem)</label>
+      <div class="jsa-sig-input-row">
+        <input type="text" id="jsaSigIntersectionSpv" class="jsa-sig-name-input" list="jsaSigDatalist" placeholder="Nama" oninput="jsaSigHandleNameInput('jsaSigIntersectionSpv')" onchange="jsaSigUpdatePreviewForField('jsaSigIntersectionSpv')">
+        <button type="button" class="jsa-sig-upload-btn" onclick="jsaSigTriggerUpload('jsaSigIntersectionSpv')">✍️ TTD</button>
+      </div>
+      <div class="jsa-sig-preview-box" id="jsaSigIntersectionSpv_sigbox"><span class="jsa-sig-empty">Belum ada tanda tangan</span></div>
+    </div>
+    <div class="form-group">
+      <label>Nama Approval Tambahan (Dept. Manager / Sr. Manager / President Director — sesuai Risk Level di atas)</label>
+      <div class="jsa-sig-input-row">
+        <input type="text" id="jsaSigAdditionalApproval" class="jsa-sig-name-input" list="jsaSigDatalist" placeholder="Nama (kosongkan kalau Risk Level Low/Medium)" oninput="jsaSigHandleNameInput('jsaSigAdditionalApproval')" onchange="jsaSigUpdatePreviewForField('jsaSigAdditionalApproval')">
+        <button type="button" class="jsa-sig-upload-btn" onclick="jsaSigTriggerUpload('jsaSigAdditionalApproval')">✍️ TTD</button>
+      </div>
+      <div class="jsa-sig-preview-box" id="jsaSigAdditionalApproval_sigbox"><span class="jsa-sig-empty">Belum ada tanda tangan</span></div>
+    </div>
   </div>
 
   <!-- ══ PLANT PROCESS & RISK CHECKLIST (Table 1 matrix) ══ -->
@@ -421,12 +486,128 @@ var jsaHazardBank = []; // dimuat dari jsa_hazard_bank.json
 var jsaHazardPickerTarget = null; // {sectionCode, stepIdx} -- step yang lagi dibuka pickernya
 var jsaHazardPickerSelected = {}; // id -> true, state sementara selama modal terbuka
 
+// Gabungan library STATIS (jsa_hazard_bank.json, bundled, tidak bisa
+// ditulis) + library SERVER (tabel Supabase jsa_hazard_library, diisi user
+// lewat tombol "💾 Simpan ke Library" per baris hazard -- lihat
+// jsaSaveHazardRowToLibrary()). Dipanggil ulang tiap kali ada hazard baru
+// disimpan supaya LANGSUNG kepakai tanpa reload halaman.
 function jsaLoadHazardBank() {
-  fetch('jsa_hazard_bank.json').then(function(r){ return r.json(); }).then(function(data) {
-    jsaHazardBank = data || [];
-  }).catch(function(err) {
+  var staticP = fetch('jsa_hazard_bank.json').then(function(r){ return r.json(); }).catch(function(err) {
     console.error('[jsa] gagal load jsa_hazard_bank.json', err);
-    jsaHazardBank = [];
+    return [];
+  });
+  var serverP = (typeof jsaLoadHazardLibraryFromServer === 'function') ? jsaLoadHazardLibraryFromServer() : Promise.resolve([]);
+  return Promise.all([staticP, serverP]).then(function(r) {
+    var serverList = (r[1] || []).map(function(row) {
+      return {
+        id: 'usr-' + row.id,
+        hazard: (row.hazard || '').split('\n').map(function(s){return s.trim();}).filter(Boolean),
+        risk: (row.risk || '').split('\n').map(function(s){return s.trim();}).filter(Boolean),
+        control: (row.control || '').split('\n').map(function(s){return s.trim();}).filter(Boolean),
+        source: 'Ditambahkan pengguna'
+      };
+    });
+    jsaHazardBank = (r[0] || []).concat(serverList);
+  });
+}
+// Simpan 1 baris hazard yang SUDAH DIKETIK user (manual ATAU hasil pilihan
+// library yang diedit lagi) ke jsa_hazard_library -- langsung bisa dipakai
+// user LAIN lewat "🔎 Pilih Hazard dari Library" begitu tersimpan.
+function jsaSaveHazardRowToLibrary(code, stepIdx, hzIdx) {
+  var hz = jsaState.sections[code].steps[stepIdx].hazards[hzIdx];
+  if (!hz || (!hz.hazard.trim() && !hz.risk.trim() && !hz.control.trim())) {
+    alert('Isi dulu Hazard/Risk/Control Measures sebelum disimpan ke Library.');
+    return;
+  }
+  if (typeof jsaSaveHazardToLibrary !== 'function') { alert('Fitur Library belum tersedia (shared.js belum termuat).'); return; }
+  return jsaSaveHazardToLibrary(hz.hazard, hz.risk, hz.control).then(function() {
+    if (typeof dbShowToast === 'function') dbShowToast('✓ Hazard disimpan ke Library, langsung bisa dipakai user lain');
+    jsaLoadHazardBank();
+  }).catch(function(err) {
+    alert('Gagal menyimpan ke Library: ' + (err && err.message ? err.message : err));
+  });
+}
+
+// ── UI Library Tanda Tangan (data layer jsaLoadSignatureLibrary/
+//    jsaSignatureLibrary/jsaFindSignatureEntry ada di shared.js, dipakai
+//    bersama jsa_condition_access.html -- fungsi2 UI di bawah ini KHUSUS
+//    file ini karena beda field id per file). ──
+var jsaSigUploadTargetField = null;
+
+function jsaSigPopulateDatalist() {
+  var dl = document.getElementById('jsaSigDatalist');
+  if (!dl) return;
+  dl.innerHTML = jsaSignatureLibrary.map(function(s) {
+    return '<option value="' + jsaEsc(s.name) + '">';
+  }).join('');
+}
+
+// Semua field Signature yg ADA DI HALAMAN dicari via class
+// .jsa-sig-name-input (bukan daftar id hardcode) -- generik, jumlah field
+// beda per file JSA tidak perlu disesuaikan di sini.
+function jsaRefreshAllSignaturePreviews() {
+  document.querySelectorAll('.jsa-sig-name-input').forEach(function(input) {
+    jsaSigUpdatePreviewForField(input.id);
+  });
+}
+
+function jsaSigUpdatePreviewForField(fieldId) {
+  var input = document.getElementById(fieldId);
+  var box = document.getElementById(fieldId + '_sigbox');
+  if (!input || !box) return;
+  var entry = jsaFindSignatureEntry(input.value);
+  if (!entry) {
+    box.classList.remove('jsa-sig-loading');
+    box.innerHTML = '<span class="jsa-sig-empty">Belum ada tanda tangan</span>';
+    return;
+  }
+  box.classList.add('jsa-sig-loading');
+  box.innerHTML = '<span class="jsa-sig-empty">Memuat...</span>';
+  _pmFetchDriveFileAsBase64(entry.drive_file_id).then(function(dataUrl) {
+    box.classList.remove('jsa-sig-loading');
+    if (!dataUrl) { box.innerHTML = '<span class="jsa-sig-empty">Gagal memuat</span>'; return; }
+    box.innerHTML = '<img src="' + dataUrl + '" alt="Tanda tangan">';
+  });
+}
+
+// Debounce per field (bukan cek tiap keystroke persis) -- ngetik nama
+// panjang tidak memicu belasan pencarian/preview-refresh berturut-turut.
+var jsaSigDebounceTimers = {};
+function jsaSigHandleNameInput(fieldId) {
+  clearTimeout(jsaSigDebounceTimers[fieldId]);
+  jsaSigDebounceTimers[fieldId] = setTimeout(function() {
+    jsaSigUpdatePreviewForField(fieldId);
+  }, 350);
+}
+
+function jsaSigTriggerUpload(fieldId) {
+  jsaSigUploadTargetField = fieldId;
+  document.getElementById('jsaSigFileInput').click();
+}
+
+function jsaSigOnFileChosen(e) {
+  var file = e.target.files && e.target.files[0];
+  e.target.value = ''; // reset supaya bisa pilih file yg SAMA lagi kalau perlu upload ulang
+  if (!file) return;
+  var fieldId = jsaSigUploadTargetField;
+  var input = document.getElementById(fieldId);
+  var name = (input.value || '').trim();
+  if (!name) { alert('Isi nama dulu sebelum upload tanda tangan.'); return; }
+  var box = document.getElementById(fieldId + '_sigbox');
+  box.classList.add('jsa-sig-loading');
+  box.innerHTML = '<span class="jsa-sig-empty">⏳ Memproses...</span>';
+  jsaProcessSignatureImage(file).then(function(dataUrlPng) {
+    box.innerHTML = '<img src="' + dataUrlPng + '" alt="preview">'; // optimis, sblm upload ke Drive kelar
+    return jsaSaveSignature(name, dataUrlPng);
+  }).then(function() {
+    return jsaLoadSignatureLibrary(); // refresh library+datalist+SEMUA preview (termasuk field lain nama sama)
+  }).then(function() {
+    box.classList.remove('jsa-sig-loading');
+    if (typeof dbShowToast === 'function') dbShowToast('✓ Tanda tangan "' + name + '" tersimpan');
+  }).catch(function(err) {
+    box.classList.remove('jsa-sig-loading');
+    box.innerHTML = '<span class="jsa-sig-empty">Gagal: ' + jsaEsc(err && err.message ? err.message : String(err)) + '</span>';
+    console.error('[jsa-sig] upload gagal', err);
   });
 }
 
@@ -681,13 +862,16 @@ function jsaRenderSections() {
               '<td>' + jsaHzTextarea(meta, stepIdx, hzIdx, 'hazard', hz.hazard) + '</td>' +
               '<td>' + jsaHzTextarea(meta, stepIdx, hzIdx, 'risk', hz.risk) + '</td>' +
               '<td>' + jsaHzTextarea(meta, stepIdx, hzIdx, 'control', hz.control, 'jsa-hz-ta-wide') + '</td>' +
-              '<td class="col-act"><button class="rm-hz-btn" onclick="jsaRemoveHazardRow(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ')" title="Hapus hazard ini">✕</button></td>' +
+              '<td class="col-act"><div class="col-act-inner">' +
+                '<button class="btn-hz-save-lib" onclick="jsaSaveHazardRowToLibrary(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ')" title="Simpan hazard ini ke Library (bisa langsung dipakai user lain)">💾</button>' +
+                '<button class="rm-hz-btn" onclick="jsaRemoveHazardRow(\'' + meta.code + '\',' + stepIdx + ',' + hzIdx + ')" title="Hapus hazard ini">✕</button>' +
+              '</div></td>' +
             '</tr>';
           });
         }
         html += '<tr class="jsa-hz-actions-row"><td colspan="4">' +
           '<button class="btn btn-blue" onclick="jsaOpenHazardPicker(\'' + meta.code + '\',' + stepIdx + ')">🔎 Pilih Hazard dari Library</button>' +
-          '<button class="btn btn-gray" onclick="jsaAddManualHazardRow(\'' + meta.code + '\',' + stepIdx + ')">+ Tambah Hazard Manual</button>' +
+          '<button class="btn btn-green" onclick="jsaAddManualHazardRow(\'' + meta.code + '\',' + stepIdx + ')">+ Tambah Hazard Manual</button>' +
         '</td></tr>';
       });
       html += '</tbody></table></div>';
@@ -842,6 +1026,7 @@ function applyRecordToForm(rec) {
   jsaRenderChecklist();
   jsaRenderControlMeasures();
   jsaRenderApprovalHint();
+  jsaRefreshAllSignaturePreviews(); // aman dipanggil walau library belum kelar load -- jsaLoadSignatureLibrary() akan refresh ulang begitu selesai
 }
 
 function jsaSaveDraft() {
@@ -943,6 +1128,138 @@ function jsaSetParagraphText(p, newText) {
   p.appendChild(run);
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// SISIPKAN GAMBAR TANDA TANGAN KE WORD (2026-09-09) -- kalau nama pada
+// field Signature cocok dgn salah satu yg tersimpan di jsaSignatureLibrary
+// (shared.js), gambar PNG-nya disisipkan LANGSUNG ke paragraf yg sama
+// dgn yg dulu cuma diisi teks nama (jsaSetParagraphText). Kalau nama itu
+// BELUM py tanda tangan tersimpan, fallback ke teks nama biasa seperti
+// semula -- 100% backward compatible, tidak WAJIB semua orang upload
+// tanda tangan dulu.
+//
+// SELURUH pipeline pembuatan XML docx di file ini SENGAJA SINKRON (parsing
+// string biasa) -- sedangkan fetch gambar dari Drive itu ASYNC, jadi SEMUA
+// gambar yg relevan HARUS sudah di tangan (dataUrl + ukuran asli px)
+// SEBELUM jsaFillTable1 dipanggil. jsaPrefetchSignatureImages() melakukan
+// itu di awal jsaBuildWordBlob(), return Promise<Map nama(lowercase trim)
+// -> {dataUrl, w, h}>.
+// ══════════════════════════════════════════════════════════════════════════
+function jsaPrefetchSignatureImages(names) {
+  var seen = {};
+  var uniqueNames = [];
+  (names || []).forEach(function(n) {
+    n = (n || '').trim();
+    var key = n.toLowerCase();
+    if (n && !seen[key]) { seen[key] = true; uniqueNames.push(n); }
+  });
+  var tasks = uniqueNames.map(function(name) {
+    var entry = jsaFindSignatureEntry(name);
+    if (!entry) return Promise.resolve(null);
+    return _pmFetchDriveFileAsBase64(entry.drive_file_id).then(function(dataUrl) {
+      if (!dataUrl) return null;
+      return new Promise(function(resolve) {
+        var img = new Image();
+        img.onload = function() { resolve({ key: name.toLowerCase(), dataUrl: dataUrl, w: img.naturalWidth, h: img.naturalHeight }); };
+        img.onerror = function() { resolve(null); };
+        img.src = dataUrl;
+      });
+    }).catch(function() { return null; });
+  });
+  return Promise.all(tasks).then(function(results) {
+    var map = {};
+    results.forEach(function(r) { if (r) map[r.key] = r; });
+    return map;
+  });
+}
+
+var JSA_WP_NS = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
+var JSA_A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+var JSA_PIC_NS = 'http://schemas.openxmlformats.org/drawingml/2006/picture';
+var JSA_R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+var JSA_RELS_NS = 'http://schemas.openxmlformats.org/package/2006/relationships';
+
+// Tambahkan gambar sbg media baru di zip + relationship baru di
+// word/_rels/document.xml.rels -- return relationship Id yg baru dibuat.
+// Prefix relId "rIdSig" SENGAJA dipakai (BUKAN "rId" polos) supaya PASTI
+// tidak bentrok dgn id bawaan template manapun (rId1..rId14 di kedua
+// template saat ini) tanpa perlu scan nomor tertinggi yg sudah dipakai.
+function jsaZipAddSignatureImage(zipCtx, dataUrlPng) {
+  var m = /^data:image\/png;base64,(.+)$/.exec(dataUrlPng);
+  if (!m) throw new Error('Format gambar tanda tangan tidak valid (bukan PNG base64).');
+  var binStr = atob(m[1]);
+  var bytes = new Uint8Array(binStr.length);
+  for (var i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+  var fileName = 'jsaSig' + (zipCtx.mediaCounter++) + '.png';
+  zipCtx.zip.file('word/media/' + fileName, bytes);
+  var relId = 'rIdSig' + (zipCtx.relIdCounter++);
+  var relEl = zipCtx.relsDoc.createElementNS(JSA_RELS_NS, 'Relationship');
+  relEl.setAttribute('Id', relId);
+  relEl.setAttribute('Type', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image');
+  relEl.setAttribute('Target', 'media/' + fileName);
+  zipCtx.relsDoc.documentElement.appendChild(relEl);
+  zipCtx.dirty = true;
+  return relId;
+}
+
+// px (natural, asumsi 96 DPI) -> EMU (914400/inch), discale PROPORSIONAL
+// supaya muat dalam kotak maksimal (tidak boleh melebihi) -- "sesuaikan
+// dgn kotaknya agar tidak kebesaran" sesuai permintaan user.
+function jsaSigEmuSize(naturalW, naturalH) {
+  var PX_TO_EMU = 9525; // 914400 EMU/inch / 96 DPI
+  var MAX_W_EMU = 1270000; // ~3.53cm
+  var MAX_H_EMU = 450000;  // ~1.25cm
+  var wEmu = naturalW * PX_TO_EMU;
+  var hEmu = naturalH * PX_TO_EMU;
+  var scale = Math.min(MAX_W_EMU / wEmu, MAX_H_EMU / hEmu, 1);
+  return { w: Math.max(1, Math.round(wEmu * scale)), h: Math.max(1, Math.round(hEmu * scale)) };
+}
+
+// Bangun <w:r><w:drawing>...</w:drawing></w:r> sbg FRAGMEN XML STANDALONE
+// (lewat DOMParser + importNode, BUKAN createElementNS node-per-node) --
+// drawing OOXML butuh banyak namespace sekaligus (wp:/a:/pic:/r:), lebih
+// aman & pasti benar kalau dideklarasikan eksplisit di root fragmen lalu
+// di-import ke dokumen utama, drpd membangun node-per-node dan berharap
+// XMLSerializer menebak prefix yang benar sendiri.
+function jsaBuildSignatureDrawingXml(relId, emu, name) {
+  var safeName = ('TTD ' + name).replace(/[<>&"]/g, '');
+  var docPrId = Math.floor(Math.random() * 900000) + 100000; // asal unik, tidak perlu counter global
+  return '<w:r xmlns:w="' + JSA_W_NS + '" xmlns:wp="' + JSA_WP_NS + '" xmlns:a="' + JSA_A_NS + '" xmlns:pic="' + JSA_PIC_NS + '" xmlns:r="' + JSA_R_NS + '">' +
+    '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">' +
+    '<wp:extent cx="' + emu.w + '" cy="' + emu.h + '"/>' +
+    '<wp:effectExtent l="0" t="0" r="0" b="0"/>' +
+    '<wp:docPr id="' + docPrId + '" name="' + safeName + '"/>' +
+    '<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>' +
+    '<a:graphic><a:graphicData uri="' + JSA_PIC_NS + '">' +
+    '<pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="' + safeName + '"/><pic:cNvPicPr/></pic:nvPicPr>' +
+    '<pic:blipFill><a:blip r:embed="' + relId + '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>' +
+    '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + emu.w + '" cy="' + emu.h + '"/></a:xfrm>' +
+    '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>' +
+    '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+}
+
+// Isi paragraf dgn GAMBAR tanda tangan (kalau ada di sigMap) ATAU teks nama
+// polos (fallback, perilaku LAMA -- backward compatible penuh utk nama yg
+// belum py tanda tangan tersimpan). Pola hapus-run-lama SAMA PERSIS dgn
+// jsaSetParagraphText, cuma run barunya berupa <w:drawing>, bukan <w:t>.
+function jsaSetParagraphSignature(p, name, sigMap, zipCtx) {
+  var entry = sigMap && sigMap[(name || '').trim().toLowerCase()];
+  if (!entry) { jsaSetParagraphText(p, name); return; }
+  var runs = jsaDirectChildren(p, 'r');
+  runs.forEach(function(r) { p.removeChild(r); });
+  try {
+    var relId = jsaZipAddSignatureImage(zipCtx, entry.dataUrl);
+    var emu = jsaSigEmuSize(entry.w, entry.h);
+    var xml = jsaBuildSignatureDrawingXml(relId, emu, name);
+    var frag = new DOMParser().parseFromString(xml, 'application/xml');
+    if (frag.getElementsByTagName('parsererror').length) throw new Error('parse gagal');
+    var imported = p.ownerDocument.importNode(frag.documentElement, true);
+    p.appendChild(imported);
+  } catch (e) {
+    console.error('[jsa-sig] gagal sisipkan gambar tanda tangan, fallback ke teks:', e);
+    jsaSetParagraphText(p, name);
+  }
+}
+
 function jsaFmtDateTime(localVal) {
   // input type="datetime-local" -> "YYYY-MM-DDTHH:MM" ; format tampilan
   // Word mengikuti gaya template ("DD/MM/YYYY HH:MM").
@@ -1004,7 +1321,7 @@ function jsaSetGlyphCheckbox(tc, checked) {
   p.appendChild(newR);
 }
 
-function jsaFillTable1(tbl1, form) {
+function jsaFillTable1(tbl1, form, sigMap, zipCtx) {
   var rows = jsaDirectChildren(tbl1, 'tr');
   function tc(rowIdx, tcIdx) { return jsaDirectChildren(rows[rowIdx], 'tc')[tcIdx]; }
   function soleP(rowIdx, tcIdx) { return jsaDirectChildren(tc(rowIdx, tcIdx), 'p')[0]; }
@@ -1117,11 +1434,11 @@ function jsaFillTable1(tbl1, form) {
   // Row 25: nama Signature -- kolom label perannya ada di row 24 pada index
   // tc yang SAMA. tc3 (RIC) punya 2 paragraf (bekas lokasi tanda tangan asli
   // yang sudah disanitasi -- lihat CLAUDE.md), makanya pakai lastP bukan soleP.
-  jsaSetParagraphText(lastP(25, 2), form.sigOpSupervisor);
-  jsaSetParagraphText(lastP(25, 3), form.sigRic);
-  jsaSetParagraphText(lastP(25, 4), form.sigMaintSupervisor);
-  jsaSetParagraphText(lastP(25, 5), form.sigHealthSafety);
-  jsaSetParagraphText(lastP(25, 6), form.sigIntersectionSpv);
+  jsaSetParagraphSignature(lastP(25, 2), form.sigOpSupervisor, sigMap, zipCtx);
+  jsaSetParagraphSignature(lastP(25, 3), form.sigRic, sigMap, zipCtx);
+  jsaSetParagraphSignature(lastP(25, 4), form.sigMaintSupervisor, sigMap, zipCtx);
+  jsaSetParagraphSignature(lastP(25, 5), form.sigHealthSafety, sigMap, zipCtx);
+  jsaSetParagraphSignature(lastP(25, 6), form.sigIntersectionSpv, sigMap, zipCtx);
 
   // Row 27: nama Approval Tambahan -- HANYA salah satu tc (4/5/6) yang
   // diisi, sesuai Risk Level yang dipilih user (lihat JSA_RISK_LEVEL_APPROVAL).
@@ -1129,7 +1446,7 @@ function jsaFillTable1(tbl1, form) {
   // tidak dibutuhkan, bukan lupa).
   var approvalTcByLevel = {high: 4, extreme1: 5, extreme2: 6};
   var approvalTcIdx = approvalTcByLevel[form.riskLevel];
-  if (approvalTcIdx) jsaSetParagraphText(lastP(27, approvalTcIdx), form.sigAdditionalApproval);
+  if (approvalTcIdx) jsaSetParagraphSignature(lastP(27, approvalTcIdx), form.sigAdditionalApproval, sigMap, zipCtx);
 }
 
 // ── Table 2 (JOB SAFETY ANALYSIS) -- row0 (judul abu-abu) & row1 (header
@@ -1462,20 +1779,28 @@ function jsaTrimEmptyParagraphsBetween(body, tblA, tblB, keep) {
 // jsaGenerateWord() (download) dan jsaPreviewWord() (preview docx-preview)
 // supaya logic isi-form-ke-XML TIDAK PERNAH duplikat di 2 tempat.
 function jsaBuildWordBlob(form) {
+  var sigNames = [form.sigOpSupervisor, form.sigRic, form.sigMaintSupervisor, form.sigHealthSafety, form.sigIntersectionSpv, form.sigAdditionalApproval];
+  return jsaPrefetchSignatureImages(sigNames).then(function(sigMap) {
   return fetch('jsa_template.docx').then(function(r) {
     if (!r.ok) throw new Error('jsa_template.docx tidak ditemukan (' + r.status + ')');
     return r.arrayBuffer();
   }).then(function(buf) {
     return JSZip.loadAsync(buf);
   }).then(function(zip) {
-    return zip.file('word/document.xml').async('string').then(function(xmlStr) {
+    return Promise.all([
+      zip.file('word/document.xml').async('string'),
+      zip.file('word/_rels/document.xml.rels').async('string')
+    ]).then(function(results) {
+      var xmlStr = results[0], relsXmlStr = results[1];
       var parser = new DOMParser();
       var xdoc = parser.parseFromString(xmlStr, 'application/xml');
       if (xdoc.getElementsByTagName('parsererror').length) throw new Error('Template XML rusak/tidak valid.');
+      var relsDoc = parser.parseFromString(relsXmlStr, 'application/xml');
+      var zipCtx = { zip: zip, relsDoc: relsDoc, mediaCounter: 1, relIdCounter: 1, dirty: false };
       var body = jsaDirectChildren(xdoc.documentElement, 'body')[0];
       var topTbls = jsaDirectChildren(body, 'tbl');
       if (topTbls.length < 4) throw new Error('Struktur template tidak sesuai (tabel kurang dari 4).');
-      jsaFillTable1(topTbls[1], form);
+      jsaFillTable1(topTbls[1], form, sigMap, zipCtx);
       jsaRebuildTable2(topTbls[2]);
       jsaFillTable3(topTbls[3], form);
       // Template ASLI py 29 paragraf KOSONG bawaan (bukan kita yang
@@ -1488,11 +1813,15 @@ function jsaBuildWordBlob(form) {
       jsaTrimEmptyParagraphsBetween(body, topTbls[2], topTbls[3], 1);
       var newXml = new XMLSerializer().serializeToString(xdoc);
       zip.file('word/document.xml', newXml);
+      if (zipCtx.dirty) {
+        zip.file('word/_rels/document.xml.rels', new XMLSerializer().serializeToString(zipCtx.relsDoc));
+      }
       // mimeType WAJIB di-set eksplisit -- default JSZip 'application/zip'
       // bikin browser (terutama Chrome Android) mendeteksi isi Blob sbg zip
       // dan menambahkan ekstensi '.zip' lagi di belakang nama file yang
       // sudah '.docx' (jadi 'Nama.docx.zip') walau <a download> sudah benar.
       return zip.generateAsync({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    });
     });
   });
 }
@@ -1531,30 +1860,59 @@ function jsaBlobToDataUrl(blob) {
   });
 }
 
+// Pastikan record ini SUDAH punya baris di Supabase sebelum upload Word ke
+// Drive -- akar penyebab laporan "kadang muncul link Drive, kadang tidak"
+// (2026-09-09): kalau user langsung klik "Generate Word" TANPA pernah klik
+// "Simpan Draft" duluan, window._editingId tetap kosong SELAMANYA (dbSave()
+// yang biasanya mengisi itu tidak pernah dipanggil) -- jsaUploadWordToDrive()
+// versi lama diam-diam SKIP TOTAL kalau _editingId kosong, jadi link Drive
+// tidak pernah tersimpan utk laporan itu walau usernya SEMPAT menyimpan
+// draft belakangan (generate ulang lagi yg dibutuhkan, tidak otomatis).
+// Fungsi ini menghapus ketergantungan pada urutan klik user: kalau belum
+// ada _editingId, simpan SEKARANG (POST langsung, bukan lewat dbSave() --
+// JSA tidak pernah punya foto evidence sama sekali jadi pipeline upload-foto
+// wajib milik dbSave() tidak relevan/tidak perlu di sini).
+function jsaEnsureSaved() {
+  if (window._editingId) return Promise.resolve(window._editingId);
+  if (typeof dbCollectData !== 'function') return Promise.reject(new Error('dbCollectData tidak ditemukan'));
+  var rec = dbCollectData(window.CURRENT_MODUL);
+  if (!rec) return Promise.reject(new Error('Gagal mengumpulkan data form.'));
+  rec.updated_at = new Date().toISOString();
+  rec.payload_size = _dbByteLength(JSON.stringify(rec));
+  return supaFetch('POST', SUPA_TABLE, rec).then(function(rows) {
+    var savedId = rows && rows[0] && rows[0].id;
+    if (!savedId) throw new Error('Gagal menyimpan draft otomatis sebelum upload ke Drive.');
+    window._editingId = savedId;
+    window._raDirty = false;
+    if (typeof autosaveClear === 'function') autosaveClear();
+    return savedId;
+  });
+}
+
 // Upload salinan Word yang baru digenerate ke Google Drive -- SELALU
 // best-effort, TIDAK PERNAH memblokir/membatalkan download lokal walau
 // gagal total (dipanggil TANPA di-await/return dari jsaGenerateWord()).
-// Kalau record ini BELUM pernah disimpan (window._editingId kosong)
-// dilewati saja -- tidak ada baris Supabase utk nyimpan link-nya. File
-// Drive versi SEBELUMNYA (kalau ada) dihapus lewat deleteFotoDariGDrive()
-// (fungsi generik, walau namanya "Foto" bekerja utk fileId APA PUN)
-// setelah upload baru sukses, supaya tidak menumpuk salinan basi tiap
-// kali user Generate Word ulang berkali-kali. Butuh backend Apps Script
-// yang sudah terima field `mimeType` opsional -- lihat CLAUDE.md.
+// Record ini dijamin tersimpan dulu lewat jsaEnsureSaved() (lihat komentar
+// di atas) sebelum upload -- tidak lagi pernah di-skip diam-diam gara-gara
+// _editingId kosong. File Drive versi SEBELUMNYA (kalau ada) dihapus lewat
+// deleteFotoDariGDrive() (fungsi generik, walau namanya "Foto" bekerja utk
+// fileId APA PUN) setelah upload baru sukses, supaya tidak menumpuk salinan
+// basi tiap kali user Generate Word ulang berkali-kali. Butuh backend Apps
+// Script yang sudah terima field `mimeType` opsional -- lihat CLAUDE.md.
 function jsaUploadWordToDrive(blob, filename) {
-  var id = window._editingId;
-  if (!id) return;
-  jsaBlobToDataUrl(blob).then(function(dataUrl) {
-    return uploadFileToGDrive(dataUrl, filename, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', window.CURRENT_MODUL, '');
-  }).then(function(result) {
-    if (!result || !result.success) return;
-    return supaFetch('GET', 'pm_records?id=eq.' + id + '&select=data').then(function(rows) {
-      var row = rows && rows[0];
-      if (!row) return;
-      var oldFileId = row.data && row.data.wordDriveFileId;
-      var merged = Object.assign({}, row.data || {}, { wordDriveUrl: result.fileUrl, wordDriveFileId: result.fileId });
-      return _pmPatchRecordWithRetry(id, { data: merged }).then(function() {
-        if (oldFileId && oldFileId !== result.fileId) deleteFotoDariGDrive(oldFileId);
+  jsaEnsureSaved().then(function(id) {
+    return jsaBlobToDataUrl(blob).then(function(dataUrl) {
+      return uploadFileToGDrive(dataUrl, filename, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', window.CURRENT_MODUL, '');
+    }).then(function(result) {
+      if (!result || !result.success) return;
+      return supaFetch('GET', 'pm_records?id=eq.' + id + '&select=data').then(function(rows) {
+        var row = rows && rows[0];
+        if (!row) return;
+        var oldFileId = row.data && row.data.wordDriveFileId;
+        var merged = Object.assign({}, row.data || {}, { wordDriveUrl: result.fileUrl, wordDriveFileId: result.fileId });
+        return _pmPatchRecordWithRetry(id, { data: merged }).then(function() {
+          if (oldFileId && oldFileId !== result.fileId) deleteFotoDariGDrive(oldFileId);
+        });
       });
     });
   }).catch(function(err) { console.error('[jsa] upload Word ke Drive gagal (non-fatal):', err); });
@@ -1598,9 +1956,37 @@ function jsaShowWordPreviewModal(blob) {
   bodyEl.innerHTML = '<div style="padding:24px;color:#7c8698">Merender preview...</div>';
   modal.classList.add('show');
   return docx.renderAsync(blob, bodyEl, null, {className: 'jsa-docx-preview', inWrapper: true})
+    .then(function() {
+      jsaFitPreviewToWidth(bodyEl);
+    })
     .catch(function(err) {
       bodyEl.innerHTML = '<div style="padding:24px;color:#e5695c">Gagal merender preview: ' + (err && err.message || err) + '</div>';
     });
+}
+// docx-preview merender tiap halaman Word dgn LEBAR ASLI dokumen (dalam
+// px, mengikuti ukuran kertas -- dokumen JSA ini landscape/lebar jadi
+// halamannya bisa >1100px), yang gampang lebih lebar drpd modal Preview
+// (apalagi di layar sempit) -- bikin scroll horizontal yg motong tampilan
+// ("terlihat previewnya terpotong", laporan user). Diskalakan LANGSUNG
+// (bukan minta user scroll) supaya SELALU muat memanjang penuh mengikuti
+// lebar modal, brp pun ukuran layarnya -- `zoom` (bukan `transform:scale`)
+// sengaja dipakai krn otomatis ikut menyesuaikan tinggi layout jg (transform
+// perlu penyesuaian tinggi wrapper manual terpisah), didukung luas di
+// Chrome/Edge yg jadi browser utama tool internal ini.
+function jsaFitPreviewToWidth(bodyEl) {
+  // docx-preview diinisialisasi dgn {className:'jsa-docx-preview'} --
+  // nama wrapper ASLI yg dihasilkannya jadi '<className>-wrapper', dan
+  // tiap halaman jadi <section class="<className>"> (BUKAN 'docx-wrapper'
+  // generik/tag section-article-div polos, itu asumsi awal yg salah,
+  // sudah diverifikasi lgs dari DOM hasil render).
+  var wrapper = bodyEl.querySelector('.jsa-docx-preview-wrapper');
+  var page = wrapper && wrapper.querySelector('section.jsa-docx-preview');
+  if (!wrapper || !page) return;
+  var pageWidth = page.offsetWidth;
+  if (!pageWidth) return;
+  var available = bodyEl.clientWidth - 32; // dikurangi padding kanan-kiri .jsa-preview-body
+  var scale = Math.min(1, available / pageWidth);
+  wrapper.style.zoom = scale;
 }
 function jsaClosePreviewModal() {
   var modal = document.getElementById('jsaPreviewModal');
@@ -1608,6 +1994,7 @@ function jsaClosePreviewModal() {
 }
 
 jsaLoadHazardBank();
+jsaLoadSignatureLibrary();
 jsaRenderSections();
 jsaRenderChecklist();
 jsaRenderControlMeasures();

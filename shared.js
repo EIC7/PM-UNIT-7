@@ -417,6 +417,153 @@ function uploadFileToGDrive(dataUrlBase64, fileName, mimeType, modul, keterangan
     .catch(function(err){ console.error('Upload GDrive (file) error:', err); return null; });
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   LIBRARY TANDA TANGAN DIGITAL (JSA, 2026-09-09) -- upload SEKALI per nama,
+   dipakai ulang lewat autocomplete <datalist> di kolom Signature manapun
+   (Applicant/Operation Supervisor/RIC/dst, jsa_report.html &
+   jsa_condition_access.html). Disimpan sbg PNG (background putih/terang
+   otomatis ditransparankan) di Google Drive (lewat uploadFileToGDrive() di
+   atas), link+fileId-nya dicatat di tabel Supabase `jsa_signatures` --
+   WAJIB migration SQL dijalankan dulu (lihat CLAUDE.md), tanpa itu
+   jsaLoadSignatureLibrary() akan gagal diam-diam (cuma nge-log error) dan
+   fitur ini berlaku seolah belum ada tanda tangan tersimpan sama sekali
+   (fallback tetap ke teks nama biasa, TIDAK bikin form/generate Word
+   error). Fungsi-fungsi ini generik/dipakai bersama shared.js, TAPI hanya
+   dipanggil dari 2 file JSA (jsaLoadSignatureLibrary() dipanggil eksplisit
+   di sana, BUKAN auto-run di semua halaman) supaya 36 modul lain tidak
+   ikut-ikutan query tabel ini tiap kali dibuka.
+   ══════════════════════════════════════════════════════════════════════════ */
+var JSA_SIGNATURES_TABLE = 'jsa_signatures';
+var jsaSignatureLibrary = []; // [{id,name,drive_url,drive_file_id}], diisi jsaLoadSignatureLibrary()
+
+function jsaLoadSignatureLibrary() {
+  return supaFetch('GET', JSA_SIGNATURES_TABLE + '?select=id,name,drive_url,drive_file_id&order=name.asc')
+    .then(function(rows) {
+      jsaSignatureLibrary = rows || [];
+      if (typeof jsaSigPopulateDatalist === 'function') jsaSigPopulateDatalist();
+      if (typeof jsaRefreshAllSignaturePreviews === 'function') jsaRefreshAllSignaturePreviews();
+      return jsaSignatureLibrary;
+    })
+    .catch(function(err) {
+      console.error('[jsa-sig] gagal ambil daftar tanda tangan (tabel jsa_signatures belum dibuat? lihat CLAUDE.md):', err);
+      jsaSignatureLibrary = [];
+      return jsaSignatureLibrary;
+    });
+}
+
+// Pencarian case-insensitive + trim -- nama yg diketik user di kolom
+// Signature dan nama yg tersimpan di library harus dianggap sama walau
+// beda kapital/spasi ujung.
+function jsaFindSignatureEntry(name) {
+  name = (name || '').trim().toLowerCase();
+  if (!name) return null;
+  for (var i = 0; i < jsaSignatureLibrary.length; i++) {
+    if (jsaSignatureLibrary[i].name.trim().toLowerCase() === name) return jsaSignatureLibrary[i];
+  }
+  return null;
+}
+
+function jsaFetchSignatureRowByName(name) {
+  return supaFetch('GET', JSA_SIGNATURES_TABLE + '?name=eq.' + encodeURIComponent(name) + '&select=id,name,drive_url,drive_file_id')
+    .then(function(rows) { return (rows && rows[0]) || null; })
+    .catch(function() { return null; });
+}
+
+// Ubah file gambar (foto/scan tanda tangan, background apa pun) jadi PNG
+// dgn background PUTIH/TERANG otomatis ditransparankan -- threshold
+// sederhana per piksel (bukan deteksi tepi canggih), cukup baik utk kertas
+// putih polos difoto/discan biasa (kalau kertasnya kotor/ada bayangan,
+// hasilnya bisa kurang sempurna -- diterima sbg trade-off, user diminta
+// pilih ini scr eksplisit drpd bikin deteksi tepi yg jauh lebih rumit).
+// Dikecilkan dulu ke lebar maksimal 500px SEBELUM diproses (bukan sesudah)
+// supaya ukuran file akhir kecil DAN proses per-piksel tidak lambat kalau
+// user upload foto resolusi tinggi dari HP.
+function jsaProcessSignatureImage(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onerror = function() { reject(new Error('Gagal membaca file.')); };
+    reader.onload = function() {
+      var img = new Image();
+      img.onerror = function() { reject(new Error('File bukan gambar yang valid.')); };
+      img.onload = function() {
+        var MAX_W = 500;
+        var scale = Math.min(1, MAX_W / img.naturalWidth);
+        var w = Math.max(1, Math.round(img.naturalWidth * scale));
+        var h = Math.max(1, Math.round(img.naturalHeight * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        var imgData;
+        try { imgData = ctx.getImageData(0, 0, w, h); }
+        catch (e) { reject(new Error('Tidak bisa memproses gambar ini.')); return; }
+        var d = imgData.data;
+        var THRESHOLD = 235; // piksel R,G,B semua >= ini dianggap "putih" -> transparan
+        for (var i = 0; i < d.length; i += 4) {
+          if (d[i] >= THRESHOLD && d[i + 1] >= THRESHOLD && d[i + 2] >= THRESHOLD) d[i + 3] = 0;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Upload gambar tanda tangan (dataUrl PNG, sudah diproses transparan) ke
+// Drive, lalu insert/update baris di tabel jsa_signatures (unique per
+// nama, dicek dulu via GET -- BUKAN upsert on_conflict, supaya tidak perlu
+// header Prefer khusus di supaFetch generik). Kalau nama ini sudah py
+// tanda tangan lama, file Drive lama dihapus SETELAH yang baru sukses
+// tersimpan, supaya tidak menumpuk salinan basi tiap kali diganti.
+function jsaSaveSignature(name, dataUrlPng) {
+  name = (name || '').trim();
+  if (!name) return Promise.reject(new Error('Nama kosong.'));
+  var fileName = 'signature_' + name.replace(/[^a-zA-Z0-9_-]/g, '_') + '_' + Date.now() + '.png';
+  return jsaFetchSignatureRowByName(name).then(function(existing) {
+    return uploadFileToGDrive(dataUrlPng, fileName, 'image/png', 'JSA_SIGNATURE', name).then(function(result) {
+      if (!result || !result.success) throw new Error('Upload ke Google Drive gagal.');
+      var payload = { name: name, drive_url: result.fileUrl, drive_file_id: result.fileId, updated_at: new Date().toISOString() };
+      var savePromise = existing
+        ? supaFetch('PATCH', JSA_SIGNATURES_TABLE + '?id=eq.' + existing.id, payload)
+        : supaFetch('POST', JSA_SIGNATURES_TABLE, payload);
+      return savePromise.then(function() {
+        if (existing && existing.drive_file_id && existing.drive_file_id !== result.fileId) {
+          deleteFotoDariGDrive(existing.drive_file_id);
+        }
+        return { drive_url: result.fileUrl, drive_file_id: result.fileId };
+      });
+    });
+  });
+}
+
+// ── Library Hazard JSA -- hazard/risk/control yang diketik manual user
+// (tombol "+ Tambah Hazard Manual") bisa disimpan ke sini supaya langsung
+// bisa dipakai user LAIN lewat "🔎 Pilih Hazard dari Library" (permintaan
+// eksplisit 2026-09-09). Beda dari jsa_hazard_bank.json (file statis
+// bundled, tidak bisa ditulis dari client) -- ini tabel Supabase biasa,
+// isinya teks murni (tidak ada foto/file, jadi TIDAK lewat Google Drive
+// sama sekali, beda dari tanda tangan/Word backup di atas).
+var JSA_HAZARD_LIBRARY_TABLE = 'jsa_hazard_library';
+
+function jsaSaveHazardToLibrary(hazard, risk, control) {
+  hazard = (hazard || '').trim();
+  risk = (risk || '').trim();
+  control = (control || '').trim();
+  if (!hazard && !risk && !control) return Promise.reject(new Error('Hazard/Risk/Control Measures masih kosong.'));
+  return supaFetch('POST', JSA_HAZARD_LIBRARY_TABLE, { hazard: hazard, risk: risk, control: control });
+}
+
+function jsaLoadHazardLibraryFromServer() {
+  return supaFetch('GET', JSA_HAZARD_LIBRARY_TABLE + '?select=id,hazard,risk,control&order=created_at.desc')
+    .then(function(rows) { return rows || []; })
+    .catch(function(err) {
+      console.error('[jsa-hazard-lib] gagal ambil hazard custom (tabel jsa_hazard_library belum dibuat? lihat CLAUDE.md):', err);
+      return [];
+    });
+}
+
 function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
   if (!GDRIVE_WEB_APP_URL || !dataUrlBase64) return Promise.resolve(null);
   // fileName dari pemanggil (nama device) diabaikan sebagai KEY penyimpanan --
