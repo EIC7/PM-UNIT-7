@@ -3564,3 +3564,30 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   bawah masing-masing, TIDAK ada overflow/tabrakan dgn kolom tetangga
   walau salah satunya sengaja dipasang di kolom TERSEMPIT (Health &
   Safety).
+
+## JSA: tombol "+ Tambah Step" dipindah dari header ke bawah tabel/step terakhir (2026-09-09)
+
+- Sebelumnya tombol ini nempel di `.jsa-section-head` (sejajar judul
+  section, rata KANAN, `justify-content:space-between`) -- posisinya
+  TETAP di paling atas section walau user sudah scroll jauh ke bawah
+  (mis. 1 step py banyak baris hazard, tabelnya jadi panjang). Permintaan
+  eksplisit user: pindahkan ke kiri, jangan sejajar judul, taruh di bawah
+  -- supaya OTOMATIS dekat dgn step yang baru saja dikerjakan, tidak perlu
+  scroll balik ke atas cuma buat nambah step baru.
+- **Fix (kedua file JSA, `jsaRenderSections()`)**: tombol dikeluarkan dari
+  `.jsa-section-head` (sekarang cuma berisi `<span>` judul), dipindah jadi
+  elemen `<button class="btn btn-blue jsa-add-step-btn">` TERPISAH yang
+  dirender SETELAH `</table>` (atau setelah pesan "Belum ada step" kalau
+  section masih kosong) -- rata KIRI (block-level default, bukan flex
+  `space-between` lagi), dan otomatis muncul TEPAT setelah baris
+  "🔎 Pilih Hazard dari Library"/"+ Tambah Hazard Manual" milik STEP
+  TERAKHIR, karena memang itu konten TERAKHIR yang dirender sebelum tombol
+  ini di dalam `.jsa-section-body`. Perilaku klik (`jsaAddStep(code)`)
+  TIDAK berubah sama sekali.
+- Diverifikasi lewat headless Chrome kedua file: section kosong -> tombol
+  tetap ada (di bawah pesan "Belum ada step"), header TIDAK py button sama
+  sekali; section dgn 1 step + 8 hazard (tabel sengaja dibikin panjang) ->
+  tombol posisinya (via `getBoundingClientRect()`) jauh LEBIH RENDAH dari
+  header (selisih ~1600px di test) dan PERSIS menyentuh/setelah batas
+  bawah tabel -- bukan lagi nempel di atas; klik tombol tetap berhasil
+  menambah step baru seperti biasa.
