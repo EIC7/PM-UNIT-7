@@ -1262,14 +1262,26 @@ function jsaZipAddSignatureImage(zipCtx, dataUrlPng) {
   return relId;
 }
 
-function jsaSigEmuSize(naturalW, naturalH) {
+// Lihat komentar lengkap jsaSigEmuSize()/jsaGetTcWidthEmu() di
+// jsa_report.html -- kode di sini IDENTIK.
+function jsaSigEmuSize(naturalW, naturalH, maxWEmu) {
   var PX_TO_EMU = 9525;
-  var MAX_W_EMU = 1270000; // ~3.53cm
-  var MAX_H_EMU = 450000;  // ~1.25cm
+  var MAX_W_EMU = maxWEmu || 1270000;
+  var MAX_H_EMU = 650000;
   var wEmu = naturalW * PX_TO_EMU;
   var hEmu = naturalH * PX_TO_EMU;
   var scale = Math.min(MAX_W_EMU / wEmu, MAX_H_EMU / hEmu, 1);
   return { w: Math.max(1, Math.round(wEmu * scale)), h: Math.max(1, Math.round(hEmu * scale)) };
+}
+function jsaGetTcWidthEmu(tcEl) {
+  if (!tcEl) return null;
+  var tcPr = jsaDirectChildren(tcEl, 'tcPr')[0];
+  var tcW = tcPr && jsaDirectChildren(tcPr, 'tcW')[0];
+  var twips = tcW && parseInt(tcW.getAttributeNS(JSA_W_NS, 'w'), 10);
+  if (!twips) return null;
+  var TWIP_TO_EMU = 635;
+  var CELL_PADDING_TWIPS = 200;
+  return Math.max(twips - CELL_PADDING_TWIPS, 200) * TWIP_TO_EMU;
 }
 
 function jsaBuildSignatureDrawingXml(relId, emu, name) {
@@ -1289,19 +1301,24 @@ function jsaBuildSignatureDrawingXml(relId, emu, name) {
     '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
 }
 
-function jsaSetParagraphSignature(p, name, sigMap, zipCtx) {
+// Lihat komentar lengkap jsaSetParagraphSignature() di jsa_report.html --
+// kode di sini IDENTIK.
+function jsaSetParagraphSignature(p, name, sigMap, zipCtx, maxWEmu) {
   var entry = sigMap && sigMap[(name || '').trim().toLowerCase()];
   if (!entry) { jsaSetParagraphText(p, name); return; }
   var runs = jsaDirectChildren(p, 'r');
   runs.forEach(function(r) { p.removeChild(r); });
   try {
     var relId = jsaZipAddSignatureImage(zipCtx, entry.dataUrl);
-    var emu = jsaSigEmuSize(entry.w, entry.h);
+    var emu = jsaSigEmuSize(entry.w, entry.h, maxWEmu);
     var xml = jsaBuildSignatureDrawingXml(relId, emu, name);
     var frag = new DOMParser().parseFromString(xml, 'application/xml');
     if (frag.getElementsByTagName('parsererror').length) throw new Error('parse gagal');
     var imported = p.ownerDocument.importNode(frag.documentElement, true);
     p.appendChild(imported);
+    var nameP = jsaCellP(p.ownerDocument, name, {jc: 'center'});
+    if (p.nextSibling) p.parentNode.insertBefore(nameP, p.nextSibling);
+    else p.parentNode.appendChild(nameP);
   } catch (e) {
     console.error('[jsa-sig] gagal sisipkan gambar tanda tangan, fallback ke teks:', e);
     jsaSetParagraphText(p, name);
@@ -1468,11 +1485,11 @@ function jsaFillTable1(tbl1, form, sigMap, zipCtx) {
   // tc yang SAMA (Applicant/Operation Supervisor/Health & Safety/RIC/
   // Maintenance Supervisor -- 5 role template LAMA, BEDA dari 5 role
   // template Risk to Trip).
-  jsaSetParagraphSignature(soleP(23, 2), form.sigApplicant, sigMap, zipCtx);
-  jsaSetParagraphSignature(soleP(23, 3), form.sigOpSupervisor, sigMap, zipCtx);
-  jsaSetParagraphSignature(soleP(23, 4), form.sigHealthSafety, sigMap, zipCtx);
-  jsaSetParagraphSignature(soleP(23, 5), form.sigRic, sigMap, zipCtx);
-  jsaSetParagraphSignature(soleP(23, 6), form.sigMaintSupervisor, sigMap, zipCtx);
+  jsaSetParagraphSignature(soleP(23, 2), form.sigApplicant, sigMap, zipCtx, jsaGetTcWidthEmu(tc(23, 2)));
+  jsaSetParagraphSignature(soleP(23, 3), form.sigOpSupervisor, sigMap, zipCtx, jsaGetTcWidthEmu(tc(23, 3)));
+  jsaSetParagraphSignature(soleP(23, 4), form.sigHealthSafety, sigMap, zipCtx, jsaGetTcWidthEmu(tc(23, 4)));
+  jsaSetParagraphSignature(soleP(23, 5), form.sigRic, sigMap, zipCtx, jsaGetTcWidthEmu(tc(23, 5)));
+  jsaSetParagraphSignature(soleP(23, 6), form.sigMaintSupervisor, sigMap, zipCtx, jsaGetTcWidthEmu(tc(23, 6)));
 }
 
 // ── Table 2 (JOB SAFETY ANALYSIS) -- row0 (judul abu-abu) & row1 (header
@@ -1905,12 +1922,15 @@ function jsaEnsureSaved() {
   });
 }
 
+// Lihat komentar lengkap jsaUploadWordToDrive() di jsa_report.html --
+// kode di sini IDENTIK (fix bug uploadFileToGDrive() yg tidak pernah
+// reject, silent failure jadi visible ke user, 2026-09-09).
 function jsaUploadWordToDrive(blob, filename) {
   jsaEnsureSaved().then(function(id) {
     return jsaBlobToDataUrl(blob).then(function(dataUrl) {
       return uploadFileToGDrive(dataUrl, filename, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', window.CURRENT_MODUL, '');
     }).then(function(result) {
-      if (!result || !result.success) return;
+      if (!result || !result.success) throw new Error('Upload ke Google Drive gagal (cek koneksi internet / status layanan Drive).');
       return supaFetch('GET', 'pm_records?id=eq.' + id + '&select=data').then(function(rows) {
         var row = rows && rows[0];
         if (!row) return;
@@ -1921,7 +1941,10 @@ function jsaUploadWordToDrive(blob, filename) {
         });
       });
     });
-  }).catch(function(err) { console.error('[jsa] upload Word ke Drive gagal (non-fatal):', err); });
+  }).catch(function(err) {
+    console.error('[jsa] upload Word ke Drive gagal (non-fatal):', err);
+    alert('Word sudah berhasil didownload ke perangkat, TAPI GAGAL disalin ke Google Drive (jadi tidak akan muncul tombol "Preview in Drive" di JSA History).\n\nCoba klik "📄 Generate Word" sekali lagi untuk mencoba ulang.\n\nDetail: ' + (err && err.message ? err.message : err));
+  });
 }
 
 // ── Preview Word (docx-preview, render APROKSIMASI -- BUKAN Word asli

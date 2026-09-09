@@ -1287,16 +1287,39 @@ function jsaZipAddSignatureImage(zipCtx, dataUrlPng) {
 }
 
 // px (natural, asumsi 96 DPI) -> EMU (914400/inch), discale PROPORSIONAL
-// supaya muat dalam kotak maksimal (tidak boleh melebihi) -- "sesuaikan
-// dgn kotaknya agar tidak kebesaran" sesuai permintaan user.
-function jsaSigEmuSize(naturalW, naturalH) {
+// supaya muat dalam kotak maksimal (tidak boleh melebihi). `maxWEmu`
+// (opsional) dari jsaGetTcWidthEmu() -- lebar sel ASLI tiap kolom
+// signature BEDA-BEDA (dibaca lgs dari w:tcW template, bukan ditebak),
+// fallback ke 1270000 (~3.53cm) kalau tidak dikasih/gagal dibaca. Tinggi
+// maks dinaikkan dari 450000 (~1.25cm) ke 650000 (~1.8cm) -- permintaan
+// eksplisit user ("tanda tangan kurang besar"), row tabel ini TIDAK py
+// tinggi tetap jadi aman membesar tanpa bikin baris lain ikut kepotong.
+function jsaSigEmuSize(naturalW, naturalH, maxWEmu) {
   var PX_TO_EMU = 9525; // 914400 EMU/inch / 96 DPI
-  var MAX_W_EMU = 1270000; // ~3.53cm
-  var MAX_H_EMU = 450000;  // ~1.25cm
+  var MAX_W_EMU = maxWEmu || 1270000;
+  var MAX_H_EMU = 650000;
   var wEmu = naturalW * PX_TO_EMU;
   var hEmu = naturalH * PX_TO_EMU;
   var scale = Math.min(MAX_W_EMU / wEmu, MAX_H_EMU / hEmu, 1);
   return { w: Math.max(1, Math.round(wEmu * scale)), h: Math.max(1, Math.round(hEmu * scale)) };
+}
+
+// Lebar USABLE (dikurangi perkiraan cell margin kiri+kanan default Word,
+// template ini TIDAK override w:tcMar jadi pakai default ~makanya
+// dikurangi utk jaga-jaga) dari SATU sel signature tertentu, dibaca
+// LANGSUNG dari w:tcW template -- BUKAN angka tebakan tetap, supaya kolom
+// yang lebih sempit (mis. Health & Safety) otomatis dapat batas lebih
+// kecil drpd kolom yang lebih lebar (mis. Operation Supervisor), tidak
+// pernah overflow ke sel tetangga di tabel yg tblLayout-nya "fixed".
+function jsaGetTcWidthEmu(tcEl) {
+  if (!tcEl) return null;
+  var tcPr = jsaDirectChildren(tcEl, 'tcPr')[0];
+  var tcW = tcPr && jsaDirectChildren(tcPr, 'tcW')[0];
+  var twips = tcW && parseInt(tcW.getAttributeNS(JSA_W_NS, 'w'), 10);
+  if (!twips) return null;
+  var TWIP_TO_EMU = 635;
+  var CELL_PADDING_TWIPS = 200;
+  return Math.max(twips - CELL_PADDING_TWIPS, 200) * TWIP_TO_EMU;
 }
 
 // Bangun <w:r><w:drawing>...</w:drawing></w:r> sbg FRAGMEN XML STANDALONE
@@ -1326,19 +1349,30 @@ function jsaBuildSignatureDrawingXml(relId, emu, name) {
 // polos (fallback, perilaku LAMA -- backward compatible penuh utk nama yg
 // belum py tanda tangan tersimpan). Pola hapus-run-lama SAMA PERSIS dgn
 // jsaSetParagraphText, cuma run barunya berupa <w:drawing>, bukan <w:t>.
-function jsaSetParagraphSignature(p, name, sigMap, zipCtx) {
+function jsaSetParagraphSignature(p, name, sigMap, zipCtx, maxWEmu) {
   var entry = sigMap && sigMap[(name || '').trim().toLowerCase()];
   if (!entry) { jsaSetParagraphText(p, name); return; }
   var runs = jsaDirectChildren(p, 'r');
   runs.forEach(function(r) { p.removeChild(r); });
   try {
     var relId = jsaZipAddSignatureImage(zipCtx, entry.dataUrl);
-    var emu = jsaSigEmuSize(entry.w, entry.h);
+    var emu = jsaSigEmuSize(entry.w, entry.h, maxWEmu);
     var xml = jsaBuildSignatureDrawingXml(relId, emu, name);
     var frag = new DOMParser().parseFromString(xml, 'application/xml');
     if (frag.getElementsByTagName('parsererror').length) throw new Error('parse gagal');
     var imported = p.ownerDocument.importNode(frag.documentElement, true);
     p.appendChild(imported);
+    // Nama terang (printed name) di BAWAH gambar tanda tangan -- paragraf
+    // BARU sbg sibling `p` (bukan ditambahkan ke `p` yang sama), supaya
+    // gambar & teks nama tidak numpuk 1 baris. Permintaan eksplisit user
+    // ("dibawah tanda tangan ada keterangan nama sesuai nama applicant
+    // atau nama terang yang lain"). Reuse jsaCellP() (helper yg sudah ada,
+    // dipakai Table 2) supaya font/size-nya konsisten dgn teks lain yang
+    // digenerate script ini -- BUKAN teks fallback lama (jsaSetParagraphText
+    // di paragraf `p` sendiri), krn `p` sekarang sudah berisi gambar.
+    var nameP = jsaCellP(p.ownerDocument, name, {jc: 'center'});
+    if (p.nextSibling) p.parentNode.insertBefore(nameP, p.nextSibling);
+    else p.parentNode.appendChild(nameP);
   } catch (e) {
     console.error('[jsa-sig] gagal sisipkan gambar tanda tangan, fallback ke teks:', e);
     jsaSetParagraphText(p, name);
@@ -1519,11 +1553,11 @@ function jsaFillTable1(tbl1, form, sigMap, zipCtx) {
   // Row 25: nama Signature -- kolom label perannya ada di row 24 pada index
   // tc yang SAMA. tc3 (RIC) punya 2 paragraf (bekas lokasi tanda tangan asli
   // yang sudah disanitasi -- lihat CLAUDE.md), makanya pakai lastP bukan soleP.
-  jsaSetParagraphSignature(lastP(25, 2), form.sigOpSupervisor, sigMap, zipCtx);
-  jsaSetParagraphSignature(lastP(25, 3), form.sigRic, sigMap, zipCtx);
-  jsaSetParagraphSignature(lastP(25, 4), form.sigMaintSupervisor, sigMap, zipCtx);
-  jsaSetParagraphSignature(lastP(25, 5), form.sigHealthSafety, sigMap, zipCtx);
-  jsaSetParagraphSignature(lastP(25, 6), form.sigIntersectionSpv, sigMap, zipCtx);
+  jsaSetParagraphSignature(lastP(25, 2), form.sigOpSupervisor, sigMap, zipCtx, jsaGetTcWidthEmu(tc(25, 2)));
+  jsaSetParagraphSignature(lastP(25, 3), form.sigRic, sigMap, zipCtx, jsaGetTcWidthEmu(tc(25, 3)));
+  jsaSetParagraphSignature(lastP(25, 4), form.sigMaintSupervisor, sigMap, zipCtx, jsaGetTcWidthEmu(tc(25, 4)));
+  jsaSetParagraphSignature(lastP(25, 5), form.sigHealthSafety, sigMap, zipCtx, jsaGetTcWidthEmu(tc(25, 5)));
+  jsaSetParagraphSignature(lastP(25, 6), form.sigIntersectionSpv, sigMap, zipCtx, jsaGetTcWidthEmu(tc(25, 6)));
 
   // Row 27: nama Approval Tambahan -- HANYA salah satu tc (4/5/6) yang
   // diisi, sesuai Risk Level yang dipilih user (lihat JSA_RISK_LEVEL_APPROVAL).
@@ -1531,7 +1565,7 @@ function jsaFillTable1(tbl1, form, sigMap, zipCtx) {
   // tidak dibutuhkan, bukan lupa).
   var approvalTcByLevel = {high: 4, extreme1: 5, extreme2: 6};
   var approvalTcIdx = approvalTcByLevel[form.riskLevel];
-  if (approvalTcIdx) jsaSetParagraphSignature(lastP(27, approvalTcIdx), form.sigAdditionalApproval, sigMap, zipCtx);
+  if (approvalTcIdx) jsaSetParagraphSignature(lastP(27, approvalTcIdx), form.sigAdditionalApproval, sigMap, zipCtx, jsaGetTcWidthEmu(tc(27, approvalTcIdx)));
 }
 
 // ── Table 2 (JOB SAFETY ANALYSIS) -- row0 (judul abu-abu) & row1 (header
@@ -1989,7 +2023,19 @@ function jsaUploadWordToDrive(blob, filename) {
     return jsaBlobToDataUrl(blob).then(function(dataUrl) {
       return uploadFileToGDrive(dataUrl, filename, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', window.CURRENT_MODUL, '');
     }).then(function(result) {
-      if (!result || !result.success) return;
+      // 🔴 BUG DITEMUKAN 2026-09-09: uploadFileToGDrive() (shared.js) TIDAK
+      // PERNAH reject -- gagal apa pun (network/Apps Script/quota) selalu
+      // resolve dgn `null`, cuma console.error diam-diam. Versi lama fungsi
+      // ini `return;` begitu saja di sini kalau result gagal -- promise
+      // chain jadi RESOLVED (bukan REJECTED), jadi .catch() di bawah TIDAK
+      // PERNAH kepanggil utk kasus ini. Akibatnya: laporan yang record-nya
+      // sudah kesimpan (equipTag dkk keisi, muncul di jsa_history.html)
+      // TAPI wordDriveUrl KOSONG SELAMANYA tanpa jejak apa pun yang
+      // kelihatan user -- ini akar penyebab paling mungkin laporan "kenapa
+      // ada yang tidak muncul tombol Preview in Drive". Fix: throw
+      // eksplisit supaya .catch() di bawah kepanggil & user DIBERI TAHU
+      // (bukan cuma console.error yg cuma kelihatan di DevTools).
+      if (!result || !result.success) throw new Error('Upload ke Google Drive gagal (cek koneksi internet / status layanan Drive).');
       return supaFetch('GET', 'pm_records?id=eq.' + id + '&select=data').then(function(rows) {
         var row = rows && rows[0];
         if (!row) return;
@@ -2000,7 +2046,10 @@ function jsaUploadWordToDrive(blob, filename) {
         });
       });
     });
-  }).catch(function(err) { console.error('[jsa] upload Word ke Drive gagal (non-fatal):', err); });
+  }).catch(function(err) {
+    console.error('[jsa] upload Word ke Drive gagal (non-fatal):', err);
+    alert('Word sudah berhasil didownload ke perangkat, TAPI GAGAL disalin ke Google Drive (jadi tidak akan muncul tombol "Preview in Drive" di JSA History).\n\nCoba klik "📄 Generate Word" sekali lagi untuk mencoba ulang.\n\nDetail: ' + (err && err.message ? err.message : err));
+  });
 }
 
 // ── Preview Word (docx-preview, render APROKSIMASI -- BUKAN Word asli

@@ -3465,3 +3465,102 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   panggilan `confirm()`, save langsung jalan; nama sudah ada + Batal -> 1
   panggilan `confirm()` (isi pesan py nama & label field yang benar), save
   TIDAK terpanggil; nama sudah ada + OK -> save terpanggil normal.
+
+## 🔴 JSA: bug `uploadFileToGDrive()` tidak pernah reject -- akar kenapa Word Drive link kadang kosong TANPA jejak sama sekali (2026-09-09)
+
+- User lapor 1 record di `jsa_history.html` (baris paling atas, laporan
+  TERBARU) tidak punya tombol "📎 Preview in Drive" -- Applicant/WO kosong,
+  mengindikasikan record ini kemungkinan cuma diisi Equipment Tag lalu
+  langsung klik "Generate Word" (bukan hasil Simpan Draft lengkap dulu).
+  Investigasi kode nemu akar masalah yang JAUH lebih penting drpd sekadar
+  "belum pernah di-generate" (yang memang wajar tidak py link Drive):
+  **`uploadFileToGDrive()` (`shared.js`) TIDAK PERNAH `reject` promise-nya
+  APAPUN yang terjadi** -- gagal network (`fetch` throw), gagal Apps Script
+  (`result.success` false), SEMUA kasus itu di-`catch()`/dicek lalu resolve
+  dgn `null` + `console.error` doang. `jsaUploadWordToDrive()` (kedua file
+  JSA) versi LAMA di baris `if (!result || !result.success) return;` --
+  `return` polos di sini bikin promise chain-nya TETAP RESOLVED (bukan
+  REJECTED), jadi `.catch()` paling luar TIDAK PERNAH kepanggil utk kasus
+  ini. Akibatnya: `jsaEnsureSaved()` sudah sukses (record ada di Supabase,
+  makanya muncul di riwayat), Word sudah kedownload lokal, TAPI upload ke
+  Drive gagal 100% DIAM-DIAM -- satu-satunya jejak cuma `console.error` yg
+  tidak akan pernah dilihat user awam. Ini SANGAT MUNGKIN jadi penyebab
+  SEBENARNYA laporan user (bukan cuma soal belum di-generate).
+- **Fix**: `jsaUploadWordToDrive()` (kedua file JSA) sekarang `throw new
+  Error(...)` eksplisit kalau `result` gagal/null, supaya `.catch()` di
+  bawahnya BENAR-BENAR kepanggil, dan `.catch()` itu sekarang `alert()`
+  (bukan cuma `console.error`) memberi tahu user SECARA JELAS: Word tetap
+  berhasil didownload lokal, TAPI gagal disalin ke Drive, dan sarankan
+  klik Generate Word lagi. **Tidak ada retry otomatis** (beda dari foto
+  evidence modul lain yang py `_pmEnsureAllPhotosOnDrive`/cron retry
+  terpisah) -- JSA sengaja tetap manual-retry-by-reclick, sesuai skala
+  fitur ini (cuma 1 file per laporan, bukan puluhan foto).
+  - **`uploadFileToGDrive()` SENDIRI TIDAK diubah** (tetap resolve `null`
+    saat gagal, tidak pernah reject) -- fungsi itu generik dipakai jalur
+    lain juga (tanda tangan, `jsaSaveSignature()`) yang SUDAH benar
+    menangani `null` dgn `throw` sendiri di pemanggilnya
+    (`if (!result || !result.success) throw new Error('Upload ke Google
+    Drive gagal.');` di `jsaSaveSignature()`, shared.js) -- CUMA
+    `jsaUploadWordToDrive()` yang kelewat pola ini. **Kalau menambah
+    pemanggil baru `uploadFileToGDrive()` di masa depan, WAJIB selalu cek
+    `!result || !result.success` dan `throw` eksplisit sendiri** -- jangan
+    asumsikan fungsi ini reject dgn sendirinya, ITU TIDAK PERNAH TERJADI.
+- **Belum bisa dipastikan** apakah record spesifik yang dilaporkan user
+  memang kena bug INI, atau sekadar "belum pernah di-generate sama
+  sekali" (kedua kondisi menghasilkan tampilan identik: tidak ada
+  `d.wordDriveUrl`, tidak ada cara membedakan dari data yang tersimpan
+  saja) -- tapi fix ini menutup SATU kelas silent-failure yang PASTI ada,
+  dan ke depan setiap kegagalan Drive akan langsung kelihatan oleh user
+  saat itu juga (bukan baru ketahuan belakangan pas cek riwayat).
+- Diverifikasi lewat headless Chrome kedua file: mock `uploadFileToGDrive`
+  return `null` (simulasi gagal) -> `alert()` terpanggil PERSIS 1x dgn
+  pesan yg jelas, DAN PATCH/GET record TIDAK ikut terpanggil (chain
+  berhenti tepat di titik yg benar, tidak lanjut proses yg percuma).
+
+## JSA: tanda tangan diperbesar (lebar mengikuti kolom ASLI) + nama terang di bawah tanda tangan (2026-09-09)
+
+- Permintaan eksplisit user (cek screenshot hasil Word): "tanda tangan
+  kurang besar" + "harusnya dibawah tanda tangan ada keterangan nama
+  sesuai nama applicant atau nama terang yang lain".
+- **Ukuran gambar**: `jsaSigEmuSize()` -- tinggi maksimal dinaikkan dari
+  450000 EMU (~1.25cm) ke **650000 EMU (~1.8cm)**, row tabel ini TIDAK py
+  tinggi tetap (aman membesar). Lebar maksimal SEKARANG DIBACA LANGSUNG
+  dari lebar sel ASLI tiap kolom (`jsaGetTcWidthEmu(tcEl)`, baca `w:tcW`
+  di XML template dikurangi perkiraan cell margin ~200 twips) -- BUKAN
+  angka tebakan tetap seperti sebelumnya (1270000 EMU hardcoded utk SEMUA
+  kolom, padahal kolom Health & Safety/RIC jauh lebih sempit dari
+  Operation Supervisor). Ini penting krn `tblLayout type="fixed"` di
+  template -- kolom TIDAK auto-melebar mengikuti isi, gambar yg lebih
+  lebar dari kolomnya akan overflow visual ke sel tetangga kalau dipaksa
+  ukuran sama rata. Diverifikasi visual (LibreOffice headless): tanda
+  tangan di kolom SEMPIT (Health & Safety) otomatis lebih kecil drpd
+  kolom LEBAR (Operation Supervisor), keduanya TIDAK overflow ke sel
+  tetangga.
+- **Nama terang**: `jsaSetParagraphSignature()` sekarang, SETELAH gambar
+  berhasil disisipkan, menyisipkan **paragraf BARU** (sibling paragraf
+  gambar, dalam `<w:tc>` yang sama -- BUKAN ditambahkan ke paragraf yang
+  sama dgn gambar) berisi nama orang tsb, center-aligned, lewat
+  `jsaCellP(doc, name, {jc:'center'})` (helper yg SUDAH ADA, dipakai jg
+  Table 2, supaya font/size-nya konsisten dgn teks lain yg digenerate
+  script ini). **HANYA muncul kalau gambar berhasil disisipkan** -- fallback
+  teks-polos (nama belum py tanda tangan tersimpan) TIDAK dapat baris
+  tambahan ini (nama-nya kan sudah tercetak sbg teks di paragraf itu
+  sendiri, dobel kalau ditambah lagi).
+- Diterapkan ke SEMUA titik panggil `jsaSetParagraphSignature` di KEDUA
+  file JSA (row 25 tc2-6 + row 27 approval tambahan di `jsa_report.html`;
+  row 23 tc2-6 di `jsa_condition_access.html`) -- masing-masing dikasih
+  `jsaGetTcWidthEmu(tc(row, col))` sesuai selnya sendiri, generik/otomatis
+  benar tanpa perlu tebak lebar per kolom manual.
+- Diverifikasi 2 lapis: (1) headless Chrome, unit test `jsaGetTcWidthEmu`/
+  `jsaSigEmuSize`/`jsaSetParagraphSignature` langsung pakai DOM tiruan
+  (bukan lewat `jsaBuildWordBlob` penuh, lebih cepat & presisi) -- lebar
+  sel terbaca benar, tinggi maks 650000 diterapkan benar, paragraf nama
+  baru muncul sbg sibling PERSIS setelah paragraf gambar, fallback teks
+  polos (nama tanpa TTD) TIDAK dapat baris tambahan; (2) end-to-end lewat
+  `jsaBuildWordBlob()` SUNGGUHAN (template asli, 2 tanda tangan palsu
+  beda kolom lebar/sempit) -> LibreOffice headless convert-to-pdf ->
+  render halaman spesifik ke PNG -> **konfirmasi visual**: kedua tanda
+  tangan tampil jelas lebih besar dari sebelumnya, nama tercetak rapi di
+  bawah masing-masing, TIDAK ada overflow/tabrakan dgn kolom tetangga
+  walau salah satunya sengaja dipasang di kolom TERSEMPIT (Health &
+  Safety).
