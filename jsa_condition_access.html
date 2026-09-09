@@ -546,6 +546,15 @@ function jsaSigTriggerUpload(fieldId) {
   document.getElementById('jsaSigFileInput').click();
 }
 
+// Lihat komentar lengkap jsaSigFieldLabel() di jsa_report.html -- kode di
+// sini IDENTIK.
+function jsaSigFieldLabel(fieldId) {
+  var input = document.getElementById(fieldId);
+  var group = input && input.closest('.form-group');
+  var label = group && group.querySelector('label');
+  return label ? label.textContent.trim() : fieldId;
+}
+
 function jsaSigOnFileChosen(e) {
   var file = e.target.files && e.target.files[0];
   e.target.value = '';
@@ -554,6 +563,9 @@ function jsaSigOnFileChosen(e) {
   var input = document.getElementById(fieldId);
   var name = (input.value || '').trim();
   if (!name) { alert('Isi nama dulu sebelum upload tanda tangan.'); return; }
+  if (jsaFindSignatureEntry(name)) {
+    if (!confirm('Tanda tangan dengan nama "' + name + '" sudah tersimpan di Library.\n\nIngin mengganti tanda tangan (' + jsaSigFieldLabel(fieldId) + ')?')) return;
+  }
   var box = document.getElementById(fieldId + '_sigbox');
   box.classList.add('jsa-sig-loading');
   box.innerHTML = '<span class="jsa-sig-empty">⏳ Memproses...</span>';

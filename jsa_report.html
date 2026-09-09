@@ -588,6 +588,18 @@ function jsaSigTriggerUpload(fieldId) {
   document.getElementById('jsaSigFileInput').click();
 }
 
+// Ambil label yang terlihat user (mis. "Applicant"/"RIC") dari <label>
+// sibling di dalam .form-group yang sama -- generik, TIDAK hardcode per
+// field, supaya jumlah/nama field signature yang beda antar 2 file JSA
+// tidak perlu disesuaikan manual di sini (pola sama dgn pmNumpadFieldLabel
+// di shared.js).
+function jsaSigFieldLabel(fieldId) {
+  var input = document.getElementById(fieldId);
+  var group = input && input.closest('.form-group');
+  var label = group && group.querySelector('label');
+  return label ? label.textContent.trim() : fieldId;
+}
+
 function jsaSigOnFileChosen(e) {
   var file = e.target.files && e.target.files[0];
   e.target.value = ''; // reset supaya bisa pilih file yg SAMA lagi kalau perlu upload ulang
@@ -596,6 +608,12 @@ function jsaSigOnFileChosen(e) {
   var input = document.getElementById(fieldId);
   var name = (input.value || '').trim();
   if (!name) { alert('Isi nama dulu sebelum upload tanda tangan.'); return; }
+  // Nama sudah punya tanda tangan tersimpan -- konfirmasi dulu SEBELUM
+  // upload/timpa, supaya tidak ada tanda tangan lama yang ke-replace tidak
+  // sengaja (permintaan eksplisit user, mengantisipasi salah hapus/ganti).
+  if (jsaFindSignatureEntry(name)) {
+    if (!confirm('Tanda tangan dengan nama "' + name + '" sudah tersimpan di Library.\n\nIngin mengganti tanda tangan (' + jsaSigFieldLabel(fieldId) + ')?')) return;
+  }
   var box = document.getElementById(fieldId + '_sigbox');
   box.classList.add('jsa-sig-loading');
   box.innerHTML = '<span class="jsa-sig-empty">⏳ Memproses...</span>';

@@ -3418,3 +3418,50 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   salah." muncul, TIDAK ada panggilan DELETE; password benar -> DELETE
   terpanggil dgn id YANG SUDAH di-strip prefix, entry hilang dari
   `jsaHazardBank` DAN dari HTML list yang sedang terbuka.
+
+## JSA: label tombol "Simpan Draft" -> "Simpan Draft Ke Database" (2026-09-09)
+
+- Cuma ganti teks tombol (`jsaSaveDraft()`, kedua file JSA) -- tidak ada
+  perubahan perilaku, permintaan eksplisit user supaya lebih jelas
+  tujuannya (nyimpen ke Supabase, bukan draft lokal/browser).
+
+## JSA: konfirmasi sebelum TIMPA tanda tangan dengan nama yang sama (2026-09-09)
+
+- Sebelumnya, upload tanda tangan baru dgn nama yang KEBETULAN sudah ada
+  di Library (`jsa_signatures`) langsung MENIMPA tanda tangan lama TANPA
+  konfirmasi apa pun (`jsaSaveSignature()` di `shared.js`, lihat bagian
+  "upload tanda tangan" di atas -- PATCH row yang sudah ada + hapus file
+  Drive lama). Permintaan eksplisit user: **beri peringatan dulu**,
+  "mengantisipasi salah hapus tanda tangan" (mis. typo nama yang KEBETULAN
+  cocok persis dengan nama orang lain yang sudah py tanda tangan, atau
+  user lupa sudah pernah upload nama itu).
+- **`jsaSigOnFileChosen()` (kedua file JSA)** sekarang cek
+  `jsaFindSignatureEntry(name)` SEBELUM proses upload apa pun dimulai --
+  kalau ketemu (nama SUDAH py tanda tangan tersimpan), tampilkan
+  `confirm('Tanda tangan dengan nama "<nama>" sudah tersimpan di
+  Library.\n\nIngin mengganti tanda tangan (<label field>)?')`. User pilih
+  **Batal** -> fungsi `return` lebih awal, TIDAK ADA proses apa pun yang
+  jalan (tidak proses gambar, tidak upload ke Drive, tidak sentuh
+  Supabase sama sekali) -- tanda tangan lama TETAP UTUH. User pilih **OK**
+  -> lanjut proses normal seperti sebelumnya (timpa, sesuai perilaku lama).
+- **`<label field>` diambil GENERIK lewat `jsaSigFieldLabel(fieldId)`**
+  (fungsi baru, `input.closest('.form-group')` lalu ambil teks
+  `<label>` sibling-nya) -- BUKAN daftar id->label hardcode, supaya
+  konsisten dgn pola generik lain di modul JSA ini (`.jsa-sig-name-input`,
+  `pmNumpadFieldLabel` di `shared.js`) dan otomatis benar walau label
+  antar 2 file JSA berbeda teks (mis. "Operation Supervisor / POC" di
+  Risk to Trip vs "Operation Supervisor" polos di Conditional Access).
+- Nama yang TIDAK ADA di library (upload PERTAMA kali utk nama itu) --
+  `jsaFindSignatureEntry()` return `null`, popup ini SAMA SEKALI TIDAK
+  muncul, upload langsung jalan seperti biasa (tidak ada regresi ke alur
+  normal).
+- Diverifikasi lewat headless Chrome kedua file (mock `jsaProcessSignatureImage`/
+  `jsaSaveSignature`/`jsaLoadSignatureLibrary`/`window.confirm`, DAN
+  `jsaFindSignatureEntry` di-override LANGSUNG -- bukan cuma isi ulang
+  array `jsaSignatureLibrary`, supaya kebal dari race call otomatis
+  `jsaLoadSignatureLibrary()` di init halaman yg hit Supabase sungguhan
+  dan bisa resolve belakangan menimpa seed manual, pelajaran yang sama
+  persis dari sesi pembuatan fitur signature sebelumnya): nama baru -> 0
+  panggilan `confirm()`, save langsung jalan; nama sudah ada + Batal -> 1
+  panggilan `confirm()` (isi pesan py nama & label field yang benar), save
+  TIDAK terpanggil; nama sudah ada + OK -> save terpanggil normal.
