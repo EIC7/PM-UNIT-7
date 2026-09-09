@@ -564,6 +564,15 @@ function jsaLoadHazardLibraryFromServer() {
     });
 }
 
+// id di sini adalah id ASLI baris jsa_hazard_library (BUKAN id ber-prefix
+// 'usr-' yang dipakai jsaHazardBank utk picker -- pemanggil WAJIB strip
+// prefix itu dulu, lihat hzDeleteFromLibrary() di jsa_report.html/
+// jsa_condition_access.html).
+function jsaDeleteHazardFromLibrary(id) {
+  if (!id) return Promise.reject(new Error('ID tidak valid.'));
+  return supaFetch('DELETE', JSA_HAZARD_LIBRARY_TABLE + '?id=eq.' + encodeURIComponent(id));
+}
+
 function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
   if (!GDRIVE_WEB_APP_URL || !dataUrlBase64) return Promise.resolve(null);
   // fileName dari pemanggil (nama device) diabaikan sebagai KEY penyimpanan --

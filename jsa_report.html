@@ -101,6 +101,8 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .hz-item input{width:auto;margin-top:3px}
 .hz-item .hz-name{font-weight:600;font-size:0.9em;color:#e7ebf2}
 .hz-item .hz-src{font-size:0.72em;color:#7c8698;margin-top:2px}
+.hz-del-btn{margin-left:auto;flex-shrink:0;border:1px solid #e5695c;background:rgba(229,105,92,0.12);color:#e5695c;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:0.78em}
+.hz-del-btn:hover{background:#e5695c;color:#fff}
 .hz-dialog-footer{padding:12px 16px;border-top:1px solid #2a3348;display:flex;justify-content:flex-end;gap:8px}
 @media print{.no-print{display:none!important}}
 /* ── Modal Preview Word (docx-preview) -- kertas putih standar (BUKAN
@@ -913,15 +915,42 @@ function hzRenderList() {
   body.innerHTML = items.map(function(hz) {
     var checked = jsaHazardPickerSelected[hz.id] ? 'checked' : '';
     var srcTag = hz.source ? '<div class="hz-src">Sumber: ' + jsaEsc(hz.source) + '</div>' : '';
+    // Cuma entry hasil "💾 Simpan ke Library" (source ada isinya) yang boleh
+    // dihapus -- 29 entry bawaan jsa_hazard_bank.json (statis, bundled)
+    // TIDAK PERNAH punya tombol ini sama sekali.
+    var delBtn = hz.source ? '<button type="button" class="hz-del-btn" onclick="event.preventDefault();event.stopPropagation();hzDeleteFromLibrary(\'' + hz.id + '\')" title="Hapus dari Library (perlu password)">🗑</button>' : '';
     return '<label class="hz-item">' +
       '<input type="checkbox" ' + checked + ' onchange="hzToggleSelect(\'' + hz.id + '\',this.checked)">' +
       '<div><div class="hz-name">' + jsaEsc(hz.hazard.join(' / ')) + '</div>' +
       '<div style="font-size:0.78em;color:#9aa4b5;margin-top:2px">Risk: ' + jsaEsc(hz.risk.join('; ')) + '</div>' +
-      srcTag + '</div></label>';
+      srcTag + '</div>' + delBtn + '</label>';
   }).join('');
 }
 function hzToggleSelect(id, checked) {
   if (checked) jsaHazardPickerSelected[id] = true; else delete jsaHazardPickerSelected[id];
+}
+// Hapus 1 entry dari jsa_hazard_library -- WAJIB password "eicunit7"
+// (permintaan eksplisit user, sekadar gerbang sederhana sesuai level
+// keamanan app ini -- semua akses tabel lewat anon key TANPA layer auth,
+// BUKAN proteksi kriptografis sungguhan, cuma mencegah hapus tidak
+// sengaja/iseng). `id` di sini SUDAH ber-prefix 'usr-' (format jsaHazardBank)
+// -- di-strip dulu sebelum dikirim ke jsaDeleteHazardFromLibrary().
+function hzDeleteFromLibrary(id) {
+  var hz = jsaHazardBank.filter(function(x){ return x.id === id; })[0];
+  var label = hz ? hz.hazard.join(' / ') : 'hazard ini';
+  var pw = prompt('Masukkan password untuk menghapus "' + label + '" dari Library:');
+  if (pw === null) return; // dibatalkan
+  if (pw !== 'eicunit7') { alert('Password salah.'); return; }
+  if (typeof jsaDeleteHazardFromLibrary !== 'function') { alert('Fitur ini belum tersedia (shared.js belum termuat).'); return; }
+  jsaDeleteHazardFromLibrary(id.replace(/^usr-/, '')).then(function() {
+    delete jsaHazardPickerSelected[id];
+    if (typeof dbShowToast === 'function') dbShowToast('✓ Hazard dihapus dari Library');
+    return jsaLoadHazardBank();
+  }).then(function() {
+    hzRenderList();
+  }).catch(function(err) {
+    alert('Gagal menghapus dari Library: ' + (err && err.message ? err.message : err));
+  });
 }
 function hzConfirmSelection() {
   if (!jsaHazardPickerTarget) return;

@@ -3373,3 +3373,48 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   benar-benar kembali kosong, `_editingId` jadi `null`, `_raDirty` jadi
   `false`, `?id=`/`autodownload`/`autopreview` hilang dari URL, dan kotak
   preview tanda tangan kembali ke placeholder kosong.
+
+## JSA: hapus entry Library hazard custom (perlu password) (2026-09-09)
+
+- Entry hasil "💾 Simpan ke Library" (`source: 'Ditambahkan pengguna'` di
+  `jsaHazardBank`) sekarang bisa dihapus lewat tombol **🗑** baru di modal
+  "🔎 Pilih Hazard dari Library" (`hzRenderList()`, kedua file JSA) --
+  **HANYA muncul utk entry yang punya `source`**, 29 entry bawaan
+  `jsa_hazard_bank.json` (statis, bundled, TIDAK ADA di Supabase, tidak
+  bisa dihapus lewat sini) TIDAK PERNAH dapat tombol ini.
+- **`hzDeleteFromLibrary(id)`** minta password via `prompt()` dulu --
+  **`"eicunit7"`, hardcoded, dicek persis (case-sensitive)** -- permintaan
+  eksplisit user. Ini SENGAJA cuma gerbang sederhana (deterrent hapus
+  tidak sengaja/iseng), BUKAN proteksi kriptografis sungguhan -- konsisten
+  dgn level keamanan app ini secara keseluruhan (semua akses tabel lewat
+  anon key TANPA layer auth server-side apa pun, password ini kelihatan
+  jelas di source kalau dibuka DevTools). **Kalau ke depan diminta
+  proteksi yang LEBIH KUAT** (bukan sekadar password klien), perlu RLS
+  policy Supabase sungguhan/Edge Function -- jauh lebih kompleks dari
+  sekadar `prompt()`, belum dikerjakan.
+  - Password SALAH atau `prompt()` dibatalkan (`Escape`/tombol Batal) ->
+    **TIDAK ADA panggilan DELETE sama sekali** (validasi password 100% di
+    JS SEBELUM `jsaDeleteHazardFromLibrary()` dipanggil).
+  - Password BENAR -> `shared.js`: `jsaDeleteHazardFromLibrary(rawId)`
+    (fungsi generik baru, `DELETE jsa_hazard_library?id=eq.<rawId>`) ->
+    `jsaLoadHazardBank()` dipanggil ulang (refresh gabungan static+server)
+    -> `hzRenderList()` refresh list yg lagi terbuka supaya entry yang
+    baru dihapus LANGSUNG hilang tanpa perlu tutup-buka modal lagi.
+  - **`id` di `jsaHazardBank` ber-prefix `'usr-'`** (lihat bagian
+    "hazard/risk/control disimpan ke library bersama" di atas) -- WAJIB
+    di-strip (`id.replace(/^usr-/, '')`) SEBELUM dikirim ke
+    `jsaDeleteHazardFromLibrary()`, itu fungsi yg cuma terima id ASLI
+    baris `jsa_hazard_library`. Kalau lupa strip, DELETE akan gagal
+    (`id=eq.usr-<uuid>` tidak match UUID mana pun).
+  - Tombol 🗑 dipasang DI DALAM `<label class="hz-item">` yang aslinya
+    sudah py behavior klik = toggle checkbox pemilihan (native HTML
+    `<label>`) -- `onclick="event.preventDefault();event.stopPropagation();..."`
+    WAJIB ada di tombolnya supaya klik hapus TIDAK ikut men-toggle
+    checkbox item itu.
+- Diverifikasi lewat headless Chrome (mock `supaFetch` utk
+  `jsa_hazard_library`, `window.prompt`/`window.alert` di-override) di
+  KEDUA file: entry statis TIDAK punya tombol hapus, entry custom PUNYA;
+  password salah -> tetap ada di Supabase + `mockLib` + alert "Password
+  salah." muncul, TIDAK ada panggilan DELETE; password benar -> DELETE
+  terpanggil dgn id YANG SUDAH di-strip prefix, entry hilang dari
+  `jsaHazardBank` DAN dari HTML list yang sedang terbuka.
