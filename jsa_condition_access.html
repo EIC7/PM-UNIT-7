@@ -280,6 +280,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
     <button class="btn btn-green btn-full" onclick="jsaSaveDraft()" style="padding:13px;font-size:1em">💾 Simpan Draft</button>
     <button class="btn btn-gray btn-full" onclick="jsaPreviewWord()" style="padding:13px;font-size:1em">👁 Preview Hasil Word</button>
     <button class="btn btn-blue btn-full" onclick="jsaGenerateWord()" style="padding:13px;font-size:1em">📄 Generate Word (.docx)</button>
+    <button class="btn btn-red btn-full" onclick="jsaResetAll()" style="padding:13px;font-size:1em">✕ Reset / Buat Dokumen JSA Baru</button>
   </div>
 </div>
 
@@ -1034,6 +1035,40 @@ function applyRecordToForm(rec) {
 
 function jsaSaveDraft() {
   dbSave('JSA Conditional Access');
+}
+
+// Lihat komentar lengkap jsaResetAll() di jsa_report.html -- logic sama,
+// cuma daftar field top-level beda (tidak ada riskToTrip/riskLevel di sini)
+// dan jsaState punya field tambahan `others` (Others/Specific Hazard dinamis).
+function jsaResetAll() {
+  if (!confirm('Reset dan buat dokumen JSA baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
+  ['jsaEquipTag','jsaWorkToBeDone','jsaWorkMethod','jsaHiraRef','jsaWo','jsaPriority','jsaEpas','jsaPeriodStart','jsaPeriodFinish'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.querySelectorAll('.jsa-sig-name-input').forEach(function(el) { el.value = ''; });
+  jsaState.sections = { A: {steps: []}, B: {steps: []}, C: {steps: []} };
+  jsaState.checklist = {};
+  jsaState.plant = {unit:'', system:'', equipment:''};
+  jsaState.riskCategory = '';
+  jsaState.others = [];
+  jsaState.controlMeasures = {};
+  jsaState.additionalMeasures = [''];
+  jsaRenderSections();
+  jsaRenderChecklist();
+  jsaRenderControlMeasures();
+  jsaRenderAdditionalMeasures();
+  jsaRefreshAllSignaturePreviews();
+  window._editingId = null;
+  window._raDirty = false;
+  if (typeof autosaveClear === 'function') autosaveClear();
+  if (window.history && window.history.replaceState) {
+    var url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('autodownload');
+    url.searchParams.delete('autopreview');
+    window.history.replaceState({}, '', url.toString());
+  }
+  if (typeof dbShowToast === 'function') dbShowToast('✓ Form direset, siap untuk dokumen JSA baru');
 }
 
 // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan

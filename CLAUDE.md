@@ -3300,3 +3300,76 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   berfungsi" (gagal simpan) sampai migrasi ini dijalankan.
 - `shared.js?v=` dinaikkan ke `20260909a` di semua 38 file yang
   memuatnya.
+
+## 🔴 Tabel baru Supabase HARUS eksplisit `disable row level security` -- `alter table ... disable` di migrasi TIDAK CUKUP kalau tabelnya dibuat lewat Supabase UI/`create table` polos duluan (2026-09-09)
+
+- Setelah migrasi `jsa_hazard_library`/`jsa_signatures` di atas "dijalankan",
+  user tetap dapat error nyata di produksi: `insert` ke `jsa_hazard_library`
+  balas `{"code":"42501",...,"message":"new row violates row-level security
+  policy for table \"jsa_hazard_library\""}` -- RLS-nya TETAP AKTIF walau
+  migrasi SUDAH punya baris `alter table jsa_hazard_library disable row
+  level security;`. Supabase **mengaktifkan RLS otomatis secara default**
+  untuk tabel baru yang dibuat lewat dashboard UI (Table Editor) -- kalau
+  user sempat bikin tabelnya duluan lewat UI (bukan cuma jalankan blok SQL
+  ini apa adanya dari atas ke bawah di SQL Editor), `create table if not
+  exists` di migrasi jadi no-op (tabel sudah ada), tapi urutan/isi migrasi
+  SQL-nya sendiri sebenarnya sudah benar -- akar masalah PALING MUNGKIN
+  adalah RLS ke-enable ulang lewat toggle UI terpisah, atau baris `alter
+  table ... disable` sempat ke-skip/tidak ke-run (mis. dijalankan partial,
+  cuma sebagian block ter-select sebelum run).
+- **Kalau ke depan menambah tabel Supabase BARU untuk fitur apa pun**
+  (pola JSA di atas -- `jsa_signatures`, `jsa_hazard_library` -- akan
+  jadi pola umum modul lain juga), SELALU ingatkan user post-migrasi
+  untuk **verifikasi ulang status RLS tabel itu** (Supabase Dashboard ->
+  Authentication -> Policies, atau Table Editor -> ikon gembok di tabelnya)
+  BENAR-BENAR "Disabled" -- jangan cuma percaya migrasi SQL sudah
+  dijalankan tanpa error. Fix definitif kalau ketemu error `42501` serupa
+  di tabel Supabase MANA PUN di app ini (semua akses dari client pakai
+  anon key, TIDAK ADA layer auth -- lihat pola `pm_sync_log`/tabel kecil
+  lain): jalankan ulang secara EKSPLISIT (bukan cuma bagian dari blok
+  `create table` yang mungkin sudah no-op):
+  ```sql
+  alter table jsa_hazard_library disable row level security;
+  alter table jsa_signatures disable row level security;
+  notify pgrst, 'reload schema';
+  ```
+
+## JSA: tombol "✕ Reset / Buat Dokumen JSA Baru" (2026-09-09)
+
+- Ditambahkan ke KEDUA file JSA (`jsa_report.html`/`jsa_condition_access.html`),
+  di bawah tombol "📄 Generate Word" -- pola SAMA PERSIS dengan `resetAll()`/
+  `so2Reset()` yang sudah lama ada di modul checksheet lain (confirm dulu,
+  kosongkan semua field, lepas `window._editingId` biar simpan/generate
+  berikutnya bikin dokumen BARU bukan menimpa yang lama, hapus `?id=` dari
+  URL). `.btn-red` (SUDAH ADA di kedua file, dipakai jg oleh tombol "🗑
+  Step") dipakai lagi di sini -- bukan warna baru.
+- **Field signature (6 di `jsa_report.html`, 5 di `jsa_condition_access.html`)
+  dikosongkan GENERIK lewat `document.querySelectorAll('.jsa-sig-name-input')`**
+  (class yang sama dipakai `jsaRefreshAllSignaturePreviews()`) -- BUKAN
+  daftar id hardcode, supaya jumlah field yang beda antar 2 file JSA tidak
+  perlu disesuaikan manual tiap ada perubahan. Setelah field-nya
+  dikosongkan, `jsaRefreshAllSignaturePreviews()` dipanggil ulang supaya
+  kotak preview tanda tangan ikut balik ke "Belum ada tanda tangan".
+- `jsaState` di-reset ke bentuk AWAL PERSIS deklarasi awalnya (`sections`
+  3 section kosong, `checklist`/`controlMeasures` object kosong, `plant`
+  3 field kosong, `riskCategory` kosong, `additionalMeasures` 1 slot
+  kosong) -- **`jsa_condition_access.html` py 1 field EKSTRA (`others: []`,
+  Others/Specific Hazard dinamis) yang TIDAK ADA di `jsa_report.html`**,
+  WAJIB diikutkan di reset function-nya sendiri (`jsaResetAll()` KEDUA
+  file TIDAK identik persis -- beda daftar field top-level & field
+  `jsaState` sesuai isi `dbCollectData()` masing-masing, lihat definisi
+  `jsaState` di awal tiap file kalau perlu verifikasi ulang). Field
+  Risk-to-Trip-khusus (`jsaRiskToTrip`, `jsaRiskLevel` + hint approval
+  otomatis via `jsaRenderApprovalHint()`) cuma direset di `jsa_report.html`
+  -- tidak ada di Conditional Access.
+  **Kalau nambah field top-level baru ke salah satu file JSA ke depan,
+  WAJIB tambahkan juga ke daftar reset di `jsaResetAll()` file itu** --
+  gampang lupa karena field baru biasanya cuma ditambahkan ke
+  `dbCollectData()`/`applyRecordToForm()`, bukan otomatis ke sini.
+- Diverifikasi lewat headless Chrome kedua file (15-17 skenario tiap
+  file): isi semua field + `jsaState` dgn data dummy + set `_editingId`/
+  `_raDirty`/`?id=` di URL, panggil `jsaResetAll()` (dgn `confirm`
+  di-override jadi selalu `true`), lalu cek SEMUA field/state di atas
+  benar-benar kembali kosong, `_editingId` jadi `null`, `_raDirty` jadi
+  `false`, `?id=`/`autodownload`/`autopreview` hilang dari URL, dan kotak
+  preview tanda tangan kembali ke placeholder kosong.
