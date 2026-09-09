@@ -3591,3 +3591,52 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   header (selisih ~1600px di test) dan PERSIS menyentuh/setelah batas
   bawah tabel -- bukan lagi nempel di atas; klik tombol tetap berhasil
   menambah step baru seperti biasa.
+
+## 🔴 JSA: BUG KE-2 penyebab link Drive kadang tetap kosong -- `_pmPatchRecordWithRetry()` juga bisa diam-diam menyerah (2026-09-09)
+
+- Sesudah fix pertama (throw eksplisit di `jsaUploadWordToDrive()`), user
+  MASIH lapor record BARU (dibuat SETELAH fix pertama live) yang tetap
+  tidak punya tombol "Preview in Drive". Investigasi ulang nemu SATU LAGI
+  celah silent-failure yang beda titiknya: langkah TERAKHIR
+  (`_pmPatchRecordWithRetry(id, {data: merged})`, dipakai buat nulis
+  `wordDriveUrl` balik ke record) memakai fungsi `shared.js` yang SENGAJA
+  didesain "coba 3x lalu diam-diam menyerah" (`return;` polos tanpa
+  reject, lihat bagian "Overlay SEDANG MENSUBMIT"/"finish()" dkk di atas)
+  -- desain itu BENAR utk pemakaian ASLINYA
+  (`raSendFinalPdfToFirebaseDashboard`, yang punya mekanisme retry
+  TERPISAH berbasis kunjungan berikutnya, `raRetryPendingFirebaseSyncs()`)
+  TAPI SALAH kalau dipakai di jalur JSA ini yang TIDAK PUNYA retry
+  otomatis serupa -- PATCH yang gagal 3x (network blip, RLS, dst) bikin
+  promise `jsaUploadWordToDrive()` TETAP RESOLVED, `.catch()`/`alert()`
+  yang baru ditambahkan TETAP TIDAK PERNAH kepanggil, `wordDriveUrl`
+  TIDAK PERNAH tersimpan, DAN kali ini bahkan Record GET yang kosong
+  (`if (!row) return;`, celah serupa di titik lain) juga ikut kena pola
+  yang sama.
+- **Fix**: `jsaUploadWordToDrive()` (kedua file JSA) TIDAK LAGI memanggil
+  `_pmPatchRecordWithRetry()` -- PATCH langsung lewat `supaFetch('PATCH',
+  SUPA_TABLE + '?id=eq.'+id, {data:merged})` (tanpa wrapper retry apa
+  pun), supaya kegagalan PATCH BENAR-BENAR reject dan sampai ke
+  `.catch()`/`alert()` yang sudah ada. `if (!row) return;` (GET record
+  kosong) juga diubah jadi `throw new Error(...)`. **`_pmPatchRecordWithRetry()`
+  SENDIRI TIDAK diubah** -- pemakaian aslinya (Firebase sync) tetap benar
+  apa adanya, cuma JSA yang berhenti memakainya.
+- **Pelajaran penting**: kalau menemukan 1 silent-failure bug di sebuah
+  chain promise yang panjang, JANGAN asumsikan itu satu-satunya -- audit
+  SETIAP titik `.then()`/pemanggilan fungsi lain di sepanjang chain yang
+  sama utk pola serupa (`return;` polos tanpa throw, fungsi generik yang
+  "sengaja menyerah diam-diam" krn didesain utk pemakaian lain). Di sini
+  butuh 2 iterasi laporan user (2 record berbeda, satu SEBELUM fix
+  pertama, satu SETELAH) sebelum akar masalah KEDUA ini ketemu -- kalau
+  ada laporan serupa lagi ke depan meski setelah fix ini, curigai lagi
+  pola yang sama di titik lain sepanjang chain yang sama.
+- Diverifikasi lewat headless Chrome kedua file, 2 skenario: (1) GET
+  sukses tapi PATCH REJECT -> `alert()` terpanggil PERSIS 1x, pesan benar,
+  TIDAK ada panggilan `deleteFotoDariGDrive` basi; (2) GET return baris
+  KOSONG -> `alert()` terpanggil, PATCH TIDAK PERNAH dicoba (berhenti tepat
+  di titik yang benar, tidak lanjut proses percuma).
+- **Record LAMA yang sudah kena bug ini (termasuk 2 laporan user di atas)
+  TIDAK otomatis diperbaiki** -- fix ini cuma berlaku utk generate BARU.
+  Utk record yang SUDAH ADA dan tidak punya link Drive: buka via tombol
+  "✎ Edit" di `jsa_history.html`, lalu klik "📄 Generate Word" lagi --
+  kalau masih gagal, `alert()` yang baru akan MENJELASKAN kenapa (dulu
+  tidak ada penjelasan sama sekali).

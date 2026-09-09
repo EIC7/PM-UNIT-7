@@ -2045,10 +2045,20 @@ function jsaUploadWordToDrive(blob, filename) {
       if (!result || !result.success) throw new Error('Upload ke Google Drive gagal (cek koneksi internet / status layanan Drive).');
       return supaFetch('GET', 'pm_records?id=eq.' + id + '&select=data').then(function(rows) {
         var row = rows && rows[0];
-        if (!row) return;
+        if (!row) throw new Error('Record tidak ditemukan setelah disimpan (id=' + id + ').');
         var oldFileId = row.data && row.data.wordDriveFileId;
         var merged = Object.assign({}, row.data || {}, { wordDriveUrl: result.fileUrl, wordDriveFileId: result.fileId });
-        return _pmPatchRecordWithRetry(id, { data: merged }).then(function() {
+        // 🔴 BUG KE-2 ditemukan 2026-09-09: _pmPatchRecordWithRetry() (shared.js)
+        // SENGAJA didesain utk pemakaian LAIN (raSendFinalPdfToFirebaseDashboard)
+        // yang boleh "coba 3x lalu diam-diam menyerah" (ada mekanisme retry
+        // TERPISAH berbasis kunjungan berikutnya di sana). Di sini TIDAK ADA
+        // mekanisme retry serupa -- kalau dipakai apa adanya, PATCH yang gagal
+        // 3x akan membuat promise ini TETAP RESOLVED (bukan REJECTED), jadi
+        // .catch() di bawah TETAP TIDAK kepanggil & wordDriveUrl TIDAK PERNAH
+        // tersimpan TANPA user diberi tahu -- persis kelas bug yang sama dgn
+        // fix di atas, cuma di titik yang berbeda. PATCH langsung (bukan lewat
+        // wrapper retry itu) supaya kegagalan di sini BENAR-BENAR reject.
+        return supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + id, { data: merged }).then(function() {
           if (oldFileId && oldFileId !== result.fileId) deleteFotoDariGDrive(oldFileId);
         });
       });
