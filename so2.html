@@ -1678,7 +1678,7 @@ function so2BuildTable() {
     tr.setAttribute('data-itemidx', idx);
     var recCell;
     if (item.gasInput) {
-      recCell = '<td style="padding:4px 6px"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:11px;color:var(--text3)">Gas 1:</span><input type="number" id="gas1_'+idx+'" placeholder="bar" min="0" max="200" style="width:54px;text-align:center;font-size:12px"><span style="font-size:11px;color:var(--text3)">Gas 2:</span><input type="number" id="gas2_'+idx+'" placeholder="bar" min="0" max="200" style="width:54px;text-align:center;font-size:12px"></div></td>';
+      recCell = '<td style="padding:4px 6px"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:11px;color:var(--text3)">Gas 1:</span><input type="number" id="gas1_'+idx+'" placeholder="psi" min="0" max="3000" style="width:54px;text-align:center;font-size:12px"><span style="font-size:11px;color:var(--text3)">psi</span><span style="font-size:11px;color:var(--text3);margin-left:4px">Gas 2:</span><input type="number" id="gas2_'+idx+'" placeholder="psi" min="0" max="3000" style="width:54px;text-align:center;font-size:12px"><span style="font-size:11px;color:var(--text3)">psi</span></div></td>';
     } else {
       recCell = '<td id="rec_'+idx+'" style="font-size:12px;font-family:\'Courier New\',monospace;color:var(--ok);font-weight:600;padding-left:8px"></td>';
     }
@@ -1961,8 +1961,9 @@ function so2DownloadPdf() {
       if (allowedCats.indexOf(item.cat) === -1) return;
       var get = function(id){ var e=document.getElementById(id); return e&&e.checked?'__CHK__':'__BOX__'; };
       var recEl = document.getElementById('rec_'+idx);
+      var g1Val = gv('gas1_'+idx), g2Val = gv('gas2_'+idx);
       var recVal = item.gasInput
-        ? ('Gas1:'+safe(gv('gas1_'+idx))+' Gas2:'+safe(gv('gas2_'+idx)))
+        ? ('Gas1:'+safe(g1Val)+(g1Val?' psi':'')+' Gas2:'+safe(g2Val)+(g2Val?' psi':''))
         : (recEl ? safe(recEl.textContent) : '');
       checkRows.push([item.no||'', safe(item.label), get('c7aY_'+idx), get('c7aN_'+idx), get('c7bY_'+idx), get('c7bN_'+idx), recVal]);
     });
