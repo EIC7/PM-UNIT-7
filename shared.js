@@ -149,6 +149,37 @@ function _pmGetSupaClient() {
 var GDRIVE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxyxAOQaIFkT9EZtTHfkjQeG3TlkLnEu2AKVyhUnguK7Td_zls1qL7IPB_hLsXTaLNBHA/exec';
 var GDRIVE_SECRET_TOKEN = 'pmeicunit7-mahfud';
 
+/* 🔴 AKAR MASALAH "tombol Simpan kadang tidak merespon di SEMUA modul"
+   (dilaporkan 2026-09-10): fetch() browser TIDAK PUNYA timeout bawaan --
+   kalau koneksi macet di tengah jalan (sinyal HP lemah/plant WiFi tidak
+   stabil, request nyangkut tanpa PERNAH fire onload/onerror), promise-nya
+   BISA TIDAK PERNAH resolve/reject sama sekali. window._dbSaving (guard
+   anti klik-dobel dipakai BERSAMA oleh dbSave/raResaveInPlace/
+   dbSaveSilent-autosave) cuma di-reset di dalam .then()/.catch() rantai
+   promise yang berujung di uploadFotoKeGDrive/uploadFileToGDrive/
+   supaFetch/supaFetchProgress -- kalau salah satu fetch/xhr di rantai itu
+   nyangkut selamanya, _dbSaving nyangkut true SELAMANYA juga, dan SEMUA
+   tombol Simpan di aplikasi (bukan cuma 1 file, termasuk yang dipicu diam-
+   diam oleh autosave server tiap 60 detik) langsung no-op TANPA pesan
+   error apa pun sampai halaman di-reload manual. Fix: bungkus semua
+   fetch() yang ada di rantai ini dengan timeout (AbortController) supaya
+   SELALU reject dalam batas waktu wajar, bukan menggantung selamanya. */
+function _pmFetchTimeout(url, opts, timeoutMs) {
+  timeoutMs = timeoutMs || 30000;
+  opts = opts || {};
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs) : null;
+  if (ctrl) opts.signal = ctrl.signal;
+  return fetch(url, opts).then(function (res) {
+    if (timer) clearTimeout(timer);
+    return res;
+  }, function (err) {
+    if (timer) clearTimeout(timer);
+    if (err && err.name === 'AbortError') throw new Error('Request timeout - periksa koneksi internet Anda.');
+    throw err;
+  });
+}
+
 function gdriveFileIdToViewUrl(fileId) {
   return 'https://lh3.googleusercontent.com/d/' + fileId;
 }
@@ -398,7 +429,7 @@ function _pmGenUniqueDriveFileName(modul) {
    terpisah, tidak pernah memblokir simpan/download apa pun). */
 function uploadFileToGDrive(dataUrlBase64, fileName, mimeType, modul, keterangan) {
   if (!GDRIVE_WEB_APP_URL || !dataUrlBase64) return Promise.resolve(null);
-  return fetch(GDRIVE_WEB_APP_URL, {
+  return _pmFetchTimeout(GDRIVE_WEB_APP_URL, {
     method: 'POST',
     body: JSON.stringify({
       token: GDRIVE_SECRET_TOKEN,
@@ -409,7 +440,7 @@ function uploadFileToGDrive(dataUrlBase64, fileName, mimeType, modul, keterangan
       modul: modul || (window.CURRENT_MODUL || 'unknown'),
       keterangan: keterangan || ''
     })
-  }).then(function(res){ return res.json(); })
+  }, 45000).then(function(res){ return res.json(); })
     .then(function(result){
       if (!result.success) { console.error('Upload GDrive (file) gagal:', result.error); return null; }
       return result; // {success, fileId, fileUrl}
@@ -579,7 +610,7 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
   // dipakai Apps Script cuma buat keterangan/logging, bukan buat identifikasi
   // file. Key aslinya selalu di-generate unik di sini.
   var driveFileName = _pmGenUniqueDriveFileName(modul);
-  var promise = fetch(GDRIVE_WEB_APP_URL, {
+  var promise = _pmFetchTimeout(GDRIVE_WEB_APP_URL, {
     method: 'POST',
     body: JSON.stringify({
       token: GDRIVE_SECRET_TOKEN,
@@ -589,7 +620,7 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
       modul: modul || (window.CURRENT_MODUL || 'unknown'),
       keterangan: keterangan || ''
     })
-  }).then(function(res){ return res.json(); })
+  }, 45000).then(function(res){ return res.json(); })
     .then(function(result){
       if (!result.success) { console.error('Upload GDrive gagal:', result.error); return null; }
       if (entry) { entry.driveUrl = gdriveFileIdToViewUrl(result.fileId); entry.driveFileId = result.fileId; }
@@ -653,14 +684,14 @@ function _pmEnsureAllPhotosOnDrive(dataObj, modul) {
    user ikut gagal. */
 function deleteFotoDariGDrive(fileId) {
   if (!GDRIVE_WEB_APP_URL || !fileId) return Promise.resolve(null);
-  var promise = fetch(GDRIVE_WEB_APP_URL, {
+  var promise = _pmFetchTimeout(GDRIVE_WEB_APP_URL, {
     method: 'POST',
     body: JSON.stringify({
       token: GDRIVE_SECRET_TOKEN,
       action: 'delete',
       fileId: fileId
     })
-  }).then(function(res){ return res.json(); })
+  }, 20000).then(function(res){ return res.json(); })
     .catch(function(err){ console.error('Hapus GDrive error:', err); return null; });
   _pmPendingDriveUploads.push(promise.catch(function(){}));
   return promise;
@@ -691,7 +722,7 @@ function supaFetch(method, path, body) {
     }
   };
   if (body) opts.body = JSON.stringify(body);
-  return fetch(SUPA_URL + '/rest/v1/' + path, opts)
+  return _pmFetchTimeout(SUPA_URL + '/rest/v1/' + path, opts, 30000)
     .then(function(res) {
       if (!res.ok) return res.text().then(function(t){ throw new Error(t); });
       return res.text().then(function(t){ return t ? JSON.parse(t) : []; });
@@ -752,6 +783,11 @@ function supaFetchProgress(method, path, body, onProgress, expectedTotal) {
     xhr.setRequestHeader('Authorization', 'Bearer ' + SUPA_KEY);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Prefer', 'return=representation');
+    // Sama seperti _pmFetchTimeout() -- tanpa ini, request yang macet di
+    // tengah jalan (sinyal lemah) bisa tidak pernah fire onload/onerror
+    // sama sekali, bikin window._dbSaving nyangkut true selamanya.
+    xhr.timeout = 45000;
+    xhr.ontimeout = function() { reject(new Error('Request timeout - periksa koneksi internet Anda.')); };
     if (onProgress && xhr.upload) {
       xhr.upload.onprogress = function(e) {
         // Dibatasi maks 95% -- begitu semua byte selesai terkirim, e.loaded/e.total
@@ -1501,6 +1537,37 @@ function dbSetSavingProgress(percent) {
   pct.textContent = p + '%';
 }
 
+/* ── WATCHDOG: pastikan window._dbSaving TIDAK PERNAH nyangkut true
+   selamanya ── Lapis pengaman TAMBAHAN (bukan pengganti timeout di
+   _pmFetchTimeout/supaFetchProgress di atas) -- kalau suatu saat ada titik
+   lain di rantai promise dbSave/raResaveInPlace/dbSaveSilent yang entah
+   bagaimana masih bisa hang tanpa reject/resolve (mis. penambahan kode
+   baru di masa depan yang lupa pasang timeout), watchdog ini yang
+   membebaskan tombol Simpan lagi setelah waktu yang sangat longgar (jauh
+   di atas timeout terpanjang di atas, 45 detik), daripada macet SELAMANYA
+   sampai halaman di-reload manual. */
+function _pmDbSavingWatchdog(silent) {
+  var startedAt = Date.now();
+  window._dbSavingStartedAt = startedAt;
+  setTimeout(function () {
+    // Bandingkan timestamp -- kalau sejak itu sudah ada siklus simpan BARU
+    // yang mulai lagi (mis. lewat tombol "Coba Lagi"), watchdog LAMA ini
+    // tidak boleh ikut mematikan _dbSaving milik siklus yang baru itu.
+    if (window._dbSaving && window._dbSavingStartedAt === startedAt) {
+      window._dbSaving = false;
+      // silent=true dipakai autosave (dbSaveSilent) -- autosave SENGAJA
+      // tidak boleh mengganggu user (lihat komentar di atas dbSaveSilent),
+      // jadi cukup log diam-diam, JANGAN munculkan overlay error besar.
+      if (silent) { console.warn('[autosave-server] watchdog: proses macet >90s, _dbSaving direset diam-diam.'); return; }
+      dbShowSavingOverlayError(
+        'Proses menyimpan terlalu lama / macet.',
+        'Kemungkinan koneksi internet Anda bermasalah. Coba lagi.',
+        null
+      );
+    }
+  }, 90000);
+}
+
 /* ── DB SAVE (generic — modul-specific dbCollectData defined per page) ── */
 function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   if (window._dbSaving) return; // cegah klik dobel saat masih proses simpan
@@ -1523,6 +1590,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   try { btn = event && event.target && event.target.tagName === 'BUTTON' ? event.target : null; } catch(e){}
   var origText = btn ? btn.innerHTML : '';
   window._dbSaving = true;
+  _pmDbSavingWatchdog();
   if (btn) { btn.innerHTML = '⏳ Menyimpan...'; btn.disabled = true; }
   dbShowSavingOverlay(true, existingId ? 'Memperbarui data, mohon tunggu...' : 'Menyimpan data, mohon tunggu...', 'Mengupload foto ke Google Drive dulu, mohon tunggu...');
   // Tunggu semua upload foto ke Google Drive yang masih berjalan (dipicu pas
@@ -1613,6 +1681,7 @@ function raResaveInPlace(modul, callback) {
   if (!existingId) { alert('Tidak ada record yang sedang dibuka untuk diedit.'); return; }
 
   window._dbSaving = true;
+  _pmDbSavingWatchdog();
   dbShowSavingOverlay(true, 'Menyimpan perubahan, mohon tunggu...', 'Mengupload banyak gambar membutuhkan waktu yang lama');
   // Sama seperti dbSave() -- upload ke Drive WAJIB berhasil dulu sebelum
   // perubahan boleh disimpan, supaya edit-in-place tidak bisa jadi jalur
@@ -2325,6 +2394,7 @@ function dbSaveSilent(modul) {
   rec.updated_at = new Date().toISOString();
   var existingId = window._editingId || null;
   window._dbSaving = true;
+  _pmDbSavingWatchdog(true);
   // Autosave TIDAK BOLEH blok/ganggu user kalau upload foto gagal (beda dari
   // dbSave()/raResaveInPlace() yang menolak simpan) -- tapi tetap WAJIB coba
   // upload dulu (bukan cuma strip yang SUDAH punya driveUrl) supaya tiap
