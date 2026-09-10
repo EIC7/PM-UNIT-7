@@ -177,6 +177,17 @@ async function fetchRecentRecords() {
   return res.json();
 }
 
+// 🔴 limit diturunkan dari 200 -> 50 (2026-09-10, lihat CLAUDE.md bagian
+// "kuota Firestore RESOURCE_EXHAUSTED"): job ini jalan tiap 5 menit lewat
+// cron-job.org (288x/hari) -- di limit 200, itu ~57.600 read Firestore/hari
+// dari poller SAJA, sudah melebihi kuota gratis Firestore Spark plan
+// (50.000 read/hari) sebelum ditambah pemakaian history.html/dashboard
+// beneran. Ketahuan lewat run GitHub Actions yang mulai gagal terus-
+// menerus (RESOURCE_EXHAUSTED) di tengah hari yang sama padahal kode tidak
+// berubah. Di limit 50, konsumsi turun ke ~14.400 read/hari -- 50 dokumen
+// approval TERBARU (order by updatedAt desc) jauh lebih dari cukup untuk
+// menangkap perubahan status dalam 1 siklus 5 menit, karena approval yang
+// berubah status jarang lebih dari puluhan dalam rentang sesingkat itu.
 async function fetchRecentApprovals() {
   const url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_PROJECT_ID
     + '/databases/(default)/documents:runQuery?key=' + FIREBASE_API_KEY;
@@ -184,7 +195,7 @@ async function fetchRecentApprovals() {
     structuredQuery: {
       from: [{ collectionId: 'approvals' }],
       orderBy: [{ field: { fieldPath: 'updatedAt' }, direction: 'DESCENDING' }],
-      limit: 200
+      limit: 50
     }
   };
   const res = await fetch(url, {
