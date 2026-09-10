@@ -560,13 +560,13 @@ function openDetail(assetTag){
   document.getElementById('modalDesc').textContent = a.description || '(Tanpa deskripsi)';
   document.getElementById('modalBadges').innerHTML = statusBadgeHtml(a.status);
 
-  // Info yang ditampilkan di popup detail SENGAJA dibatasi cuma 6 ini
-  // (Asset + Asset Description sudah di title/subtitle di atas, Status
-  // sudah jadi badge di atas) -- permintaan eksplisit user, field lain
-  // (Custodian/MPI/Serial Number/Level/Workgroup) SENGAJA tidak
-  // ditampilkan lagi walau datanya tetap ada di ASSETS/FIELD_LABELS
-  // (tidak dihapus dari data, cuma tidak dirender ke grid/badge).
-  var order = ['location','locationDesc','pid'];
+  // Info yang ditampilkan di popup detail SENGAJA dibatasi (Asset + Asset
+  // Description sudah di title/subtitle di atas, Status sudah jadi badge
+  // di atas) -- permintaan eksplisit user, field lain (Custodian/MPI/
+  // Serial Number/Level) SENGAJA tidak ditampilkan lagi walau datanya
+  // tetap ada di ASSETS/FIELD_LABELS (tidak dihapus dari data, cuma tidak
+  // dirender ke grid/badge). Default Workgroup ditambahkan lagi di grid.
+  var order = ['location','locationDesc','pid','workgroup'];
   var gridHtml = '';
   order.forEach(function(field){
     var val = a[field];
