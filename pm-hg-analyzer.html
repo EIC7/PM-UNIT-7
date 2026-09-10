@@ -157,12 +157,6 @@ input[type="checkbox"]:checked::after {
       <div class="meta-field"><label>Tanggal</label><input type="date" id="hgTanggal"></div>
       <div class="meta-field"><label>Work Order</label><input type="text" id="hgWorkOrder" placeholder="Nomor Work Order..."></div>
       <div class="meta-field"><label>Nama Operator / PIC</label><input type="text" id="hgPIC" placeholder="Nama PIC..."></div>
-      <div class="meta-field"><label>Checked By - Technician</label>
-        <select id="hgCheckedBy">
-          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-        </select>
-      </div>
     </div>
 
     <div style="margin-top:18px;border:1px solid var(--panel-border);border-radius:8px;padding:10px 14px;background:#f8faf9">
@@ -1551,18 +1545,21 @@ function closePdfPreview() {
 
 /* ── DATA: Table 5.3 — Regularly Recurring Maintenance Work for 1 Year ── */
 /* freq: bulan-bulan di mana step ini muncul (3/6/9/12). replace: true => kolom
-   "Sparepart Replacement" berupa dropdown Ready/Kosong. false => checkbox "Sudah Dikerjakan". */
+   "Sparepart Replacement" berupa dropdown Ready/Kosong. false => checkbox "Sudah Dikerjakan".
+   2026-09-10: step 1/7/8/9 ditambah freq 3 supaya daftar step 3 Monthly SAMA
+   PERSIS dengan 6 Monthly (permintaan eksplisit user) -- sebelumnya 3
+   Monthly cuma step 2,3,4,5,6,6.5,17 (kelewat 4 step yang 6 Monthly punya). */
 var STEP_DATA = [
-  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[2,6,12]},
+  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[2,3,6,12]},
   {no:2,  label:"Replace the particle protection filter (13) upstream from the photometer", ref:"", refImg:"assets/hg-step2-ref.png", replace:true,  freq:[3,6,9,12]},
   {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", refImg:"assets/hg-step3-ref.png", replace:true,  freq:[3,6,9,12], proc:'iodine'},
   {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", refImg:"assets/hg-step4-ref.png", replace:false, freq:[2,3,6,9,12]},
   {no:5,  label:"Adjust the flow at the needle valve (15)", ref:"", refImg:"assets/hg-step5-ref.png", replace:false, freq:[3,6,9,12]},
   {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"Menu 32111", refImg:"", replace:false, freq:[2,3,6,9,12], evidenceMode:'single'},
   {no:6.5, label:"Validation", ref:"", refImg:"", replace:false, freq:[2,3,6,9,12], evidenceMode:'single'},
-  {no:7,  label:"Rinse the wash bottles of the gas cooler (M1) with water", ref:"", refImg:"assets/hg-step7-ref.png", replace:false, freq:[6,12]},
-  {no:8,  label:"Replace the reactor filling (A6.1 and A6.2)*", ref:"", refImg:"assets/hg-step8-ref.png", replace:true,  freq:[6,12], proc:'reactor'},
-  {no:9,  label:"Replace the condensate blocking membrane (16)", ref:"", refImg:"assets/hg-step9-ref.png", replace:true,  freq:[6,12]},
+  {no:7,  label:"Rinse the wash bottles of the gas cooler (M1) with water", ref:"", refImg:"assets/hg-step7-ref.png", replace:false, freq:[3,6,12]},
+  {no:8,  label:"Replace the reactor filling (A6.1 and A6.2)*", ref:"", refImg:"assets/hg-step8-ref.png", replace:true,  freq:[3,6,12], proc:'reactor'},
+  {no:9,  label:"Replace the condensate blocking membrane (16)", ref:"", refImg:"assets/hg-step9-ref.png", replace:true,  freq:[3,6,12]},
   {no:10, label:"Replace the membrane of the gas pump (M3)", ref:"", refImg:"assets/hg-step10-ref.png", replace:true,  freq:[12]},
   {no:11, label:"Maintain the condensate pump (M4.#), replace the hoses and pressure rollers", ref:"", refImg:"assets/hg-step11-ref.png", replace:true,  freq:[12]},
   {no:12, label:"Replace the iodine-active carbon (12) in the zero gas filter", ref:"", refImg:"assets/hg-step12-ref.png", replace:true,  freq:[12]},
@@ -2156,7 +2153,7 @@ function dbCollectData(modul) {
     pic: document.getElementById('hgPIC').value || '',
     work_order: document.getElementById('hgWorkOrder').value || '',
     unit: 'Unit 7',
-    data: { frequency: activeFreq, steps: stepsOut, table54: t54Out, checkedBy: document.getElementById('hgCheckedBy').value || '' }
+    data: { frequency: activeFreq, steps: stepsOut, table54: t54Out }
   };
 }
 
@@ -2167,7 +2164,6 @@ function hgRestoreRecord(rec, opts) {
   document.getElementById('hgTanggal').value = rec.tanggal || '';
   document.getElementById('hgWorkOrder').value = rec.work_order || '';
   document.getElementById('hgPIC').value = rec.pic || '';
-  if (data.checkedBy) document.getElementById('hgCheckedBy').value = data.checkedBy;
   if (data.steps) {
     Object.keys(data.steps).forEach(function(no){
       var s = data.steps[no];
