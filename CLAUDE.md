@@ -3637,6 +3637,115 @@ Supabase sebagai backend, jsPDF untuk export PDF).
 - **Record LAMA yang sudah kena bug ini (termasuk 2 laporan user di atas)
   TIDAK otomatis diperbaiki** -- fix ini cuma berlaku utk generate BARU.
   Utk record yang SUDAH ADA dan tidak punya link Drive: buka via tombol
-  "✎ Edit" di `jsa_history.html`, lalu klik "📄 Generate Word" lagi --
-  kalau masih gagal, `alert()` yang baru akan MENJELASKAN kenapa (dulu
-  tidak ada penjelasan sama sekali).
+  "✎ Edit" di `jsa_history.html`, lalu Simpan ulang ATAU klik "⬇ Download
+  .docx" lagi (nama tombol "📄 Generate Word" diganti "⬇ Download .docx",
+  lihat bagian di bawah) -- kalau masih gagal, `alert()` yang baru akan
+  MENJELASKAN kenapa (dulu tidak ada penjelasan sama sekali).
+
+## JSA: pisah "Simpan" (generate ke Drive TANPA download) vs "Download .docx" (wajib sudah tersimpan dulu) (2026-09-09)
+
+- User klarifikasi kebingungan di atas: sebelumnya "Simpan Draft Ke
+  Database" HANYA menyimpan data mentah (tidak generate Word/upload Drive
+  sama sekali) -- Word/link Drive baru ada kalau user SECARA TERPISAH klik
+  "📄 Generate Word (.docx)" (yang JUGA memaksa download lokal ke
+  perangkat). Permintaan eksplisit user, 2 tombol dengan tanggung jawab
+  jelas beda:
+  1. **"💾 Simpan Draft Ke Database"** = Simpan data + Generate Word +
+     upload ke Google Drive, **TANPA** trigger download lokal ke
+     perangkat. Tujuannya: begitu Simpan sukses, link "📎 Preview in
+     Drive" LANGSUNG tersedia di `jsa_history.html` tanpa perlu aksi
+     tambahan apa pun.
+  2. **"⬇ Download .docx"** (rename dari "📄 Generate Word (.docx)") =
+     Generate Word (ulang, dari isian TERKINI) + download lokal +
+     re-upload ke Drive (menimpa link lama, sama seperti perilaku lama).
+     **WAJIB sudah pernah Simpan dulu** -- tombol ini `disabled` di HTML
+     secara default, HANYA aktif kalau `window._editingId` sudah terisi.
+- **`jsaSaveDraft()` diubah dari `dbSave('JSA Report')` polos (bentuk
+  simple-call, TIDAK mendukung callback) jadi bentuk EKSPLISIT** --
+  `dbSave(rec.modul, rec.tanggal, rec.pic, rec.work_order, 'Unit 7',
+  rec.data, window._editingId, callback)` (lihat percabangan
+  `if (arg6 !== undefined && typeof arg6 === 'object')` di `dbSave()`,
+  shared.js) -- SATU-SATUNYA cara memasang callback tanpa mengubah
+  `dbSave()` itu sendiri (fungsi generik dipakai 20+ modul lain, TIDAK
+  disentuh sama sekali). Callback ini yang memicu
+  `jsaAfterSaveGenerateToDrive()` -- generate blob + `jsaUploadWordToDrive
+  (blob, filename, false)` (parameter ke-3 `false` = TIDAK ada download
+  lokal yang terjadi), TANPA `jsaDownloadBlob()` sama sekali.
+- **`jsaUploadWordToDrive(blob, filename, downloadedLocally)` dapat
+  parameter baru** -- menentukan teks `alert()`/toast SETELAHNYA (pesan
+  "Word sudah berhasil didownload..." SALAH kalau dipakai apa adanya di
+  jalur Simpan, karena memang tidak ada download yang terjadi di jalur
+  itu):
+  - `true` (dari tombol Download, `jsaGenerateWord()`): alert kegagalan
+    bilang "Word sudah berhasil didownload ke perangkat, TAPI GAGAL
+    disalin ke Google Drive...". Toast sukses SUDAH ADA lebih awal di
+    `jsaGenerateWord()` sendiri (independen hasil Drive), jadi TIDAK ada
+    toast sukses kedua di sini.
+  - `false` (dari Simpan, `jsaAfterSaveGenerateToDrive()`): alert
+    kegagalan bilang "Data berhasil disimpan, TAPI GAGAL menggenerate/
+    menyalin dokumen Word ke Google Drive...". Toast SUKSES BARU
+    ditambahkan khusus jalur ini ("✓ Word ter-generate & tersimpan ke
+    Google Drive") krn jalur Simpan TIDAK py toast lain yang menandakan
+    proses generate+Drive ini selesai.
+- **`jsaUpdateDownloadButtonState()`** (fungsi baru, generik) -- toggle
+  `disabled` tombol `#jsaDownloadBtn` berdasarkan `!!window._editingId`.
+  Dipanggil di SEMUA titik yang mengubah `window._editingId`:
+  setelah Simpan sukses (via callback), `restoreDraftData()` (autosave
+  restore), blok "LOAD FROM HISTORY" (`?id=xxx`), DAN `jsaResetAll()`
+  (supaya tombol balik `disabled` lagi setelah reset -- record baru belum
+  pernah disimpan). `.btn:disabled{opacity:0.4;cursor:not-allowed}`
+  ditambahkan (belum ada override disabled sebelumnya di kedua file).
+- **`jsaGenerateWord()` (fungsi di balik tombol Download) dapat guard
+  eksplisit** `if (!window._editingId) { alert(...); return; }` di paling
+  atas -- SEHARUSNYA tidak pernah ke-trigger krn tombolnya `disabled` di
+  DOM, tapi dipasang jaga-jaga (mis. kalau ada jalur pemanggilan
+  programatik lain di masa depan yang lolos dari gate HTML). Juga:
+  `btn.disabled = false` di akhir fungsi (sebelumnya, dipakai buat
+  melepas kunci sementara "⏳ Membuat Word...") diganti panggil
+  `jsaUpdateDownloadButtonState()` -- supaya kalau entah bagaimana
+  `_editingId` sempat hilang di tengah proses, tombol tidak ke-re-enable
+  keliru.
+- Diverifikasi lewat headless Chrome kedua file (14 skenario/file, SEMUA
+  dependency di-mock -- `jsaBuildWordBlob`/`jsaUploadWordToDrive`/
+  `jsaDownloadBlob`/`dbSave`/`alert`/`confirm`): tombol Download `disabled`
+  di render awal; klik Download SEBELUM pernah Simpan -> alert + TIDAK ada
+  proses apa pun yang jalan; panggil Simpan (dbSave dimock sukses +
+  panggil callback) -> tombol Download otomatis AKTIF, blob ter-generate,
+  `jsaUploadWordToDrive` terpanggil dgn flag `false`, `jsaDownloadBlob`
+  **TIDAK** terpanggil; klik Download SETELAH Simpan -> blob ter-generate
+  lagi, `jsaDownloadBlob` terpanggil, `jsaUploadWordToDrive` terpanggil
+  dgn flag `true`; Reset -> tombol Download `disabled` lagi, `_editingId`
+  balik `null`. **Sempat dicoba juga integration test dgn `dbSave()` ASLI
+  (bukan di-mock)** -- headless Chrome-nya HANG/crash ("Abnormal renderer
+  termination") krn `dbSave()` internal pakai `supaFetchProgress()`
+  (XMLHttpRequest LANGSUNG ke `SUPA_URL`, BUKAN lewat `supaFetch()` yang
+  sempat di-mock) -- coba request ke Supabase PRODUKSI sungguhan dari
+  sandbox tanpa akses jaringan penuh, jadi macet. **Pelajaran**: kalau
+  butuh test `dbSave()` end-to-end lagi di masa depan, WAJIB mock
+  `window.supaFetchProgress` juga (bukan cuma `supaFetch`) -- 2 fungsi
+  network terpisah di `shared.js`, gampang kelupaan salah satu.
+
+## `find-asset-detail.html`: popup detail dipersempit jadi 6 info saja (2026-09-10)
+
+- Permintaan eksplisit user (screenshot popup): info yang ditampilkan di
+  popup detail (`openDetail()`) SEHARUSNYA cuma **Asset, Asset
+  Description, Location, Location Description, P/ID Number, Status** --
+  sebelumnya grid-nya juga menampilkan Custodian, Maintenance Priority
+  Index (MPI), Serial Number, plus badge Level & Workgroup di header.
+- **Fix**: `order` array di `openDetail()` dipersempit dari `['location',
+  'locationDesc','custodian','mpi','serial','pid']` jadi `['location',
+  'locationDesc','pid']` -- Asset (title `#modalTagText`), Asset
+  Description (`#modalDesc`), dan Status (badge) TIDAK perlu diubah,
+  sudah tampil dari awal di luar grid. `modalBadges` dipersempit jadi
+  cuma `statusBadgeHtml(a.status)` (Level & Workgroup badge dihapus dari
+  popup). `levelBadgeHtml()` jadi dead code sesudah ini (cuma dipanggil
+  dari popup yang sekarang dihapus) -- dihapus total. `workgroupBadgeHtml()`
+  **TIDAK dihapus** -- tetap dipakai di kartu hasil pencarian (`.result-
+  badges`, bagian LAIN dari halaman ini, di luar scope perubahan ini).
+- **Data-nya SENDIRI tidak dihapus** dari `ASSETS`/`FIELD_LABELS` --
+  Custodian/MPI/Serial/Level cuma tidak dirender lagi di popup, kalau
+  nanti user minta ditambahkan balik tinggal masukkan lagi ke `order`.
+- Diverifikasi lewat headless Chrome (`asset-database.json` asli, bukan
+  mock) -- buka popup `7BF-LSH-500B`: title/desc/badge status benar, grid
+  PERSIS 3 baris (Location Code/Location Description/P per ID Number),
+  tidak ada Custodian/MPI/Serial/Level/Workgroup lagi.

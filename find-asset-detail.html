@@ -312,11 +312,6 @@ function workgroupBadgeHtml(wg){
   var cls = badgeClassForWorkgroup(wg);
   return '<span class="badge ' + cls + '">' + escHtml(wg) + '</span>';
 }
-function levelBadgeHtml(level){
-  if (!level) return '';
-  return '<span class="badge badge-outline">' + escHtml(level) + '</span>';
-}
-
 /* ── Load data ── */
 function loadData(){
   fetch('asset-database.json', {cache:'no-cache'})
@@ -563,9 +558,15 @@ function openDetail(assetTag){
 
   document.getElementById('modalTagText').textContent = a.asset;
   document.getElementById('modalDesc').textContent = a.description || '(Tanpa deskripsi)';
-  document.getElementById('modalBadges').innerHTML = statusBadgeHtml(a.status) + levelBadgeHtml(a.level) + workgroupBadgeHtml(a.workgroup);
+  document.getElementById('modalBadges').innerHTML = statusBadgeHtml(a.status);
 
-  var order = ['location','locationDesc','custodian','mpi','serial','pid'];
+  // Info yang ditampilkan di popup detail SENGAJA dibatasi cuma 6 ini
+  // (Asset + Asset Description sudah di title/subtitle di atas, Status
+  // sudah jadi badge di atas) -- permintaan eksplisit user, field lain
+  // (Custodian/MPI/Serial Number/Level/Workgroup) SENGAJA tidak
+  // ditampilkan lagi walau datanya tetap ada di ASSETS/FIELD_LABELS
+  // (tidak dihapus dari data, cuma tidak dirender ke grid/badge).
+  var order = ['location','locationDesc','pid'];
   var gridHtml = '';
   order.forEach(function(field){
     var val = a[field];
