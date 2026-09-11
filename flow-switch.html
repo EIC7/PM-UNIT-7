@@ -1865,12 +1865,13 @@ function buildAndShowPdf() {
       }
       return [r.no, r.activity, '', '', remarksText];
     }),
-    // Kolom Remarks/Note dilebarkan ~3x dari lebar otomatis semula (perkiraan
-    // ~31mm -> 93mm), Job Plan Inspection dikurangi (~106mm -> 45mm) supaya
-    // total tetap pas dengan contentW (170mm = 8+45+12+12+93) -- teks yang
-    // tidak muat otomatis wrap ke baris baru (default autoTable, bukan kode
-    // tambahan) baik di kolom Job Plan maupun Remarks/Note.
-    columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:45},2:{cellWidth:12,halign:'center'},3:{cellWidth:12,halign:'center'},4:{cellWidth:93}},
+    // Kolom Remarks/Note dilebarkan dari otomatis semula (~31mm), TAPI
+    // 93mm (percobaan pertama, 3x) ternyata sisa kosong terlalu banyak di
+    // kanan (dilaporkan user via screenshot) -- dipotong jadi 60mm.
+    // Job Plan Inspection dapat sisa ruangnya (78mm) supaya total tetap
+    // pas dengan contentW (170mm = 8+78+12+12+60) -- teks yang tidak muat
+    // otomatis wrap ke baris baru (default autoTable) di kedua kolom itu.
+    columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:78},2:{cellWidth:12,halign:'center'},3:{cellWidth:12,halign:'center'},4:{cellWidth:60}},
     didDrawCell:function(d){
       if (d.section!=='body') return;
       var r = CHECKLIST_DATA[d.row.index];
