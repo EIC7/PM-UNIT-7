@@ -179,6 +179,12 @@ function historyStatusBadge(status, firebaseSyncedAt) {
 // + shared.js dbList() AREA_COLS). Modul yang tidak mengisi kolom ini (semua
 // modul lain saat ini) tetap tampil r.modul apa adanya seperti sebelumnya.
 function historyReportName(r) {
+  // FLOW_SWITCH pakai format BEDA (2 bagian "Asset_<tag>", TANPA work_order)
+  // -- lihat kasus sama di raSendFinalPdfToFirebaseDashboard (shared.js),
+  // kedua tempat ini WAJIB konsisten.
+  if (typeof normalizeModul === 'function' && normalizeModul(r.modul) === 'FLOW_SWITCH' && r.asset) {
+    return 'Asset_' + r.asset;
+  }
   if (r.asset || r.asset_desc) {
     return [r.work_order, r.asset, r.asset_desc].filter(Boolean).join('_');
   }

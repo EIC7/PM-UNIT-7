@@ -3048,6 +3048,12 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   if (record.asset || record.asset_desc) {
     label = [record.work_order, record.asset, record.asset_desc].filter(Boolean).join('_');
   }
+  // FLOW_SWITCH minta format BEDA (2 bagian "Asset_<tag>", TANPA work_order
+  // di depan) -- kasus khusus SETELAH aturan generik di atas supaya tidak
+  // mengubah perilaku modul lain yang sudah pakai pola "WO_Asset_AssetDesc".
+  if (modKey === 'FLOW_SWITCH' && record.asset) {
+    label = 'Asset_' + record.asset;
+  }
   // Nama PIC/Checked By ASLI -- lihat catatan RA_MODUL_AREA di atas,
   // routing reviewer sekarang lewat parameter team/area eksplisit di
   // Approvals.submitWithFiles(), bukan lagi lewat name-match submittedBy,

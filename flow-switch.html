@@ -1828,8 +1828,13 @@ function buildAndShowPdf() {
   doc.text(noteLines, marginX, y); y += noteLines.length*4 + 6;
 
   dbShowSavingOverlay(false);
+  // Nama file "Asset_<Asset Number>" -- SAMA dengan nama yang dikirim ke
+  // History/Review Approval Dashboard (lihat record.asset di dbCollectData()
+  // + kasus khusus FLOW_SWITCH di raSendFinalPdfToFirebaseDashboard/
+  // historyReportName), supaya nama file & label yang tampil di mana pun
+  // konsisten satu sama lain.
   var fnAsset = (document.getElementById('hAssetNumber').value || 'draft').replace(/[^A-Za-z0-9_-]+/g, '_');
-  showPdfPreview(doc, 'Flow_Switch_' + fnAsset + '_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');
+  showPdfPreview(doc, 'Asset_' + fnAsset + '.pdf');
 }
 /* ══════════════════ DB SAVE / LOAD (pola shared.js) ══════════════════ */
 window.CURRENT_MODUL = 'FLOW_SWITCH'; // HARUS sama persis dengan check di dbCollectData(modul)
@@ -1853,6 +1858,16 @@ function dbCollectData(modul) {
     // shared.js). Kolom `area` ini SUDAH ADA di tabel `pm_records` (dibuat
     // untuk Maintenance Report), jadi tidak perlu migration baru.
     area: document.getElementById('hArea').value || null,
+    // Kolom ringan top-level `asset` (SAMA dengan yang dipakai
+    // maintenance_report_form.html, kolom sudah ada, tidak perlu migration
+    // baru) -- dipakai kasus khusus FLOW_SWITCH di
+    // raSendFinalPdfToFirebaseDashboard() (shared.js) dan
+    // historyReportName() (history.html) untuk membentuk label
+    // "Asset_<Asset Number>" yang dikirim ke Review Approval Dashboard &
+    // ditampilkan di Riwayat. `asset_desc` SENGAJA tidak diisi -- format
+    // Flow Switch cuma "Asset_<tag>" (2 bagian), bukan pola 3-bagian
+    // "WO_Asset_AssetDesc" milik Maintenance Report.
+    asset: document.getElementById('hAssetNumber').value || null,
     data: {
       assetNumber: document.getElementById('hAssetNumber').value || '',
       mnf: document.getElementById('hMnf').value || '',
