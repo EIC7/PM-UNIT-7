@@ -59,6 +59,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .jsa-del-cancel{background:#2a3348;color:#dbe1ea}
 .jsa-del-confirm{background:#5a2420;color:#7c8698;cursor:not-allowed}
 .jsa-del-confirm.ready{background:#e5695c;color:#fff;cursor:pointer}
+
+/* ── Popup "Create New JSA" -- pilih Conditional Access / Risk To Trip,
+   pola SAMA PERSIS dengan popup kartu JSA di index.html (openJsaPopup()),
+   cuma warnanya disesuaikan ke tema gelap file ini. ── */
+.header .btn-create-jsa{padding:8px 16px;background:#1c3324;color:#7fd99a;border:1.5px solid #2e6fcc;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:0.9em}
+.header .btn-create-jsa:hover{background:#234030}
+.pm-popup-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);z-index:20000;align-items:center;justify-content:center;padding:16px}
+.pm-popup-overlay.show{display:flex}
+.pm-popup{background:#161d2c;border:1px solid #2a3348;border-radius:14px;width:min(440px,100%);box-shadow:0 20px 60px rgba(0,0,0,0.5);overflow:hidden;animation:jsaPopupIn .18s ease-out}
+@keyframes jsaPopupIn{from{transform:translateY(8px) scale(.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+.pm-popup-header{padding:20px 22px 14px;border-bottom:1px solid #2a3348;position:relative}
+.pm-popup-icon{font-size:28px;margin-bottom:6px}
+.pm-popup-title{font-size:17px;font-weight:700;color:#e7ebf2}
+.pm-popup-sub{font-size:12px;color:#7c8698;margin-top:3px}
+.pm-popup-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;border:1px solid #3a4560;background:#1c2334;color:#aab4c4;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.pm-popup-close:hover{background:#2a3348}
+.pm-popup-body{padding:16px 18px 20px;display:flex;flex-direction:column;gap:10px}
+.pm-popup-option{display:flex;align-items:center;gap:14px;padding:14px 16px;border:2px solid #2a3348;border-radius:12px;background:#1c2334;cursor:pointer;text-align:left;transition:all .15s ease}
+.pm-popup-option-icon{font-size:22px;flex:none;width:40px;height:40px;border-radius:10px;background:#12182a;display:flex;align-items:center;justify-content:center}
+.pm-popup-option-text{flex:1;min-width:0}
+.pm-popup-option-title{font-size:14px;font-weight:700;color:#e7ebf2}
+.pm-popup-option-desc{font-size:11.5px;color:#aab4c4;margin-top:2px;line-height:1.4}
+.pm-popup-option-arrow{font-size:16px;color:#7c8698;flex:none}
+.pm-popup-option-blue{background:rgba(46,111,204,0.14);border-color:#2e6fcc}
+.pm-popup-option-blue:hover{background:rgba(46,111,204,0.24);border-color:#6fa1e8}
+.pm-popup-option-blue .pm-popup-option-icon{background:#2e6fcc}
+.pm-popup-option-blue .pm-popup-option-title{color:#7fb2f0}
+.pm-popup-option-red{background:rgba(231,76,60,0.12);border-color:#e74c3c}
+.pm-popup-option-red:hover{background:rgba(231,76,60,0.22);border-color:#e5695c}
+.pm-popup-option-red .pm-popup-option-icon{background:#e74c3c}
+.pm-popup-option-red .pm-popup-option-title{color:#e5695c}
 </style>
 </head>
 <body>
@@ -69,8 +100,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <p>Riwayat laporan JSA yang sudah dibuat — Conditional Access &amp; Risk To Trip</p>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn-create-jsa" onclick="openJsaPopup()">+ Create New JSA</button>
       <a class="btn-eic7-portal" href="https://eenputra.github.io/EIC7-PORTAL/index.html#" target="_blank" rel="noopener">🔗 Portal EIC7</a>
       <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard PM I&amp;C</button>
+    </div>
+  </div>
+
+  <!-- POPUP "Create New JSA" -- sama persis pilihan popup kartu JSA di index.html -->
+  <div class="pm-popup-overlay" id="jsaPopupOverlay" onclick="if(event.target===this)closeJsaPopup()">
+    <div class="pm-popup">
+      <div class="pm-popup-header">
+        <button type="button" class="pm-popup-close" onclick="closeJsaPopup()" aria-label="Tutup">✕</button>
+        <div class="pm-popup-icon">🦺</div>
+        <div class="pm-popup-title">Job Safety Analysis</div>
+        <div class="pm-popup-sub">Pilih jenis form JSA yang ingin dibuat</div>
+      </div>
+      <div class="pm-popup-body">
+        <div class="pm-popup-option pm-popup-option-blue" onclick="window.location.href='jsa_condition_access.html'">
+          <div class="pm-popup-option-icon">🔷</div>
+          <div class="pm-popup-option-text">
+            <div class="pm-popup-option-title">JSA Conditional Access</div>
+            <div class="pm-popup-option-desc">Plant Process &amp; Risk Checklist (Online/Offline, Risk Category, Hazard Identification) sebagai header.</div>
+          </div>
+          <div class="pm-popup-option-arrow">↗</div>
+        </div>
+        <div class="pm-popup-option pm-popup-option-red" onclick="window.location.href='jsa_report.html'">
+          <div class="pm-popup-option-icon">🔻</div>
+          <div class="pm-popup-option-text">
+            <div class="pm-popup-option-title">JSA Risk To Trip</div>
+            <div class="pm-popup-option-desc">Risk to Trip No., Risk Level (HIRA) &amp; approval tambahan sebagai header.</div>
+          </div>
+          <div class="pm-popup-option-arrow">↗</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -107,6 +169,19 @@ var jsaHistRowsCA = [];
 var jsaHistRowsRT = [];
 var jsaHistCurrentTab = 'JSA_CONDITION_ACCESS';
 var jsaDelTarget = null;
+
+// Popup "Create New JSA" -- pilihan sama persis dengan popup kartu JSA di
+// index.html (openJsaPopup()), TANPA parameter ?id= supaya kedua file modul
+// otomatis mulai dokumen BARU (bukan buka record yang sudah ada).
+function openJsaPopup() {
+  document.getElementById('jsaPopupOverlay').classList.add('show');
+}
+function closeJsaPopup() {
+  document.getElementById('jsaPopupOverlay').classList.remove('show');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeJsaPopup();
+});
 
 // dbList() (shared.js) SENGAJA cuma ambil kolom ringan (BUKAN `data` JSONB)
 // supaya Riwayat umum tetap cepat -- tapi jsa_history.html BUTUH isi
