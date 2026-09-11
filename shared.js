@@ -1387,6 +1387,7 @@ function dbShowSavingOverlay(show, msg, submsg) {
       ov.innerHTML = '<style>' + PM_FOLDER_ANIM_CSS + '</style>'
         + '<div id="dbSavingFolderAnim" style="position:relative;width:min(90vw,300px);height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:1;margin-bottom:10px">' + PM_FOLDER_ANIM_HTML + '</div>'
         +   '<div id="dbSavingErrorIcon" style="display:none;width:52px;height:52px;border-radius:50%;background:#e74c3c;color:#fff;font-size:26px;font-weight:700;align-items:center;justify-content:center;line-height:1;margin-bottom:10px">&#10005;</div>'
+        +   '<div id="dbSavingSuccessIcon" style="display:none;width:52px;height:52px;border-radius:50%;background:#2ecc71;color:#fff;font-size:26px;font-weight:700;align-items:center;justify-content:center;line-height:1;margin-bottom:10px">&#10003;</div>'
         +   '<div id="dbSavingMsgGroup" style="width:80%;max-width:320px;text-align:center">'
         +     '<div id="dbSavingOverlayMsg" style="font-size:clamp(11px,3.4vw,14px);font-weight:600;line-height:1.35"></div>'
         +     '<div id="dbSavingProgressWrap" style="width:100%;max-width:180px;height:6px;background:rgba(255,255,255,0.2);border-radius:5px;margin:10px auto 0;overflow:hidden;display:none">'
@@ -1424,6 +1425,7 @@ function dbShowSavingOverlay(show, msg, submsg) {
     ov.style.backgroundColor = '#060a10';
     document.getElementById('dbSavingFolderAnim').style.display = 'flex';
     document.getElementById('dbSavingErrorIcon').style.display = 'none';
+    document.getElementById('dbSavingSuccessIcon').style.display = 'none';
     document.getElementById('dbSavingOverlayTapHint').style.display = 'none';
     document.getElementById('dbSavingRetryBtn').style.display = 'none';
     ov._retryFn = null;
@@ -1435,6 +1437,38 @@ function dbShowSavingOverlay(show, msg, submsg) {
     dbStopFakeProgress();
     dbSetSavingProgress(null);
   }
+}
+
+/* ── OVERLAY MODE SUKSES ──
+   Dipanggil sebagai pengganti dbShowSavingOverlay(false) + dbShowToast(...)
+   polos di titik SUKSES dbSave()/raResaveInPlace() (2026-09-11, permintaan
+   eksplisit user: "tampilkan overlay-nya saat benar-benar berhasil
+   menyimpan/diperbarui, bukan hanya tulisan kecil" -- toast kecil gampang
+   kelewat/tidak meyakinkan sbg konfirmasi, apalagi setelah insiden "toast
+   sukses palsu" yang baru diperbaiki. sekarang layar penuh, jelas, tidak
+   bisa kelewat) sama seperti dbShowSavingOverlayError, cuma pakai ikon
+   centang hijau (bukan silang merah) dan TERTUTUP OTOMATIS sesudah ~1.4
+   detik (bukan menunggu tap user -- ini konfirmasi positif, bukan error
+   yang perlu perhatian aktif). Pola identik dgn pmHideManualSubmitOverlay
+   (overlay submit) supaya seluruh app konsisten satu bahasa visual utk
+   "berhasil". */
+function dbShowSavingOverlaySuccess(msg) {
+  var ov = document.getElementById('dbSavingOverlay');
+  if (!ov) return;
+  dbStopFakeProgress();
+  dbSetSavingProgress(null);
+  ov._isError = false;
+  ov.style.cursor = 'default';
+  ov.style.backgroundColor = '#060a10';
+  document.getElementById('dbSavingFolderAnim').style.display = 'none';
+  document.getElementById('dbSavingErrorIcon').style.display = 'none';
+  document.getElementById('dbSavingSuccessIcon').style.display = 'flex';
+  document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Berhasil tersimpan!';
+  document.getElementById('dbSavingOverlaySub').textContent = '';
+  document.getElementById('dbSavingRetryBtn').style.display = 'none';
+  document.getElementById('dbSavingOverlayTapHint').style.display = 'none';
+  ov.style.display = 'flex';
+  setTimeout(function(){ dbShowSavingOverlay(false); }, 1400);
 }
 
 /* ── OVERLAY MODE ERROR ──
@@ -1650,7 +1684,6 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
           throw new Error('Record ini sudah tidak ada di database (mungkin sudah dihapus lewat sesi/tab lain). Perubahan TIDAK tersimpan -- buat entri baru atau muat ulang halaman.');
         }
         window._dbSaving = false;
-        dbShowSavingOverlay(false);
         if (btn) { btn.innerHTML = origText; btn.disabled = false; }
         var savedId = (rows && rows[0] && rows[0].id) ? rows[0].id : existingId;
         // PENTING: tetap "nempel" ke record yang sama (bukan di-null-kan) supaya
@@ -1664,7 +1697,9 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         // SAJA berhasil Simpan manual, karena flag-nya masih true dari
         // sebelumnya.
         window._raDirty = false;
-        dbShowToast(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
+        // 2026-09-11: overlay konfirmasi SUKSES (bukan cuma toast kecil) --
+        // permintaan eksplisit user, lihat komentar dbShowSavingOverlaySuccess().
+        dbShowSavingOverlaySuccess(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
         pmMarkRevisionSaved();
         if (callback) callback(savedId);
       })
@@ -1725,12 +1760,13 @@ function raResaveInPlace(modul, callback) {
     };
     raUpdateRecord(existingId, patch, function(err, updated) {
       window._dbSaving = false;
-      dbShowSavingOverlay(false);
       if (err) {
         dbShowSavingOverlayError('Gagal menyimpan perubahan.', err, function(){ raResaveInPlace(modul, callback); });
         return;
       }
-      dbShowToast('✓ Perubahan tersimpan (status tidak berubah)');
+      // 2026-09-11: overlay konfirmasi SUKSES (bukan cuma toast kecil) --
+      // sama seperti dbSave(), lihat komentar dbShowSavingOverlaySuccess().
+      dbShowSavingOverlaySuccess('✓ Perubahan tersimpan (status tidak berubah)');
       if (callback) callback(updated);
     });
   });
