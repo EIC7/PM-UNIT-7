@@ -1631,6 +1631,24 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
       if (phase === 'upload') dbReportRealProgress(percent);
     })
       .then(function(rows) {
+        // 🔴 BUG DITEMUKAN 2026-09-11 (laporan JSA "Record tidak ditemukan
+        // setelah disimpan" -- record itu TERNYATA sudah dihapus duluan,
+        // tab yang dipakai user masih menyimpan _editingId lama/basi):
+        // PATCH ke id yang SUDAH TIDAK ADA (dihapus pihak lain/sesi lain/
+        // tab lain) balas HTTP 200 dgn array KOSONG (PostgREST tidak
+        // menganggap "0 baris ke-update" sbg error) -- versi lama di sini
+        // diam-diam fallback ke `existingId` lama dan TETAP menampilkan
+        // "✓ Data berhasil diperbarui!", padahal TIDAK ADA APAPUN yang
+        // tersimpan sama sekali. User kehilangan editannya TANPA pemberitahuan
+        // apa pun -- baru ketahuan belakangan (mis. link Drive JSA yang
+        // di-generate sesudahnya gagal menemukan record itu lagi). Fix:
+        // PATCH (existingId ada) yang balas array kosong sekarang throw
+        // eksplisit supaya masuk .catch() di bawah (overlay error + retry),
+        // BUKAN diam-diam dianggap sukses. TIDAK berlaku utk POST (record
+        // baru) -- itu tidak mungkin balas kosong kalau sukses.
+        if (existingId && (!rows || !rows.length)) {
+          throw new Error('Record ini sudah tidak ada di database (mungkin sudah dihapus lewat sesi/tab lain). Perubahan TIDAK tersimpan -- buat entri baru atau muat ulang halaman.');
+        }
         window._dbSaving = false;
         dbShowSavingOverlay(false);
         if (btn) { btn.innerHTML = origText; btn.disabled = false; }
@@ -2414,6 +2432,13 @@ function dbSaveSilent(modul) {
     var method = existingId ? 'PATCH' : 'POST';
     supaFetch(method, path, rec)
       .then(function(rows) {
+        // Sama seperti dbSave() -- lihat komentar panjang di sana. PATCH ke
+        // id yang sudah dihapus balas array kosong (bukan error HTTP), jadi
+        // TANPA guard ini autosave akan diam-diam "sukses" (indikator
+        // "☁️ Auto-tersimpan" tetap muncul) padahal TIDAK ADA yang tersimpan.
+        if (existingId && (!rows || !rows.length)) {
+          throw new Error('Record ini sudah tidak ada di database (mungkin sudah dihapus lewat sesi/tab lain).');
+        }
         window._dbSaving = false;
         var savedId = (rows && rows[0] && rows[0].id) ? rows[0].id : existingId;
         window._editingId = savedId || null;
