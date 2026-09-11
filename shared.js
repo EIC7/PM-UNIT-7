@@ -1871,6 +1871,7 @@ function normalizeModul(name) {
   if (n.indexOf('HG')>=0 || n.indexOf('MERCURY')>=0) return 'PM_HG_ANALYZER';
   if (n.indexOf('PH')>=0 || n.indexOf('TRANSMITTER')>=0 || n.indexOf('AIT')>=0 || n.indexOf('ANALYZER')>=0) return 'PH-ANALYZER';
   if (n.indexOf('ID FAN')>=0 || n.indexOf('ID_FAN')>=0 || n.indexOf('LINE PURGING')>=0 || n.indexOf('LINE_PURGING')>=0) return 'ID_FAN_LINE_PURGING';
+  if (n.indexOf('FLOW SWITCH')>=0 || n.indexOf('FLOW_SWITCH')>=0) return 'FLOW_SWITCH';
   return n;
 }
 
@@ -1906,6 +1907,7 @@ function raModulToUrl(modul, id) {
   if (norm === 'CEC_CONSOLE_WWTP')      return 'dcs-console-wwtp.html?id=' + id;
   if (norm === 'JSA_REPORT')            return 'jsa_report.html?id=' + id;
   if (norm === 'JSA_CONDITION_ACCESS')  return 'jsa_condition_access.html?id=' + id;
+  if (norm === 'FLOW_SWITCH')           return 'flow-switch.html?id=' + id;
   return 'index.html';
 }
 function raModulToPrintUrl(modul, id) {
@@ -2852,7 +2854,8 @@ var RA_ASSET_LABEL = {
   MARK_VIE: 'Mark VIe Alarm & Module Inspection',
   ID_FAN_LINE_PURGING: 'ID Fan Flow Transmitter Line Purging',
   CEC_CONSOLE_CHCB: 'Inspection & Cleaning DCS Console - Common CHCB',
-  CEC_CONSOLE_WWTP: 'Inspection & Cleaning DCS Console - Common WWTP'
+  CEC_CONSOLE_WWTP: 'Inspection & Cleaning DCS Console - Common WWTP',
+  FLOW_SWITCH: 'Flow Switch Maintenance'
 };
 
 /* ── PEMETAAN MODUL -> AREA (routing eksplisit ke reviewer) ──
@@ -2881,6 +2884,13 @@ var RA_MODUL_AREA = {
   BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common', CEC_CONSOLE_CHCB: 'common',
   'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp', CEC_CONSOLE_WWTP: 'wwtp',
   GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
+  // MAINTENANCE_REPORT dan FLOW_SWITCH SENGAJA TIDAK ada di sini -- keduanya
+  // dipakai/dipasang di banyak lokasi berbeda, jadi areanya TIDAK tetap
+  // per-modul seperti yang lain. Masing-masing punya dropdown Area sendiri
+  // di form (kolom ringan top-level `area`, sama seperti asset/asset_desc di
+  // maintenance_report_form.html) -- raSendFinalPdfToFirebaseDashboard() di
+  // bawah membaca `record.area` LEBIH DULU sebelum fallback ke peta statis
+  // ini, jadi routing-nya per-submission (per laporan), bukan per-modul.
 };
 // Nilai AREA PERSIS seperti pilihan checkbox Register di
 // Review_Approval_Dashboard.html (TEAM_AREAS.C7 di file itu) -- kalau
@@ -3044,9 +3054,10 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   // jadi tidak perlu diganti identitas sintetis lagi.
   var effectiveSubmittedBy = submittedByName || record.pic || '';
   // 🆕 record.area (kolom ringan, dipilih user lewat dropdown Area di form --
-  // lihat maintenance_report_form.html) DIPRIORITASKAN di atas RA_MODUL_AREA
-  // (peta statis per-modul) -- modul generik seperti Maintenance Report tidak
-  // terikat 1 area tetap, areanya ditentukan PER LAPORAN oleh user sendiri.
+  // lihat maintenance_report_form.html DAN flow-switch.html) DIPRIORITASKAN
+  // di atas RA_MODUL_AREA (peta statis per-modul) -- modul generik yang tidak
+  // terikat 1 area tetap (Maintenance Report, Flow Switch) areanya ditentukan
+  // PER LAPORAN oleh user sendiri lewat dropdown ini.
   var areaKey = record.area || RA_MODUL_AREA[modKey];
   // Ditemukan laporan yang macet TANPA PERNAH melapor sukses ATAU gagal
   // (firebase_synced_at dan firebase_sync_error dua-duanya kosong selamanya)

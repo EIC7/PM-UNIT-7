@@ -3,25 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Opacity Monitor — Unit 7</title>
+<title>Flow Switch Maintenance — Unit 7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260911b"></script>
+<script src="shared.js?v=20260911a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="db-helper.js"></script>
 <script src="storage-helper.js"></script>
 <script src="approval-helper.js"></script>
-<link rel="stylesheet" href="shared.css?v=20260911b">
+<link rel="stylesheet" href="shared.css?v=20260911a">
 <style>
-:root{--bg:#eef5fb;--bg2:#dceaf6;--panel:rgba(255,255,255,0.78);--panel-border:rgba(150,180,210,0.65);--steel:#294c6f;--steel-light:#3f6f9f;--ok:#1d74c7;--text:#152638;--text2:#2c4660;--text3:#6f879c;--border:rgba(150,180,210,0.65);--shadow:0 4px 24px rgba(35,75,120,0.10);--shadow2:0 2px 8px rgba(35,75,120,0.08);}
-body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 0%,transparent 55%),radial-gradient(ellipse at 85% 80%,rgba(135,185,225,0.30) 0%,transparent 50%),linear-gradient(180deg,#f8fbfe 0%,var(--bg) 100%);}
-.topbar{background:linear-gradient(90deg,#1c3550 0%,#294c6f 60%,#1c3550 100%);border-bottom-color:#1d74c744;}
-.topbar-logo{color:#b7d8f5}.topbar-sep{background:#3f668a}.topbar-sub,.topbar-back,.topbar-time{color:#8fb7dc}
-.topbar-back{border-color:#315d86;background:rgba(29,116,199,0.06)}.topbar-back:hover{color:#b7d8f5;border-color:#1d74c7;background:rgba(29,116,199,0.12)}
-.badge{background:#1d74c722;color:var(--ok);border-color:#1d74c744}
+/* ── Application radio choices (pola sama dengan .freq-choice di cems_calibration.html) ── */
+.freq-choices{display:flex;flex-direction:column;gap:8px}
+.freq-choice{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid #cfd8d2;border-radius:8px;cursor:pointer;background:#fafcfb}
+.freq-choice input{width:16px;height:16px}
+.freq-choice.checked{background:#eafcf1;border-color:#2ecc71}
+.freq-choice span{font-weight:600;font-size:13px;color:#20302a}
 /* ── Fitur reusable: geser posisi foto ── */
 .img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
 .img-nudge-label{font-size:8px;color:#8a8a8a;text-align:center;line-height:1.2;max-width:100px}
@@ -31,13 +31,6 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 /* ── CROP MODAL (3-mode) ── */
 #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
 #cropModal.show{display:flex}
-/* ── MULTI-UPLOAD NOTIFICATION OVERLAY ── */
-#opUploadOverlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.8);flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
-#opUploadOverlay.show{display:flex}
-#opUploadOverlaySpinner{width:38px;height:38px;border:4px solid rgba(255,255,255,0.25);border-top-color:#2ecc71;border-radius:50%;animation:opSpin 0.8s linear infinite;margin-bottom:16px}
-#opUploadOverlayTitle{font-size:15px;font-weight:700;color:#fff}
-#opUploadOverlaySub{font-size:12px;color:#c9d6cf;margin-top:6px;max-width:280px}
-@keyframes opSpin{to{transform:rotate(360deg)}}
 .crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
 .crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
 .crop-header-title{font-weight:700;font-size:16px;color:#e0f0e8;letter-spacing:0.5px}
@@ -103,88 +96,111 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 </style>
 </head>
 <body>
+
 <div class="topbar">
   <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
   <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
   <div class="topbar-sep"></div>
-  <div class="topbar-logo">OPACITY</div>
+  <div class="topbar-logo">FLOW SWITCH</div>
   <div class="topbar-sep"></div>
-  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; 1 Monthly Inspect Opacity Monitor</div>
-  <div class="topbar-right"><div class="live-dot"></div><div class="topbar-time" id="clockOpacity">--:--:--</div></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; Flow Switch Maintenance Plan</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
 </div>
+
 <div class="wrapper">
+
+  <div class="page-header">
+    <div>
+      <div class="page-header-sub">Preventive Maintenance — Job Plan Inspection</div>
+      <div class="page-header-title">Flow Switch <span>Maintenance Plan</span></div>
+    </div>
+  </div>
+
+  <!-- HEADER UMUM -->
   <div class="panel">
     <div class="section-label">Informasi Pekerjaan</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
-      <div class="meta-field"><label>Asset 7A</label><input type="text" id="opAsset7A" value="7BG-AIT-813A"></div>
-      <div class="meta-field"><label>Asset 7B</label><input type="text" id="opAsset7B" value="7BG-AIT-813B"></div>
-      <div class="meta-field"><label>Date / Time</label><input type="date" id="opDate"></div>
-      <div class="meta-field"><label>PIC</label><input type="text" id="opPIC" placeholder="Nama PIC..."></div>
-      <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="opWO" placeholder="Work Order..."></div>
-      <div class="meta-field"><label>Checked By - Technician</label>
-        <select id="opCheckedBy">
-          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
+    <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <div class="meta-field"><label>Asset Number</label><input type="text" id="hAssetNumber" placeholder="Mis. 7BF-FS-720A..."></div>
+      <div class="meta-field"><label>Manufacturer (Mnf)</label><input type="text" id="hMnf" placeholder="Mis. KAYDON, EATON, UFM..."></div>
+      <div class="meta-field"><label>SN</label><input type="text" id="hSn" placeholder="Serial Number..."></div>
+      <div class="meta-field"><label>Date/Time</label><input type="date" id="hTanggal"></div>
+      <div class="meta-field"><label>Location</label><input type="text" id="hLocation" placeholder="Mis. Turbine ground floor..."></div>
+      <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="hWorkOrder" placeholder="No. Work Order..."></div>
+      <div class="meta-field"><label>PIC</label><input type="text" id="hPic" placeholder="Nama PIC..."></div>
+      <div class="meta-field">
+        <label>Area <span style="font-weight:400;color:var(--text3)">(tujuan Review Approval)</span></label>
+        <select id="hArea" onchange="onAreaChange()">
+          <option value="">— Pilih Area —</option>
+          <option value="boiler">Boiler</option>
+          <option value="turbine">Turbine</option>
+          <option value="common">Common CHCB</option>
+          <option value="wwtp">Common WWTP</option>
         </select>
       </div>
     </div>
+    <div class="meta-field" style="margin-top:12px">
+      <label>Application</label>
+      <div class="freq-choices" id="applicationChoices" style="flex-direction:row;flex-wrap:wrap">
+        <label class="freq-choice"><input type="radio" name="hApplication" value="Steam" onchange="onApplicationChange()"><span>Steam</span></label>
+        <label class="freq-choice"><input type="radio" name="hApplication" value="Water" onchange="onApplicationChange()"><span>Water</span></label>
+        <label class="freq-choice"><input type="radio" name="hApplication" value="Oil" onchange="onApplicationChange()"><span>Oil</span></label>
+      </div>
+    </div>
+    <div class="notice info" style="display:block;margin-top:12px" id="areaHint">
+      <b>Penting:</b> Flow Switch bisa dipasang di area mana saja — pilih <b>Area</b> di atas sesuai lokasi unit ini sebelum submit, supaya checksheet dikirim ke reviewer area yang benar di Review Approval Dashboard.
+    </div>
   </div>
+
+  <!-- TABLE CHECKLIST -->
   <div class="panel">
-    <div class="section-label">Step of Work — Opacity ID Fan Inlet 7A &amp; 7B</div>
+    <div class="section-label">Job Plan Inspection</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table class="manual-table" id="opCheckTable">
-        <thead><tr>
-          <th style="width:36px">No.</th><th>Step of Work</th><th style="width:120px">Criteria</th>
-          <th style="width:46px;text-align:center">&#10003;</th>
-          <th style="width:120px;text-align:center">7BG-AIT-813A<br><span style="font-weight:400;font-size:10px">(Opacity Inlet 7A)</span></th>
-          <th style="width:120px;text-align:center">7BG-AIT-813B<br><span style="font-weight:400;font-size:10px">(Opacity Inlet 7B)</span></th>
-          <th>Result / Remark</th>
-        </tr></thead>
-        <tbody id="opCheckBody"></tbody>
+      <table class="manual-table" id="t2Table" style="min-width:760px">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:34px">No</th>
+            <th rowspan="2" style="min-width:300px">Job Plan Inspection</th>
+            <th colspan="2">Inspection</th>
+            <th rowspan="2" style="min-width:220px">Remarks / Note</th>
+          </tr>
+          <tr>
+            <th style="width:50px">Y</th><th style="width:50px">N</th>
+          </tr>
+        </thead>
+        <tbody id="t2Body"></tbody>
       </table>
     </div>
   </div>
+
+  <!-- EVIDENCE: MODEL / NAMEPLATE ALAT -->
   <div class="panel">
-    <div class="section-label">Catatan &amp; Evidence Photo</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px">
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#128247; 7A — 7BG-AIT-813A</div>
-        <textarea id="opNote7A" rows="2" placeholder="Catatan untuk 7A..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
-        <div id="opImgDrop7A" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2,#dceaf6)" onclick="toggleSourceChoices('opSource7A')" ondragover="event.preventDefault()" ondrop="opHandleDrop(event,'7A')">
-          <input type="file" id="opImgInput7A" accept="image/*,.heic,.heif" multiple style="display:none" onchange="opHandleFiles(this.files,'7A')">
-          <div style="font-size:24px;margin-bottom:6px">&#128444;&#65039;</div>
-          <div style="font-size:12px;color:var(--text3)">Klik untuk pilih sumber atau drag file untuk upload</div>
-          <div id="opSource7A" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">
-            <button type="button" onclick="event.stopPropagation();openFileInputSource('opImgInput7A','storage')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Penyimpanan</button>
-            <button type="button" onclick="event.stopPropagation();openFileInputSource('opImgInput7A','camera')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Kamera</button>
-          </div>
-        </div>
-        <div id="opImgPreview7A" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
-        <div id="opSizeInfo7A" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#128247; 7B — 7BG-AIT-813B</div>
-        <textarea id="opNote7B" rows="2" placeholder="Catatan untuk 7B..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px"></textarea>
-        <div id="opImgDrop7B" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2,#dceaf6)" onclick="toggleSourceChoices('opSource7B')" ondragover="event.preventDefault()" ondrop="opHandleDrop(event,'7B')">
-          <input type="file" id="opImgInput7B" accept="image/*,.heic,.heif" multiple style="display:none" onchange="opHandleFiles(this.files,'7B')">
-          <div style="font-size:24px;margin-bottom:6px">&#128444;&#65039;</div>
-          <div style="font-size:12px;color:var(--text3)">Klik untuk pilih sumber atau drag file untuk upload</div>
-          <div id="opSource7B" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">
-            <button type="button" onclick="event.stopPropagation();openFileInputSource('opImgInput7B','storage')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Penyimpanan</button>
-            <button type="button" onclick="event.stopPropagation();openFileInputSource('opImgInput7B','camera')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Kamera</button>
-          </div>
-        </div>
-        <div id="opImgPreview7B" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
-        <div id="opSizeInfo7B" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
-      </div>
+    <div class="section-label">Foto Evidence — Model / Nameplate Alat</div>
+    <div id="evEvidenceList"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-outline" onclick="evAddEvidenceSlot()">+ Tambah Evidence</button>
     </div>
   </div>
-  <div class="btn-row" style="margin-top:20px">
-    <button class="btn btn-pdf" onclick="opDownloadPdf()">&#11015; Download PDF Report</button>
-    <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('opacity')">&#128190; Simpan ke Database</button>
-    <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=opDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
-    <button class="btn btn-danger" onclick="opReset()">&#10005; Reset</button>
+
+  <!-- CATATAN -->
+  <div class="panel">
+    <div class="notice info" style="display:block">
+      <b>Catatan:</b> All reference of technical information details such as clearances, gaps, tolerances and fits, setting values, engineering drawings, cross sectional drawings, and other supporting documents shall be attached into this checksheet package for control measure.
+    </div>
   </div>
+
+  <!-- BUTTONS -->
+  <div class="panel">
+    <div class="btn-row">
+      <button class="btn btn-pdf" id="btnPdf" onclick="runPdfPreview()">⬇ PDF Preview &amp; Download</button>
+      <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('flow_switch')">💾 Simpan ke Database</button>
+      <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=runPdfPreview; raSubmitReport()">🔒 Submit Laporan</button>
+      <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- CROP MODAL (3-mode: Default/Preset/Manual) -->
@@ -227,7 +243,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
                 </div>
                 <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
                     <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="16.4" step="0.1" value="5" oninput="onCustomCmChange('w')" onblur="onCustomCmCommit('w')"></div>
-                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="25" step="0.1" value="5" oninput="onCustomCmChange('h')" onblur="onCustomCmCommit('h')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="24" step="0.1" value="5" oninput="onCustomCmChange('h')" onblur="onCustomCmCommit('h')"></div>
                     <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                 </div>
             </div>
@@ -290,14 +306,12 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
     </div>
 </div>
 
-<!-- MULTI-UPLOAD NOTIFICATION OVERLAY -->
-<div id="opUploadOverlay" onclick="opHideUploadOverlay()">
-    <div id="opUploadOverlaySpinner"></div>
-    <div id="opUploadOverlayTitle"></div>
-    <div id="opUploadOverlaySub"></div>
-</div>
-
 <script>
+/* ══════════════════════════════════════════════════════════════════════════
+   FITUR REUSABLE (copy verbatim dari generator_stator_leak_monitoring.html):
+   Crop 3-mode (Default/Preset/Manual) / Geser posisi foto / Preview PDF
+   sebelum download / Loading overlay / Autosave draft.
+   ══════════════════════════════════════════════════════════════════════════ */
 var cropModalState = document.getElementById('cropModal');
 cropModalState._pending = null;
 cropModalState._ratioLocked = false;
@@ -332,15 +346,13 @@ var PRESET_DEFAULT_LONG_CM = 7;
 var MANUAL_MAX_W_CM = 16.4;
 // Lebar (cropHcm) = dimensi VERTIKAL saat dicetak -> lebih longgar karena kalau
 // kelebihan cuma pindah halaman.
-var MANUAL_MAX_H_CM = 25;
+var MANUAL_MAX_H_CM = 24;
 
 /* ══════════════════════════════════════════════════════════════════════════
    EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
    Dipanggil dari dalam Crop Modal ("🖍️ Edit Gambar"). Bekerja di atas
    gambar ASLI (sebelum crop), lalu hasil flatten (gambar + anotasi jadi
    satu) dikembalikan ke #cropImg supaya alur crop selanjutnya normal.
-   Koordinat shape disimpan dalam ruang piksel ASLI gambar (naturalW/H)
-   supaya scaling ke layar & flatten ke canvas konsisten.
    ══════════════════════════════════════════════════════════════════════════ */
 var NS_SVG = 'http://www.w3.org/2000/svg';
 var imgEditState = {
@@ -352,11 +364,6 @@ var IE_ZOOM_MIN = 1, IE_ZOOM_MAX = 4, IE_ZOOM_STEP = 0.5;
 
 function ieMinSize(){ return Math.max(20, imgEditState.naturalW * 0.02); }
 function ieHandleR(){ return Math.max(9, imgEditState.naturalW * 0.009); }
-function ieHandleHitR(){
-    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
-    var minTouchPx = 22;
-    return Math.max(ieHandleR(), minTouchPx / scale);
-}
 function ieStrokeWFor(shape){
     var key = (shape && shape.strokeSize) || imgEditState.thickness || 'M';
     var f = IE_THICKNESS_FACTORS[key] || IE_THICKNESS_FACTORS.M;
@@ -440,11 +447,8 @@ function setEditTool(tool){
         b.classList.toggle('active', b.getAttribute('data-tool') === tool);
     });
     var svg = document.getElementById('editSvgOverlay');
-    svg.style.cursor = (tool === 'select') ? 'default' : (tool === 'pan' ? 'grab' : 'crosshair');
+    svg.style.cursor = (tool === 'select') ? 'default' : (tool === 'pan') ? 'grab' : 'crosshair';
 }
-
-/* Kembali ke tool 'select' setelah shape baru dibuat, TANPA menghapus seleksi
-   shape yang baru saja dibuat (supaya langsung bisa digeser/resize). */
 function ieBackToSelectKeepSelection(){
     imgEditState.tool = 'select';
     document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
@@ -453,7 +457,6 @@ function ieBackToSelectKeepSelection(){
     var svg = document.getElementById('editSvgOverlay');
     svg.style.cursor = 'default';
 }
-
 function setEditColor(color, btnEl){
     imgEditState.color = color;
     document.querySelectorAll('.edit-color-swatch').forEach(function(s){ s.classList.remove('active'); });
@@ -461,7 +464,6 @@ function setEditColor(color, btnEl){
     var sel = getShapeById(imgEditState.selectedId);
     if (sel) { sel.color = color; renderAllShapes(); }
 }
-
 function setEditThickness(key, btnEl){
     imgEditState.thickness = key;
     document.querySelectorAll('.edit-thick-swatch').forEach(function(s){ s.classList.remove('active'); });
@@ -469,7 +471,6 @@ function setEditThickness(key, btnEl){
     var sel = getShapeById(imgEditState.selectedId);
     if (sel && sel.type !== 'text') { sel.strokeSize = key; renderAllShapes(); }
 }
-
 function getShapeById(id){
     for (var i=0;i<imgEditState.shapes.length;i++) if (imgEditState.shapes[i].id === id) return imgEditState.shapes[i];
     return null;
@@ -480,11 +481,11 @@ function addShape(shape){
     return shape;
 }
 function ieSetSelButtonsDisplay(shape){
-    var isText = !!(shape && shape.type === 'text');
-    var db = document.getElementById('editDeleteBtn'); if (db) db.style.display = shape ? 'flex' : 'none';
-    var tb = document.getElementById('editTextEditBtn'); if (tb) tb.style.display = isText ? 'flex' : 'none';
-    var sb = document.getElementById('editTextSmallerBtn'); if (sb) sb.style.display = isText ? 'flex' : 'none';
-    var bb = document.getElementById('editTextBiggerBtn'); if (bb) bb.style.display = isText ? 'flex' : 'none';
+    var isText = shape && shape.type === 'text';
+    document.getElementById('editTextSmallerBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editTextBiggerBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editTextEditBtn').style.display = isText ? 'flex' : 'none';
+    document.getElementById('editDeleteBtn').style.display = shape ? 'flex' : 'none';
 }
 function deselectShape(){
     imgEditState.selectedId = null;
@@ -502,17 +503,18 @@ function setSelectedShape(id){
     renderAllShapes();
 }
 function deleteSelectedShape(){
-    if (!imgEditState.selectedId) return;
-    imgEditState.shapes = imgEditState.shapes.filter(function(s){ return s.id !== imgEditState.selectedId; });
+    var id = imgEditState.selectedId;
+    if (!id) return;
+    imgEditState.shapes = imgEditState.shapes.filter(function(s){ return s.id !== id; });
     deselectShape();
 }
 function editSelectedText(){
-    var s = getShapeById(imgEditState.selectedId);
-    if (!s || s.type !== 'text') return;
-    var val = prompt('Edit teks:', s.text);
+    var shape = getShapeById(imgEditState.selectedId);
+    if (!shape || shape.type !== 'text') return;
+    var val = prompt('Edit teks:', shape.text);
     ieForceHideKeyboard();
     if (val === null) return;
-    s.text = val || ' ';
+    shape.text = val || ' ';
     renderAllShapes();
 }
 /* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
@@ -543,13 +545,12 @@ function ieForceHideKeyboard(){
     setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
 }
 function ieResizeSelectedText(dir){
-    var s = getShapeById(imgEditState.selectedId);
-    if (!s || s.type !== 'text') return;
-    var step = Math.max(2, imgEditState.naturalW*0.006);
-    s.fontSize = Math.max(10, (s.fontSize||ieFontDefault()) + dir*step);
+    var shape = getShapeById(imgEditState.selectedId);
+    if (!shape || shape.type !== 'text') return;
+    var step = Math.max(2, imgEditState.naturalW * 0.006);
+    shape.fontSize = Math.max(10, (shape.fontSize||ieFontDefault()) + dir*step);
     renderAllShapes();
 }
-
 function getSvgPoint(evt){
     var svg = document.getElementById('editSvgOverlay');
     var rect = svg.getBoundingClientRect();
@@ -558,10 +559,6 @@ function getSvgPoint(evt){
     var y = (t.clientY - rect.top) * (imgEditState.naturalH / rect.height);
     return { x: x, y: y };
 }
-
-/* Pakai Pointer Events (bukan touchstart/mousedown terpisah) supaya drag di HP
-   (Chrome/Safari Android & iOS) lebih andal — menghindari konflik event
-   sentuh vs mouse sintetis yang kadang bikin drag "putus" di tengah jalan. */
 function ieAddDocListeners(onMove, onUp){
     document.addEventListener('pointermove', onMove, {passive:false});
     document.addEventListener('pointerup', onUp);
@@ -572,94 +569,83 @@ function ieRemoveDocListeners(onMove, onUp){
     document.removeEventListener('pointerup', onUp);
     document.removeEventListener('pointercancel', onUp);
 }
-
-/* ── Mulai gambar shape baru (drag dari kosong) ── */
 function onEditSvgPointerDown(e){
     var tool = imgEditState.tool;
     if (tool === 'pan') {
         if (e.cancelable) e.preventDefault();
         var outer = document.getElementById('editImgOuter');
-        var t0 = e.touches ? e.touches[0] : e;
-        var startX = t0.clientX, startY = t0.clientY;
-        var startL = outer.scrollLeft, startT = outer.scrollTop;
+        var startX = e.clientX, startY = e.clientY, startL = outer.scrollLeft, startT = outer.scrollTop;
         var svgEl = document.getElementById('editSvgOverlay'); svgEl.style.cursor = 'grabbing';
-        function onMove(mv){
-            if (mv.cancelable) mv.preventDefault();
-            var t = mv.touches ? mv.touches[0] : mv;
-            outer.scrollLeft = startL - (t.clientX - startX);
-            outer.scrollTop = startT - (t.clientY - startY);
-        }
-        function onUp(){ ieRemoveDocListeners(onMove, onUp); svgEl.style.cursor = 'grab'; }
+        function onMove(ev){ if (ev.cancelable) ev.preventDefault(); outer.scrollLeft = startL-(ev.clientX-startX); outer.scrollTop = startT-(ev.clientY-startY); }
+        function onUp(){ svgEl.style.cursor = 'grab'; ieRemoveDocListeners(onMove, onUp); }
         ieAddDocListeners(onMove, onUp);
         return;
     }
     if (tool === 'select') { if (e.target.id === 'editSvgOverlay') deselectShape(); return; }
-    if (e.cancelable) e.preventDefault();
-    var pt = getSvgPoint(e);
     if (tool === 'text') {
-        var txt = prompt('Masukkan teks:');
+        var p = getSvgPoint(e);
+        var val = prompt('Masukkan teks:', '');
         ieForceHideKeyboard();
-        if (txt && txt.trim()) {
-            var shapeT = addShape({type:'text', x:pt.x, y:pt.y, text:txt.trim(), color:imgEditState.color, fontSize: ieFontDefault()});
-            setSelectedShape(shapeT.id);
-        }
+        if (!val) return;
+        var shape = addShape({ type:'text', x:p.x, y:p.y, text:val, color:imgEditState.color, fontSize:ieFontDefault() });
+        setSelectedShape(shape.id);
         ieBackToSelectKeepSelection();
         return;
     }
-    imgEditState.drawing = {type:tool, x1:pt.x, y1:pt.y, x2:pt.x, y2:pt.y, color:imgEditState.color, strokeSize:imgEditState.thickness};
-    renderAllShapes();
-    function onMove(mv){
-        if (mv.cancelable) mv.preventDefault();
-        var p = getSvgPoint(mv);
-        imgEditState.drawing.x2 = p.x; imgEditState.drawing.y2 = p.y;
-        renderAllShapes();
+    if (tool === 'line' || tool === 'arrow' || tool === 'rect' || tool === 'oval') {
+        if (e.cancelable) e.preventDefault();
+        var p0 = getSvgPoint(e);
+        imgEditState.drawing = { type: tool, x1:p0.x, y1:p0.y, x2:p0.x, y2:p0.y, color: imgEditState.color, strokeSize: imgEditState.thickness };
+        function onMove(ev){ if (ev.cancelable) ev.preventDefault(); var pm = getSvgPoint(ev); imgEditState.drawing.x2 = pm.x; imgEditState.drawing.y2 = pm.y; renderAllShapes(); }
+        function onUp(){
+            var d = imgEditState.drawing; imgEditState.drawing = null;
+            if (d && (Math.abs(d.x2-d.x1) > 4 || Math.abs(d.y2-d.y1) > 4)) {
+                var shape;
+                if (d.type === 'rect' || d.type === 'oval') {
+                    shape = addShape({ type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize, rotation:0 });
+                } else {
+                    shape = addShape({ type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize });
+                }
+                setSelectedShape(shape.id);
+                ieBackToSelectKeepSelection();
+            } else { renderAllShapes(); }
+            ieRemoveDocListeners(onMove, onUp);
+        }
+        ieAddDocListeners(onMove, onUp);
     }
-    function onUp(){
-        ieRemoveDocListeners(onMove, onUp);
-        var d = imgEditState.drawing; imgEditState.drawing = null;
-        if (d && (Math.abs(d.x2-d.x1) > 4 || Math.abs(d.y2-d.y1) > 4)) {
-            var shape;
-            if (d.type === 'rect' || d.type === 'oval') {
-                shape = addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize, rotation:0});
-            } else {
-                shape = addShape({type:d.type, x1:d.x1, y1:d.y1, x2:d.x2, y2:d.y2, color:d.color, strokeSize:d.strokeSize});
-            }
-            setSelectedShape(shape.id);
-            ieBackToSelectKeepSelection();
-        } else { renderAllShapes(); }
-    }
-    ieAddDocListeners(onMove, onUp);
 }
-
-/* ── Pindahkan shape yang ada (drag body) ── */
 function startDragShape(id, ev){
     setSelectedShape(id);
     var shape = getShapeById(id);
     if (!shape) return;
-    var startPt = getSvgPoint(ev);
+    var p0 = getSvgPoint(ev);
     var orig = JSON.parse(JSON.stringify(shape));
-    function onMove(mv){
-        if (mv.cancelable) mv.preventDefault();
-        var p = getSvgPoint(mv);
-        var dx = p.x - startPt.x, dy = p.y - startPt.y;
-        if (shape.type === 'line' || shape.type === 'arrow') {
-            shape.x1 = orig.x1+dx; shape.y1 = orig.y1+dy; shape.x2 = orig.x2+dx; shape.y2 = orig.y2+dy;
-        } else {
-            shape.x = orig.x+dx; shape.y = orig.y+dy;
-        }
+    function onMove(e){
+        if (e.cancelable) e.preventDefault();
+        var p = getSvgPoint(e);
+        var dx = p.x-p0.x, dy = p.y-p0.y;
+        if (shape.type === 'line' || shape.type === 'arrow') { shape.x1=orig.x1+dx; shape.y1=orig.y1+dy; shape.x2=orig.x2+dx; shape.y2=orig.y2+dy; }
+        else { shape.x = orig.x+dx; shape.y = orig.y+dy; }
         renderAllShapes();
     }
     function onUp(){ ieRemoveDocListeners(onMove, onUp); }
     ieAddDocListeners(onMove, onUp);
 }
-
-/* ── Handle resize/endpoint drag ── */
 function startHandleDrag(onDragMove){
-    function onMove(mv){ if (mv.cancelable) mv.preventDefault(); onDragMove(getSvgPoint(mv)); renderAllShapes(); }
+    function onMove(e){ if (e.cancelable) e.preventDefault(); onDragMove(getSvgPoint(e)); renderAllShapes(); }
     function onUp(){ ieRemoveDocListeners(onMove, onUp); }
     ieAddDocListeners(onMove, onUp);
+    return { onMove: onMove, onUp: onUp };
 }
-
+/* Radius area sentuh (bukan visual) — minimal setara ~22px layar supaya
+   enak dipencet jari, meski titik hijaunya sendiri sengaja dibikin kecil
+   biar presisi. Dikonversi ke koordinat "natural" gambar sesuai skala
+   tampilan saat ini (baseScale x zoom). */
+function ieHandleHitR(){
+    var scale = (imgEditState.baseScale || 1) * (imgEditState.zoom || 1);
+    var minTouchPx = 22;
+    return Math.max(ieHandleR(), minTouchPx / scale);
+}
 function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
     var c = document.createElementNS(NS_SVG, 'circle');
     c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', ieHandleR());
@@ -675,8 +661,6 @@ function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
     hit.addEventListener('pointerdown', function(e){ e.stopPropagation(); if (e.cancelable) e.preventDefault(); startHandleDrag(onDragMove); });
     svg.appendChild(hit);
 }
-
-/* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */
 function ieBuildShapeVisual(shape){
     var el;
     if (shape.type === 'rect') {
@@ -704,7 +688,6 @@ function ieBuildShapeVisual(shape){
     }
     return el;
 }
-
 function ieBuildDefs(svg){
     var defs = document.createElementNS(NS_SVG, 'defs');
     ['#e53935','#1a1a1a','#1e88e5','#fdd835'].forEach(function(c){
@@ -717,19 +700,13 @@ function ieBuildDefs(svg){
     });
     svg.appendChild(defs);
 }
-
-/* ── Rotasi titik (px,py) mengelilingi pusat (cx,cy) sejauh `deg` derajat ── */
 function ieRotatePoint(px, py, cx, cy, deg){
-    var rad = deg * Math.PI/180;
-    var cos = Math.cos(rad), sin = Math.sin(rad);
-    var dx = px-cx, dy = py-cy;
-    return { x: cx + dx*cos - dy*sin, y: cy + dx*sin + dy*cos };
+    var rad = deg * Math.PI / 180;
+    var dx = px - cx, dy = py - cy;
+    return { x: cx + dx*Math.cos(rad) - dy*Math.sin(rad), y: cy + dx*Math.sin(rad) + dy*Math.cos(rad) };
 }
-
-/* ── Render ulang seluruh overlay interaktif (shapes + preview + handle seleksi) ── */
 function renderAllShapes(){
     var svg = document.getElementById('editSvgOverlay');
-    if (!svg) return;
     svg.innerHTML = '';
     ieBuildDefs(svg);
     imgEditState.shapes.forEach(function(shape){
@@ -772,11 +749,7 @@ function renderAllShapes(){
             var rcx = shape.x + shape.w/2, rcy = shape.y + shape.h/2;
             g.setAttribute('transform', 'rotate(' + shape.rotation + ' ' + rcx + ' ' + rcy + ')');
         }
-        var start = (function(shapeId){ return function(ev){
-            if (imgEditState.tool !== 'select') return;
-            ev.stopPropagation(); if (ev.cancelable) ev.preventDefault();
-            startDragShape(shapeId, ev);
-        }; })(shape.id);
+        var start = function(shapeId){ return function(e){ if (imgEditState.tool !== 'select') return; e.stopPropagation(); if (e.cancelable) e.preventDefault(); startDragShape(shapeId, e); }; }(shape.id);
         g.addEventListener('pointerdown', start);
         svg.appendChild(g);
 
@@ -899,7 +872,6 @@ function applyImageEdits(){
     svgImg.onerror = function(){ alert('Gagal menerapkan anotasi pada gambar. Coba lagi.'); };
     svgImg.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
 }
-
 var CROP_PRESETS = [
     {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
     {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
@@ -1201,7 +1173,6 @@ function cropReset() {
     if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
 }
 function skipCrop() { closeCropModal(); }
-
 function cropAndSave() {
     var img = document.getElementById('cropImg');
     var box = document.getElementById('cropBox');
@@ -1228,7 +1199,7 @@ function cropAndSave() {
     var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
     var otherTotal = imgArr.reduce(function(a,im,i){ return a+((existing && i===p.replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0)); }, 0);
     var dataUrl;
-    for (var q=0.9; q>=0.25; q-=0.1) {
+    for (var q=0.85; q>=0.25; q-=0.1) {
         dataUrl = canvas.toDataURL('image/jpeg', q);
         var newSize = dataUrl.length*0.75;
         if (otherTotal+newSize <= MAX) break;
@@ -1256,21 +1227,18 @@ function cropAndSave() {
     }
     // Foto lama yang diganti (crop-ulang) dihapus dari Drive lewat fileId
     // pasti, bukan lewat cocokkan nama -- supaya tidak salah hapus file foto
-    // lain yang kebetulan nama device-nya sama. Dipisah dari if/else di atas
-    // (BUG LAMA: else di sini sempat nempel ke kondisi driveFileId, bukan ke
-    // "existing" -- akibatnya foto yang di-crop-ulang tapi belum punya
-    // driveFileId [misal foto lama dari sebelum migrasi] ke-splice DAN
-    // ke-push sekaligus, jadi dobel di galeri).
+    // lain yang kebetulan nama device-nya sama. (Perbaikan dangling-else:
+    // dulu "else" di sini nempel ke kondisi driveFileId, bukan ke
+    // "existing", jadi foto yang di-crop-ulang tapi belum punya driveFileId
+    // ke-splice DAN ke-push sekaligus -> dobel di galeri.)
     if (existing && existing.driveFileId) deleteFotoDariGDrive(existing.driveFileId);
-
-    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
-    uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '', entry);
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '', entry);
 
     closeCropModal();
     // panggil render callback modul terkait (sama seperti imgCompressAndStore lama di shared.js)
-    // Panggil render callback modul terkait secara dinamis: {prefix}RenderPreviews(side)
-    var renderFnName = p.modulePrefix + 'RenderPreviews';
-    if (typeof window[renderFnName] === 'function') window[renderFnName](p.side);
+    if (p.modulePrefix === 'cl' && typeof clRenderPreviews === 'function') clRenderPreviews(p.side);
+    else if (p.modulePrefix === 'ld' && typeof ldRenderPreviews === 'function') ldRenderPreviews(p.side);
+    else if (p.modulePrefix === 'ev' && typeof evRenderPreview === 'function') evRenderPreview(p.side);
 }
 
 /* ── Geser posisi gambar (nudge) — generik untuk array manapun ── */
@@ -1405,312 +1373,233 @@ function closePdfPreview() {
     if (pdfPreviewState.blobUrl) { URL.revokeObjectURL(pdfPreviewState.blobUrl); pdfPreviewState.blobUrl=''; }
     pdfPreviewState.doc = null;
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   FITUR REUSABLE DI ATAS: copy verbatim dari generator_stator_leak_monitoring.html
+   (crop modal 3-mode, edit gambar, preview PDF). Mulai di sini: bagian
+   module-specific untuk ID FAN FLOW TRANSMITTER LINE PURGING.
+   ══════════════════════════════════════════════════════════════════════════ */
+function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
-var OP_CHECKS = [
-  {no:1,   label:'Make sure PTW already issue.', criteria:'', both:true},
-  {no:2,   label:'Prepare tool & material required.', criteria:'', both:true},
-  {no:3,   label:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', criteria:'Cleanliness', both:true},
-  {no:4,   label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress). * replace if required', criteria:'No dust / No water ingress / No broken', both:true},
-  {no:5,   label:'Check connection was tightened and no looses.', criteria:'Tight Connection', both:true},
-  {no:'6a',label:'OPACITY ANALYZER INSPECTION — Record / Note the faulty or alarm active', criteria:'Opacity Monitor', both:true},
-  {no:'6b',label:'Cleaning Mirror/lens, chamber opacity, record if any abnormality found.', criteria:'', both:true},
-  {no:'6c',label:'Air Regulator Flushing / Cleaning.', criteria:'', both:true},
-  {no:'6d',label:'Seal Air Filter and Air Filter Replacement (*inspection and cleaning if Spare not Available)', criteria:'', both:true},
-  {no:9,   label:'Raise new WO & repair if any defect found.', criteria:'', both:false},
-  {no:10,  label:'Leave the location within safe condition.', criteria:'', both:true}
-];
+/* ═══ DATA MODUL — FLOW SWITCH MAINTENANCE PLAN ═══
+   Sumber: sheet 7BF-FS-720A (potongan Excel dari user, tanpa tabel QCP besar
+   di atasnya -- HANYA bagian "FLOW SWITCH ... MAINTENANCE PLAN" + "Job Plan
+   Inspection" yang dibangun, sesuai instruksi eksplisit user). 10 baris
+   checklist, penomoran mengikuti sheet asli. Baris No.3 & No.4 punya field
+   nilai tambahan (extra) di kolom Remarks -- di sheet asli itu tampil
+   sebagai sub-baris nilai terpisah di bawah baris utamanya. */
+var CHECKLIST_DATA = [
+  {no:1, activity:'Visually inspect panel for any obvious signs of damage.'},
+  {no:2, activity:'Cleaning instrumentation, flushing-purging-draining impulse line if required. Check Flow Switch for free movement, repair it on necessary.'},
+  {no:3, activity:'Check for micro-switch contact, repair/replace it if contact >10 Ohm.', extra:[
+    {key:'resistanceOhm', label:'R ='}, {key:'flowValue', label:'Flow (GPM/LPM/Bar) ='}
+  ]},
+  {no:4, activity:'Check for micro-switch contact voltage test (NO-NC check measurement).', extra:[
+    {key:'voltageNo', label:'(NO test) V ='}, {key:'voltageNc', label:'(NC test) V ='}
+  ]},
+  {no:5, activity:'Check cable route line, termination in end of line, inspection control panel, tidy up the cable — apply ties for correction, cleaning from any dust and get sealant and fixed the lock panel.'},
+  {no:6, activity:'Check sealing/covering of instrument & junction boxes, conduits, apply sealant/duct seal to prevent water/oil vapor ingress, replacement conduit/cable if required.'},
+  {no:7, activity:'Check sealing/covering of instrument & junction boxes, conduits, apply sealant/duct seal to prevent dust/water/oil vapor ingress.'},
+  {no:8, activity:'Check instrument signal/power availability at the end of maintenance activities.'},
+  {no:9, activity:'Keep Overall EQ Cleanness & Appearance.'},
+  {no:10, activity:'Record all defect found and result of work carried out as work history.'}
+].map(function(r){
+  var row = {no:r.no, activity:r.activity, y:false, n:false, remarks:''};
+  if (r.extra) { row.extra = r.extra; r.extra.forEach(function(f){ row[f.key] = ''; }); }
+  return row;
+});
 
-var opImages = {'7A':[], '7B':[]};
-var opTableBuilt = false;
+/* 1 galeri evidence (foto model/nameplate alat) -- registry EV_GALLERIES
+   dipertahankan (bukan array biasa) supaya fungsi add/remove/render/crop
+   generik di bawah (dipakai bersama modul lain) tidak perlu diubah. */
+var EV_GALLERIES = {
+  evidence: { items: [], nextId: 1, listId: 'evEvidenceList', emptyMsg: 'Belum ada evidence model/nameplate alat. Klik "+ Tambah Evidence" untuk menambahkan foto.' }
+};
 
-// ── BACKGROUND ───────────────────────────────────────────────────────────────
-var reportBgImg = null;
-var reportBgReady = false;
-var reportBgCallbacks = [];
-
-function initReportBackground() {
-  if (reportBgImg) return;
-  reportBgImg = new Image();
-  reportBgImg.onload = function() {
-    reportBgReady = true;
-    var cbs = reportBgCallbacks.splice(0);
-    for (var i = 0; i < cbs.length; i++) cbs[i]();
-  };
-  reportBgImg.onerror = function() {
-    reportBgReady = false;
-    var cbs = reportBgCallbacks.splice(0);
-    for (var i = 0; i < cbs.length; i++) cbs[i]();
-  };
-  reportBgImg.src = 'DRAFT PM KOSONG.jpg';
-}
-
-function ensureReportBackground(callback) {
-  if (!reportBgImg) { reportBgCallbacks.push(callback); initReportBackground(); return; }
-  if (reportBgReady) { callback(); return; }
-  if (reportBgImg.complete && reportBgImg.naturalWidth > 0) { reportBgReady = true; callback(); return; }
-  reportBgCallbacks.push(callback);
-}
-
-function drawBg(doc, pw, ph) {
-  if (!reportBgImg || !reportBgImg.naturalWidth) return;
-  try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
-}
-
-// ── TABLE ────────────────────────────────────────────────────────────────────
-function opBuildTable() {
-  if (opTableBuilt) return; opTableBuilt = true;
-  var tbody = document.getElementById('opCheckBody');
-  var trAll = document.createElement('tr');
-  trAll.style.cssText = 'background:#e8f2ff;border-left:4px solid #1d74c7;';
-  trAll.innerHTML =
-    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#1d74c7;font-weight:600">&#10003; Centang Semua</td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAllCheck" onchange="opCheckAll(\'check\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAll7A" onchange="opCheckAll(\'7a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAll7B" onchange="opCheckAll(\'7b\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
-    '<td style="font-size:11px;color:#1d74c7;font-style:italic;padding-left:8px">semua OK</td>';
-  tbody.appendChild(trAll);
-  OP_CHECKS.forEach(function(item, idx) {
+/* ══════════════════ TABLE CHECKLIST ══════════════════ */
+function buildChecklistTable() {
+  var tbody = document.getElementById('t2Body');
+  tbody.innerHTML = '';
+  CHECKLIST_DATA.forEach(function(row, idx) {
     var tr = document.createElement('tr');
+    var extraHtml = '';
+    if (row.extra) {
+      extraHtml = row.extra.map(function(f){
+        return '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">'+
+          '<span style="font-size:11px;color:var(--text3);white-space:nowrap">'+escapeHtmlG(f.label)+'</span>'+
+          '<input type="text" class="pm-num-input" inputmode="none" readonly value="'+escapeHtmlG(row[f.key])+'" oninput="CHECKLIST_DATA['+idx+'].'+f.key+'=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box">'+
+        '</div>';
+      }).join('');
+    }
     tr.innerHTML =
-      '<td style="text-align:center;font-size:12px;color:var(--text3);white-space:nowrap">'+item.no+'</td>'+
-      '<td style="font-size:13px;padding:8px 12px">'+item.label+'</td>'+
-      '<td style="font-size:12px;color:var(--text3);font-style:italic">'+item.criteria+'</td>'+
-      '<td style="text-align:center"><input type="checkbox" id="opChk_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>'+
-      '<td style="text-align:center"><input type="checkbox" id="op7A_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>'+
-      '<td style="text-align:center">'+(item.both?'<input type="checkbox" id="op7B_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)">':'<span style="color:var(--text3);font-size:12px">—</span>')+'</td>'+
-      '<td id="opRec_'+idx+'" style="font-size:12px;font-family:\'Courier New\',monospace;color:var(--ok);font-weight:600;padding-left:8px"></td>';
+      '<td style="text-align:center">'+row.no+'</td>'+
+      '<td>'+escapeHtmlG(row.activity)+'</td>'+
+      '<td style="text-align:center"><input type="checkbox" '+(row.y?'checked':'')+' onchange="toggleChecklistFlag('+idx+',\'y\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--ok,#16a34a)"></td>'+
+      '<td style="text-align:center"><input type="checkbox" '+(row.n?'checked':'')+' onchange="toggleChecklistFlag('+idx+',\'n\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--fail,#dc2626)"></td>'+
+      '<td><input type="text" value="'+escapeHtmlG(row.remarks)+'" oninput="CHECKLIST_DATA['+idx+'].remarks=this.value" placeholder="Remarks / Note..." style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box">'+extraHtml+'</td>';
     tbody.appendChild(tr);
   });
+  if (typeof pmNumpadInit === 'function') pmNumpadInit();
 }
-
-function opChk(idx) {
-  var chk=document.getElementById('opChk_'+idx), a=document.getElementById('op7A_'+idx), b=document.getElementById('op7B_'+idx), rec=document.getElementById('opRec_'+idx);
-  if (!rec) return;
-  rec.textContent = ((chk&&chk.checked)||(a&&a.checked)||(b&&b.checked)) ? 'ok' : '';
-}
-
-function opCheckAll(which, checked) {
-  OP_CHECKS.forEach(function(item, idx) {
-    var id = which==='check'?'opChk_'+idx:which==='7a'?'op7A_'+idx:'op7B_'+idx;
-    var el = document.getElementById(id);
-    if (el && (which!=='7b'||item.both)) el.checked = checked;
-    opChk(idx);
-  });
-}
-
-function opRefreshAllChecks() {
-  var allCheck=true, all7A=true, all7B=true, has7B=false;
-  OP_CHECKS.forEach(function(item,idx){
-    var chk=document.getElementById('opChk_'+idx), a=document.getElementById('op7A_'+idx), b=document.getElementById('op7B_'+idx);
-    if(!(chk&&chk.checked)) allCheck=false;
-    if(!(a&&a.checked)) all7A=false;
-    if(item.both){has7B=true;if(!(b&&b.checked)) all7B=false;}
-  });
-  var el=document.getElementById('opAllCheck');if(el)el.checked=allCheck;
-  el=document.getElementById('opAll7A');if(el)el.checked=all7A;
-  el=document.getElementById('opAll7B');if(el)el.checked=has7B&&all7B;
-}
-
-// ── IMAGES ───────────────────────────────────────────────────────────────────
-function opHandleDrop(e, side) { e.preventDefault(); opHandleFiles(e.dataTransfer.files, side); }
-
-/* ── Overlay notifikasi multi-upload ── */
-var opUploadOverlayTimer = null;
-function opShowUploadOverlay(mode) {
-  var ov = document.getElementById('opUploadOverlay');
-  var spinner = document.getElementById('opUploadOverlaySpinner');
-  var title = document.getElementById('opUploadOverlayTitle');
-  var sub = document.getElementById('opUploadOverlaySub');
-  if (!ov) return;
-  if (opUploadOverlayTimer) { clearTimeout(opUploadOverlayTimer); opUploadOverlayTimer = null; }
-  if (mode === 'loading') {
-    spinner.style.display = '';
-    title.textContent = 'Sedang mengupload gambar';
-    sub.textContent = 'Upload banyak gambar mungkin membutuhkan waktu';
-    ov.classList.add('show');
-  } else if (mode === 'done') {
-    spinner.style.display = 'none';
-    title.textContent = 'Silahkan crop gambar secara manual per item';
-    sub.textContent = 'Ketuk di mana saja untuk menutup';
-    ov.classList.add('show');
-    opUploadOverlayTimer = setTimeout(opHideUploadOverlay, 3000);
+function toggleChecklistFlag(idx, key, checked) {
+  var row = CHECKLIST_DATA[idx];
+  row[key] = checked;
+  if (checked) {
+    var pairKey = (key === 'y') ? 'n' : 'y';
+    row[pairKey] = false;
   }
+  buildChecklistTable();
 }
-function opHideUploadOverlay() {
-  var ov = document.getElementById('opUploadOverlay');
-  if (ov) ov.classList.remove('show');
-  if (opUploadOverlayTimer) { clearTimeout(opUploadOverlayTimer); opUploadOverlayTimer = null; }
+/* ══════════════════ UPLOAD EVIDENCE — 2 galeri independen ══════════════════
+   Pola sama dengan evList/evAddSlot di generator_stator_leak_monitoring.html,
+   diparameterkan lewat gk ('cleaning'|'purging') supaya tidak ada duplikasi
+   kode dan tidak ada tabrakan id DOM antar galeri. side yang dikirim ke
+   imgOpenCropper()/cropAndSave() dikodekan sebagai 'ev_<gk>_<id>' supaya
+   evRenderPreview() bisa merutekan render balik ke galeri yang benar. */
+function evAddSlot(gk) {
+  var g = EV_GALLERIES[gk];
+  g.items.push({id: g.nextId++, caption:'', images:[]});
+  renderEvidenceList(gk);
 }
+function evAddEvidenceSlot() { evAddSlot('evidence'); }
 
-/* ── Compress dataUrl gambar penuh (tanpa dipotong) mengikuti budget ukuran
-   yang sama seperti cropAndSave, dipakai untuk auto-skip-crop multi-upload ── */
-function opCompressFullImage(dataUrl, imgArr, cb) {
-  var img = new Image();
-  img.onload = function() {
-    var canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-    canvas.getContext('2d').drawImage(img, 0, 0);
-    var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
-    var out;
-    for (var q=0.9; q>=0.25; q-=0.1) {
-      out = canvas.toDataURL('image/jpeg', q);
-      var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
-      var newSize = out.length*0.75;
-      if (currentTotal+newSize <= MAX) break;
-      if (q<=0.25) {
-        var factor = Math.sqrt(MAX/(currentTotal+newSize));
-        var c2 = document.createElement('canvas');
-        c2.width = Math.max(50, Math.floor(canvas.width*factor));
-        c2.height = Math.max(50, Math.floor(canvas.height*factor));
-        c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
-        out = c2.toDataURL('image/jpeg', 0.7);
-        break;
-      }
-    }
-    cb(out);
-  };
-  img.onerror = function(){ cb(null); };
-  img.src = dataUrl;
-}
-
-function opHandleFiles(files, side) {
-  var fileArr = Array.from(files);
-  var isMulti = fileArr.length > 1;
-
-  if (!isMulti) {
-    // Single file: alur normal, modal crop tetap muncul untuk konfirmasi.
-    fileArr.forEach(function(file) {
-      if (!isImageFile(file)) {
-        var r=new FileReader(); r.onload=function(ev){opImages[side].push({name:file.name,dataUrl:ev.target.result,type:file.type||'',caption:''});opRenderPreviews(side);}; r.readAsDataURL(file); return;
-      }
-      fileToJpegDataUrl(file, function(dataUrl){ if(!dataUrl)return; imgOpenCropper(dataUrl, file.name.replace(/\.[^.]+$/,'.jpg'), 'image/jpeg', opImages[side], side, 'op', -1); });
+function evRemoveSlot(gk, id) {
+  var g = EV_GALLERIES[gk];
+  var removed = g.items.filter(function(it){ return it.id === id; });
+  // Slot ini dihapus permanen -- hapus juga semua foto di dalamnya dari Drive
+  // (kalau sudah sempat ke-upload), supaya tidak nyangkut selamanya.
+  removed.forEach(function(it){
+    (it.images||[]).forEach(function(img){
+      if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
     });
+  });
+  g.items = g.items.filter(function(it){ return it.id !== id; });
+  renderEvidenceList(gk);
+}
+function renderEvidenceList(gk) {
+  var g = EV_GALLERIES[gk];
+  var wrap = document.getElementById(g.listId);
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  if (!g.items.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:var(--text3);padding:14px;font-size:12px">'+escapeHtmlG(g.emptyMsg)+'</div>';
     return;
   }
-
-  // Multi file: skip modal crop otomatis (default = gambar penuh, tanpa dipotong).
-  opShowUploadOverlay('loading');
-  var pending = fileArr.length;
-  var finishOne = function() {
-    pending--;
-    if (pending <= 0) opShowUploadOverlay('done');
-  };
-  fileArr.forEach(function(file) {
-    if (!isImageFile(file)) {
-      var r=new FileReader();
-      r.onload=function(ev){ opImages[side].push({name:file.name,dataUrl:ev.target.result,type:file.type||'',caption:''}); opRenderPreviews(side); finishOne(); };
-      r.onerror=finishOne;
-      r.readAsDataURL(file);
-      return;
-    }
-    fileToJpegDataUrl(file, function(rawDataUrl){
-      if (!rawDataUrl) { finishOne(); return; }
-      opCompressFullImage(rawDataUrl, opImages[side], function(finalDataUrl){
-        if (!finalDataUrl) { finishOne(); return; }
-        var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, type:'image/jpeg', caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
-        opImages[side].push(entry);
-        opRenderPreviews(side);
-        if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, 'op', side, entry);
-        finishOne();
-      });
+  g.items.forEach(function(item) {
+    wrap.appendChild(buildEvidenceSlotEl(gk, item));
+  });
+}
+function buildEvidenceSlotEl(gk, item) {
+  var uid = gk + '_' + item.id; // id DOM unik antar galeri, mis. "cleaning_1" vs "purging_1"
+  var hasImg = item.images.length > 0;
+  var div = document.createElement('div');
+  div.id = 'evSlot_' + uid;
+  div.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:#fafafa;position:relative';
+  div.innerHTML =
+    '<button onclick="evRemoveSlot(\''+gk+'\','+item.id+')" title="Hapus slot ini" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--fail,#dc2626);color:#fff;border:none;cursor:pointer;font-size:11px;line-height:22px;padding:0;z-index:2">&#215;</button>'+
+    '<div class="img-upload-area" id="evUploadArea_'+uid+'" onclick="evTriggerPick(\''+gk+'\','+item.id+')" style="'+(hasImg?'border-style:solid;border-color:var(--accent,#0f766e);background:#fff;padding:10px;':'')+'border:2px dashed var(--border);border-radius:6px;padding:20px;text-align:center;cursor:pointer">'+
+      '<div id="evPlaceholder_'+uid+'" style="display:'+(hasImg?'none':'block')+'">'+
+        '<div style="font-size:28px;margin-bottom:6px">&#128247;</div>'+
+        '<div style="font-size:13px;font-weight:600;color:var(--text-mid,#475569)">Klik untuk Upload Gambar</div>'+
+        '<div style="font-size:11px;color:var(--text-light,#94a3b8);margin-top:4px">Pilih dari Kamera atau Penyimpanan &rarr; Crop &rarr; Simpan</div>'+
+      '</div>'+
+      '<div id="evPreviewWrap_'+uid+'" style="display:'+(hasImg?'block':'none')+';position:relative">'+
+        '<img id="evPreview_'+uid+'" src="'+(hasImg?item.images[0].dataUrl:'')+'" alt="Preview" style="max-width:100%;max-height:260px;border-radius:6px;display:block;margin:0 auto">'+
+        '<button type="button" onclick="event.stopPropagation();evReEditCrop(\''+gk+'\','+item.id+')" title="Crop ulang" style="position:absolute;top:6px;right:34px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer">&#9986;&#65039;</button>'+
+        '<button type="button" onclick="event.stopPropagation();evRemoveImage(\''+gk+'\','+item.id+')" title="Hapus Gambar" style="position:absolute;top:6px;right:4px;width:26px;height:26px;border-radius:50%;background:var(--fail,#dc2626);color:#fff;border:none;cursor:pointer">&#215;</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="source-choices" id="evSrcChoices_'+uid+'" style="display:none;gap:8px;margin-top:8px;justify-content:center">'+
+      '<button type="button" onclick="event.stopPropagation();evTriggerSource(\''+gk+'\','+item.id+',\'camera\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>'+
+      '<button type="button" onclick="event.stopPropagation();evTriggerSource(\''+gk+'\','+item.id+',\'storage\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>'+
+    '</div>'+
+    '<input type="file" id="evFileInput_'+uid+'" accept="image/*" style="display:none" onchange="evOnFileSelected(\''+gk+'\','+item.id+',event)">'+
+    '<input type="text" placeholder="Keterangan evidence..." value="'+escapeHtmlG(item.caption)+'" oninput="evUpdateCaption(\''+gk+'\','+item.id+',this.value)" style="width:100%;margin-top:8px;padding:7px 8px;font-size:14px;border:1px solid var(--border);border-radius:5px;box-sizing:border-box">';
+  return div;
+}
+function evUpdateCaption(gk, id, val) {
+  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
+  if (item) item.caption = val;
+}
+function evTriggerPick(gk, id) {
+  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
+  if (item && item.images.length) return; // sudah ada gambar, klik gambar sendiri untuk crop ulang
+  var el = document.getElementById('evSrcChoices_'+gk+'_'+id);
+  if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+function evTriggerSource(gk, id, source) {
+  document.getElementById('evSrcChoices_'+gk+'_'+id).style.display = 'none';
+  openFileInputSource('evFileInput_'+gk+'_'+id, source); // openFileInputSource dari shared.js
+}
+function evOnFileSelected(gk, id, e) {
+  var file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
+  if (!item) return;
+  var replaceIdx = item.images.length ? 0 : -1;
+  var sideKey = 'ev_' + gk + '_' + id;
+  if (typeof fileToJpegDataUrl === 'function') {
+    fileToJpegDataUrl(file, function(dataUrl) {
+      if (dataUrl) imgOpenCropper(dataUrl, file.name, 'image/jpeg', item.images, sideKey, 'ev', replaceIdx);
     });
-  });
-}
-
-function opRenderPreviews(side) {
-  var container=document.getElementById('opImgPreview'+side); if(!container)return;
-  container.innerHTML='';
-  var st = opReorderState[side] || {active:false, selectedIdx:null};
-  opImages[side].forEach(function(img,idx){
-    if(!img||!img.name)return;
-    var wrap=document.createElement('div'); wrap.style.cssText='position:relative;display:inline-block;text-align:center;width:112px';
-    var isImg=IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
-    var safe=function(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
-    var thumb=isImg?'<div style="width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center"><img src="'+safe(img.dataUrl)+'" style="width:100%;height:100%;object-fit:contain;cursor:pointer" onclick="imgReEditOp(\''+side+'\','+idx+')" title="Klik crop ulang"></div>':'<div style="width:112px;height:84px;border-radius:4px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:#f5f5f5;font-size:28px">'+fileIcon(img.name)+'</div>';
-    var cropBtn=(isImg && !st.active)?'<button onclick="imgReEditOp(\''+side+'\','+idx+')" style="position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:4px;font-size:9px;padding:2px 6px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>':'';
-    var nudgeHtml=isImg?('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">'+
-      '<button type="button" onclick="nudgeImageInArray(opImages[\''+side+'\'],'+idx+',-0.5,function(){opRenderPreviews(\''+side+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>'+
-      '<span>'+(img.offsetX||0)+'cm</span>'+
-      '<button type="button" onclick="nudgeImageInArray(opImages[\''+side+'\'],'+idx+',0.5,function(){opRenderPreviews(\''+side+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>'+
-      '</div></div>'):'';
-    var actionBtn = !st.active
-      ? '<button onclick="opRemoveImg(\''+side+'\','+idx+')" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--fail);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:18px;text-align:center;padding:0">&#215;</button>'
-      : '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid #2563eb;display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="opSelectForReorder(\''+side+'\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
-    wrap.innerHTML=thumb+cropBtn+actionBtn+'<div style="font-size:13px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+safe(img.name)+'</div>'+nudgeHtml+'<input id="opCap_'+side+'_'+idx+'" type="text" placeholder="Keterangan" value="'+safe(img.caption||'')+'" oninput="opImages[\''+side+'\']['+idx+'].caption=this.value" style="width:100%;margin-top:6px;padding:5px 6px;font-size:14px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">';
-    container.appendChild(wrap);
-  });
-  if (opImages[side].length > 1) {
-    var ctrl=document.createElement('div');
-    ctrl.style.cssText='display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px';
-    var toggleBtn=document.createElement('button');
-    toggleBtn.type='button'; toggleBtn.textContent = st.active ? '✓ Selesai' : '🔀 Urutkan Foto';
-    toggleBtn.style.cssText='background:'+(st.active?'#16a34a':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap';
-    toggleBtn.onclick=function(){ opToggleReorder(side); };
-    ctrl.appendChild(toggleBtn);
-    if (st.active && st.selectedIdx !== null) {
-      var arrows=document.createElement('div'); arrows.style.cssText='display:flex;gap:4px';
-      var atStart=st.selectedIdx<=0, atEnd=st.selectedIdx>=opImages[side].length-1;
-      var leftBtn=document.createElement('button');
-      leftBtn.type='button'; leftBtn.textContent='◀ Kiri'; leftBtn.disabled=atStart;
-      leftBtn.style.cssText='flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atStart?'default':'pointer')+';opacity:'+(atStart?'0.4':'1');
-      leftBtn.onclick=function(){ opMoveImg(side,-1); };
-      var rightBtn=document.createElement('button');
-      rightBtn.type='button'; rightBtn.textContent='Kanan ▶'; rightBtn.disabled=atEnd;
-      rightBtn.style.cssText='flex:1;background:#eef2f7;border:1px solid var(--border);border-radius:4px;font-size:11px;padding:5px 8px;cursor:'+(atEnd?'default':'pointer')+';opacity:'+(atEnd?'0.4':'1');
-      rightBtn.onclick=function(){ opMoveImg(side,1); };
-      arrows.appendChild(leftBtn); arrows.appendChild(rightBtn);
-      ctrl.appendChild(arrows);
-    }
-    container.appendChild(ctrl);
+  } else {
+    var reader = new FileReader();
+    reader.onload = function(ev) { imgOpenCropper(ev.target.result, file.name, file.type, item.images, sideKey, 'ev', replaceIdx); };
+    reader.readAsDataURL(file);
   }
-  updateSizeIndicator('op', side);
 }
-var opReorderState = {};
-function opToggleReorder(side){
-  var st = opReorderState[side] || (opReorderState[side] = {active:false, selectedIdx:null});
-  st.active = !st.active;
-  st.selectedIdx = null;
-  opRenderPreviews(side);
+function evReEditCrop(gk, id) {
+  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
+  if (!item || !item.images.length) return;
+  var img = item.images[0];
+  imgOpenCropper(img.dataUrl, img.name, img.type, item.images, 'ev_'+gk+'_'+id, 'ev', 0);
 }
-function opSelectForReorder(side, idx, checked){
-  var st = opReorderState[side] || (opReorderState[side] = {active:false, selectedIdx:null});
-  st.selectedIdx = checked ? idx : null;
-  opRenderPreviews(side);
+function evRemoveImage(gk, id) {
+  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
+  if (!item) return;
+  (item.images||[]).forEach(function(img){
+    if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+  });
+  item.images = [];
+  renderEvidenceList(gk);
 }
-function opMoveImg(side, dir){
-  var st = opReorderState[side];
-  if (!st || st.selectedIdx === null) return;
-  var arr = opImages[side];
-  var i = st.selectedIdx, j = i + dir;
-  if (j < 0 || j >= arr.length) return;
-  var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp; // swap 1 object utuh — caption/crop/offset ikut
-  st.selectedIdx = j;
-  opRenderPreviews(side);
+/* Dipanggil dari cropAndSave() setelah crop selesai, side = 'ev_<gk>_<id>' */
+function evRenderPreview(side) {
+  var m = /^ev_(evidence)_(\d+)$/.exec(String(side));
+  if (!m) { renderEvidenceList('evidence'); return; }
+  renderEvidenceList(m[1]);
 }
-
-function opSyncCaptions() {
-  Object.keys(opImages).forEach(function(side){
-    opImages[side].forEach(function(img,idx){ var inp=document.getElementById('opCap_'+side+'_'+idx); if(inp)img.caption=inp.value||''; });
+/* ══════════════════ AREA / APPLICATION UI HELPERS ══════════════════ */
+function onAreaChange() {
+  var sel = document.getElementById('hArea');
+  var hint = document.getElementById('areaHint');
+  if (hint) hint.style.display = sel.value ? 'none' : 'block';
+}
+function onApplicationChange() {
+  document.querySelectorAll('#applicationChoices .freq-choice').forEach(function(el){
+    el.classList.toggle('checked', el.querySelector('input').checked);
   });
 }
-
-function imgReEditOp(side,idx){ opSyncCaptions(); var img=opImages[side][idx]; imgOpenCropper(img.dataUrl,img.name,img.type,opImages[side],side,'op',idx); }
-function opRemoveImg(side,idx){ opSyncCaptions(); pmDeleteImgFromArr(opImages[side], idx); opRenderPreviews(side); }
-
-function opReset() {
+/* ══════════════════ RESET ══════════════════ */
+function resetAll() {
   if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
-  OP_CHECKS.forEach(function(item,idx){
-    ['opChk_','op7A_','op7B_'].forEach(function(p){var e=document.getElementById(p+idx);if(e)e.checked=false;});
-    var r=document.getElementById('opRec_'+idx);if(r)r.textContent='';
+  document.getElementById('hAssetNumber').value = '';
+  document.getElementById('hMnf').value = '';
+  document.getElementById('hSn').value = '';
+  document.getElementById('hLocation').value = '';
+  document.getElementById('hWorkOrder').value = '';
+  document.getElementById('hPic').value = '';
+  document.getElementById('hTanggal').value = todayStrG();
+  document.getElementById('hArea').value = '';
+  document.querySelectorAll('input[name="hApplication"]').forEach(function(el){ el.checked = false; });
+  onApplicationChange(); onAreaChange();
+  CHECKLIST_DATA.forEach(function(r){
+    r.y=false; r.n=false; r.remarks='';
+    if (r.extra) r.extra.forEach(function(f){ r[f.key]=''; });
   });
-  ['opAllCheck','opAll7A','opAll7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=false;});
-  ['opDate','opPIC','opWO','opNote7A','opNote7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('opAsset7A').value='7BG-AIT-813A';
-  document.getElementById('opAsset7B').value='7BG-AIT-813B';
-  opImages={'7A':[],'7B':[]};
-  ['opImgPreview7A','opImgPreview7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.innerHTML='';});
-  updateSizeIndicator('op','7A'); updateSizeIndicator('op','7B');
+  EV_GALLERIES.evidence.items = []; EV_GALLERIES.evidence.nextId = 1;
+  buildChecklistTable(); renderEvidenceList('evidence');
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
@@ -1719,332 +1608,291 @@ function opReset() {
     window.history.replaceState({}, '', url.toString());
   }
 }
+function todayStrG() {
+  var d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 
-// ── PDF ───────────────────────────────────────────────────────────────────────
-function opDownloadPdf() {
-  var totalImgs = (opImages['7A']?opImages['7A'].length:0) + (opImages['7B']?opImages['7B'].length:0);
-  var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
-  dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
-  ensureReportBackground(function() {
-    try {
-      opSyncCaptions();
-      var jsPDF = window.jspdf.jsPDF;
-      var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-      var pw = doc.internal.pageSize.getWidth();   // 210mm
-      var ph = doc.internal.pageSize.getHeight();  // 297mm
-
-      // Margin 2cm = 20mm sesuai request
-      var marginX      = 20;
-      var marginTop    = 20;
-      var marginBottom = 20;
-      var contentW     = pw - marginX * 2;  // 170mm
-
-      var now = new Date();
-      var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-      var dd = String(now.getDate()).padStart(2,'0');
-      var yy = now.getFullYear();
-      var nowStr = dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-
-      function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
-      function safe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
-      function pad(n){ return String(n).padStart(2,'0'); }
-
-      var y = marginTop;
-
-      function checkPage(need) {
-        if (y + need > ph - marginBottom) {
-          doc.addPage();
-          drawBg(doc, pw, ph);
-          y = marginTop;
-        }
+/* ══════════════════ BACKGROUND TEMPLATE PDF (pola Section H) ══════════════════ */
+/* Pakai file background yang SAMA dengan modul lain (fegt.html, generator_stator_leak_monitoring.html)
+   supaya konsisten — bukan file terpisah per modul. */
+var genBgImg = null, genBgReady = false, genBgCallbacks = [];
+function initGenBackground() {
+  if (genBgImg) return;
+  genBgImg = new Image();
+  genBgImg.onload = function() { genBgReady = true; genBgCallbacks.splice(0).forEach(function(cb){cb();}); };
+  genBgImg.onerror = function() { genBgReady = false; genBgCallbacks.splice(0).forEach(function(cb){cb();}); };
+  genBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+function ensureGenBackground(callback) {
+  if (!genBgImg) { genBgCallbacks.push(callback); initGenBackground(); return; }
+  if (genBgImg.complete) { callback(); return; } // sudah selesai dicoba (berhasil ATAU gagal) — jangan nunggu lagi
+  genBgCallbacks.push(callback);
+}
+function drawGenBackground(doc, pw, ph) {
+  if (!genBgImg || !genBgReady || !genBgImg.naturalWidth) return;
+  try { doc.addImage(genBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+/* ══════════════════ PDF EXPORT ══════════════════ */
+function runPdfPreview() {
+  dbShowSavingOverlay(true, 'Sedang memuat print preview...', 'Menyusun tabel & foto evidence...');
+  try {
+    ensureGenBackground(function() {
+      try {
+        buildAndShowPdf();
+      } catch (err) {
+        dbShowSavingOverlay(false);
+        alert('❌ GAGAL BUAT PDF (di dalam buildAndShowPdf):\n\n' + (err && err.stack ? err.stack : err));
       }
+    });
+  } catch (err) {
+    dbShowSavingOverlay(false);
+    alert('❌ GAGAL BUAT PDF (di ensureGenBackground):\n\n' + (err && err.stack ? err.stack : err));
+  }
+}
+function buildAndShowPdf() {
+  var doc = new jspdf.jsPDF({unit:'mm', format:'a4'});
+  var pw = doc.internal.pageSize.getWidth();
+  var ph = doc.internal.pageSize.getHeight();
+  var marginX = 20, marginTop = 25, marginBottom = 25;
+  var contentW = pw - (marginX * 2);
+  var y = marginTop;
 
-      // Halaman pertama — draw background SEKALI di awal
-      drawBg(doc, pw, ph);
+  function safe(s) { return String(s==null?'':s); }
+  function drawBg() { drawGenBackground(doc, pw, ph); }
+  function checkPage(h) {
+    if (y + h > ph - marginBottom) { doc.addPage(); drawBg(); y = marginTop; }
+    return y;
+  }
+  function secHeader(title) {
+    checkPage(16);
+    doc.setFillColor(44, 62, 48);
+    doc.rect(marginX, y, contentW, 8, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(210, 230, 215);
+    doc.text(title, pw/2, y+5.5, {align:'center'});
+    y += 11;
+    doc.setTextColor(20,30,25);
+  }
+  /* Table Label|Value grid full-width, gaya Work Activity Report (pola form_o2_report.html) */
+  function drawInfoGrid(fields, labelColW) {
+    labelColW = labelColW || 40;
+    var padIn = 3;
+    var valueX = marginX + labelColW + padIn;
+    var valueW = contentW - labelColW - padIn*2;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+    var rows = fields.map(function(f){
+      var lines = doc.splitTextToSize(safe(f[1]) || '-', valueW);
+      var h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5);
+      return {label:f[0], lines:lines, h:h};
+    });
+    var totalH = rows.reduce(function(s,r){ return s+r.h; }, 0);
+    checkPage(totalH + 4);
+    doc.setFillColor(255, 251, 214);
+    doc.setDrawColor(0,0,0); doc.setLineWidth(0.35);
+    doc.rect(marginX, y, contentW, totalH, 'FD');
+    doc.line(marginX+labelColW, y, marginX+labelColW, y+totalH);
+    var rowY = y;
+    doc.setLineWidth(0.25); doc.setDrawColor(0,0,0);
+    rows.forEach(function(r, idx){
+      if (idx > 0) doc.line(marginX, rowY, marginX+contentW, rowY);
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
+      doc.text(r.label, marginX+padIn, rowY+4.6);
+      doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
+      doc.text(r.lines, valueX, rowY+4.6);
+      rowY += r.h;
+    });
+    y += totalH + 6;
+    doc.setTextColor(20,30,25);
+  }
 
-      secHeader('1 Monthly Inspect Opacity Monitor - Unit 7');
+  drawBg();
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(20,30,25);
+  doc.text('FLOW SWITCH MAINTENANCE PLAN', pw/2, y, {align:'center'});
+  y += 8;
 
-      // ═══ INFO BOX — Fitur L: Tabel Info Pekerjaan Grid Full-Width (Label | Value) ═══
-      var padIn = 3;
-      var labelColW = 32;
-      var valueX = marginX + labelColW + padIn;
-      var valueW = contentW - labelColW - padIn*2;
+  var areaSel = document.getElementById('hArea');
+  var areaLabel = areaSel.options[areaSel.selectedIndex] ? areaSel.options[areaSel.selectedIndex].text : '';
+  var appChecked = document.querySelector('input[name="hApplication"]:checked');
 
-      var infoFields = [
-        ['Date/Time', safe(gv('opDate'))],
-        ['PIC', safe(gv('opPIC'))],
-        ['Work Order', safe(gv('opWO'))],
-        ['Dicetak', safe(nowStr)]
-      ];
+  // ═══ INFORMASI PEKERJAAN — grid full-width Label|Value ═══
+  drawInfoGrid([
+    ['Asset Number', document.getElementById('hAssetNumber').value],
+    ['Manufacturer', document.getElementById('hMnf').value],
+    ['SN', document.getElementById('hSn').value],
+    ['Application', appChecked ? appChecked.value : ''],
+    ['Date/Time', document.getElementById('hTanggal').value],
+    ['Location', document.getElementById('hLocation').value],
+    ['Work Order Ref.', document.getElementById('hWorkOrder').value],
+    ['PIC', document.getElementById('hPic').value],
+    ['Area', areaSel.value ? areaLabel : '-']
+  ], 45);
 
-      doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
-      var infoRows = infoFields.map(function(f){
-        var lines = doc.splitTextToSize(String(f[1]||''), valueW);
-        var h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5);
-        return {label:f[0], lines:lines, h:h};
-      });
-      var infoTotalH = infoRows.reduce(function(s,r){ return s + r.h; }, 0);
-      checkPage(infoTotalH + 4);
-
-      doc.setFillColor(255, 251, 214);
-      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.35);
-      doc.rect(marginX, y, contentW, infoTotalH, 'FD');
-      doc.line(marginX+labelColW, y, marginX+labelColW, y+infoTotalH);
-
-      var infoRowY = y;
-      doc.setLineWidth(0.25); doc.setDrawColor(0, 0, 0);
-      infoRows.forEach(function(r, idx){
-        if (idx > 0) doc.line(marginX, infoRowY, marginX+contentW, infoRowY);
-        doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
-        doc.text(r.label, marginX+padIn, infoRowY+4.6);
-        doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
-        doc.text(r.lines, valueX, infoRowY+4.6);
-        infoRowY += r.h;
-      });
-
-      y += infoTotalH + 6;
-
-      // Asset line
-      checkPage(8);
-      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,70,130);
-      doc.text('Asset 7A: '+safe(gv('opAsset7A'))+'   |   Asset 7B: '+safe(gv('opAsset7B')), marginX+3, y);
-      y += 8;
-
-      // Section header
-      function secHeader(title) {
-        checkPage(12);
-        doc.setFillColor(232,240,253);
-        doc.rect(marginX, y, contentW, 8, 'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(30,64,175);
-        doc.text(title, marginX+3, y+5.5);
-        y += 11;
-      }
-
-      secHeader('STEP OF WORK — Opacity ID Fan Inlet 7A & 7B');
-
-      // ── Helper: gambar checkbox manual ──
-      function drawCheckbox(doc, x, y, w, h, checked) {
-        var size = 3.5;
-        var cx = x + w/2;
-        var cy = y + h/2;
-        doc.setDrawColor(80, 80, 80);
-        doc.setLineWidth(0.3);
-        doc.rect(cx - size/2, cy - size/2, size, size, 'S');
-        if (checked) {
-          doc.setDrawColor(26, 107, 58);
-          doc.setLineWidth(0.5);
-          doc.line(cx - size/2 + 0.4, cy, cx - size/2 + size*0.38, cy + size/2 - 0.5);
-          doc.line(cx - size/2 + size*0.38, cy + size/2 - 0.5, cx + size/2 - 0.3, cy - size/2 + 0.5);
-        }
-      }
-
-      // Build table rows
-      var tableRows = OP_CHECKS.map(function(item, idx) {
-        var chk=document.getElementById('opChk_'+idx), a7=document.getElementById('op7A_'+idx), b7=document.getElementById('op7B_'+idx), rec=document.getElementById('opRec_'+idx);
-        return [
-          String(item.no),
-          safe(item.label),
-          safe(item.criteria),
-          (chk&&chk.checked)?'__CHK__':'__BOX__',
-          (a7&&a7.checked)?'__CHK__':'__BOX__',
-          (b7&&b7.checked)?'__CHK__':(item.both?'__BOX__':'__DASH__'),
-          rec?safe(rec.textContent):''
-        ];
-      });
-
-      var CHK_COLS_OP = {3:true, 4:true, 5:true};
-
-      // Kolom total = contentW 170mm: 9+79+28+9+11+11+23 = 170
-      doc.autoTable({
-        startY: y,
-        head: [['No','Step of Work','Criteria','v','7A','7B','Result']],
-        body: tableRows,
-        theme: 'grid',
-        margin: {top: marginTop, bottom: marginBottom, left: marginX, right: marginX},
-        headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
-        bodyStyles: {fontSize:7.5, textColor:[20,30,25], font:'helvetica', cellPadding:2},
-        columnStyles: {
-          0:{cellWidth:9,  halign:'center'},
-          1:{cellWidth:79},
-          2:{cellWidth:28},
-          3:{cellWidth:9,  halign:'center'},
-          4:{cellWidth:11, halign:'center'},
-          5:{cellWidth:11, halign:'center'},
-          6:{cellWidth:23, halign:'center'}
-        },
-        alternateRowStyles: {fillColor:[246,249,247]},
-        didDrawCell: function(data) {
-          if (data.section !== 'body') return;
-          if (!CHK_COLS_OP[data.column.index]) return;
-          var val = data.cell.raw;
-          if (val !== '__CHK__' && val !== '__BOX__' && val !== '__DASH__') return;
-          var x = data.cell.x, y = data.cell.y, w = data.cell.width, h = data.cell.height;
-          var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,249,247];
-          doc.setFillColor(bg[0], bg[1], bg[2]);
-          doc.rect(x+0.2, y+0.2, w-0.4, h-0.4, 'F');
-          if (val === '__DASH__') {
-            doc.setDrawColor(150,150,150); doc.setLineWidth(0.3);
-            doc.line(x+w/2-2, y+h/2, x+w/2+2, y+h/2);
-          } else {
-            drawCheckbox(doc, x, y, w, h, val === '__CHK__');
-          }
-        },
-        willDrawPage: function(data) {
-          if (data.pageNumber > 1) {
-            drawBg(doc, pw, ph);
-          }
-        }
-      });
-
-      y = doc.lastAutoTable.finalY + 8;
-
-      // CATATAN & EVIDENCE
-      var n7a=safe(gv('opNote7A')), n7b=safe(gv('opNote7B'));
-      if (n7a || n7b || opImages['7A'].length || opImages['7B'].length) {
-        secHeader('CATATAN & EVIDENCE PHOTO');
-
-        function iePhotoDrawSize(entry, maxW, maxH) {
-          var wCm = (entry.widthCm && entry.widthCm > 0) ? entry.widthCm : DEFAULT_CROP_W_CM;
-          var hCm = (entry.heightCm && entry.heightCm > 0) ? entry.heightCm : DEFAULT_CROP_H_CM;
-          var w = wCm * 10, h = hCm * 10;
-          if (w > maxW) { h = h * (maxW / w); w = maxW; }
-          if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
-          return { w: w, h: h };
-        }
-        function addSide(label, note, imgs) {
-          if (!note && !imgs.length) return;
-          // Hitung kebutuhan tinggi "judul + baris gambar pertama" sebagai 1 paket,
-          // supaya keduanya tidak terpisah halaman.
-          var labelH = 6;
-          var noteLinesPre = note ? doc.splitTextToSize(note, contentW-6) : [];
-          var noteH = note ? (noteLinesPre.length*4.5 + 2) : 0;
-          var maxPhotoW = contentW - 6, maxPhotoH = 60;
-          var firstDim = imgs.length ? iePhotoDrawSize(imgs[0], maxPhotoW, maxPhotoH) : null;
-          var firstImgH = firstDim ? firstDim.h+12 : 0;
-          var neededFirstBlock = labelH + noteH + firstImgH;
-          var pageUsableH = ph - marginTop - marginBottom;
-          if (neededFirstBlock <= pageUsableH && (y + neededFirstBlock > ph - marginBottom)) {
-            doc.addPage(); drawBg(doc,pw,ph); y = marginTop;
-          } else {
-            checkPage(10);
-          }
-          doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(30,64,175);
-          doc.text(label, marginX+3, y); y += 6;
-          if (note) {
-            doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
-            var ls = doc.splitTextToSize(note, contentW-6);
-            ls.forEach(function(l){ checkPage(5); doc.text(l, marginX+3, y); y+=4.5; });
-            y += 2;
-          }
-          if (imgs.length) {
-            var gap=4, maxRowW = contentW - 6;
-            // Pass 1: kelompokkan foto ke baris-baris dulu (perlu tahu total
-            // lebar 1 baris sebelum baris itu bisa dipusatkan).
-            var rows = [], curRow = [], curRowW = 0;
-            imgs.forEach(function(img) {
-              var dim = iePhotoDrawSize(img, maxPhotoW, maxPhotoH);
-              var capH = img.caption ? 6 : 0;
-              var addW = curRow.length ? gap + dim.w : dim.w;
-              if (curRow.length && curRowW + addW > maxRowW) { rows.push(curRow); curRow = []; curRowW = 0; addW = dim.w; }
-              curRow.push({img:img, dim:dim, capH:capH});
-              curRowW += addW;
-            });
-            if (curRow.length) rows.push(curRow);
-            // Pass 2: gambar tiap baris rata tengah terhadap contentW.
-            rows.forEach(function(row) {
-              var totalRowW = row.reduce(function(s,it,idx){ return s + it.dim.w + (idx>0?gap:0); }, 0);
-              var rowMaxH = Math.max.apply(null, row.map(function(it){ return it.dim.h + it.capH; }));
-              if (y + rowMaxH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
-              var curX = marginX + (contentW - totalRowW) / 2;
-              row.forEach(function(it) {
-                var img=it.img, dim=it.dim;
-                var drawX = Math.max(marginX, Math.min(curX + ((img.offsetX||0)*10), pw - marginX - dim.w));
-                var imgOk = true;
-                try {
-                  if (!img.dataUrl || dim.w <= 0 || dim.h <= 0) throw new Error('data gambar kosong/rusak');
-                  doc.addImage(img.dataUrl,'JPEG',drawX,y,dim.w,dim.h);
-                } catch(e) {
-                  imgOk = false;
-                  doc.setDrawColor(200,60,60); doc.setLineWidth(0.4);
-                  doc.rect(drawX, y, dim.w, dim.h, 'S');
-                  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(200,60,60);
-                  doc.text(doc.splitTextToSize('\u26A0 Gagal memuat gambar: '+safe(img.name||'?'), dim.w-4), drawX+2, y+dim.h/2, {baseline:'middle'});
-                }
-                var cap=safe(img.caption||'');
-                if (cap) { doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,dim.w), drawX, y+dim.h+3); }
-                curX += dim.w + gap;
-              });
-              y += rowMaxH + gap;
-            });
-            y += 8;
-          }
-        }
-
-        addSide('Note 7A ('+safe(gv('opAsset7A'))+'):', n7a, opImages['7A']);
-        addSide('Note 7B ('+safe(gv('opAsset7B'))+'):', n7b, opImages['7B']);
-      }
-
-      // Footer area dibiarkan kosong — mengandalkan background template
-      var nPages = doc.internal.getNumberOfPages();
-      for (var i=1; i<=nPages; i++) { doc.setPage(i); }
-
-      var dateStr = (gv('opDate')||'').replace(/-/g,'')||yy+pad(now.getMonth()+1)+dd;
-      if (typeof hideImgLoading === 'function') hideImgLoading();
-      dbShowSavingOverlay(false);
-      showPdfPreview(doc, 'Opacity_PM_Report_'+dateStr+'.pdf');
-
-    } catch(err) {
-      if (typeof hideImgLoading === 'function') hideImgLoading();
-      dbShowSavingOverlay(false);
-      alert('PDF Error: '+err.message); console.error(err);
+  // Kotak centang digambar sebagai checkbox visual (kotak + centang vektor),
+  // bukan karakter unicode ✓ — karena font standar jsPDF (helvetica) tidak
+  // punya glyph untuk ✓ sehingga tercetak sebagai titik.
+  function drawCheckboxBs(doc, x, y, w, h, checked, tone){
+    var size = Math.min(w, h) * 0.55;
+    var bx = x + w/2 - size/2, by = y + h/2 - size/2;
+    doc.setLineWidth(0.4);
+    if (checked) {
+      var fill = tone === 'red' ? [204,60,60] : [46,204,113];
+      var strk = tone === 'red' ? [140,30,30] : [30,140,74];
+      doc.setDrawColor(strk[0],strk[1],strk[2]); doc.setFillColor(fill[0],fill[1],fill[2]);
+      doc.rect(bx, by, size, size, 'FD');
+      doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+      doc.line(bx+size*0.18, by+size*0.52, bx+size*0.40, by+size*0.76);
+      doc.line(bx+size*0.40, by+size*0.76, bx+size*0.84, by+size*0.22);
+    } else {
+      doc.setDrawColor(150,160,155); doc.setFillColor(255,255,255);
+      doc.rect(bx, by, size, size, 'FD');
     }
-  });
-}
+  }
 
-// ── dbCollectData ─────────────────────────────────────────────────────────────
+  // CHECKLIST
+  secHeader('JOB PLAN INSPECTION');
+  doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:7.5, cellPadding:1.6, valign:'middle'}, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom},
+    head: [['No','Job Plan Inspection','Y','N','Remarks / Note']],
+    body: CHECKLIST_DATA.map(function(r){
+      var remarksText = safe(r.remarks);
+      if (r.extra) {
+        var extraText = r.extra.map(function(f){ return f.label + ' ' + safe(r[f.key]); }).join('\n');
+        remarksText = remarksText ? (remarksText + '\n' + extraText) : extraText;
+      }
+      return [r.no, r.activity, '', '', remarksText];
+    }),
+    columnStyles:{0:{cellWidth:8,halign:'center'},2:{cellWidth:12,halign:'center'},3:{cellWidth:12,halign:'center'}},
+    didDrawCell:function(d){
+      if (d.section!=='body') return;
+      var r = CHECKLIST_DATA[d.row.index];
+      if (!r) return;
+      if (d.column.index===2 && r.y) drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'green');
+      if (d.column.index===3 && r.n) drawCheckboxBs(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, true, 'red');
+    },
+    willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
+  y = doc.lastAutoTable.finalY + 6;
+
+  // Foto evidence generik (dipakai untuk kedua galeri, dipanggil dengan
+  // title & array berbeda) -- layout flow 2-pass: kelompokkan ke baris dulu,
+  // baru rata tengah per baris terhadap contentW, sama seperti modul lain.
+  function drawEvidenceSection(title, items) {
+    var photosWithImg = items.filter(function(it){ return it.images.length > 0; });
+    if (!photosWithImg.length) return;
+    secHeader(title);
+    function iePhotoDrawSize(entry, maxW, maxH) {
+      var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
+      var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+      var w = wCm * 10, h = hCm * 10; // cm -> mm
+      if (w > maxW) { h = h * (maxW / w); w = maxW; }
+      if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
+      return { w: w, h: h };
+    }
+    var gap = 6, maxPhotoW = contentW - 6, maxPhotoH = 60, maxRowW = contentW - 6;
+    var rows = [], curRow = [], curRowW = 0;
+    photosWithImg.forEach(function(item){
+      var img = item.images[0];
+      var dim = iePhotoDrawSize(img, maxPhotoW, maxPhotoH);
+      var addW = curRow.length ? gap + dim.w : dim.w;
+      if (curRow.length && curRowW + addW > maxRowW) { rows.push(curRow); curRow = []; curRowW = 0; addW = dim.w; }
+      curRow.push({item:item, img:img, dim:dim});
+      curRowW += addW;
+    });
+    if (curRow.length) rows.push(curRow);
+    rows.forEach(function(row) {
+      var totalRowW = row.reduce(function(s,it,idx){ return s + it.dim.w + (idx>0?gap:0); }, 0);
+      var capLinesArr = row.map(function(it){ return doc.splitTextToSize(it.item.caption || '-', it.dim.w); });
+      var capH = Math.max.apply(null, capLinesArr.map(function(l){ return l.length*3.5 + 4; }));
+      var rowMaxH = Math.max.apply(null, row.map(function(it){ return it.dim.h; })) + capH;
+      checkPage(rowMaxH + 6);
+      var curX = marginX + (contentW - totalRowW) / 2;
+      row.forEach(function(it, idx){
+        var img=it.img, dim=it.dim;
+        var drawX = Math.max(marginX, Math.min(curX + ((img.offsetX||0)*10), pw - marginX - dim.w));
+        try { doc.addImage(img.dataUrl, 'JPEG', drawX, y, dim.w, dim.h); } catch(e) {}
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(20,30,25);
+        doc.text(capLinesArr[idx], drawX, y + dim.h + 4);
+        curX += dim.w + gap;
+      });
+      y += rowMaxH + 8;
+    });
+  }
+
+  // EVIDENCE — MODEL / NAMEPLATE ALAT
+  drawEvidenceSection('FOTO EVIDENCE — MODEL / NAMEPLATE ALAT', EV_GALLERIES.evidence.items);
+
+  // CATATAN
+  secHeader('CATATAN');
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(20,30,25);
+  var noteText = 'Note: All reference of technical information details such as clearances, gaps, tolerances and fits, setting values, engineering drawings, cross sectional drawings, and other supporting documents shall be attached into this checksheet package for control measure.';
+  var noteLines = doc.splitTextToSize(noteText, contentW);
+  checkPage(noteLines.length*4 + 4);
+  doc.text(noteLines, marginX, y); y += noteLines.length*4 + 6;
+
+  dbShowSavingOverlay(false);
+  var fnAsset = (document.getElementById('hAssetNumber').value || 'draft').replace(/[^A-Za-z0-9_-]+/g, '_');
+  showPdfPreview(doc, 'Flow_Switch_' + fnAsset + '_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');
+}
+/* ══════════════════ DB SAVE / LOAD (pola shared.js) ══════════════════ */
+window.CURRENT_MODUL = 'FLOW_SWITCH'; // HARUS sama persis dengan check di dbCollectData(modul)
+
 function dbCollectData(modul) {
-  if (modul !== 'opacity') return null;
-  opSyncCaptions();
-  var gv=function(id){var e=document.getElementById(id);return e?e.value:'';};
-  var checks={};
-  OP_CHECKS.forEach(function(item,idx){
-    checks[idx]={chk:!!(document.getElementById('opChk_'+idx)&&document.getElementById('opChk_'+idx).checked),a7:!!(document.getElementById('op7A_'+idx)&&document.getElementById('op7A_'+idx).checked),b7:!!(document.getElementById('op7B_'+idx)&&document.getElementById('op7B_'+idx).checked)};
-  });
-  var ki=function(img){
-    var o={name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};
-    if(img.offsetX)o.offsetX=img.offsetX;
-    if(img.widthCm)o.widthCm=img.widthCm;
-    if(img.heightCm)o.heightCm=img.heightCm;
-    return o;
+  if (modul !== 'flow_switch') return null;
+  var appChecked = document.querySelector('input[name="hApplication"]:checked');
+  return {
+    modul: window.CURRENT_MODUL,
+    tanggal: document.getElementById('hTanggal').value || '',
+    pic: document.getElementById('hPic').value || '',
+    work_order: document.getElementById('hWorkOrder').value || '',
+    unit: 'Unit 7',
+    // Kolom ringan top-level (BUKAN di dalam `data` JSONB) -- pola SAMA
+    // PERSIS dengan `area` di maintenance_report_form.html. Dibaca
+    // raSendFinalPdfToFirebaseDashboard() (shared.js, `record.area ||
+    // RA_MODUL_AREA[modKey]`) untuk routing area SECARA DINAMIS per-
+    // submission, dan historyAreaLabel() (history.html) untuk kolom Area di
+    // Riwayat -- Flow Switch bisa dipasang di banyak lokasi, jadi TIDAK ada
+    // area tetap seperti modul lain (lihat catatan RA_MODUL_AREA di
+    // shared.js). Kolom `area` ini SUDAH ADA di tabel `pm_records` (dibuat
+    // untuk Maintenance Report), jadi tidak perlu migration baru.
+    area: document.getElementById('hArea').value || null,
+    data: {
+      assetNumber: document.getElementById('hAssetNumber').value || '',
+      mnf: document.getElementById('hMnf').value || '',
+      sn: document.getElementById('hSn').value || '',
+      application: appChecked ? appChecked.value : '',
+      location: document.getElementById('hLocation').value || '',
+      checklist: CHECKLIST_DATA,
+      evidence: EV_GALLERIES.evidence.items
+    }
   };
-  return {modul:'Opacity Monitor',tanggal:gv('opDate'),pic:gv('opPIC'),work_order:gv('opWO'),unit:'Unit 7',
-    data:{checks:checks,notes:{note7A:gv('opNote7A'),note7B:gv('opNote7B')},checkedBy:gv('opCheckedBy'),images:{'7A':opImages['7A'].map(ki),'7B':opImages['7B'].map(ki)}}};
 }
-
-/* ── AUTOSAVE DRAFT (pola shared.js) ── */
-window.CURRENT_MODUL = 'opacity'; // HARUS sama persis dengan check di dbCollectData(modul)
 
 function applyRecordToForm(rec, editingId) {
-  var data=rec.data||{};
-  if (editingId) window._editingId = editingId;
-  var sv=function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
-  sv('opDate',rec.tanggal); sv('opPIC',rec.pic); sv('opWO',rec.work_order);
-  if (data.checkedBy) sv('opCheckedBy', data.checkedBy);
-  if(data.notes){sv('opNote7A',data.notes.note7A||'');sv('opNote7B',data.notes.note7B||'');}
-  if(data.images){
-    var restoreImg=function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.offsetX)o.offsetX=img.offsetX;if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;return o;};
-    opImages['7A']=(data.images['7A']||[]).map(restoreImg);
-    opImages['7B']=(data.images['7B']||[]).map(restoreImg);
-    opRenderPreviews('7A'); opRenderPreviews('7B');
-  }
-  if(data.checks){
-    Object.keys(data.checks).forEach(function(i){
-      var c=data.checks[i];
-      var set=function(id2,val){var e=document.getElementById(id2);if(e&&e.type==='checkbox')e.checked=val;};
-      set('opChk_'+i,c.chk); set('op7A_'+i,c.a7); set('op7B_'+i,c.b7); opChk(i);
+  if (!rec) return;
+  if (editingId) window._editingId = editingId; // supaya Simpan berikutnya meng-UPDATE record ini, bukan bikin duplikat baru
+  var d = rec.data || {};
+  document.getElementById('hTanggal').value = rec.tanggal || '';
+  document.getElementById('hPic').value = rec.pic || '';
+  document.getElementById('hWorkOrder').value = rec.work_order || '';
+  document.getElementById('hAssetNumber').value = d.assetNumber || '';
+  document.getElementById('hMnf').value = d.mnf || '';
+  document.getElementById('hSn').value = d.sn || '';
+  document.getElementById('hLocation').value = d.location || '';
+  document.getElementById('hArea').value = rec.area || d.areaTarget || '';
+  document.querySelectorAll('input[name="hApplication"]').forEach(function(el){ el.checked = (el.value === d.application); });
+  onApplicationChange(); onAreaChange();
+
+  if (Array.isArray(d.checklist) && d.checklist.length) {
+    CHECKLIST_DATA.forEach(function(row, idx) {
+      var src = d.checklist[idx];
+      if (!src) return;
+      row.y=!!src.y; row.n=!!src.n; row.remarks=src.remarks||'';
+      if (row.extra) row.extra.forEach(function(f){ row[f.key] = src[f.key] || ''; });
     });
-    opRefreshAllChecks();
   }
+
+  EV_GALLERIES.evidence.items = Array.isArray(d.evidence) ? d.evidence : [];
+  EV_GALLERIES.evidence.nextId = EV_GALLERIES.evidence.items.reduce(function(m,r){ return Math.max(m, (r.id||0)+1); }, 1);
+
+  buildChecklistTable(); renderEvidenceList('evidence');
 }
 
 // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
@@ -2056,35 +1904,31 @@ function restoreDraftData(rec, editingId) {
   }, 400);
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-setInterval(function(){var el=document.getElementById('clockOpacity');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
-
-opBuildTable();
-initReportBackground();
+/* ══════════════════ INIT ══════════════════ */
+setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
+buildChecklistTable(); renderEvidenceList('evidence');
+onApplicationChange(); onAreaChange();
 renderPresetButtons();
 initCropDrag();
+initGenBackground();
+(function(){ var el=document.getElementById('hTanggal'); if(el && !el.value) el.value = todayStrG(); })();
 
+/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
 (function(){
-  var today=new Date();
-  var el=document.getElementById('opDate');
-  if(el&&!el.value) el.value=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-})();
-
-// ── LOAD FROM HISTORY (?id=xxx&print=1) ───────────────────────────────────────
-(function(){
-  var params=new URLSearchParams(window.location.search);
-  var id=params.get('id'), doPrint=params.get('print')==='1';
+  var params = new URLSearchParams(window.location.search);
+  var id = params.get('id');
+  var doPrint = params.get('print') === '1';
   if (params.get('embed') === '1') window._pdfEmbedMode = true;
   var doAutosubmit = params.get('autosubmit') === '1';
-  if(!id) return;
+  if (!id) return;
   dbLoad(id, function(rec){
     setTimeout(function(){
       applyRecordToForm(rec, id);
       pmMaybeEnterRevisionMode(rec);
       dbShowToast('Data dimuat dari riwayat ✓');
-      if(doPrint){ ensureReportBackground(function(){ setTimeout(opDownloadPdf,300); }); }
-      if(doAutosubmit){ window._raBuildPdf = opDownloadPdf; raSubmitReportAuto(); }
-    }, 800);
+      if (doPrint) setTimeout(function(){ runPdfPreview(); }, 500);
+      if (doAutosubmit) { window._raBuildPdf = runPdfPreview; raSubmitReportAuto(); }
+    }, 400);
   });
 })();
 </script>

@@ -11,7 +11,7 @@
 <script src="db-helper.js"></script>
 <script src="storage-helper.js"></script>
 <script src="approval-helper.js"></script>
-<link rel="stylesheet" href="shared.css?v=20260903d">
+<link rel="stylesheet" href="shared.css?v=20260911b">
 <style>
 /* ── Modal konfirmasi Hapus (ketik "HAPUS") ── */
 .hist-del-confirm{background:#f3d4ce;color:#b0472f;cursor:not-allowed;opacity:0.75}
@@ -129,6 +129,7 @@
       <button class="btn btn-outline" data-modul-filter="GENERATOR_STATOR_LEAK" onclick="loadHistory('GENERATOR_STATOR_LEAK')" style="font-size:12px;padding:6px 14px;flex:none">Gen Stator Leak<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="Mark VIe Alarm & Module Inspection" onclick="loadHistory('Mark VIe Alarm & Module Inspection')" style="font-size:12px;padding:6px 14px;flex:none">Mark VIe<span class="hist-count"></span></button>
       <button class="btn btn-outline" data-modul-filter="ID_FAN_LINE_PURGING" onclick="loadHistory('ID_FAN_LINE_PURGING')" style="font-size:12px;padding:6px 14px;flex:none">ID Fan Purging<span class="hist-count"></span></button>
+      <button class="btn btn-outline" data-modul-filter="FLOW_SWITCH" onclick="loadHistory('FLOW_SWITCH')" style="font-size:12px;padding:6px 14px;flex:none">Flow Switch<span class="hist-count"></span></button>
     </div>
     <div id="historyList" style="overflow-x:auto">
       <div style="text-align:center;color:var(--text3);padding:32px;font-size:13px">Memuat...</div>
