@@ -3048,11 +3048,15 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   if (record.asset || record.asset_desc) {
     label = [record.work_order, record.asset, record.asset_desc].filter(Boolean).join('_');
   }
-  // FLOW_SWITCH minta format BEDA (2 bagian "Asset_<tag>", TANPA work_order
-  // di depan) -- kasus khusus SETELAH aturan generik di atas supaya tidak
-  // mengubah perilaku modul lain yang sudah pakai pola "WO_Asset_AssetDesc".
+  // FLOW_SWITCH minta format BEDA: "PM Flow Switch <Asset> - <Asset
+  // Description>" (2026-09-11, revisi dari format lama "Asset_<tag>" --
+  // TANPA work_order di depan) -- kasus khusus SETELAH aturan generik di
+  // atas supaya tidak mengubah perilaku modul lain yang sudah pakai pola
+  // "WO_Asset_AssetDesc". " - <Asset Description>" cuma disertakan kalau
+  // field itu diisi (opsional), supaya tidak ada " - " menggantung kalau
+  // user belum sempat mengisi Asset Description.
   if (modKey === 'FLOW_SWITCH' && record.asset) {
-    label = 'Asset_' + record.asset;
+    label = 'PM Flow Switch ' + record.asset + (record.asset_desc ? ' - ' + record.asset_desc : '');
   }
   // Nama PIC/Checked By ASLI -- lihat catatan RA_MODUL_AREA di atas,
   // routing reviewer sekarang lewat parameter team/area eksplisit di

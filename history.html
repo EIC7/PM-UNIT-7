@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Riwayat PM — Unit 7</title>
-<script src="shared.js?v=20260911c"></script>
+<script src="shared.js?v=20260911d"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -179,11 +179,12 @@ function historyStatusBadge(status, firebaseSyncedAt) {
 // + shared.js dbList() AREA_COLS). Modul yang tidak mengisi kolom ini (semua
 // modul lain saat ini) tetap tampil r.modul apa adanya seperti sebelumnya.
 function historyReportName(r) {
-  // FLOW_SWITCH pakai format BEDA (2 bagian "Asset_<tag>", TANPA work_order)
-  // -- lihat kasus sama di raSendFinalPdfToFirebaseDashboard (shared.js),
-  // kedua tempat ini WAJIB konsisten.
+  // FLOW_SWITCH pakai format BEDA: "PM Flow Switch <Asset> - <Asset
+  // Description>" (2026-09-11, TANPA work_order) -- lihat kasus sama di
+  // raSendFinalPdfToFirebaseDashboard (shared.js), kedua tempat ini WAJIB
+  // konsisten.
   if (typeof normalizeModul === 'function' && normalizeModul(r.modul) === 'FLOW_SWITCH' && r.asset) {
-    return 'Asset_' + r.asset;
+    return 'PM Flow Switch ' + r.asset + (r.asset_desc ? ' - ' + r.asset_desc : '');
   }
   if (r.asset || r.asset_desc) {
     return [r.work_order, r.asset, r.asset_desc].filter(Boolean).join('_');

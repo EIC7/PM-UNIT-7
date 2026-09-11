@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260911c"></script>
+<script src="shared.js?v=20260911d"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -124,6 +124,7 @@
     <div class="section-label">Informasi Pekerjaan</div>
     <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
       <div class="meta-field"><label>Asset Number</label><input type="text" id="hAssetNumber" placeholder="Mis. 7BF-FS-720A..."></div>
+      <div class="meta-field"><label>Asset Description <span style="font-weight:400;color:var(--text3)">(dipakai di penamaan Riwayat & Review Approval)</span></label><input type="text" id="hAssetDesc" placeholder="Mis. Flow Switch Boiler Feed Pump..."></div>
       <div class="meta-field"><label>Manufacturer (Mnf)</label><input type="text" id="hMnf" placeholder="Mis. KAYDON, EATON, UFM..."></div>
       <div class="meta-field"><label>SN</label><input type="text" id="hSn" placeholder="Serial Number..."></div>
       <div class="meta-field"><label>Date/Time</label><input type="date" id="hTanggal"></div>
@@ -167,7 +168,7 @@
             <th rowspan="2" style="min-width:220px">Remarks / Note</th>
           </tr>
           <tr>
-            <th style="width:50px">Y</th><th style="width:50px">N</th>
+            <th style="width:50px">Y<br><input type="checkbox" id="t2CheckAllY" onchange="checkAllY(this.checked)" title="Centang semua Y" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok,#16a34a);margin-top:2px"></th><th style="width:50px">N</th>
           </tr>
         </thead>
         <tbody id="t2Body"></tbody>
@@ -181,13 +182,6 @@
     <div id="evEvidenceList"></div>
     <div class="btn-row" style="margin-top:12px">
       <button class="btn btn-outline" onclick="evAddEvidenceSlot()">+ Tambah Evidence</button>
-    </div>
-  </div>
-
-  <!-- CATATAN -->
-  <div class="panel">
-    <div class="notice info" style="display:block">
-      <b>Catatan:</b> All reference of technical information details such as clearances, gaps, tolerances and fits, setting values, engineering drawings, cross sectional drawings, and other supporting documents shall be attached into this checksheet package for control measure.
     </div>
   </div>
 
@@ -1388,22 +1382,22 @@ function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, functi
    nilai tambahan (extra) di kolom Remarks -- di sheet asli itu tampil
    sebagai sub-baris nilai terpisah di bawah baris utamanya. */
 var CHECKLIST_DATA = [
-  {no:1, activity:'Visually inspect panel for any obvious signs of damage.'},
-  {no:2, activity:'Cleaning instrumentation, flushing-purging-draining impulse line if required. Check Flow Switch for free movement, repair it on necessary.'},
+  {no:1, activity:'Visually inspect panel for any obvious signs of damage.', defRemark:'Clean'},
+  {no:2, activity:'Cleaning instrumentation, flushing-purging-draining impulse line if required. Check Flow Switch for free movement, repair it on necessary.', defRemark:'Clean'},
   {no:3, activity:'Check for micro-switch contact, repair/replace it if contact >10 Ohm.', extra:[
     {key:'resistanceOhm', label:'R ='}, {key:'flowValue', label:'Flow (GPM/LPM/Bar) ='}
   ]},
   {no:4, activity:'Check for micro-switch contact voltage test (NO-NC check measurement).', extra:[
     {key:'voltageNo', label:'(NO test) V ='}, {key:'voltageNc', label:'(NC test) V ='}
   ]},
-  {no:5, activity:'Check cable route line, termination in end of line, inspection control panel, tidy up the cable — apply ties for correction, cleaning from any dust and get sealant and fixed the lock panel.'},
-  {no:6, activity:'Check sealing/covering of instrument & junction boxes, conduits, apply sealant/duct seal to prevent water/oil vapor ingress, replacement conduit/cable if required.'},
-  {no:7, activity:'Check sealing/covering of instrument & junction boxes, conduits, apply sealant/duct seal to prevent dust/water/oil vapor ingress.'},
-  {no:8, activity:'Check instrument signal/power availability at the end of maintenance activities.'},
-  {no:9, activity:'Keep Overall EQ Cleanness & Appearance.'},
-  {no:10, activity:'Record all defect found and result of work carried out as work history.'}
+  {no:5, activity:'Check cable route line, termination in end of line, inspection control panel, tidy up the cable — apply ties for correction, cleaning from any dust and get sealant and fixed the lock panel.', defRemark:'Clean'},
+  {no:6, activity:'Check sealing/covering of instrument & junction boxes, conduits, apply sealant/duct seal to prevent water/oil vapor ingress, replacement conduit/cable if required.', defRemark:'Clean'},
+  {no:7, activity:'Check sealing/covering of instrument & junction boxes, conduits, apply sealant/duct seal to prevent dust/water/oil vapor ingress.', defRemark:'Clean'},
+  {no:8, activity:'Check instrument signal/power availability at the end of maintenance activities.', defRemark:'Signal / Power Available'},
+  {no:9, activity:'Keep Overall EQ Cleanness & Appearance.', defRemark:'Clean'},
+  {no:10, activity:'Record all defect found and result of work carried out as work history.', defRemark:'Good Condition'}
 ].map(function(r){
-  var row = {no:r.no, activity:r.activity, y:false, n:false, remarks:''};
+  var row = {no:r.no, activity:r.activity, y:false, n:false, remarks:'', defRemark:r.defRemark || ''};
   if (r.extra) { row.extra = r.extra; r.extra.forEach(function(f){ row[f.key] = ''; }); }
   return row;
 });
@@ -1446,8 +1440,30 @@ function toggleChecklistFlag(idx, key, checked) {
   if (checked) {
     var pairKey = (key === 'y') ? 'n' : 'y';
     row[pairKey] = false;
+    // Centang Y -> isi Remarks/Note otomatis dengan teks default per baris
+    // (mis. "Clean"), TAPI cuma kalau remarks-nya masih kosong -- supaya
+    // tidak menimpa catatan yang sudah diketik manual oleh user kalau Y
+    // sempat dicentang-lepas-centang lagi.
+    if (key === 'y' && !row.remarks && row.defRemark) row.remarks = row.defRemark;
   }
   buildChecklistTable();
+}
+// Centang Y SEMUA baris sekaligus (checkbox di header kolom Y) -- baris yang
+// punya extra field (R=/Flow=, NO-NC test) TIDAK dapat default remark (tetap
+// kosong, sesuai desain aslinya: catatan di baris itu digantikan angka
+// pengukuran di extra field, bukan teks). Uncheck header TIDAK menghapus Y
+// individual/remarks yang sudah terisi -- cuma melepas centang header itu
+// sendiri, supaya tidak destruktif kalau user cuma iseng klik ulang.
+function checkAllY(checked) {
+  if (!checked) return;
+  CHECKLIST_DATA.forEach(function(row) {
+    row.y = true;
+    row.n = false;
+    if (!row.remarks && row.defRemark) row.remarks = row.defRemark;
+  });
+  buildChecklistTable();
+  var headerChk = document.getElementById('t2CheckAllY');
+  if (headerChk) headerChk.checked = true; // buildChecklistTable() re-render tbody, bukan thead -- checkbox header aman tidak ikut ter-reset
 }
 /* ══════════════════ UPLOAD EVIDENCE — 2 galeri independen ══════════════════
    Pola sama dengan evList/evAddSlot di generator_stator_leak_monitoring.html,
@@ -1730,8 +1746,16 @@ function buildAndShowPdf() {
   // Kotak centang digambar sebagai checkbox visual (kotak + centang vektor),
   // bukan karakter unicode ✓ — karena font standar jsPDF (helvetica) tidak
   // punya glyph untuk ✓ sehingga tercetak sebagai titik.
+  // Ukuran checkbox SENGAJA cuma turunan dari LEBAR kolom (w, konstan 12mm),
+  // BUKAN Math.min(w,h) seperti pola referensi -- baris Remarks/Note di
+  // tabel ini bisa 1 baris (defRemark) atau 2-3 baris (field 'extra', mis.
+  // "R =", "Flow ="), jadi tinggi baris (h) sangat bervariasi antar baris.
+  // Kalau ukuran ikut h, checkbox jadi besar di baris tinggi & kecil di
+  // baris pendek -- dilaporkan user (2026-09-11): "centangnya terlalu besar
+  // dan tidak sama besaranya". Posisi TETAP di-center pakai w & h (itu
+  // benar/tidak berubah), cuma UKURAN-nya sekarang independen dari h.
   function drawCheckboxBs(doc, x, y, w, h, checked, tone){
-    var size = Math.min(w, h) * 0.55;
+    var size = Math.min(w * 0.45, 4.5);
     var bx = x + w/2 - size/2, by = y + h/2 - size/2;
     doc.setLineWidth(0.4);
     if (checked) {
@@ -1858,18 +1882,18 @@ function dbCollectData(modul) {
     // shared.js). Kolom `area` ini SUDAH ADA di tabel `pm_records` (dibuat
     // untuk Maintenance Report), jadi tidak perlu migration baru.
     area: document.getElementById('hArea').value || null,
-    // Kolom ringan top-level `asset` (SAMA dengan yang dipakai
+    // Kolom ringan top-level `asset`/`asset_desc` (SAMA dengan yang dipakai
     // maintenance_report_form.html, kolom sudah ada, tidak perlu migration
     // baru) -- dipakai kasus khusus FLOW_SWITCH di
     // raSendFinalPdfToFirebaseDashboard() (shared.js) dan
     // historyReportName() (history.html) untuk membentuk label
-    // "Asset_<Asset Number>" yang dikirim ke Review Approval Dashboard &
-    // ditampilkan di Riwayat. `asset_desc` SENGAJA tidak diisi -- format
-    // Flow Switch cuma "Asset_<tag>" (2 bagian), bukan pola 3-bagian
-    // "WO_Asset_AssetDesc" milik Maintenance Report.
+    // "PM Flow Switch <Asset> - <Asset Description>" yang dikirim ke
+    // Review Approval Dashboard & ditampilkan di Riwayat.
     asset: document.getElementById('hAssetNumber').value || null,
+    asset_desc: document.getElementById('hAssetDesc').value || null,
     data: {
       assetNumber: document.getElementById('hAssetNumber').value || '',
+      assetDesc: document.getElementById('hAssetDesc').value || '',
       mnf: document.getElementById('hMnf').value || '',
       sn: document.getElementById('hSn').value || '',
       application: appChecked ? appChecked.value : '',
@@ -1888,6 +1912,7 @@ function applyRecordToForm(rec, editingId) {
   document.getElementById('hPic').value = rec.pic || '';
   document.getElementById('hWorkOrder').value = rec.work_order || '';
   document.getElementById('hAssetNumber').value = d.assetNumber || '';
+  document.getElementById('hAssetDesc').value = d.assetDesc || '';
   document.getElementById('hMnf').value = d.mnf || '';
   document.getElementById('hSn').value = d.sn || '';
   document.getElementById('hLocation').value = d.location || '';
