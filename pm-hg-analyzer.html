@@ -2313,14 +2313,37 @@ function hgAddBtnHtml(no, phase) {
    sendirian, tidak nempel lagi ke tombolnya. Fix: begitu dropdown dibuka, pasang
    listener scroll (capture:true, supaya kedeteksi juga kalau yang di-scroll adalah
    tabel di dalamnya, bukan cuma window/halaman utama) yang langsung menutup dropdown.
-   Listener-nya dilepas lagi begitu dropdown ditutup, supaya tidak numpuk. */
-var _hgSrcMenuScrollHandler = null;
+   Listener-nya dilepas lagi begitu dropdown ditutup, supaya tidak numpuk.
+
+   🔴 REVISI 2026-09-11 (laporan "popup pilihan muncul JAUH dari tombol yang
+   diklik", screenshot menunjukkan popup nongkrong di baris step yang beda
+   total dari tombol "+" yang ditekan): fix "reposisi saat scroll" di atas
+   TERNYATA tidak cukup -- itu cuma menangani SATU penyebab tombol bergeser
+   (window/tabel di-scroll). Penyebab LAIN yang sama-sama menggeser posisi
+   tombol "+" SETELAH menu sempat dibuka: foto evidence yang < gambar>-nya
+   masih proses load/decode saat menu dibuka, lalu "pop in" begitu selesai
+   (baris jadi lebih tinggi, semua yang di bawahnya ikut turun) -- record
+   yang sedang diedit (?id=...) biasa sudah py BANYAK foto tersimpan,
+   jadi ini SANGAT mungkin terjadi persis saat user buru-buru klik "+"
+   sesaat setelah halaman kelihatan siap. Daripada terus menambal PER
+   PENYEBAB satu-satu (scroll, lalu foto, nanti apa lagi), dropdown
+   sekarang REPOSISI TERUS-MENERUS lewat requestAnimationFrame SELAMA
+   menu terbuka -- otomatis kebal terhadap APA PUN yang menggeser
+   tombolnya (scroll, foto pop-in, zoom, resize, dll), karena posisi
+   dihitung ULANG setiap frame dari getBoundingClientRect() anchor-nya
+   yang SELALU akurat kapan pun dipanggil. RAF loop berhenti otomatis
+   begitu menu ditutup (hgCloseAllSrcMenus membatalkan RAF-nya) -- biaya
+   ~60x/detik ini cuma jalan SELAMA 1 menu benar-benar terbuka (biasanya
+   cuma beberapa detik sampai user pilih Penyimpanan/Kamera atau klik
+   keluar), jadi murah. */
+var _hgSrcMenuRafId = null;
+var _hgSrcMenuClickHandler = null;
 function hgCloseAllSrcMenus() {
   document.querySelectorAll('[id^="hgSrc_"]').forEach(function(d){ d.style.display = 'none'; });
-  if (_hgSrcMenuScrollHandler) {
-    window.removeEventListener('scroll', _hgSrcMenuScrollHandler, true);
-    document.removeEventListener('click', _hgSrcMenuScrollHandler, true);
-    _hgSrcMenuScrollHandler = null;
+  if (_hgSrcMenuRafId) { cancelAnimationFrame(_hgSrcMenuRafId); _hgSrcMenuRafId = null; }
+  if (_hgSrcMenuClickHandler) {
+    document.removeEventListener('click', _hgSrcMenuClickHandler, true);
+    _hgSrcMenuClickHandler = null;
   }
 }
 function hgPositionSrcMenu(el, anchorEl) {
@@ -2341,29 +2364,20 @@ function hgOpenSrcMenu(anchorEl, elId) {
   if (alreadyOpen) return;
   el.style.display = 'block';
   hgPositionSrcMenu(el, anchorEl);
-  // Dulu: tutup otomatis begitu ada scroll. Ternyata di HP, sekadar men-tap
-  // tombol "+" sering memicu event scroll/reflow otomatis dari browser (address
-  // bar menyusut, dsb) SESAAT setelah dropdown terbuka -- akibatnya dropdown
-  // langsung tertutup sendiri sebelum sempat dipakai (kelihatan seperti pilihan
-  // "hilang"). Fix: saat discroll, dropdown REPOSISI ikut tombolnya (bukan
-  // ditutup) -- ini tetap mencegah "nyangkut" di posisi lama tanpa membuatnya
-  // hilang tiba-tiba. Ditutup hanya kalau tombolnya benar-benar sudah keluar
-  // dari area layar (discroll jauh), atau kalau user klik di luar dropdown.
-  _hgSrcMenuScrollHandler = function(ev){
-    if (ev.type === 'click') {
-      if (el.contains(ev.target) || anchorEl.contains(ev.target)) return;
-      hgCloseAllSrcMenus();
-      return;
-    }
-    // ev.type === 'scroll' -> reposisi, bukan tutup
-    if (!document.body.contains(anchorEl)) { hgCloseAllSrcMenus(); return; }
+  (function reposLoop() {
+    if (!document.body.contains(anchorEl) || el.style.display === 'none') { hgCloseAllSrcMenus(); return; }
     var r = hgPositionSrcMenu(el, anchorEl);
     if (r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) {
       hgCloseAllSrcMenus(); // tombolnya sudah keluar layar sama sekali
+      return;
     }
+    _hgSrcMenuRafId = requestAnimationFrame(reposLoop);
+  })();
+  _hgSrcMenuClickHandler = function(ev) {
+    if (el.contains(ev.target) || anchorEl.contains(ev.target)) return;
+    hgCloseAllSrcMenus();
   };
-  window.addEventListener('scroll', _hgSrcMenuScrollHandler, true);
-  document.addEventListener('click', _hgSrcMenuScrollHandler, true);
+  document.addEventListener('click', _hgSrcMenuClickHandler, true);
 }
 
 function hgHandleFiles(files, no, phase) {
