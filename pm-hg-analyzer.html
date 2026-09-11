@@ -1551,9 +1551,17 @@ function closePdfPreview() {
    checkbox vektor, konsisten dgn kolom Ready/Kosong yang sudah teks).
    2026-09-10: step 1/7/8/9 ditambah freq 3 supaya daftar step 3 Monthly SAMA
    PERSIS dengan 6 Monthly (permintaan eksplisit user) -- sebelumnya 3
-   Monthly cuma step 2,3,4,5,6,6.5,17 (kelewat 4 step yang 6 Monthly punya). */
+   Monthly cuma step 2,3,4,5,6,6.5,17 (kelewat 4 step yang 6 Monthly punya).
+   2026-09-11: freq 3 di step 1 KHUSUS DICABUT LAGI (balik ke [2,6,12]) --
+   step 1 memang SENGAJA dikecualikan dari 3 Monthly & 9 Monthly sejak
+   sesi lebih lama (lihat CLAUDE.md/riwayat commit 6dc2395), keputusan itu
+   TIDAK dimaksudkan ikut berubah oleh penyamaan 3M=6M di atas. Step
+   7/8/9 TIDAK ikut dicabut (freq 3 tetap ada di situ) -- user cuma minta
+   step 1 yang dikecualikan lagi. Kalau nanti ada permintaan serupa lagi
+   utk step lain, JANGAN asumsikan "samakan 3M=6M" itu final/menang atas
+   pengecualian step 1 -- itu memang harus tetap beda. */
 var STEP_DATA = [
-  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[2,3,6,12]},
+  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[2,6,12]},
   {no:2,  label:"Replace the particle protection filter (13) upstream from the photometer", ref:"", refImg:"assets/hg-step2-ref.png", replace:true,  freq:[3,6,9,12]},
   {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", refImg:"assets/hg-step3-ref.png", replace:true,  freq:[3,6,9,12], proc:'iodine'},
   {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", refImg:"assets/hg-step4-ref.png", replace:false, freq:[2,3,6,9,12]},
