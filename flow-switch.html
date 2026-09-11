@@ -1528,7 +1528,7 @@ function buildEvidenceSlotEl(gk, item) {
       '<button type="button" onclick="event.stopPropagation();evTriggerSource(\''+gk+'\','+item.id+',\'camera\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>'+
       '<button type="button" onclick="event.stopPropagation();evTriggerSource(\''+gk+'\','+item.id+',\'storage\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>'+
     '</div>'+
-    '<input type="file" id="evFileInput_'+uid+'" accept="image/*" style="display:none" onchange="evOnFileSelected(\''+gk+'\','+item.id+',event)">'+
+    '<input type="file" id="evFileInput_'+uid+'" accept="image/*" multiple style="display:none" onchange="evOnFileSelected(\''+gk+'\','+item.id+',event)">'+
     '<input type="text" placeholder="Keterangan evidence..." value="'+escapeHtmlG(item.caption)+'" oninput="evUpdateCaption(\''+gk+'\','+item.id+',this.value)" style="width:100%;margin-top:8px;padding:7px 8px;font-size:14px;border:1px solid var(--border);border-radius:5px;box-sizing:border-box">';
   return div;
 }
@@ -1547,9 +1547,11 @@ function evTriggerSource(gk, id, source) {
   openFileInputSource('evFileInput_'+gk+'_'+id, source); // openFileInputSource dari shared.js
 }
 function evOnFileSelected(gk, id, e) {
-  var file = e.target.files[0];
+  var files = Array.prototype.slice.call(e.target.files || []);
   e.target.value = '';
-  if (!file) return;
+  if (!files.length) return;
+  if (files.length > 1) { evHandleMultiUpload(gk, id, files); return; }
+  var file = files[0];
   var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
   if (!item) return;
   var replaceIdx = item.images.length ? 0 : -1;
@@ -1563,6 +1565,81 @@ function evOnFileSelected(gk, id, e) {
     reader.onload = function(ev) { imgOpenCropper(ev.target.result, file.name, file.type, item.images, sideKey, 'ev', replaceIdx); };
     reader.readAsDataURL(file);
   }
+}
+/* Upload banyak foto sekaligus (pilih >1 file dari galeri/penyimpanan) --
+   pola sama dengan puHandleMultiUpload di modul lain (pm-hg-analyzer.html
+   dkk, lihat FITUR_REUSABLE_REFERENCE.md Fitur A), TAPI disesuaikan ke
+   model galeri Evidence di file ini: 1 SLOT = 1 FOTO (bukan 1 galeri = N
+   foto). File PERTAMA dipakai utk slot yang tombolnya diklik, file
+   TAMBAHAN masing-masing otomatis dapat SLOT BARU (evAddSlot) -- crop
+   modal DILEWATI (skip-crop, sama seperti pola upload banyak file di
+   modul lain), gambar langsung dikompresi & disimpan APA ADANYA. */
+function evHandleMultiUpload(gk, id, files) {
+  var g = EV_GALLERIES[gk];
+  var pending = files.length;
+  dbShowToast('Mengupload ' + files.length + ' foto...');
+  var finishOne = function() {
+    pending--;
+    if (pending <= 0) dbShowToast('✓ ' + files.length + ' foto berhasil ditambahkan');
+  };
+  files.forEach(function(file, idx) {
+    var targetId = id;
+    if (idx > 0) { targetId = g.nextId++; g.items.push({id: targetId, caption:'', images:[]}); }
+    evProcessFileIntoSlot(gk, targetId, file, finishOne);
+  });
+  renderEvidenceList(gk);
+}
+function evProcessFileIntoSlot(gk, id, file, done) {
+  var afterDataUrl = function(rawDataUrl) {
+    if (!rawDataUrl) { done(); return; }
+    evCompressFullImage(rawDataUrl, function(finalDataUrl) {
+      if (!finalDataUrl) { done(); return; }
+      var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
+      if (!item) { done(); return; }
+      var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl: finalDataUrl, type:'image/jpeg', caption:''};
+      item.images = [entry];
+      renderEvidenceList(gk);
+      uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, 'ev_'+gk+'_'+id, entry);
+      done();
+    });
+  };
+  if (typeof fileToJpegDataUrl === 'function') {
+    fileToJpegDataUrl(file, afterDataUrl);
+  } else {
+    var reader = new FileReader();
+    reader.onload = function(ev) { afterDataUrl(ev.target.result); };
+    reader.readAsDataURL(file);
+  }
+}
+/* Kompresi gambar UTUH (tanpa crop) ke budget 500KB PER SLOT -- sama
+   persis rumus cropAndSave() di file ini (lihat komentar "disamakan
+   dengan budget shared.js imgCompressAndStore" di atas), cuma tanpa
+   potongan area crop (dipakai gambar penuh apa adanya). */
+function evCompressFullImage(dataUrl, cb) {
+  var img = new Image();
+  img.onload = function() {
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    var MAX = 500*1024;
+    var out;
+    for (var q=0.85; q>=0.25; q-=0.1) {
+      out = canvas.toDataURL('image/jpeg', q);
+      if (out.length*0.75 <= MAX) break;
+      if (q<=0.25) {
+        var factor = Math.sqrt(MAX/(out.length*0.75));
+        var c2 = document.createElement('canvas');
+        c2.width = Math.max(50, Math.floor(canvas.width*factor));
+        c2.height = Math.max(50, Math.floor(canvas.height*factor));
+        c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
+        out = c2.toDataURL('image/jpeg', 0.7);
+        break;
+      }
+    }
+    cb(out);
+  };
+  img.onerror = function(){ cb(null); };
+  img.src = dataUrl;
 }
 function evReEditCrop(gk, id) {
   var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
