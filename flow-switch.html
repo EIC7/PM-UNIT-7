@@ -28,6 +28,16 @@
 .img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
 .img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ccc;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
 .img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
+/* ── Fitur reusable: galeri foto thumbnail kecil (pola so2.html) — dipakai
+   Evidence Model/Nameplate Alat, GANTI pola "1 slot = 1 foto preview besar"
+   lama supaya konsisten dengan checksheet lain (lihat CLAUDE.md 2026-09-11) ── */
+.img-gallery{display:flex;flex-wrap:wrap;gap:20px;margin-top:10px}
+.img-thumb{position:relative}
+.img-thumb img{width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block;cursor:pointer}
+.img-thumb .del{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0;font-weight:700}
+.img-thumb .reedit{position:absolute;top:-7px;left:-7px;width:20px;height:20px;border-radius:50%;background:#2563eb;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:20px;text-align:center;padding:0}
+.img-thumb .size-badge{position:absolute;bottom:6px;left:2px;background:rgba(0,0,0,0.65);color:#fff;font-size:9px;padding:1px 4px;border-radius:4px;font-weight:600}
+.img-caption-input{width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid var(--border,#ccc);border-radius:6px;background:#fff;color:#111;box-sizing:border-box}
 /* ── CROP MODAL (3-mode) ── */
 #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
 #cropModal.show{display:flex}
@@ -179,10 +189,13 @@
   <!-- EVIDENCE: MODEL / NAMEPLATE ALAT -->
   <div class="panel">
     <div class="section-label">Foto Evidence — Model / Nameplate Alat</div>
-    <div id="evEvidenceList"></div>
-    <div class="btn-row" style="margin-top:12px">
-      <button class="btn btn-outline" onclick="evAddEvidenceSlot()">+ Tambah Evidence</button>
+    <button type="button" class="btn btn-outline" onclick="toggleSourceChoices('evSrcChoices_evidence')">+ Tambah Foto</button>
+    <div class="source-choices" id="evSrcChoices_evidence" style="display:none;gap:8px;margin-top:8px">
+      <button type="button" onclick="evTriggerSource('evidence','camera')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>
+      <button type="button" onclick="evTriggerSource('evidence','storage')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>
     </div>
+    <input type="file" id="evFileInput_evidence" accept="image/*" multiple style="display:none" onchange="evOnFileSelected('evidence', event)">
+    <div id="evEvidenceList"></div>
   </div>
 
   <!-- BUTTONS -->
@@ -1402,12 +1415,17 @@ var CHECKLIST_DATA = [
   return row;
 });
 
-/* 1 galeri evidence (foto model/nameplate alat) -- registry EV_GALLERIES
-   dipertahankan (bukan array biasa) supaya fungsi add/remove/render/crop
-   generik di bawah (dipakai bersama modul lain) tidak perlu diubah. */
+/* 1 galeri evidence (foto model/nameplate alat) -- array datar berisi
+   objek foto {name,dataUrl,type,caption,offsetX,widthCm,heightCm,
+   driveFileId,driveUrl}, pola SAMA PERSIS dengan so2Photos/renderPhotoGallery()
+   di so2.html (thumbnail kecil 72x72 + Urutkan Foto/Fitur O + Geser Posisi/
+   Fitur D), BUKAN lagi "1 slot = 1 foto" seperti sebelumnya -- diganti
+   2026-09-11 karena preview besar per-slot terlihat "kegedean" & tidak
+   konsisten dengan modul checksheet lain (lihat CLAUDE.md tanggal itu). */
 var EV_GALLERIES = {
-  evidence: { items: [], nextId: 1, listId: 'evEvidenceList', emptyMsg: 'Belum ada evidence model/nameplate alat. Klik "+ Tambah Evidence" untuk menambahkan foto.' }
+  evidence: { photos: [], listId: 'evEvidenceList', emptyMsg: 'Belum ada evidence model/nameplate alat. Klik "+ Tambah Foto" untuk menambahkan.' }
 };
+var evReorderState = {};
 
 /* ══════════════════ TABLE CHECKLIST ══════════════════ */
 function buildChecklistTable() {
@@ -1465,141 +1483,58 @@ function checkAllY(checked) {
   var headerChk = document.getElementById('t2CheckAllY');
   if (headerChk) headerChk.checked = true; // buildChecklistTable() re-render tbody, bukan thead -- checkbox header aman tidak ikut ter-reset
 }
-/* ══════════════════ UPLOAD EVIDENCE — 2 galeri independen ══════════════════
-   Pola sama dengan evList/evAddSlot di generator_stator_leak_monitoring.html,
-   diparameterkan lewat gk ('cleaning'|'purging') supaya tidak ada duplikasi
-   kode dan tidak ada tabrakan id DOM antar galeri. side yang dikirim ke
-   imgOpenCropper()/cropAndSave() dikodekan sebagai 'ev_<gk>_<id>' supaya
-   evRenderPreview() bisa merutekan render balik ke galeri yang benar. */
-function evAddSlot(gk) {
-  var g = EV_GALLERIES[gk];
-  g.items.push({id: g.nextId++, caption:'', images:[]});
-  renderEvidenceList(gk);
+/* ══════════════════ UPLOAD EVIDENCE — thumbnail grid + Urutkan Foto ══════════════════
+   Pola SAMA PERSIS dengan renderPhotoGallery()/so2Photos di so2.html (Fitur
+   O: Urutkan Foto, Fitur D: Geser Posisi -- lihat FITUR_REUSABLE_REFERENCE.md),
+   diparameterkan lewat gk supaya siap dipakai kalau nanti ada galeri evidence
+   ke-2 (saat ini cuma 'evidence' yang dipakai). side yang dikirim ke
+   imgOpenCropper()/cropAndSave() dikodekan sebagai 'ev_<gk>' (TANPA suffix id
+   slot lagi -- 1 galeri = banyak foto sekarang, bukan 1 slot = 1 foto). */
+function evTriggerSource(gk, source) {
+  var el = document.getElementById('evSrcChoices_'+gk);
+  if (el) el.style.display = 'none';
+  openFileInputSource('evFileInput_'+gk, source); // openFileInputSource dari shared.js
 }
-function evAddEvidenceSlot() { evAddSlot('evidence'); }
-
-function evRemoveSlot(gk, id) {
-  var g = EV_GALLERIES[gk];
-  var removed = g.items.filter(function(it){ return it.id === id; });
-  // Slot ini dihapus permanen -- hapus juga semua foto di dalamnya dari Drive
-  // (kalau sudah sempat ke-upload), supaya tidak nyangkut selamanya.
-  removed.forEach(function(it){
-    (it.images||[]).forEach(function(img){
-      if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
-    });
-  });
-  g.items = g.items.filter(function(it){ return it.id !== id; });
-  renderEvidenceList(gk);
-}
-function renderEvidenceList(gk) {
-  var g = EV_GALLERIES[gk];
-  var wrap = document.getElementById(g.listId);
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  if (!g.items.length) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--text3);padding:14px;font-size:12px">'+escapeHtmlG(g.emptyMsg)+'</div>';
-    return;
-  }
-  g.items.forEach(function(item) {
-    wrap.appendChild(buildEvidenceSlotEl(gk, item));
-  });
-}
-function buildEvidenceSlotEl(gk, item) {
-  var uid = gk + '_' + item.id; // id DOM unik antar galeri, mis. "cleaning_1" vs "purging_1"
-  var hasImg = item.images.length > 0;
-  var div = document.createElement('div');
-  div.id = 'evSlot_' + uid;
-  div.style.cssText = 'border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:#fafafa;position:relative';
-  div.innerHTML =
-    '<button onclick="evRemoveSlot(\''+gk+'\','+item.id+')" title="Hapus slot ini" style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--fail,#dc2626);color:#fff;border:none;cursor:pointer;font-size:11px;line-height:22px;padding:0;z-index:2">&#215;</button>'+
-    '<div class="img-upload-area" id="evUploadArea_'+uid+'" onclick="evTriggerPick(\''+gk+'\','+item.id+')" style="'+(hasImg?'border-style:solid;border-color:var(--accent,#0f766e);background:#fff;padding:10px;':'')+'border:2px dashed var(--border);border-radius:6px;padding:20px;text-align:center;cursor:pointer">'+
-      '<div id="evPlaceholder_'+uid+'" style="display:'+(hasImg?'none':'block')+'">'+
-        '<div style="font-size:28px;margin-bottom:6px">&#128247;</div>'+
-        '<div style="font-size:13px;font-weight:600;color:var(--text-mid,#475569)">Klik untuk Upload Gambar</div>'+
-        '<div style="font-size:11px;color:var(--text-light,#94a3b8);margin-top:4px">Pilih dari Kamera atau Penyimpanan &rarr; Crop &rarr; Simpan</div>'+
-      '</div>'+
-      '<div id="evPreviewWrap_'+uid+'" style="display:'+(hasImg?'block':'none')+';position:relative">'+
-        '<img id="evPreview_'+uid+'" src="'+(hasImg?item.images[0].dataUrl:'')+'" alt="Preview" style="max-width:100%;max-height:260px;border-radius:6px;display:block;margin:0 auto">'+
-        '<button type="button" onclick="event.stopPropagation();evReEditCrop(\''+gk+'\','+item.id+')" title="Crop ulang" style="position:absolute;top:6px;right:34px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer">&#9986;&#65039;</button>'+
-        '<button type="button" onclick="event.stopPropagation();evRemoveImage(\''+gk+'\','+item.id+')" title="Hapus Gambar" style="position:absolute;top:6px;right:4px;width:26px;height:26px;border-radius:50%;background:var(--fail,#dc2626);color:#fff;border:none;cursor:pointer">&#215;</button>'+
-      '</div>'+
-    '</div>'+
-    '<div class="source-choices" id="evSrcChoices_'+uid+'" style="display:none;gap:8px;margin-top:8px;justify-content:center">'+
-      '<button type="button" onclick="event.stopPropagation();evTriggerSource(\''+gk+'\','+item.id+',\'camera\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>'+
-      '<button type="button" onclick="event.stopPropagation();evTriggerSource(\''+gk+'\','+item.id+',\'storage\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>'+
-    '</div>'+
-    '<input type="file" id="evFileInput_'+uid+'" accept="image/*" multiple style="display:none" onchange="evOnFileSelected(\''+gk+'\','+item.id+',event)">'+
-    '<input type="text" placeholder="Keterangan evidence..." value="'+escapeHtmlG(item.caption)+'" oninput="evUpdateCaption(\''+gk+'\','+item.id+',this.value)" style="width:100%;margin-top:8px;padding:7px 8px;font-size:14px;border:1px solid var(--border);border-radius:5px;box-sizing:border-box">';
-  return div;
-}
-function evUpdateCaption(gk, id, val) {
-  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
-  if (item) item.caption = val;
-}
-function evTriggerPick(gk, id) {
-  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
-  if (item && item.images.length) return; // sudah ada gambar, klik gambar sendiri untuk crop ulang
-  var el = document.getElementById('evSrcChoices_'+gk+'_'+id);
-  if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
-}
-function evTriggerSource(gk, id, source) {
-  document.getElementById('evSrcChoices_'+gk+'_'+id).style.display = 'none';
-  openFileInputSource('evFileInput_'+gk+'_'+id, source); // openFileInputSource dari shared.js
-}
-function evOnFileSelected(gk, id, e) {
+function evOnFileSelected(gk, e) {
   var files = Array.prototype.slice.call(e.target.files || []);
   e.target.value = '';
   if (!files.length) return;
-  if (files.length > 1) { evHandleMultiUpload(gk, id, files); return; }
+  if (files.length > 1) { evHandleMultiUpload(gk, files); return; }
   var file = files[0];
-  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
-  if (!item) return;
-  var replaceIdx = item.images.length ? 0 : -1;
-  var sideKey = 'ev_' + gk + '_' + id;
+  var arr = EV_GALLERIES[gk].photos;
   if (typeof fileToJpegDataUrl === 'function') {
     fileToJpegDataUrl(file, function(dataUrl) {
-      if (dataUrl) imgOpenCropper(dataUrl, file.name, 'image/jpeg', item.images, sideKey, 'ev', replaceIdx);
+      if (dataUrl) imgOpenCropper(dataUrl, file.name, 'image/jpeg', arr, 'ev_'+gk, 'ev', -1);
     });
   } else {
     var reader = new FileReader();
-    reader.onload = function(ev) { imgOpenCropper(ev.target.result, file.name, file.type, item.images, sideKey, 'ev', replaceIdx); };
+    reader.onload = function(ev) { imgOpenCropper(ev.target.result, file.name, file.type, arr, 'ev_'+gk, 'ev', -1); };
     reader.readAsDataURL(file);
   }
 }
 /* Upload banyak foto sekaligus (pilih >1 file dari galeri/penyimpanan) --
    pola sama dengan puHandleMultiUpload di modul lain (pm-hg-analyzer.html
-   dkk, lihat FITUR_REUSABLE_REFERENCE.md Fitur A), TAPI disesuaikan ke
-   model galeri Evidence di file ini: 1 SLOT = 1 FOTO (bukan 1 galeri = N
-   foto). File PERTAMA dipakai utk slot yang tombolnya diklik, file
-   TAMBAHAN masing-masing otomatis dapat SLOT BARU (evAddSlot) -- crop
-   modal DILEWATI (skip-crop, sama seperti pola upload banyak file di
-   modul lain), gambar langsung dikompresi & disimpan APA ADANYA. */
-function evHandleMultiUpload(gk, id, files) {
-  var g = EV_GALLERIES[gk];
+   dkk, lihat FITUR_REUSABLE_REFERENCE.md Fitur A) -- crop modal DILEWATI
+   (skip-crop), gambar langsung dikompresi & ditambahkan APA ADANYA ke
+   galeri (push, bukan replace -- foto yang sudah ada tidak tersentuh). */
+function evHandleMultiUpload(gk, files) {
   var pending = files.length;
   dbShowToast('Mengupload ' + files.length + ' foto...');
   var finishOne = function() {
     pending--;
     if (pending <= 0) dbShowToast('✓ ' + files.length + ' foto berhasil ditambahkan');
   };
-  files.forEach(function(file, idx) {
-    var targetId = id;
-    if (idx > 0) { targetId = g.nextId++; g.items.push({id: targetId, caption:'', images:[]}); }
-    evProcessFileIntoSlot(gk, targetId, file, finishOne);
-  });
-  renderEvidenceList(gk);
+  files.forEach(function(file) { evProcessFile(gk, file, finishOne); });
 }
-function evProcessFileIntoSlot(gk, id, file, done) {
+function evProcessFile(gk, file, done) {
   var afterDataUrl = function(rawDataUrl) {
     if (!rawDataUrl) { done(); return; }
     evCompressFullImage(rawDataUrl, function(finalDataUrl) {
       if (!finalDataUrl) { done(); return; }
-      var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
-      if (!item) { done(); return; }
       var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl: finalDataUrl, type:'image/jpeg', caption:''};
-      item.images = [entry];
+      EV_GALLERIES[gk].photos.push(entry);
       renderEvidenceList(gk);
-      uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, 'ev_'+gk+'_'+id, entry);
+      uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, 'ev_'+gk, entry);
       done();
     });
   };
@@ -1611,10 +1546,10 @@ function evProcessFileIntoSlot(gk, id, file, done) {
     reader.readAsDataURL(file);
   }
 }
-/* Kompresi gambar UTUH (tanpa crop) ke budget 500KB PER SLOT -- sama
-   persis rumus cropAndSave() di file ini (lihat komentar "disamakan
-   dengan budget shared.js imgCompressAndStore" di atas), cuma tanpa
-   potongan area crop (dipakai gambar penuh apa adanya). */
+/* Kompresi gambar UTUH (tanpa crop) ke budget 500KB PER FOTO -- sama persis
+   rumus cropAndSave() di file ini (lihat komentar "disamakan dengan budget
+   shared.js imgCompressAndStore" di atas), cuma tanpa potongan area crop
+   (dipakai gambar penuh apa adanya). */
 function evCompressFullImage(dataUrl, cb) {
   var img = new Image();
   img.onload = function() {
@@ -1641,26 +1576,94 @@ function evCompressFullImage(dataUrl, cb) {
   img.onerror = function(){ cb(null); };
   img.src = dataUrl;
 }
-function evReEditCrop(gk, id) {
-  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
-  if (!item || !item.images.length) return;
-  var img = item.images[0];
-  imgOpenCropper(img.dataUrl, img.name, img.type, item.images, 'ev_'+gk+'_'+id, 'ev', 0);
+function evReEditCrop(gk, idx) {
+  var arr = EV_GALLERIES[gk].photos;
+  var img = arr[idx];
+  if (!img) return;
+  imgOpenCropper(img.dataUrl, img.name, img.type, arr, 'ev_'+gk, 'ev', idx);
 }
-function evRemoveImage(gk, id) {
-  var item = EV_GALLERIES[gk].items.find(function(it){ return it.id === id; });
-  if (!item) return;
-  (item.images||[]).forEach(function(img){
-    if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
-  });
-  item.images = [];
+function evDeletePhoto(gk, idx) {
+  var arr = EV_GALLERIES[gk].photos;
+  var img = arr[idx];
+  if (!img) return;
+  if (img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+  arr.splice(idx, 1);
   renderEvidenceList(gk);
 }
-/* Dipanggil dari cropAndSave() setelah crop selesai, side = 'ev_<gk>_<id>' */
+/* Fitur O: Urutkan Foto -- toggle mode + tukar posisi (pola sama persis
+   so2ToggleReorder/so2SelectForReorder/so2MoveImg di so2.html). */
+function evToggleReorder(gk) {
+  var st = evReorderState[gk] || (evReorderState[gk] = {active:false, selectedIdx:null});
+  st.active = !st.active;
+  st.selectedIdx = null;
+  renderEvidenceList(gk);
+}
+function evSelectForReorder(gk, idx, checked) {
+  var st = evReorderState[gk] || (evReorderState[gk] = {active:false, selectedIdx:null});
+  st.selectedIdx = checked ? idx : null;
+  renderEvidenceList(gk);
+}
+function evMoveImg(gk, dir) {
+  var st = evReorderState[gk];
+  if (!st || st.selectedIdx === null) return;
+  var arr = EV_GALLERIES[gk].photos;
+  var i = st.selectedIdx, j = i + dir;
+  if (j < 0 || j >= arr.length) return;
+  // swap 1 object UTUH -- caption/crop/offset ikut pindah, bukan cuma dataUrl
+  var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  st.selectedIdx = j;
+  renderEvidenceList(gk);
+}
+function renderEvidenceList(gk) {
+  var g = EV_GALLERIES[gk];
+  var wrap = document.getElementById(g.listId);
+  if (!wrap) return;
+  var arr = g.photos;
+  if (!arr.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:var(--text3);padding:14px;font-size:12px">'+escapeHtmlG(g.emptyMsg)+'</div>';
+    return;
+  }
+  var st = evReorderState[gk] || (evReorderState[gk] = {active:false, selectedIdx:null});
+  var html = '<div class="img-gallery">';
+  arr.forEach(function(img, idx) {
+    html += '<div class="img-thumb">';
+    html += '<img src="'+(img.dataUrl||'')+'" onclick="'+(st.active?'':'evReEditCrop(\''+gk+'\','+idx+')')+'">';
+    if (img.widthCm && img.heightCm) html += '<span class="size-badge">'+img.widthCm+'&times;'+img.heightCm+'cm</span>';
+    if (!st.active) {
+      html += '<button class="reedit" onclick="evReEditCrop(\''+gk+'\','+idx+')" title="Crop ulang">&#9986;&#65039;</button>';
+      html += '<button class="del" onclick="evDeletePhoto(\''+gk+'\','+idx+')" title="Hapus foto">&times;</button>';
+    } else {
+      html += '<label style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--accent,#0f766e);display:flex;align-items:center;justify-content:center;cursor:pointer"><input type="checkbox" '+(st.selectedIdx===idx?'checked':'')+' onchange="evSelectForReorder(\''+gk+'\','+idx+',this.checked)" style="margin:0;width:14px;height:14px;cursor:pointer"></label>';
+    }
+    if (!st.active) {
+      html += '<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">';
+      html += '<button type="button" onclick="nudgeImageInArray(EV_GALLERIES[\''+gk+'\'].photos,'+idx+',-0.5,function(){renderEvidenceList(\''+gk+'\')})" title="Geser posisi gambar ini ke kiri di hasil PDF">&#9664;</button>';
+      html += '<span>'+(img.offsetX||0)+'cm</span>';
+      html += '<button type="button" onclick="nudgeImageInArray(EV_GALLERIES[\''+gk+'\'].photos,'+idx+',0.5,function(){renderEvidenceList(\''+gk+'\')})" title="Geser posisi gambar ini ke kanan di hasil PDF">&#9654;</button>';
+      html += '</div></div>';
+    }
+    html += '<input type="text" class="img-caption-input" placeholder="Keterangan evidence..." value="'+escapeHtmlG(img.caption||'')+'" oninput="EV_GALLERIES[\''+gk+'\'].photos['+idx+'].caption=this.value">';
+    html += '</div>';
+  });
+  if (arr.length > 1) {
+    html += '<div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;vertical-align:top;margin-left:2px">';
+    html += '<button type="button" onclick="evToggleReorder(\''+gk+'\')" style="background:'+(st.active?'var(--ok,#16a34a)':'#eef2f7')+';color:'+(st.active?'#fff':'#333')+';border:1px solid var(--border);border-radius:4px;font-size:10px;padding:5px 8px;cursor:pointer;white-space:nowrap">'+(st.active?'&#10003; Selesai':'&#128256; Urutkan Foto')+'</button>';
+    if (st.active && st.selectedIdx !== null) {
+      var atStart = st.selectedIdx <= 0, atEnd = st.selectedIdx >= arr.length - 1;
+      html += '<div style="display:flex;gap:4px">';
+      html += '<button type="button" '+(atStart?'disabled':'')+' onclick="evMoveImg(\''+gk+'\',-1)" style="flex:1;opacity:'+(atStart?'0.4':'1')+'">&#9664; Kiri</button>';
+      html += '<button type="button" '+(atEnd?'disabled':'')+' onclick="evMoveImg(\''+gk+'\',1)" style="flex:1;opacity:'+(atEnd?'0.4':'1')+'">Kanan &#9654;</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+/* Dipanggil dari cropAndSave() setelah crop selesai, side = 'ev_<gk>' */
 function evRenderPreview(side) {
-  var m = /^ev_(evidence)_(\d+)$/.exec(String(side));
-  if (!m) { renderEvidenceList('evidence'); return; }
-  renderEvidenceList(m[1]);
+  var gk = String(side).replace(/^ev_/, '') || 'evidence';
+  renderEvidenceList(gk);
 }
 /* ══════════════════ AREA / APPLICATION UI HELPERS ══════════════════ */
 function onAreaChange() {
@@ -1691,7 +1694,7 @@ function resetAll() {
     r.y=false; r.n=false; r.remarks='';
     if (r.extra) r.extra.forEach(function(f){ r[f.key]=''; });
   });
-  EV_GALLERIES.evidence.items = []; EV_GALLERIES.evidence.nextId = 1;
+  EV_GALLERIES.evidence.photos = [];
   buildChecklistTable(); renderEvidenceList('evidence');
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
@@ -1862,7 +1865,12 @@ function buildAndShowPdf() {
       }
       return [r.no, r.activity, '', '', remarksText];
     }),
-    columnStyles:{0:{cellWidth:8,halign:'center'},2:{cellWidth:12,halign:'center'},3:{cellWidth:12,halign:'center'}},
+    // Kolom Remarks/Note dilebarkan ~3x dari lebar otomatis semula (perkiraan
+    // ~31mm -> 93mm), Job Plan Inspection dikurangi (~106mm -> 45mm) supaya
+    // total tetap pas dengan contentW (170mm = 8+45+12+12+93) -- teks yang
+    // tidak muat otomatis wrap ke baris baru (default autoTable, bukan kode
+    // tambahan) baik di kolom Job Plan maupun Remarks/Note.
+    columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:45},2:{cellWidth:12,halign:'center'},3:{cellWidth:12,halign:'center'},4:{cellWidth:93}},
     didDrawCell:function(d){
       if (d.section!=='body') return;
       var r = CHECKLIST_DATA[d.row.index];
@@ -1873,13 +1881,11 @@ function buildAndShowPdf() {
     willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
-  // Foto evidence generik (dipakai untuk kedua galeri, dipanggil dengan
-  // title & array berbeda) -- layout flow 2-pass: kelompokkan ke baris dulu,
-  // baru rata tengah per baris terhadap contentW, sama seperti modul lain.
-  function drawEvidenceSection(title, items) {
-    var photosWithImg = items.filter(function(it){ return it.images.length > 0; });
-    if (!photosWithImg.length) return;
-    secHeader(title);
+  // Foto evidence generik (array datar foto, bukan lagi "items" ber-.images[])
+  // -- layout flow 2-pass: kelompokkan ke baris dulu, baru rata tengah per
+  // baris terhadap contentW, sama seperti modul lain.
+  function drawEvidenceSection(title, photos) {
+    if (!photos.length) return;
     function iePhotoDrawSize(entry, maxW, maxH) {
       var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
       var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
@@ -1890,18 +1896,30 @@ function buildAndShowPdf() {
     }
     var gap = 6, maxPhotoW = contentW - 6, maxPhotoH = 60, maxRowW = contentW - 6;
     var rows = [], curRow = [], curRowW = 0;
-    photosWithImg.forEach(function(item){
-      var img = item.images[0];
+    photos.forEach(function(img){
       var dim = iePhotoDrawSize(img, maxPhotoW, maxPhotoH);
       var addW = curRow.length ? gap + dim.w : dim.w;
       if (curRow.length && curRowW + addW > maxRowW) { rows.push(curRow); curRow = []; curRowW = 0; addW = dim.w; }
-      curRow.push({item:item, img:img, dim:dim});
+      curRow.push({img:img, dim:dim});
       curRowW += addW;
     });
     if (curRow.length) rows.push(curRow);
+    // Fitur P (judul section jangan sampai "yatim" terpisah dari isi
+    // pertamanya, lihat CLAUDE.md) -- hitung dulu tinggi gabungan bar judul
+    // (11mm) + baris foto PERTAMA, baru checkPage() SATU KALI sebelum apa
+    // pun digambar (termasuk sebelum secHeader() sendiri).
+    var firstRow = rows[0];
+    var firstBlockH = 11;
+    if (firstRow) {
+      var capLines0 = firstRow.map(function(it){ return doc.splitTextToSize(it.img.caption || '-', it.dim.w); });
+      var capH0 = Math.max.apply(null, capLines0.map(function(l){ return l.length*3.5 + 4; }));
+      firstBlockH += Math.max.apply(null, firstRow.map(function(it){ return it.dim.h; })) + capH0 + 6;
+    }
+    if (firstBlockH <= (ph - marginTop - marginBottom)) checkPage(firstBlockH); else checkPage(11);
+    secHeader(title);
     rows.forEach(function(row) {
       var totalRowW = row.reduce(function(s,it,idx){ return s + it.dim.w + (idx>0?gap:0); }, 0);
-      var capLinesArr = row.map(function(it){ return doc.splitTextToSize(it.item.caption || '-', it.dim.w); });
+      var capLinesArr = row.map(function(it){ return doc.splitTextToSize(it.img.caption || '-', it.dim.w); });
       var capH = Math.max.apply(null, capLinesArr.map(function(l){ return l.length*3.5 + 4; }));
       var rowMaxH = Math.max.apply(null, row.map(function(it){ return it.dim.h; })) + capH;
       checkPage(rowMaxH + 6);
@@ -1919,15 +1937,7 @@ function buildAndShowPdf() {
   }
 
   // EVIDENCE — MODEL / NAMEPLATE ALAT
-  drawEvidenceSection('FOTO EVIDENCE — MODEL / NAMEPLATE ALAT', EV_GALLERIES.evidence.items);
-
-  // CATATAN
-  secHeader('CATATAN');
-  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(20,30,25);
-  var noteText = 'Note: All reference of technical information details such as clearances, gaps, tolerances and fits, setting values, engineering drawings, cross sectional drawings, and other supporting documents shall be attached into this checksheet package for control measure.';
-  var noteLines = doc.splitTextToSize(noteText, contentW);
-  checkPage(noteLines.length*4 + 4);
-  doc.text(noteLines, marginX, y); y += noteLines.length*4 + 6;
+  drawEvidenceSection('FOTO EVIDENCE — MODEL / NAMEPLATE ALAT', EV_GALLERIES.evidence.photos);
 
   dbShowSavingOverlay(false);
   // Nama file "Asset_<Asset Number>" -- SAMA dengan nama yang dikirim ke
@@ -1977,7 +1987,7 @@ function dbCollectData(modul) {
       application: appChecked ? appChecked.value : '',
       location: document.getElementById('hLocation').value || '',
       checklist: CHECKLIST_DATA,
-      evidence: EV_GALLERIES.evidence.items
+      evidence: EV_GALLERIES.evidence.photos
     }
   };
 }
@@ -2007,8 +2017,21 @@ function applyRecordToForm(rec, editingId) {
     });
   }
 
-  EV_GALLERIES.evidence.items = Array.isArray(d.evidence) ? d.evidence : [];
-  EV_GALLERIES.evidence.nextId = EV_GALLERIES.evidence.items.reduce(function(m,r){ return Math.max(m, (r.id||0)+1); }, 1);
+  // Migrasi format lama "1 slot = 1 foto" ({id,caption,images:[img]}) ke
+  // array foto datar -- record yang dibuat SEBELUM redesign galeri Evidence
+  // (2026-09-11) masih tersimpan dalam bentuk lama, WAJIB tetap kebaca benar.
+  var rawEvidence = Array.isArray(d.evidence) ? d.evidence : [];
+  EV_GALLERIES.evidence.photos = rawEvidence.map(function(r){
+    if (r && Array.isArray(r.images)) {
+      var img = r.images[0];
+      if (!img) return null;
+      var merged = {};
+      for (var k in img) merged[k] = img[k];
+      merged.caption = r.caption || img.caption || '';
+      return merged;
+    }
+    return r;
+  }).filter(Boolean);
 
   buildChecklistTable(); renderEvidenceList('evidence');
 }
