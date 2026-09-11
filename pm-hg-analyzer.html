@@ -1545,7 +1545,10 @@ function closePdfPreview() {
 
 /* ── DATA: Table 5.3 — Regularly Recurring Maintenance Work for 1 Year ── */
 /* freq: bulan-bulan di mana step ini muncul (3/6/9/12). replace: true => kolom
-   "Sparepart Replacement" berupa dropdown Ready/Kosong. false => checkbox "Sudah Dikerjakan".
+   "Sparepart Replacement" berupa dropdown Ready/Kosong. false => dropdown
+   Belum/Selesai (2026-09-11: diubah dari checkbox polos -- permintaan
+   eksplisit user, PDF-nya juga cetak teks "Selesai"/"Belum", bukan lagi
+   checkbox vektor, konsisten dgn kolom Ready/Kosong yang sudah teks).
    2026-09-10: step 1/7/8/9 ditambah freq 3 supaya daftar step 3 Monthly SAMA
    PERSIS dengan 6 Monthly (permintaan eksplisit user) -- sebelumnya 3
    Monthly cuma step 2,3,4,5,6,6.5,17 (kelewat 4 step yang 6 Monthly punya). */
@@ -1942,13 +1945,17 @@ function hgDownloadPdf() {
         var month = FREQ_MONTH[activeFreq];
         var rowsStep = stepsFor(month);
         secHeader('Table 5.3 \u2014 Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')');
-        var CHK_COL_53 = {3:true,4:true};
+        var CHK_COL_53 = {3:true};
         doc.autoTable({
           startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
           head: [['No','Step Of Work','Ref','Check','Sparepart / Selesai']],
           body: rowsStep.map(function(s){
             var st = stepState[s.no];
-            var spCell = s.replace ? (st.sparepart || '-') : (st.done?'__CHK__':'__BOX__');
+            // 2026-09-11: step tanpa sparepart (replace:false) SEKARANG cetak
+            // teks literal "Selesai"/"Belum" (bukan checkbox vektor lagi) --
+            // permintaan eksplisit user, konsisten dgn kolom Sparepart yang
+            // sudah lama pakai teks "Ready"/"Kosong" (bukan checkbox) di sini.
+            var spCell = s.replace ? (st.sparepart || '-') : (st.done ? 'Selesai' : 'Belum');
             return [String(s.no), pdfSafe(s.label), pdfSafe(s.ref||'-'), st.check?'__CHK__':'__BOX__', spCell];
           }),
           headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
@@ -1963,6 +1970,9 @@ function hgDownloadPdf() {
               var s2 = rowsStep[d.row.index];
               if (s2 && s2.replace && (d.cell.raw==='Ready'||d.cell.raw==='Kosong')) {
                 d.cell.styles.fillColor = d.cell.raw==='Ready' ? [200,240,205] : [250,210,205];
+              }
+              if (s2 && !s2.replace && (d.cell.raw==='Selesai'||d.cell.raw==='Belum')) {
+                d.cell.styles.fillColor = d.cell.raw==='Selesai' ? [200,240,205] : [250,210,205];
               }
             }
           },
@@ -2441,7 +2451,10 @@ function renderStepTableHtml(month) {
           '<option value="Ready"'+(st.sparepart==='Ready'?' selected':'')+'>Ready</option>'+
           '<option value="Kosong"'+(st.sparepart==='Kosong'?' selected':'')+'>Sparepart Kosong</option>'+
         '</select>'
-      : '<input type="checkbox" '+(st.done?'checked':'')+' onchange="stepState['+s.no+'].done=this.checked" style="width:20px;height:20px;cursor:pointer">';
+      : '<select onchange="stepState['+s.no+'].done=(this.value===\'Selesai\')" style="min-width:90px">'+
+          '<option value="Belum"'+(!st.done?' selected':'')+'>Belum</option>'+
+          '<option value="Selesai"'+(st.done?' selected':'')+'>Selesai</option>'+
+        '</select>';
     var procBadge = s.proc ? ' <span style="font-size:10px;color:#c0392b;font-weight:700">&#9888; lihat prosedur</span>' : '';
     // Step dengan evidenceMode:'single' (mis. Zero Adjustment, Validation, Reading HG
     // After Calibration) tidak punya Before/After -- cuma 1 kolom Evidence gabungan
