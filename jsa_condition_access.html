@@ -50,6 +50,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
    melebar tak perlu jadi kelihatan kosong/renggang. */
 .section-box-narrow{max-width:900px}
 .btn{padding:10px 16px;border:none;border-radius:6px;font-size:0.9em;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:opacity 0.2s}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
 .btn:active{opacity:0.75}
 .btn-blue{background:#2e6fcc;color:#fff}
 .btn-green{background:#2ecc71;color:#0b2016}
@@ -282,7 +283,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
   <div class="no-print" style="margin-top:20px">
     <button class="btn btn-green btn-full" onclick="jsaSaveDraft()" style="padding:13px;font-size:1em">💾 Simpan Draft Ke Database</button>
     <button class="btn btn-gray btn-full" onclick="jsaPreviewWord()" style="padding:13px;font-size:1em">👁 Preview Hasil Word</button>
-    <button class="btn btn-blue btn-full" onclick="jsaGenerateWord()" style="padding:13px;font-size:1em">📄 Generate Word (.docx)</button>
+    <button class="btn btn-blue btn-full" id="jsaDownloadBtn" disabled title="Simpan dulu ke database sebelum bisa download" onclick="jsaGenerateWord()" style="padding:13px;font-size:1em">⬇ Download .docx</button>
     <button class="btn btn-red btn-full" onclick="jsaResetAll()" style="padding:13px;font-size:1em">✕ Reset / Buat Dokumen JSA Baru</button>
   </div>
 </div>
@@ -333,6 +334,10 @@ var jsaState = {
   controlMeasures: {},
   additionalMeasures: ['']
 };
+
+// Lihat komentar panjang di jsa_report.html (deklarasi jsaDriveInfo yang
+// SAMA PERSIS) -- fix bug "link Drive hilang sesudah autosave" 2026-09-11.
+var jsaDriveInfo = { wordDriveUrl: '', wordDriveFileId: '' };
 
 // ── Item checklist Table 1 (Plant Process Hazard Identification + Risk
 //    detail) -- {row, labelCol, cbCol} adalah index PERSIS hasil pembacaan
@@ -1007,13 +1012,17 @@ function dbCollectData(modul) {
       additionalMeasures: jsaState.additionalMeasures.map(function(s){return s || '';}).filter(function(s){return s.trim();}),
       checklist: jsaState.checklist,
       controlMeasures: jsaState.controlMeasures,
-      sections: jsaState.sections
+      sections: jsaState.sections,
+      wordDriveUrl: jsaDriveInfo.wordDriveUrl,
+      wordDriveFileId: jsaDriveInfo.wordDriveFileId
     }
   };
 }
 
 function applyRecordToForm(rec) {
   var d = rec.data || {};
+  jsaDriveInfo.wordDriveUrl = d.wordDriveUrl || '';
+  jsaDriveInfo.wordDriveFileId = d.wordDriveFileId || '';
   document.getElementById('jsaEquipTag').value = d.equipTag || '';
   document.getElementById('jsaWorkToBeDone').value = d.workToBeDone || '';
   document.getElementById('jsaWorkMethod').value = d.workMethod || '';
@@ -1070,8 +1079,31 @@ function applyRecordToForm(rec) {
   jsaRefreshAllSignaturePreviews(); // aman dipanggil walau library belum kelar load -- jsaLoadSignatureLibrary() akan refresh ulang begitu selesai
 }
 
+// Lihat komentar lengkap jsaSaveDraft()/jsaUpdateDownloadButtonState()/
+// jsaAfterSaveGenerateToDrive() di jsa_report.html -- kode di sini IDENTIK.
 function jsaSaveDraft() {
-  dbSave('JSA Conditional Access');
+  var rec = dbCollectData('JSA Conditional Access');
+  if (!rec) return;
+  dbSave(rec.modul, rec.tanggal, rec.pic, rec.work_order, 'Unit 7', rec.data, window._editingId, function() {
+    jsaAfterSaveGenerateToDrive();
+  });
+}
+
+function jsaUpdateDownloadButtonState() {
+  var btn = document.getElementById('jsaDownloadBtn');
+  if (!btn) return;
+  btn.disabled = !window._editingId;
+}
+
+function jsaAfterSaveGenerateToDrive() {
+  jsaUpdateDownloadButtonState();
+  var form = jsaCollectFormValues();
+  jsaBuildWordBlob(form).then(function(blob) {
+    var filename = jsaBuildFilename(form);
+    jsaUploadWordToDrive(blob, filename, false);
+  }).catch(function(err) {
+    console.error('[jsa] auto-generate Word setelah Simpan gagal', err);
+  });
 }
 
 // Lihat komentar lengkap jsaResetAll() di jsa_report.html -- logic sama,
@@ -1090,6 +1122,8 @@ function jsaResetAll() {
   jsaState.others = [];
   jsaState.controlMeasures = {};
   jsaState.additionalMeasures = [''];
+  jsaDriveInfo.wordDriveUrl = '';
+  jsaDriveInfo.wordDriveFileId = '';
   jsaRenderSections();
   jsaRenderChecklist();
   jsaRenderControlMeasures();
@@ -1097,6 +1131,7 @@ function jsaResetAll() {
   jsaRefreshAllSignaturePreviews();
   window._editingId = null;
   window._raDirty = false;
+  jsaUpdateDownloadButtonState();
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
@@ -1113,6 +1148,7 @@ function restoreDraftData(rec, editingId) {
   if (!rec) return;
   applyRecordToForm(rec);
   if (editingId) window._editingId = editingId;
+  jsaUpdateDownloadButtonState();
   if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
 }
 
@@ -1125,6 +1161,7 @@ function restoreDraftData(rec, editingId) {
     if (!rec) return;
     applyRecordToForm(rec);
     window._editingId = id;
+    jsaUpdateDownloadButtonState();
     if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
     // ?autodownload=1 -- dipakai jsa_history.html (tombol "Download") lewat
     // iframe tersembunyi: begitu record selesai dimuat ke form, langsung
@@ -1871,6 +1908,11 @@ function jsaBuildWordBlob(form) {
 }
 
 function jsaGenerateWord() {
+  // Lihat komentar lengkap gerbang ini di jsa_report.html.
+  if (!window._editingId) {
+    alert('Simpan data ke database dulu (tombol "💾 Simpan Draft Ke Database") sebelum bisa Download .docx.');
+    return;
+  }
   var form = jsaCollectFormValues();
   var btn = event && event.target ? event.target : null;
   var origText = btn ? btn.innerHTML : '';
@@ -1885,13 +1927,14 @@ function jsaGenerateWord() {
   jsaBuildWordBlob(form).then(function(blob) {
     var filename = jsaBuildFilename(form);
     jsaDownloadBlob(blob, filename);
-    jsaUploadWordToDrive(blob, filename); // best-effort, tidak di-await -- lihat komentar fungsinya
+    jsaUploadWordToDrive(blob, filename, true); // best-effort, tidak di-await -- lihat komentar fungsinya
     if (typeof dbShowToast === 'function') dbShowToast('✓ Word berhasil dibuat & diunduh');
   }).catch(function(err) {
     console.error('[jsa] generate word gagal', err);
     alert('Gagal membuat Word: ' + (err && err.message ? err.message : err));
   }).then(function() {
-    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+    if (btn) { btn.innerHTML = origText; }
+    jsaUpdateDownloadButtonState();
   });
 }
 
@@ -1928,7 +1971,8 @@ function jsaEnsureSaved() {
 // Lihat komentar lengkap jsaUploadWordToDrive() di jsa_report.html --
 // kode di sini IDENTIK (fix bug uploadFileToGDrive() yg tidak pernah
 // reject, silent failure jadi visible ke user, 2026-09-09).
-function jsaUploadWordToDrive(blob, filename) {
+// Lihat komentar lengkap parameter `downloadedLocally` di jsa_report.html.
+function jsaUploadWordToDrive(blob, filename, downloadedLocally) {
   jsaEnsureSaved().then(function(id) {
     return jsaBlobToDataUrl(blob).then(function(dataUrl) {
       return uploadFileToGDrive(dataUrl, filename, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', window.CURRENT_MODUL, '');
@@ -1939,6 +1983,9 @@ function jsaUploadWordToDrive(blob, filename) {
         if (!row) throw new Error('Record tidak ditemukan setelah disimpan (id=' + id + ').');
         var oldFileId = row.data && row.data.wordDriveFileId;
         var merged = Object.assign({}, row.data || {}, { wordDriveUrl: result.fileUrl, wordDriveFileId: result.fileId });
+        // Lihat komentar lengkap "BUG KE-3"/jsaDriveInfo di jsa_report.html.
+        jsaDriveInfo.wordDriveUrl = result.fileUrl;
+        jsaDriveInfo.wordDriveFileId = result.fileId;
         // Lihat komentar lengkap "BUG KE-2" di jsa_report.html --
         // _pmPatchRecordWithRetry() bisa diam2 menyerah setelah 3x gagal
         // (didesain utk pemakaian lain yg punya retry terpisah), jadi
@@ -1948,9 +1995,17 @@ function jsaUploadWordToDrive(blob, filename) {
         });
       });
     });
+  }).then(function() {
+    if (!downloadedLocally && typeof dbShowToast === 'function') {
+      dbShowToast('✓ Word ter-generate & tersimpan ke Google Drive');
+    }
   }).catch(function(err) {
     console.error('[jsa] upload Word ke Drive gagal (non-fatal):', err);
-    alert('Word sudah berhasil didownload ke perangkat, TAPI GAGAL disalin ke Google Drive (jadi tidak akan muncul tombol "Preview in Drive" di JSA History).\n\nCoba klik "📄 Generate Word" sekali lagi untuk mencoba ulang.\n\nDetail: ' + (err && err.message ? err.message : err));
+    if (downloadedLocally) {
+      alert('Word sudah berhasil didownload ke perangkat, TAPI GAGAL disalin ke Google Drive (jadi tidak akan muncul tombol "Preview in Drive" di JSA History).\n\nCoba klik "⬇ Download .docx" sekali lagi untuk mencoba ulang.\n\nDetail: ' + (err && err.message ? err.message : err));
+    } else {
+      alert('Data berhasil disimpan, TAPI GAGAL menggenerate/menyalin dokumen Word ke Google Drive (jadi tidak akan muncul tombol "Preview in Drive" di JSA History sampai berhasil).\n\nCoba Simpan lagi, atau klik "⬇ Download .docx".\n\nDetail: ' + (err && err.message ? err.message : err));
+    }
   });
 }
 

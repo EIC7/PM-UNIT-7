@@ -50,6 +50,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
    melebar tak perlu jadi kelihatan kosong/renggang. */
 .section-box-narrow{max-width:900px}
 .btn{padding:10px 16px;border:none;border-radius:6px;font-size:0.9em;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:opacity 0.2s}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
 .btn:active{opacity:0.75}
 .btn-blue{background:#2e6fcc;color:#fff}
 .btn-green{background:#2ecc71;color:#0b2016}
@@ -296,7 +297,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
   <div class="no-print" style="margin-top:20px">
     <button class="btn btn-green btn-full" onclick="jsaSaveDraft()" style="padding:13px;font-size:1em">💾 Simpan Draft Ke Database</button>
     <button class="btn btn-gray btn-full" onclick="jsaPreviewWord()" style="padding:13px;font-size:1em">👁 Preview Hasil Word</button>
-    <button class="btn btn-blue btn-full" onclick="jsaGenerateWord()" style="padding:13px;font-size:1em">📄 Generate Word (.docx)</button>
+    <button class="btn btn-blue btn-full" id="jsaDownloadBtn" disabled title="Simpan dulu ke database sebelum bisa download" onclick="jsaGenerateWord()" style="padding:13px;font-size:1em">⬇ Download .docx</button>
     <button class="btn btn-red btn-full" onclick="jsaResetAll()" style="padding:13px;font-size:1em">✕ Reset / Buat Dokumen JSA Baru</button>
   </div>
 </div>
@@ -346,6 +347,26 @@ var jsaState = {
   controlMeasures: {},
   additionalMeasures: ['']
 };
+
+// 🔴 BUG BESAR (ditemukan 2026-09-11, laporan "link Preview in Drive
+// kadang hilang sesudah Simpan padahal Generate/Download selalu berhasil"):
+// dbCollectData() (di bawah) SEBELUMNYA tidak pernah menyertakan
+// wordDriveUrl/wordDriveFileId sama sekali -- field itu murni ditulis oleh
+// jsaUploadWordToDrive() lewat GET+merge+PATCH TERPISAH, bukan bagian dari
+// data form. Karena dbSave()/dbSaveSilent() (autosave server, jalan
+// otomatis tiap 60 detik kalau _raDirty true) mem-PATCH SELURUH kolom
+// `data` pakai hasil dbCollectData() apa adanya, autosave manapun yang
+// jalan SETELAH Simpan sukses+Drive ter-upload akan DIAM-DIAM MENIMPA
+// wordDriveUrl balik jadi kosong -- tanpa error apa pun, karena PATCH-nya
+// sendiri "berhasil" (cuma isinya yang tidak lagi punya field itu). Beda
+// dari tombol Download (jsaGenerateWord) yang biasanya jadi aksi TERAKHIR
+// (user tidak lanjut mengetik sesudahnya, autosave jarang sempat menimpa).
+// Fix: jsaDriveInfo jadi SATU-SATUNYA sumber kebenaran wordDriveUrl/
+// wordDriveFileId di sisi client, ikut disertakan ke SETIAP dbCollectData()
+// (lihat di bawah), diisi ulang dari record saat dibuka (applyRecordToForm)
+// DAN diupdate tiap kali jsaUploadWordToDrive() sukses -- supaya autosave
+// TIDAK PERNAH lagi menimpanya balik jadi kosong.
+var jsaDriveInfo = { wordDriveUrl: '', wordDriveFileId: '' };
 
 // ── Item checklist Table 1 (Plant Process Hazard Identification + Risk
 //    detail) -- {row, labelCol, cbCol} adalah index PERSIS hasil pembacaan
@@ -1021,13 +1042,21 @@ function dbCollectData(modul) {
       additionalMeasures: jsaState.additionalMeasures.map(function(s){return s || '';}).filter(function(s){return s.trim();}),
       checklist: jsaState.checklist,
       controlMeasures: jsaState.controlMeasures,
-      sections: jsaState.sections
+      sections: jsaState.sections,
+      // Lihat komentar panjang di deklarasi jsaDriveInfo di atas -- WAJIB
+      // disertakan di SETIAP dbCollectData(), termasuk yang dipanggil
+      // autosave, supaya link Drive yang sudah ada TIDAK PERNAH tertimpa
+      // kosong oleh save berikutnya.
+      wordDriveUrl: jsaDriveInfo.wordDriveUrl,
+      wordDriveFileId: jsaDriveInfo.wordDriveFileId
     }
   };
 }
 
 function applyRecordToForm(rec) {
   var d = rec.data || {};
+  jsaDriveInfo.wordDriveUrl = d.wordDriveUrl || '';
+  jsaDriveInfo.wordDriveFileId = d.wordDriveFileId || '';
   document.getElementById('jsaEquipTag').value = d.equipTag || '';
   document.getElementById('jsaWorkToBeDone').value = d.workToBeDone || '';
   document.getElementById('jsaWorkMethod').value = d.workMethod || '';
@@ -1084,8 +1113,45 @@ function applyRecordToForm(rec) {
   jsaRefreshAllSignaturePreviews(); // aman dipanggil walau library belum kelar load -- jsaLoadSignatureLibrary() akan refresh ulang begitu selesai
 }
 
+// Pakai bentuk EKSPLISIT dbSave() (bukan dbSave('JSA Report') polos) SUPAYA
+// bisa dikasih callback -- bentuk simple-call dbSave() TIDAK mendukung
+// callback sama sekali (lihat definisinya di shared.js). Callback ini yang
+// memicu auto-generate+upload-ke-Drive TANPA download lokal begitu Simpan
+// sukses (permintaan eksplisit user 2026-09-09: "Simpan = Simpan - Generate
+// - Tanpa download").
 function jsaSaveDraft() {
-  dbSave('JSA Report');
+  var rec = dbCollectData('JSA Report');
+  if (!rec) return;
+  dbSave(rec.modul, rec.tanggal, rec.pic, rec.work_order, 'Unit 7', rec.data, window._editingId, function() {
+    jsaAfterSaveGenerateToDrive();
+  });
+}
+
+// Buka/kunci tombol "⬇ Download .docx" -- HANYA aktif kalau record ini
+// SUDAH tersimpan (window._editingId ada isinya). Permintaan eksplisit
+// user: semua harus tergenerate+tersimpan dulu sebelum bisa didownload.
+function jsaUpdateDownloadButtonState() {
+  var btn = document.getElementById('jsaDownloadBtn');
+  if (!btn) return;
+  btn.disabled = !window._editingId;
+}
+
+// Dipanggil SETELAH dbSave() (lewat jsaSaveDraft) sukses -- generate Word
+// dari isian SAAT INI + upload ke Google Drive (pola SAMA PERSIS dgn yang
+// dipakai tombol Download, lihat jsaUploadWordToDrive()), TAPI TANPA
+// jsaDownloadBlob() -- tidak ada file yang di-trigger-download ke
+// perangkat user. Tujuannya: begitu Simpan sukses, tombol "📎 Preview in
+// Drive" di jsa_history.html SUDAH langsung tersedia tanpa perlu klik
+// Download terpisah.
+function jsaAfterSaveGenerateToDrive() {
+  jsaUpdateDownloadButtonState();
+  var form = jsaCollectFormValues();
+  jsaBuildWordBlob(form).then(function(blob) {
+    var filename = jsaBuildFilename(form);
+    jsaUploadWordToDrive(blob, filename, false);
+  }).catch(function(err) {
+    console.error('[jsa] auto-generate Word setelah Simpan gagal', err);
+  });
 }
 
 // Reset SEMUA isian ke kosong + lepas ikatan ke record lama (window._editingId)
@@ -1106,6 +1172,8 @@ function jsaResetAll() {
   jsaState.riskCategory = '';
   jsaState.controlMeasures = {};
   jsaState.additionalMeasures = [''];
+  jsaDriveInfo.wordDriveUrl = '';
+  jsaDriveInfo.wordDriveFileId = '';
   jsaRenderSections();
   jsaRenderChecklist();
   jsaRenderControlMeasures();
@@ -1114,6 +1182,7 @@ function jsaResetAll() {
   jsaRefreshAllSignaturePreviews();
   window._editingId = null;
   window._raDirty = false;
+  jsaUpdateDownloadButtonState();
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
@@ -1130,6 +1199,7 @@ function restoreDraftData(rec, editingId) {
   if (!rec) return;
   applyRecordToForm(rec);
   if (editingId) window._editingId = editingId;
+  jsaUpdateDownloadButtonState();
   if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
 }
 
@@ -1142,6 +1212,7 @@ function restoreDraftData(rec, editingId) {
     if (!rec) return;
     applyRecordToForm(rec);
     window._editingId = id;
+    jsaUpdateDownloadButtonState();
     if (typeof dbShowToast === 'function') dbShowToast('Data dimuat dari riwayat ✓');
     // ?autodownload=1 -- dipakai jsa_history.html (tombol "Download") lewat
     // iframe tersembunyi: begitu record selesai dimuat ke form, langsung
@@ -1953,6 +2024,15 @@ function jsaBuildWordBlob(form) {
 }
 
 function jsaGenerateWord() {
+  // Gerbang WAJIB: tombol ini seharusnya sudah `disabled` di DOM kalau
+  // belum pernah Simpan (lihat jsaUpdateDownloadButtonState()), tapi guard
+  // eksplisit ini tetap dipasang jaga-jaga (mis. dipanggil programatik
+  // lewat jalur lain di masa depan) -- permintaan eksplisit user: semua
+  // WAJIB tergenerate+tersimpan dulu sebelum bisa didownload.
+  if (!window._editingId) {
+    alert('Simpan data ke database dulu (tombol "💾 Simpan Draft Ke Database") sebelum bisa Download .docx.');
+    return;
+  }
   var form = jsaCollectFormValues();
   var btn = event && event.target ? event.target : null;
   var origText = btn ? btn.innerHTML : '';
@@ -1967,13 +2047,14 @@ function jsaGenerateWord() {
   jsaBuildWordBlob(form).then(function(blob) {
     var filename = jsaBuildFilename(form);
     jsaDownloadBlob(blob, filename);
-    jsaUploadWordToDrive(blob, filename); // best-effort, tidak di-await -- lihat komentar fungsinya
+    jsaUploadWordToDrive(blob, filename, true); // best-effort, tidak di-await -- lihat komentar fungsinya
     if (typeof dbShowToast === 'function') dbShowToast('✓ Word berhasil dibuat & diunduh');
   }).catch(function(err) {
     console.error('[jsa] generate word gagal', err);
     alert('Gagal membuat Word: ' + (err && err.message ? err.message : err));
   }).then(function() {
-    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+    if (btn) { btn.innerHTML = origText; }
+    jsaUpdateDownloadButtonState();
   });
 }
 
@@ -2025,7 +2106,12 @@ function jsaEnsureSaved() {
 // fileId APA PUN) setelah upload baru sukses, supaya tidak menumpuk salinan
 // basi tiap kali user Generate Word ulang berkali-kali. Butuh backend Apps
 // Script yang sudah terima field `mimeType` opsional -- lihat CLAUDE.md.
-function jsaUploadWordToDrive(blob, filename) {
+// `downloadedLocally` (true dari jsaGenerateWord()/tombol Download, false
+// dari jsaAfterSaveGenerateToDrive()/tombol Simpan) MENENTUKAN teks
+// alert/toast -- Simpan TIDAK PERNAH trigger download lokal, jadi pesan
+// "Word sudah berhasil didownload..." akan SALAH/membingungkan kalau
+// dipakai apa adanya di jalur itu.
+function jsaUploadWordToDrive(blob, filename, downloadedLocally) {
   jsaEnsureSaved().then(function(id) {
     return jsaBlobToDataUrl(blob).then(function(dataUrl) {
       return uploadFileToGDrive(dataUrl, filename, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', window.CURRENT_MODUL, '');
@@ -2048,6 +2134,13 @@ function jsaUploadWordToDrive(blob, filename) {
         if (!row) throw new Error('Record tidak ditemukan setelah disimpan (id=' + id + ').');
         var oldFileId = row.data && row.data.wordDriveFileId;
         var merged = Object.assign({}, row.data || {}, { wordDriveUrl: result.fileUrl, wordDriveFileId: result.fileId });
+        // 🔴 BUG KE-3 ditemukan 2026-09-11 (lihat komentar panjang di deklarasi
+        // jsaDriveInfo): update jsaDriveInfo DI SINI juga -- bukan cuma di
+        // database -- supaya dbCollectData() (dipanggil autosave/Simpan
+        // berikutnya) langsung tahu link Drive yang baru ini dan ikut
+        // menyertakannya, TIDAK menimpanya balik jadi kosong.
+        jsaDriveInfo.wordDriveUrl = result.fileUrl;
+        jsaDriveInfo.wordDriveFileId = result.fileId;
         // 🔴 BUG KE-2 ditemukan 2026-09-09: _pmPatchRecordWithRetry() (shared.js)
         // SENGAJA didesain utk pemakaian LAIN (raSendFinalPdfToFirebaseDashboard)
         // yang boleh "coba 3x lalu diam-diam menyerah" (ada mekanisme retry
@@ -2063,9 +2156,21 @@ function jsaUploadWordToDrive(blob, filename) {
         });
       });
     });
+  }).then(function() {
+    // Jalur Simpan (tidak ada download lokal) belum py toast sukses apa
+    // pun sejauh ini -- kasih tahu di sini. Jalur Download sudah py toast
+    // suksesnya sendiri lebih awal di jsaGenerateWord() (independen dari
+    // hasil upload Drive), jadi TIDAK perlu toast kedua di sini.
+    if (!downloadedLocally && typeof dbShowToast === 'function') {
+      dbShowToast('✓ Word ter-generate & tersimpan ke Google Drive');
+    }
   }).catch(function(err) {
     console.error('[jsa] upload Word ke Drive gagal (non-fatal):', err);
-    alert('Word sudah berhasil didownload ke perangkat, TAPI GAGAL disalin ke Google Drive (jadi tidak akan muncul tombol "Preview in Drive" di JSA History).\n\nCoba klik "📄 Generate Word" sekali lagi untuk mencoba ulang.\n\nDetail: ' + (err && err.message ? err.message : err));
+    if (downloadedLocally) {
+      alert('Word sudah berhasil didownload ke perangkat, TAPI GAGAL disalin ke Google Drive (jadi tidak akan muncul tombol "Preview in Drive" di JSA History).\n\nCoba klik "⬇ Download .docx" sekali lagi untuk mencoba ulang.\n\nDetail: ' + (err && err.message ? err.message : err));
+    } else {
+      alert('Data berhasil disimpan, TAPI GAGAL menggenerate/menyalin dokumen Word ke Google Drive (jadi tidak akan muncul tombol "Preview in Drive" di JSA History sampai berhasil).\n\nCoba Simpan lagi, atau klik "⬇ Download .docx".\n\nDetail: ' + (err && err.message ? err.message : err));
+    }
   });
 }
 
