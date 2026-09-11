@@ -1,7 +1,7 @@
 name: RA Status Notify Poll
 
 # Jaring pengaman notifikasi Telegram reviewed/approved -- jalan otomatis
-# tiap 5 menit TANPA butuh siapa pun buka history.html. Aman dijalankan
+# tiap 10 menit TANPA butuh siapa pun buka history.html. Aman dijalankan
 # berbarengan dengan browser yang lagi buka history.html; keduanya manggil
 # RPC Supabase yang sama, yang sudah pakai klaim atomik supaya tidak ada
 # notif dobel. SEKALIGUS ngecek kesehatan Supabase & kirim alert Telegram
@@ -15,12 +15,12 @@ name: RA Status Notify Poll
 # tidak butuh token di sini).
 #
 # 🔴 `schedule:` di bawah TERBUKTI TIDAK BISA DIANDALKAN (telat 1.5-5+ jam
-# terus-menerus di praktiknya, bukan tiap 5 menit -- lihat CLAUDE.md 2026-
+# terus-menerus di praktiknya, bukan tiap X menit -- lihat CLAUDE.md 2026-
 # 09-04). Trigger UTAMA yang sebenarnya sekarang: layanan cron EKSTERNAL
 # (cron-job.org, job "AUTO REFRESH HISTORY") yang memanggil REST API
-# workflow_dispatch tiap 5 menit pakai GitHub fine-grained PAT (scope
-# Actions:R/W, dibatasi ke repo ini saja) -- trigger via API jalan LANGSUNG
-# tanpa antre, beda dari `schedule:` yang dijadwalkan GitHub sendiri.
+# workflow_dispatch pakai GitHub fine-grained PAT (scope Actions:R/W,
+# dibatasi ke repo ini saja) -- trigger via API jalan LANGSUNG tanpa
+# antre, beda dari `schedule:` yang dijadwalkan GitHub sendiri.
 # `schedule:` di bawah SENGAJA TETAP DIBIARKAN sebagai fallback kalau
 # cron-job.org/token-nya bermasalah -- aman jalan berbarengan (idempotent,
 # lihat catatan klaim atomik RPC di atas). PAT itu PUNYA TANGGAL EXPIRED --
@@ -28,9 +28,28 @@ name: RA Status Notify Poll
 # Telegram H-3/H-2/H-1 otomatis, TAPI kalau lewat tanpa diperpanjang,
 # trigger eksternal berhenti diam-diam dan notifikasi balik telat berjam-
 # jam seperti sebelum ini dipasang.
+#
+# 🔴 2026-09-11: interval DINAIKKAN dari */5 ke */10 -- percobaan mengurangi
+# beban poller ke kuota Firestore project pomi-checksheet-e7 (RESOURCE_
+# EXHAUSTED berulang, lihat riwayat commit/CLAUDE.md 2026-09-10 &
+# 2026-09-11). CATATAN JUJUR: poller ini BUKAN konsumen kuota dominan --
+# dari perhitungan (kuota 50.000/hari habis dalam ~20 jam = ~2.500
+# read/jam, sedangkan poller di limit 50 dokumen/panggil cuma ~600
+# read/jam) -- Review Approval Dashboard asli (dipakai reviewer manusia
+# sepanjang hari) yang kemungkinan besar konsumen terbesarnya, BUKAN
+# poller ini. Menaikkan interval ini cuma mengurangi kontribusi poller
+# (dari ~14.400 jadi ~7.200 read/hari), TIDAK menjamin kuota tidak habis
+# lagi kalau Dashboard-nya sendiri yang dominan. Solusi PERMANEN yang
+# sebenarnya (upgrade project Firestore itu ke paket Blaze) di luar
+# kendali repo ini -- perlu pemilik akun Google project tsb (bukan user
+# PM-UNIT-7). ⚠️ SCHEDULE INI BUKAN TRIGGER UTAMA -- job "AUTO REFRESH
+# HISTORY" di cron-job.org (layanan eksternal, TIDAK ADA di repo ini)
+# JUGA HARUS diubah manual dari tiap 5 menit ke tiap 10 menit oleh user,
+# kalau tidak, trigger eksternal itu TETAP jalan tiap 5 menit dan
+# perubahan di file ini TIDAK BEREFEK sama sekali ke frekuensi nyata.
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch: {}
 
 jobs:
