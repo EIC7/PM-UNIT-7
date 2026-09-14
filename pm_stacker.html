@@ -1385,17 +1385,22 @@ function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, functi
    2 TAB independen (Stacker Reclaimer 1 & 2) -- 1 laporan/Simpan = 1 tab
    yang lagi aktif, modul yang dikirim ke DB dinamis "PM 1Monthly Stacker
    Reclaimer 1"/"...2" sesuai tab (lihat dbCollectData()). */
+// yText/nText (Step 3 & 9): baris "Alarm / No Alarm" -- Remark BUKAN
+// salinan Criteria mentah, tapi HASIL LOGIKA Y/N (Y="No Alarm", N="Alarm",
+// saling berkebalikan) sesuai permintaan eksplisit user. Baris lain (tanpa
+// yText/nText) tetap pola lama: Y -> salin Criteria apa adanya (lihat
+// stkSetCheck()/stkCheckAllY()).
 var STEP_DATA = [
   {no:1, activity:'Make sure PTW already issue.', criteria:'Ptw Issued', evidence:false},
   {no:2, activity:'Prepare tool & material required.', criteria:'Tool Ready', evidence:false},
-  {no:3, activity:'Check Alarm PLC', criteria:'Alarm / No Alarm', evidence:true},
+  {no:3, activity:'Check Alarm PLC', criteria:'Alarm / No Alarm', evidence:true, yText:'No Alarm', nText:'Alarm'},
   {no:4, activity:'Cleaning PLC ABB 800M and Cabinet IO', criteria:'Clean', evidence:true},
   {no:5, activity:'Cleaning outside/inside all of panel use soft cloth/purging with low ultra dryer.', criteria:'Clean', evidence:true},
   {no:6, activity:'Cleaning Panel PLC', criteria:'Clean', evidence:true},
   {no:7, activity:'Cleaning Monitor Display / HMI', criteria:'Clean', evidence:true},
   {no:8, activity:'Cleaning PLC Cabin', criteria:'Clean', evidence:true},
-  {no:9, activity:'Check Alarm HMI', criteria:'Alarm / No Alarm', evidence:true},
-  {no:10, activity:'Cleaning Control lokal', criteria:'Clean', evidence:true},
+  {no:9, activity:'Check Alarm HMI', criteria:'Alarm / No Alarm', evidence:true, yText:'No Alarm', nText:'Alarm'},
+  {no:10, activity:'Cleaning Local Control', criteria:'Clean', evidence:true},
   {no:11, activity:'Lamp Test', criteria:'Lamp Test Oke', evidence:true},
   {no:12, activity:'Make sure all cables connected correctly to the ports.', criteria:'All Cable Connected', evidence:false},
   {no:13, activity:'Leave the location within safe condition.', criteria:'Completed', evidence:false}
@@ -1481,7 +1486,17 @@ function buildChecklistTable() {
 function stkSetCheck(idx, val) {
   var row = STK.checklist[STK.currentTab][idx];
   row.check = (row.check === val) ? '' : val;
-  if (row.check === 'Y' && !row.remark) row.remark = STEP_DATA[idx].criteria;
+  var step = STEP_DATA[idx];
+  if (step.yText || step.nText) {
+    // Baris Y/N berkebalikan (mis. Alarm/No Alarm) -- Remark SELALU jadi
+    // HASIL LOGIKA Y/N, jadi SELALU ditimpa mengikuti pilihan terakhir
+    // (beda dari baris biasa di bawah yang cuma isi kalau kosong).
+    if (row.check === 'Y') row.remark = step.yText || step.criteria;
+    else if (row.check === 'N') row.remark = step.nText || '';
+    // row.check === '' (toggle lepas) -> remark dibiarkan apa adanya
+  } else if (row.check === 'Y' && !row.remark) {
+    row.remark = step.criteria;
+  }
   buildChecklistTable();
 }
 function stkSetRemark(idx, val) {
@@ -1490,7 +1505,9 @@ function stkSetRemark(idx, val) {
 function stkCheckAllY() {
   STK.checklist[STK.currentTab].forEach(function(r, idx){
     r.check = 'Y';
-    if (!r.remark) r.remark = STEP_DATA[idx].criteria;
+    var step = STEP_DATA[idx];
+    if (step.yText) r.remark = step.yText;
+    else if (!r.remark) r.remark = step.criteria;
   });
   buildChecklistTable();
 }
