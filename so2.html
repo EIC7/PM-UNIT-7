@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260911d"></script>
+<script src="shared.js?v=20260914a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -140,12 +140,6 @@
       <div class="meta-field"><label>Serial Number</label><input type="text" id="s2SN" value="18944251"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="s2PIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="s2WO" placeholder="Work Order..."></div>
-      <div class="meta-field"><label>Checked By - Technician</label>
-        <select id="s2CheckedBy">
-          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-        </select>
-      </div>
     </div>
   </div>
 
@@ -2121,7 +2115,7 @@ function dbCollectData(modul) {
     };
   });
   var analyzer={aDCS:gv2('s2aDCS'),aLocal:gv2('s2aLocal'),aZero:gv2('s2aZero'),aSpan:gv2('s2aSpan'),aBefore:gv2('s2aBefore'),aAfter:gv2('s2aAfter'),cDCS:gv2('s2cDCS'),cLocal:gv2('s2cLocal'),cZero:gv2('s2cZero'),cSpan:gv2('s2cSpan'),cBefore:gv2('s2cBefore'),cAfter:gv2('s2cAfter')};
-  return {modul:'SO2 Scrubber Inlet', tanggal:gv2('s2Date'), pic:gv2('s2PIC'), work_order:gv2('s2WO'), unit:'Unit 7', data:{checks:checks,analyzer:analyzer,notes:{note7A:gv2('s2Note7A'),note7B:gv2('s2Note7B')},checkedBy:gv2('s2CheckedBy'),photos:so2Photos}};
+  return {modul:'SO2 Scrubber Inlet', tanggal:gv2('s2Date'), pic:gv2('s2PIC'), work_order:gv2('s2WO'), unit:'Unit 7', data:{checks:checks,analyzer:analyzer,notes:{note7A:gv2('s2Note7A'),note7B:gv2('s2Note7B')},photos:so2Photos}};
 }
 
 /* ── AUTOSAVE DRAFT (pola shared.js) ── */
@@ -2132,7 +2126,6 @@ function applyRecordToForm(rec, editingId) {
   if (editingId) window._editingId = editingId;
   var gv=function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
   gv('s2Date',rec.tanggal); gv('s2PIC',rec.pic); gv('s2WO',rec.work_order);
-  if (data.checkedBy) gv('s2CheckedBy', data.checkedBy);
   if (data.analyzer) { var a=data.analyzer; gv('s2aDCS',a.aDCS);gv('s2aLocal',a.aLocal);gv('s2aZero',a.aZero);gv('s2aSpan',a.aSpan);gv('s2aBefore',a.aBefore);gv('s2aAfter',a.aAfter);gv('s2cDCS',a.cDCS);gv('s2cLocal',a.cLocal);gv('s2cZero',a.cZero);gv('s2cSpan',a.cSpan);gv('s2cBefore',a.cBefore);gv('s2cAfter',a.cAfter); }
   if (data.notes) { gv('s2Note7A',data.notes.note7A||''); gv('s2Note7B',data.notes.note7B||''); }
   if (data.checks) {

@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260911d"></script>
+<script src="shared.js?v=20260914a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -155,12 +155,6 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       <div class="meta-field"><label>Date</label><input type="date" id="csDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="csPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="csWO" placeholder="Work Order..."></div>
-      <div class="meta-field"><label>Checked By - Technician</label>
-        <select id="csCheckedBy">
-          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-        </select>
-      </div>
     </div>
     <div class="meta-field" style="margin-top:10px">
       <label>Work To Be Done</label>
@@ -2054,7 +2048,7 @@ function dbCollectData(modul){
     pic:gv('csPIC'),
     work_order:gv('csWO'),
     unit:'Unit 7',
-    data:{activeUnits:Object.keys(csActiveUnits).filter(function(k){return csActiveUnits[k];}),steps:steps,images:images,notes:notes,workToBeDone:gv('csWTBD'),checkedBy:gv('csCheckedBy'),tabMode:window.csTabMode}
+    data:{activeUnits:Object.keys(csActiveUnits).filter(function(k){return csActiveUnits[k];}),steps:steps,images:images,notes:notes,workToBeDone:gv('csWTBD'),tabMode:window.csTabMode}
   };
 }
 
@@ -2366,7 +2360,6 @@ function applyRecordToForm(rec, editingId) {
   var sv=function(eid,val){var e=document.getElementById(eid);if(e)e.value=val||'';};
   sv('csDate',rec.tanggal); sv('csPIC',rec.pic); sv('csWO',rec.work_order);
   sv('csWTBD', data.workToBeDone);
-  if (data.checkedBy) sv('csCheckedBy', data.checkedBy);
 
   // Restore active units
   if(data.activeUnits&&data.activeUnits.length){

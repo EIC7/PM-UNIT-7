@@ -1872,6 +1872,10 @@ function normalizeModul(name) {
   if (n.indexOf('PH')>=0 || n.indexOf('TRANSMITTER')>=0 || n.indexOf('AIT')>=0 || n.indexOf('ANALYZER')>=0) return 'PH-ANALYZER';
   if (n.indexOf('ID FAN')>=0 || n.indexOf('ID_FAN')>=0 || n.indexOf('LINE PURGING')>=0 || n.indexOf('LINE_PURGING')>=0) return 'ID_FAN_LINE_PURGING';
   if (n.indexOf('FLOW SWITCH')>=0 || n.indexOf('FLOW_SWITCH')>=0) return 'FLOW_SWITCH';
+  // Modul pm_stacker.html dinamis per tab ("PM 1Monthly Stacker Reclaimer
+  // 1"/"...2") -- keduanya dinormalisasi ke 1 key yang sama karena dibuka
+  // lewat file & area yang sama (common/CHCB, lihat RA_MODUL_AREA di bawah).
+  if (n.indexOf('STACKER')>=0) return 'PM_STACKER';
   return n;
 }
 
@@ -1908,6 +1912,7 @@ function raModulToUrl(modul, id) {
   if (norm === 'JSA_REPORT')            return 'jsa_report.html?id=' + id;
   if (norm === 'JSA_CONDITION_ACCESS')  return 'jsa_condition_access.html?id=' + id;
   if (norm === 'FLOW_SWITCH')           return 'flow-switch.html?id=' + id;
+  if (norm === 'PM_STACKER')            return 'pm_stacker.html?id=' + id;
   return 'index.html';
 }
 function raModulToPrintUrl(modul, id) {
@@ -2881,7 +2886,7 @@ var RA_ASSET_LABEL = {
 var RA_MODUL_AREA = {
   FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
   COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler', ID_FAN_LINE_PURGING: 'boiler',
-  BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common', CEC_CONSOLE_CHCB: 'common',
+  BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common', CEC_CONSOLE_CHCB: 'common', PM_STACKER: 'common',
   'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp', CEC_CONSOLE_WWTP: 'wwtp',
   GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
   // MAINTENANCE_REPORT dan FLOW_SWITCH SENGAJA TIDAK ada di sini -- keduanya

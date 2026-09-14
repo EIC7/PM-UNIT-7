@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260911d"></script>
+<script src="shared.js?v=20260914a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -410,13 +410,6 @@ body{
       <div class="meta-field">
         <label>Program Maintenance</label>
         <input type="text" id="dcsProgram" value="JP-DROP" placeholder="JP-DROP...">
-      </div>
-      <div class="meta-field">
-        <label>Checked By - Technician</label>
-        <select id="dcsCheckedBy">
-          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-        </select>
       </div>
     </div>
   </div>
@@ -2574,7 +2567,6 @@ function dbCollectData(modul) {
     unit:       gv('dcsUnit'),
     data: {
       program:  gv('dcsProgram'),
-      checkedBy: gv('dcsCheckedBy'),
       activeDrops: DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; }).map(function(d){ return d.id; }),
       checks:   checks,
       notes:    { general: gv('dcsNoteGeneral'), defect: gv('dcsNoteDefect') },
@@ -2596,7 +2588,6 @@ function applyRecordToForm(rec, editingId) {
   sv('dcsWO',      rec.work_order || data.work_order || '');
   sv('dcsUnit',    rec.unit       || data.unit       || 'U7');
   sv('dcsProgram', data.program   || 'JP-DROP');
-  if (data.checkedBy) sv('dcsCheckedBy', data.checkedBy);
   if (data.notes){ sv('dcsNoteGeneral',data.notes.general||''); sv('dcsNoteDefect',data.notes.defect||''); }
   if (data.images){
     var mapImg = function(i){ return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||'',widthCm:i.widthCm,heightCm:i.heightCm,offsetX:i.offsetX||0}; };

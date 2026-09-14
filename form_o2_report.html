@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260911d"></script>
+<script src="shared.js?v=20260914a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -171,12 +171,6 @@
       <div class="meta-field"><label>Tanggal</label><input type="date" id="o2Tanggal"></div>
       <div class="meta-field"><label>Asset</label><input type="text" id="o2Asset" placeholder="Nama / kode asset..."></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="o2Pic" placeholder="Nama PIC..."></div>
-      <div class="meta-field"><label>Checked By - Technician</label>
-        <select id="o2CheckedBy">
-          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-        </select>
-      </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
       <div class="meta-field"><label>Asset Description</label><textarea id="o2AssetDesc" rows="2" placeholder="Deskripsi asset..."></textarea></div>
@@ -2355,8 +2349,7 @@ function dbCollectData(modul) {
     assetDesc: document.getElementById('o2AssetDesc').value || '—',
     workToBeDone: document.getElementById('o2WorkToBeDone').value || '—',
     frequency: o2SelectedFreq.slice(),
-    pic: document.getElementById('o2Pic').value || '—',
-    checkedBy: document.getElementById('o2CheckedBy').value || ''
+    pic: document.getElementById('o2Pic').value || '—'
   };
   o2SyncAllCaptions();
   var ki = function(img){
@@ -2428,7 +2421,6 @@ function applyRecordToForm(rec, editingId) {
   var wdEl = document.getElementById('o2WorkToBeDone'); if (wdEl && header.workToBeDone && header.workToBeDone !== '—') wdEl.value = header.workToBeDone;
   var pcEl = document.getElementById('o2Pic'); var picVal = rec.pic || header.pic || '';
   if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
-  var cbEl = document.getElementById('o2CheckedBy'); if (cbEl && header.checkedBy) cbEl.value = header.checkedBy;
 
   if (data.channels) {
     function restoreChannelData(channelList, prefix) {

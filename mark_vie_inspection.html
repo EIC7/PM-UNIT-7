@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260911d"></script>
+<script src="shared.js?v=20260914a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -123,12 +123,6 @@
       <div class="meta-field"><label>Tanggal</label><input type="date" id="mvTanggal"></div>
       <div class="meta-field"><label>Work Order</label><input type="text" id="mvWorkorder" placeholder="No. Work Order..."></div>
       <div class="meta-field"><label>PIC / Inspector</label><input type="text" id="mvPIC" placeholder="Nama PIC..."></div>
-      <div class="meta-field"><label>Checked By - Technician</label>
-        <select id="mvCheckedBy">
-          <option value="Zaini Nur Hidayat">Zaini Nur Hidayat</option>
-          <option value="Isyana Ray Sasongko">Isyana Ray Sasongko</option>
-        </select>
-      </div>
       <div class="meta-field"><label>Asset Tag</label><input type="text" id="mvAssetTag" placeholder="7TG-CAB-MKVI" value="7TG-CAB-MKVI"></div>
       <div class="meta-field"><label>Asset Description</label><input type="text" id="mvAssetDesc" placeholder="Main Turbine Control Cabinet Unit 7 Mark VIe" value="Main Turbine Control Cabinet Unit 7 Mark VIe"></div>
     </div>
@@ -1784,8 +1778,7 @@ function dbCollectData(modul) {
     workorder: document.getElementById('mvWorkorder').value || '—',
     pic: document.getElementById('mvPIC').value || '—',
     assetTag: document.getElementById('mvAssetTag').value || '—',
-    assetDesc: document.getElementById('mvAssetDesc').value || '—',
-    checkedBy: document.getElementById('mvCheckedBy').value || ''
+    assetDesc: document.getElementById('mvAssetDesc').value || '—'
   };
   var ki = function(img){
     var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg'};
@@ -1835,7 +1828,6 @@ function applyRecordToForm(rec, editingId) {
   if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
   var atEl = document.getElementById('mvAssetTag'); if (atEl && header.assetTag && header.assetTag !== '—') atEl.value = header.assetTag;
   var adEl = document.getElementById('mvAssetDesc'); if (adEl && header.assetDesc && header.assetDesc !== '—') adEl.value = header.assetDesc;
-  var cbEl = document.getElementById('mvCheckedBy'); if (cbEl && header.checkedBy) cbEl.value = header.checkedBy;
 
   if (data.items && data.items.length === mvState.length) {
     data.items.forEach(function(it, i){
