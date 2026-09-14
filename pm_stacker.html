@@ -146,6 +146,9 @@
   <div class="panel">
     <div class="section-label">Informasi Pekerjaan</div>
     <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <div class="meta-field"><label>Asset</label><input type="text" id="hAsset" placeholder="Kode Asset..."></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="hAssetDesc" placeholder="Deskripsi Asset..."></div>
+      <div class="meta-field"><label>Work To Be Done</label><input type="text" id="hWorkToBeDone" placeholder="Pekerjaan yang dilakukan..."></div>
       <div class="meta-field"><label>Date/Time</label><input type="date" id="hTanggal"></div>
       <div class="meta-field"><label>Location</label><input type="text" id="hLocation" placeholder="Mis. Switch Room / Panel / Cabin..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="hWorkOrder" placeholder="No. Work Order..."></div>
@@ -1406,9 +1409,26 @@ function freshChecklist() { return STEP_DATA.map(function(s){ return {no:s.no, c
    defect), supaya bisa reuse APA ADANYA seluruh mesin galeri thumbnail
    (Fitur O Urutkan Foto, Fitur D Geser Posisi, Fitur C Crop Ulang, Fitur M
    upload Drive) yang sudah dibangun & diuji di flow-switch.html. */
+// Asset & Asset Description TETAP per tab (2 mesin fisik berbeda), Work To
+// Be Done SAMA untuk keduanya -- diisi otomatis begitu tab dipilih (lihat
+// stkFreshInfo()), TAPI field-nya tetap bisa diedit manual kalau perlu
+// (bukan readonly, pola sama dengan Asset 7A/7B di opacity.html).
+var STK_ASSET_DEFAULTS = {
+  1: { asset: 'CCH-STRC-100A', assetDesc: 'STACKER / RECLAIMER 1' },
+  2: { asset: 'CCH-STRC-100B', assetDesc: 'STACKER / RECLAIMER 2' }
+};
+var STK_WORK_TO_BE_DONE = '1 Monthly - General PM & cleaning for switch room, panel, cabin';
+function stkFreshInfo(tab) {
+  return {
+    tanggal:'', location:'', workOrder:'', pic:'',
+    asset: STK_ASSET_DEFAULTS[tab].asset,
+    assetDesc: STK_ASSET_DEFAULTS[tab].assetDesc,
+    workToBeDone: STK_WORK_TO_BE_DONE
+  };
+}
 var STK = {
   currentTab: 1,
-  info: {1: {tanggal:'',location:'',workOrder:'',pic:''}, 2: {tanggal:'',location:'',workOrder:'',pic:''}},
+  info: {1: stkFreshInfo(1), 2: stkFreshInfo(2)},
   checklist: {1: freshChecklist(), 2: freshChecklist()},
   defects: {1: [], 2: []}
 };
@@ -1455,16 +1475,23 @@ function buildChecklistTable() {
 }
 // Klik Y/N lagi (sudah aktif) -> lepas jadi kosong (belum dijawab) -- toggle
 // beneran, bukan cuma pilih-salah-satu-permanen.
+// Centang Y -> isi Remark otomatis dengan teks Criteria baris itu, TAPI
+// cuma kalau Remark-nya masih kosong -- supaya tidak menimpa catatan yang
+// sudah diketik manual user (pola sama dengan defRemark di flow-switch.html).
 function stkSetCheck(idx, val) {
   var row = STK.checklist[STK.currentTab][idx];
   row.check = (row.check === val) ? '' : val;
+  if (row.check === 'Y' && !row.remark) row.remark = STEP_DATA[idx].criteria;
   buildChecklistTable();
 }
 function stkSetRemark(idx, val) {
   STK.checklist[STK.currentTab][idx].remark = val;
 }
 function stkCheckAllY() {
-  STK.checklist[STK.currentTab].forEach(function(r){ r.check = 'Y'; });
+  STK.checklist[STK.currentTab].forEach(function(r, idx){
+    r.check = 'Y';
+    if (!r.remark) r.remark = STEP_DATA[idx].criteria;
+  });
   buildChecklistTable();
 }
 
@@ -1490,7 +1517,10 @@ function stkSaveInfoFromDom(tab) {
     tanggal: document.getElementById('hTanggal').value || '',
     location: document.getElementById('hLocation').value || '',
     workOrder: document.getElementById('hWorkOrder').value || '',
-    pic: document.getElementById('hPic').value || ''
+    pic: document.getElementById('hPic').value || '',
+    asset: document.getElementById('hAsset').value || '',
+    assetDesc: document.getElementById('hAssetDesc').value || '',
+    workToBeDone: document.getElementById('hWorkToBeDone').value || ''
   };
 }
 function stkLoadInfoToDom(tab) {
@@ -1499,6 +1529,9 @@ function stkLoadInfoToDom(tab) {
   document.getElementById('hLocation').value = info.location || '';
   document.getElementById('hWorkOrder').value = info.workOrder || '';
   document.getElementById('hPic').value = info.pic || '';
+  document.getElementById('hAsset').value = info.asset || STK_ASSET_DEFAULTS[tab].asset;
+  document.getElementById('hAssetDesc').value = info.assetDesc || STK_ASSET_DEFAULTS[tab].assetDesc;
+  document.getElementById('hWorkToBeDone').value = info.workToBeDone || STK_WORK_TO_BE_DONE;
 }
 
 /* ══════════════════ EVIDENCE PER STEP (9 blok, gaya drag&drop opacity.html)
@@ -1764,7 +1797,7 @@ function resetAll() {
   if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
   [1,2].forEach(function(tab){
-    STK.info[tab] = {tanggal:'', location:'', workOrder:'', pic:''};
+    STK.info[tab] = stkFreshInfo(tab);
     STK.checklist[tab] = freshChecklist();
     STK.defects[tab] = [];
     stkClearEvidenceGalleriesForTab(tab);
@@ -1889,30 +1922,55 @@ function buildAndShowPdf() {
 
   // ═══ INFORMASI PEKERJAAN — grid full-width Label|Value ═══
   drawInfoGrid([
+    ['Asset', document.getElementById('hAsset').value],
+    ['Asset Description', document.getElementById('hAssetDesc').value],
+    ['Work To Be Done', document.getElementById('hWorkToBeDone').value],
     ['Date/Time', document.getElementById('hTanggal').value],
     ['Location', document.getElementById('hLocation').value],
     ['Work Order Ref.', document.getElementById('hWorkOrder').value],
     ['PIC', document.getElementById('hPic').value]
   ], 45);
 
-  // CHECKLIST -- kolom Check cuma 1 (isi teks 'Y'/'N', diwarnai via
-  // didParseCell), BUKAN vektor checkbox 2-kolom seperti flow-switch.html --
-  // sesuai konfirmasi user Excel-nya cuma 1 kolom "Check" isi "Y/N".
+  // Fitur N (varian): kolom Check digambar sebagai icon vektor -- centang
+  // hijau kalau Y, silang/X merah kalau BUKAN Y (N atau belum dijawab).
+  // BEDA dari drawCheckboxBs standar (kotak kosong utk unchecked) --
+  // sesuai permintaan eksplisit user ("jika tidak dicentang maka icon x").
+  // Ukuran ikut pola flow-switch.html (Math.min(w*0.45,4.5), independen
+  // dari tinggi baris h supaya konsisten antar baris Remark yang panjang-
+  // pendeknya beda-beda).
+  function drawCheckIcon(doc, x, y, w, h, isChecked) {
+    var size = Math.min(w * 0.45, 4.5);
+    var bx = x + w/2 - size/2, by = y + h/2 - size/2;
+    doc.setLineWidth(0.6);
+    if (isChecked) {
+      doc.setDrawColor(30,140,74); doc.setFillColor(46,204,113);
+      doc.rect(bx, by, size, size, 'FD');
+      doc.setDrawColor(255,255,255);
+      doc.line(bx+size*0.18, by+size*0.52, bx+size*0.40, by+size*0.76);
+      doc.line(bx+size*0.40, by+size*0.76, bx+size*0.84, by+size*0.22);
+    } else {
+      doc.setDrawColor(140,30,30); doc.setFillColor(204,60,60);
+      doc.rect(bx, by, size, size, 'FD');
+      doc.setDrawColor(255,255,255);
+      doc.line(bx+size*0.22, by+size*0.22, bx+size*0.78, by+size*0.78);
+      doc.line(bx+size*0.78, by+size*0.22, bx+size*0.22, by+size*0.78);
+    }
+  }
+
   secHeader('JOB PLAN INSPECTION');
   var checklistRows = STK.checklist[tab];
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:7.5, cellPadding:1.6, valign:'middle'}, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom},
     head: [['No','Step Of Work','Criteria','Check','Remark/Note']],
     body: STEP_DATA.map(function(step, idx){
       var r = checklistRows[idx];
-      return [step.no, step.activity, step.criteria, r.check || '-', safe(r.remark)];
+      return [step.no, step.activity, step.criteria, '', safe(r.remark)];
     }),
-    columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:66},2:{cellWidth:34},3:{cellWidth:14,halign:'center',fontStyle:'bold'},4:{cellWidth:48}},
-    didParseCell:function(d){
-      if (d.section==='body' && d.column.index===3) {
-        if (d.cell.raw === 'Y') d.cell.styles.textColor = [22,163,74];
-        else if (d.cell.raw === 'N') d.cell.styles.textColor = [220,38,38];
-        else d.cell.styles.textColor = [150,150,150];
-      }
+    columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:66},2:{cellWidth:34},3:{cellWidth:14,halign:'center'},4:{cellWidth:48}},
+    didDrawCell:function(d){
+      if (d.section!=='body' || d.column.index!==3) return;
+      var r = checklistRows[d.row.index];
+      if (!r) return;
+      drawCheckIcon(doc, d.cell.x, d.cell.y, d.cell.width, d.cell.height, r.check === 'Y');
     },
     willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
@@ -2040,6 +2098,9 @@ function dbCollectData(modul) {
     unit: 'Unit 7',
     data: {
       tab: tab,
+      asset: document.getElementById('hAsset').value || '',
+      assetDesc: document.getElementById('hAssetDesc').value || '',
+      workToBeDone: document.getElementById('hWorkToBeDone').value || '',
       location: document.getElementById('hLocation').value || '',
       checklist: checklist,
       evidence: evidence,
@@ -2058,7 +2119,14 @@ function applyRecordToForm(rec, editingId) {
   STK.defects[tab] = [];
   stkClearEvidenceGalleriesForTab(tab);
 
-  STK.info[tab] = { tanggal: rec.tanggal || '', location: d.location || '', workOrder: rec.work_order || '', pic: rec.pic || '' };
+  STK.info[tab] = {
+    tanggal: rec.tanggal || '', location: d.location || '', workOrder: rec.work_order || '', pic: rec.pic || '',
+    // Fallback ke default per-tab (bukan string kosong) kalau record LAMA
+    // dibuat sebelum field Asset/Asset Description/Work To Be Done ada.
+    asset: d.asset || STK_ASSET_DEFAULTS[tab].asset,
+    assetDesc: d.assetDesc || STK_ASSET_DEFAULTS[tab].assetDesc,
+    workToBeDone: d.workToBeDone || STK_WORK_TO_BE_DONE
+  };
 
   if (Array.isArray(d.checklist) && d.checklist.length) {
     STK.checklist[tab].forEach(function(row, idx) {
