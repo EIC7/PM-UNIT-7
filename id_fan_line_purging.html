@@ -170,9 +170,9 @@
     </div>
   </div>
 
-  <!-- EVIDENCE: CLEANING PANEL (LANGKAH 4) -->
+  <!-- EVIDENCE: CLEANING PANEL (LANGKAH 5) -->
   <div class="panel">
-    <div class="section-label">Foto Evidence — Cleaning Panel (Langkah 4)</div>
+    <div class="section-label">Foto Evidence — Cleaning Panel (Langkah 5)</div>
     <button type="button" class="btn btn-outline" onclick="toggleSourceChoices('evSrcChoices_cleaning')">+ Tambah Foto</button>
     <div class="source-choices" id="evSrcChoices_cleaning" style="display:none;gap:8px;margin-top:8px">
       <button type="button" onclick="evTriggerSource('cleaning','camera')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>
@@ -182,9 +182,9 @@
     <div id="evCleaningList"></div>
   </div>
 
-  <!-- TABLE MEASUREMENT (LANGKAH 7) -->
+  <!-- TABLE MEASUREMENT (LANGKAH 8) -->
   <div class="panel">
-    <div class="section-label">Purging Line Flow Transmitter — Card Value (Langkah 7)</div>
+    <div class="section-label">Purging Line Flow Transmitter — Pengukuran (Langkah 8)</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="manual-table" id="t3Table" style="min-width:640px">
         <thead>
@@ -204,16 +204,11 @@
     </div>
   </div>
 
-  <!-- EVIDENCE: BEFORE/AFTER LINE PURGING (LANGKAH 7) -->
+  <!-- EVIDENCE: PURGING LINE FLOW TRANSMITTER (LANGKAH 8) -- 8 galeri dinamis,
+       lihat PURGING_EVIDENCE_GROUPS/renderPurgingEvidenceSections() -->
   <div class="panel">
-    <div class="section-label">Foto Evidence — Before/After Line Purging (Langkah 7)</div>
-    <button type="button" class="btn btn-outline" onclick="toggleSourceChoices('evSrcChoices_purging')">+ Tambah Foto</button>
-    <div class="source-choices" id="evSrcChoices_purging" style="display:none;gap:8px;margin-top:8px">
-      <button type="button" onclick="evTriggerSource('purging','camera')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>
-      <button type="button" onclick="evTriggerSource('purging','storage')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>
-    </div>
-    <input type="file" id="evFileInput_purging" accept="image/*" multiple style="display:none" onchange="evOnFileSelected('purging', event)">
-    <div id="evPurgingList"></div>
+    <div class="section-label">Foto Evidence — Purging Line Flow Transmitter (Langkah 8)</div>
+    <div id="purgingEvidenceContainer"></div>
   </div>
 
   <!-- CATATAN -->
@@ -1414,18 +1409,23 @@ function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, functi
 
 /* ═══ DATA MODUL — ID FAN FLOW TRANSMITTER LINE PURGING ═══ */
 
-/* Checklist (9 aktivitas, penomoran mengikuti sheet asli — tidak ada baris
-   "No 7" di checklist karena langkah 7 adalah tabel pengukuran terpisah,
-   lihat MEASUREMENT_DATA di bawah). Setiap baris punya 2 pasang checkbox
+/* Checklist (10 aktivitas, penomoran mengikuti sheet asli — tidak ada baris
+   "No 8" di checklist karena langkah 8 adalah tabel pengukuran + evidence
+   Purging Line Flow Transmitter terpisah, lihat MEASUREMENT_DATA/
+   PURGING_EVIDENCE_GROUPS di bawah). Setiap baris punya 2 pasang checkbox
    Pass/Fail independen: satu untuk 7BG-FT-933A, satu untuk 7BG-FT-933B. */
 /* yText/nText = keterangan otomatis yang diisi ke kolom Remarks begitu
    Pass (Y)/Fail (N) dipilih (lihat toggleChecklistFlag()/checkAllChecklistY()
    di bawah) -- kalimat lengkap yang menjelaskan hasil pemeriksaan baris itu,
    BUKAN cuma "Not"/"No" polos (contoh logika dari user, bukan teks final).
-   Poin 9 (Raise new WO) SENGAJA kebalikan makna: Pass = "tidak ada defect"
+   Poin 10 (Raise new WO) SENGAJA kebalikan makna: Pass = "tidak ada defect"
    (bagus), Fail = "ada defect, WO baru diajukan") -- lihat catatan di
    checkAllChecklistY() kenapa baris ini DIKECUALIKAN dari tombol Centang
-   Semua Y. */
+   Semua Y.
+   Nomor "8" SENGAJA dilewati (langkah 8 = tabel pengukuran + evidence
+   Purging Line Flow Transmitter, lihat MEASUREMENT_DATA/PURGING_EVIDENCE_GROUPS
+   di bawah) -- direvisi 2026-09-15, menambah 1 langkah baru (no.4) yang
+   menggeser semua nomor sesudahnya +1 dari susunan awal. */
 var CHECKLIST_DATA = [
   {no:1,  activity:'Make sure PTW already issue.', kriteria:'OK',
     yText:'PTW Sudah Diterbitkan dan Berlaku', nText:'PTW Belum Diterbitkan / Belum Berlaku'},
@@ -1433,48 +1433,68 @@ var CHECKLIST_DATA = [
     yText:'Tool & Material Sudah Disiapkan dan Siap Pakai', nText:'Tool & Material Belum Lengkap / Belum Siap'},
   {no:3,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading is on "hold / Forced" Condition before access.', kriteria:'Forced',
     yText:'Reading Sudah Di-Forced Sebelum Akses', nText:'Reading Belum Di-Forced, Akses Belum Aman Dilakukan'},
-  {no:4,  activity:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', kriteria:'Cleanliness',
+  {no:4,  activity:'Make sure the Blade pitch control is in Manual Operation, work alternately between ID Fan A and B.', kriteria:'Manual',
+    yText:'Blade Pitch Control Sudah Manual, Bekerja Bergantian ID Fan A/B', nText:'Blade Pitch Control Belum Manual / Belum Bekerja Bergantian A-B'},
+  {no:5,  activity:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', kriteria:'Cleanliness',
     yText:'Panel Sudah Dibersihkan, Kondisi Bersih', nText:'Panel Belum Dibersihkan / Masih Kotor'},
-  {no:5,  activity:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). *Replace if required.', kriteria:'No dust or dirty / No sign of water ingress / No broken condition',
+  {no:6,  activity:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). *Replace if required.', kriteria:'No dust or dirty / No sign of water ingress / No broken condition',
     yText:'Sealing & Conduit Dalam Kondisi Baik, Tidak Ada Debu/Air Masuk', nText:'Ditemukan Debu, Indikasi Air Masuk, atau Kondisi Rusak pada Sealing/Conduit'},
-  {no:6,  activity:'Check connection was tighted and no looses.', kriteria:'Tight Connection',
+  {no:7,  activity:'Check connection was tighted and no looses.', kriteria:'Tight Connection',
     yText:'Koneksi Sudah Kencang, Tidak Ada yang Kendor', nText:'Ditemukan Koneksi yang Kendor, Perlu Dikencangkan'},
-  {no:8,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading back to normal "Unforced".', kriteria:'Unforced',
+  {no:9,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading back to normal "Unforced".', kriteria:'Unforced',
     yText:'Reading Sudah Kembali Normal (Unforced)', nText:'Reading Belum Kembali Normal, Masih Dalam Kondisi Forced'},
-  {no:9,  activity:'Raise new WO & repair if any defect found.', kriteria:'OK',
+  {no:10, activity:'Raise new WO & repair if any defect found.', kriteria:'OK',
     yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
-  {no:10, activity:'Leave the location within safe condition.', kriteria:'OK',
+  {no:11, activity:'Leave the location within safe condition.', kriteria:'OK',
     yText:'Lokasi Kerja Sudah Ditinggalkan dalam Kondisi Aman dan Rapi', nText:'Lokasi Kerja Belum dalam Kondisi Aman / Masih Perlu Dirapikan'}
 ].map(function(r){
   return {no:r.no, activity:r.activity, kriteria:r.kriteria, yText:r.yText, nText:r.nText, passA:false, failA:false, passB:false, failB:false, remarks:''};
 });
 var ID_FAN_WORK_TO_BE_DONE = '3 Monthly - Inspect and make sure instrument air regulator for moving blade actuator is set at 5.5';
 
-/* Table Measurement — "Purging Line Flow Transmitter — Card Value" (Langkah 7).
-   2 parameter, tiap parameter punya 4 kolom angka: Before/After x 933A/933B.
-   Sengaja dibiarkan kosong (bukan contoh terisi) sebagai template kosong. */
+/* Table Measurement — "Purging Line Flow Transmitter" (Langkah 8).
+   4 parameter (Card Value & Flow sudah ada dari awal, Blade Pitch Control &
+   Inlet Pressure STALL ditambahkan 2026-09-15 -- lihat revisi user), tiap
+   parameter punya 4 kolom angka: Before/After x 933A/933B. Sengaja
+   dibiarkan kosong (bukan contoh terisi) sebagai template kosong. */
 var MEASUREMENT_DATA = [
   {parameter:'Card Value', unit:'mA'},
-  {parameter:'Flow', unit:'T/H'}
+  {parameter:'Flow', unit:'T/H'},
+  {parameter:'ID Fan Air Flow Blade Pitch Control', unit:'%'},
+  {parameter:'ID Fan Inlet Pressure STALL', unit:'KPaG'}
 ].map(function(r){
   return {parameter:r.parameter, unit:r.unit, beforeA:'', afterA:'', beforeB:'', afterB:''};
 });
 
-/* Dua galeri evidence independen (Langkah 4 = Cleaning Panel, Langkah 7 =
-   Before/After Line Purging), dikelola lewat 1 registry supaya fungsi
-   add/remove/render/crop-nya bisa dipakai bersama tanpa duplikasi kode dan
-   tanpa tabrakan id DOM (setiap elemen dibubuhi prefix gk = 'cleaning'/'purging'). */
-/* 2 galeri evidence (cleaning panel, before/after line purging) -- array
-   datar berisi objek foto {name,dataUrl,type,caption,offsetX,widthCm,
-   heightCm,driveFileId,driveUrl}, pola SAMA PERSIS dengan so2Photos/
-   renderPhotoGallery() di so2.html (thumbnail kecil 72x72 + Urutkan Foto/
-   Fitur O + Geser Posisi/Fitur D), BUKAN lagi "1 slot = 1 foto" seperti
-   sebelumnya -- diganti 2026-09-14 supaya bisa upload banyak foto sekaligus
-   (lihat CLAUDE.md redesign galeri Evidence flow-switch.html 2026-09-11,
-   pola yang sama diterapkan di sini). */
+/* Evidence Langkah 8 (Purging Line Flow Transmitter) dipecah jadi 8 galeri
+   terpisah (4 parameter x 2 flow transmitter, urutan: SEMUA parameter 933A
+   dulu baru SEMUA parameter 933B -- persis urutan yang diminta user), 1 per
+   kombinasi parameter+transmitter -- BUKAN 1 galeri gabungan seperti
+   sebelumnya, supaya foto before/after tiap parameter bisa dikelompokkan
+   jelas alih-alih bercampur semua jadi satu tumpukan. Dibangun dinamis
+   lewat renderPurgingEvidenceSections() (pola sama dengan
+   renderEvidenceSections() di pm_stacker.html) supaya tidak perlu menulis
+   ulang markup 8x. */
+var PURGING_EVIDENCE_GROUPS = [
+  {gk:'a_cardvalue',      label:'ID Fan A (7BG-FT-933A) — Card Value (mA) — Before/After'},
+  {gk:'a_flow',           label:'ID Fan A (7BG-FT-933A) — Flow (T/H) — Before/After'},
+  {gk:'a_bladepitch',     label:'ID Fan A (7BG-FT-933A) — Air Flow Blade Pitch Control (%) — Before/After'},
+  {gk:'a_inletpressure',  label:'ID Fan A (7BG-FT-933A) — Inlet Pressure STALL (KPaG) — Before/After'},
+  {gk:'b_cardvalue',      label:'ID Fan B (7BG-FT-933B) — Card Value (mA) — Before/After'},
+  {gk:'b_flow',           label:'ID Fan B (7BG-FT-933B) — Flow (T/H) — Before/After'},
+  {gk:'b_bladepitch',     label:'ID Fan B (7BG-FT-933B) — Air Flow Blade Pitch Control (%) — Before/After'},
+  {gk:'b_inletpressure',  label:'ID Fan B (7BG-FT-933B) — Inlet Pressure STALL (KPaG) — Before/After'}
+];
+
+/* Registry galeri evidence -- array datar berisi objek foto {name,dataUrl,
+   type,caption,offsetX,widthCm,heightCm,driveFileId,driveUrl}, pola SAMA
+   PERSIS dengan so2Photos/renderPhotoGallery() di so2.html (thumbnail kecil
+   72x72 + Urutkan Foto/Fitur O + Geser Posisi/Fitur D). 'cleaning' statis
+   (1 galeri tetap, Langkah 5); 8 galeri PURGING_EVIDENCE_GROUPS + 'legacy'
+   (migrasi data lama, lihat applyRecordToForm()) dibuat dinamis oleh
+   renderPurgingEvidenceSections(). */
 var EV_GALLERIES = {
-  cleaning: { photos: [], listId: 'evCleaningList', emptyMsg: 'Belum ada evidence cleaning panel. Klik "+ Tambah Foto" untuk menambahkan.' },
-  purging:  { photos: [], listId: 'evPurgingList',  emptyMsg: 'Belum ada evidence before/after line purging. Klik "+ Tambah Foto" untuk menambahkan.' }
+  cleaning: { photos: [], listId: 'evCleaningList', emptyMsg: 'Belum ada evidence cleaning panel. Klik "+ Tambah Foto" untuk menambahkan.' }
 };
 var evReorderState = {};
 
@@ -1524,14 +1544,14 @@ function toggleChecklistFlag(idx, key, checked) {
   buildChecklistTable();
 }
 /* Centang Semua Y -- shortcut isi Pass utk semua baris SEKALIGUS, KECUALI
-   poin 9 "Raise new WO & repair if any defect found." yang SENGAJA
+   poin 10 "Raise new WO & repair if any defect found." yang SENGAJA
    dikecualikan & di-default-kan ke Fail ("No") -- baris ini menentukan
    ADA/TIDAKNYA defect, jadi tombol shortcut TIDAK BOLEH diam-diam
    mengasumsikan "tidak ada defect" (Pass); teknisi wajib meninjau &
    mengubahnya manual jadi Pass kalau memang benar tidak ada defect. */
 function checkAllChecklistY() {
   CHECKLIST_DATA.forEach(function(row) {
-    if (row.no === 9) {
+    if (row.no === 10) {
       row.passA = false; row.failA = true; row.passB = false; row.failB = true;
     } else {
       row.passA = true; row.failA = false; row.passB = true; row.failB = false;
@@ -1560,8 +1580,9 @@ function buildMeasurementTable() {
 /* ══════════════════ UPLOAD EVIDENCE — thumbnail grid + Urutkan Foto ══════════════════
    Pola SAMA PERSIS dengan renderPhotoGallery()/so2Photos di so2.html (Fitur
    O: Urutkan Foto, Fitur D: Geser Posisi -- lihat FITUR_REUSABLE_REFERENCE.md),
-   diparameterkan lewat gk ('cleaning'|'purging') supaya tidak ada duplikasi
-   kode antar 2 galeri. side yang dikirim ke imgOpenCropper()/cropAndSave()
+   diparameterkan lewat gk ('cleaning', 8 key PURGING_EVIDENCE_GROUPS, atau
+   'legacy') supaya tidak ada duplikasi kode antar galeri. side yang
+   dikirim ke imgOpenCropper()/cropAndSave()
    dikodekan sebagai 'ev_<gk>' (TANPA suffix id slot lagi -- 1 galeri = banyak
    foto sekarang, bukan 1 slot = 1 foto). */
 function evTriggerSource(gk, source) {
@@ -1736,8 +1757,41 @@ function renderEvidenceList(gk) {
 /* Dipanggil dari cropAndSave() setelah crop selesai, side = 'ev_<gk>' */
 function evRenderPreview(side) {
   var gk = String(side).replace(/^ev_/, '');
-  if (gk !== 'cleaning' && gk !== 'purging') { renderEvidenceList('cleaning'); renderEvidenceList('purging'); return; }
-  renderEvidenceList(gk);
+  if (EV_GALLERIES[gk]) { renderEvidenceList(gk); return; }
+  renderEvidenceList('cleaning');
+  renderPurgingEvidenceSections();
+}
+/* Bangun 8 panel galeri Langkah 8 (PURGING_EVIDENCE_GROUPS) + panel
+   "legacy" (kalau ada foto migrasi dari format lama sebelum revisi ini,
+   lihat applyRecordToForm()) -- dipanggil ulang tiap kali daftar galeri
+   berubah (init halaman, resetAll, load record). Markup tiap sub-panel
+   MENIRU PERSIS gaya galeri Cleaning Panel yang sudah ada (tombol "+ Tambah
+   Foto" + popup sumber + input file + list), cuma dibangun lewat loop
+   supaya tidak perlu menulis ulang HTML yang sama 8x. */
+function renderPurgingEvidenceSections() {
+  var wrap = document.getElementById('purgingEvidenceContainer');
+  if (!wrap) return;
+  var groups = PURGING_EVIDENCE_GROUPS.slice();
+  if (EV_GALLERIES.legacy && EV_GALLERIES.legacy.photos.length) {
+    groups = groups.concat([{gk:'legacy', label:'Foto Evidence Lama (Sebelum Revisi Evidence per Parameter, 2026-09-15)'}]);
+  }
+  var html = '';
+  groups.forEach(function(g, i) {
+    if (!EV_GALLERIES[g.gk]) EV_GALLERIES[g.gk] = { photos: [], listId: 'evList_'+g.gk, emptyMsg: 'Belum ada foto. Klik "+ Tambah Foto" untuk menambahkan.' };
+    html +=
+      '<div style="'+(i>0?'margin-top:16px;padding-top:14px;border-top:1px solid var(--border);':'')+'">'+
+        '<div style="font-size:12.5px;font-weight:600;margin-bottom:6px;color:var(--text2,#334155)">'+escapeHtmlG(g.label)+'</div>'+
+        '<button type="button" class="btn btn-outline" onclick="toggleSourceChoices(\'evSrcChoices_'+g.gk+'\')">+ Tambah Foto</button>'+
+        '<div class="source-choices" id="evSrcChoices_'+g.gk+'" style="display:none;gap:8px;margin-top:8px">'+
+          '<button type="button" onclick="evTriggerSource(\''+g.gk+'\',\'camera\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>'+
+          '<button type="button" onclick="evTriggerSource(\''+g.gk+'\',\'storage\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>'+
+        '</div>'+
+        '<input type="file" id="evFileInput_'+g.gk+'" accept="image/*" multiple style="display:none" onchange="evOnFileSelected(\''+g.gk+'\', event)">'+
+        '<div id="evList_'+g.gk+'"></div>'+
+      '</div>';
+  });
+  wrap.innerHTML = html;
+  groups.forEach(function(g){ renderEvidenceList(g.gk); });
 }
 /* ══════════════════ RESET ══════════════════ */
 function resetAll() {
@@ -1753,8 +1807,9 @@ function resetAll() {
   CHECKLIST_DATA.forEach(function(r){ r.passA=false; r.failA=false; r.passB=false; r.failB=false; r.remarks=''; });
   MEASUREMENT_DATA.forEach(function(r){ r.beforeA=''; r.afterA=''; r.beforeB=''; r.afterB=''; });
   EV_GALLERIES.cleaning.photos = [];
-  EV_GALLERIES.purging.photos = [];
-  buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderEvidenceList('purging');
+  PURGING_EVIDENCE_GROUPS.forEach(function(g){ if (EV_GALLERIES[g.gk]) EV_GALLERIES[g.gk].photos = []; });
+  delete EV_GALLERIES.legacy;
+  buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderPurgingEvidenceSections();
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
@@ -1881,7 +1936,11 @@ function buildAndShowPdf() {
   // bukan karakter unicode ✓ — karena font standar jsPDF (helvetica) tidak
   // punya glyph untuk ✓ sehingga tercetak sebagai titik.
   function drawCheckboxBs(doc, x, y, w, h, checked, tone){
-    var size = Math.min(w, h) * 0.55;
+    // Ukuran berdasarkan LEBAR KOLOM saja (bukan Math.min(w,h)) -- tinggi baris
+    // ikut membesar mengikuti panjang teks Remarks (auto-fill 1-2 kalimat),
+    // rumus lama bikin ukuran kotak centang ikut berubah-ubah tiap baris jadi
+    // tidak rapi (lihat fix serupa di flow-switch.html/pm_stacker.html).
+    var size = Math.min(w * 0.45, 4.5);
     var bx = x + w/2 - size/2, by = y + h/2 - size/2;
     doc.setLineWidth(0.4);
     if (checked) {
@@ -1971,18 +2030,26 @@ function buildAndShowPdf() {
     });
   }
 
-  // EVIDENCE — CLEANING PANEL (LANGKAH 4)
-  drawEvidenceSection('FOTO EVIDENCE — CLEANING PANEL (LANGKAH 4)', EV_GALLERIES.cleaning.photos);
-  // MEASUREMENT — PURGING LINE FLOW TRANSMITTER (LANGKAH 7)
-  secHeader('PURGING LINE FLOW TRANSMITTER — CARD VALUE (LANGKAH 7)');
+  // EVIDENCE — CLEANING PANEL (LANGKAH 5)
+  drawEvidenceSection('FOTO EVIDENCE — CLEANING PANEL (LANGKAH 5)', EV_GALLERIES.cleaning.photos);
+  // MEASUREMENT — PURGING LINE FLOW TRANSMITTER (LANGKAH 8)
+  secHeader('PURGING LINE FLOW TRANSMITTER — PENGUKURAN (LANGKAH 8)');
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom},
     head: [['Parameter','Unit','Before 933A','After 933A','Before 933B','After 933B']],
     body: MEASUREMENT_DATA.map(function(r){ return [r.parameter, r.unit, r.beforeA, r.afterA, r.beforeB, r.afterB]; }),
     willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
-  // EVIDENCE — BEFORE/AFTER LINE PURGING (LANGKAH 7)
-  drawEvidenceSection('FOTO EVIDENCE — BEFORE/AFTER LINE PURGING (LANGKAH 7)', EV_GALLERIES.purging.photos);
+  // EVIDENCE — PURGING LINE FLOW TRANSMITTER (LANGKAH 8) -- 8 galeri per
+  // parameter x 933A/933B (urutan A dulu semua, baru B, sesuai revisi user),
+  // + 'legacy' (foto migrasi dari format lama, kalau ada).
+  PURGING_EVIDENCE_GROUPS.forEach(function(g) {
+    var photos = EV_GALLERIES[g.gk] ? EV_GALLERIES[g.gk].photos : [];
+    drawEvidenceSection('FOTO EVIDENCE — ' + g.label.toUpperCase(), photos);
+  });
+  if (EV_GALLERIES.legacy && EV_GALLERIES.legacy.photos.length) {
+    drawEvidenceSection('FOTO EVIDENCE — LAMA (SEBELUM REVISI EVIDENCE PER PARAMETER)', EV_GALLERIES.legacy.photos);
+  }
 
   // CATATAN
   secHeader('CATATAN');
@@ -2014,7 +2081,13 @@ function dbCollectData(modul) {
       checklist: CHECKLIST_DATA,
       measurement: MEASUREMENT_DATA,
       evidenceCleaning: EV_GALLERIES.cleaning.photos,
-      evidencePurging: EV_GALLERIES.purging.photos
+      // 8 galeri terpisah (parameter x 933A/933B, Langkah 8) -- ganti dari
+      // 1 galeri gabungan "evidencePurging" (format lama, dibaca kembali di
+      // applyRecordToForm() sbg migrasi ke bucket 'legacy').
+      evidencePurgingGroups: PURGING_EVIDENCE_GROUPS.reduce(function(acc, g){
+        acc[g.gk] = EV_GALLERIES[g.gk] ? EV_GALLERIES[g.gk].photos : [];
+        return acc;
+      }, {})
     }
   };
 }
@@ -2031,9 +2104,16 @@ function applyRecordToForm(rec, editingId) {
   document.getElementById('hAssetDesc').value = d.assetDescription || 'INDUCED DRAFT FAN 7';
   document.getElementById('hWorkToBeDone').value = d.workToBeDone || ID_FAN_WORK_TO_BE_DONE;
 
+  // Dicocokkan lewat teks activity (BUKAN index/no) -- direvisi 2026-09-15,
+  // menambah 1 langkah baru (no.4 "Blade pitch control...") yang menggeser
+  // index & no semua langkah sesudahnya. Record LAMA (dibuat sebelum revisi
+  // ini) masih menyimpan array checklist SEBELUM langkah baru ditambahkan;
+  // mencocokkan by-index akan salah pasang (baris Cleaning lama ketuker ke
+  // baris Manual yang baru). Teks activity tidak pernah berubah untuk
+  // langkah yang sudah ada dari awal, jadi aman dipakai sbg kunci match.
   if (Array.isArray(d.checklist) && d.checklist.length) {
-    CHECKLIST_DATA.forEach(function(row, idx) {
-      var src = d.checklist[idx];
+    CHECKLIST_DATA.forEach(function(row) {
+      var src = d.checklist.find(function(s){ return s && s.activity === row.activity; });
       if (src) { row.passA=!!src.passA; row.failA=!!src.failA; row.passB=!!src.passB; row.failB=!!src.failB; row.remarks=src.remarks||''; }
     });
   }
@@ -2061,9 +2141,23 @@ function applyRecordToForm(rec, editingId) {
     }).filter(Boolean);
   }
   EV_GALLERIES.cleaning.photos = evMigrateOldSlots(d.evidenceCleaning);
-  EV_GALLERIES.purging.photos = evMigrateOldSlots(d.evidencePurging);
 
-  buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderEvidenceList('purging');
+  var purgingGroups = d.evidencePurgingGroups || {};
+  PURGING_EVIDENCE_GROUPS.forEach(function(g) {
+    EV_GALLERIES[g.gk] = { photos: evMigrateOldSlots(purgingGroups[g.gk]), listId: 'evList_'+g.gk, emptyMsg: 'Belum ada foto. Klik "+ Tambah Foto" untuk menambahkan.' };
+  });
+  // Record LAMA (sebelum revisi 2026-09-15) masih menyimpan 1 galeri gabungan
+  // "evidencePurging" (bukan 8 galeri per parameter) -- foto-foto itu TIDAK
+  // BISA dipetakan otomatis ke parameter yang benar (tidak ada info lagi
+  // foto itu punya Card Value/Flow/dst), jadi ditampung ke bucket 'legacy'
+  // supaya tidak hilang, biar teknisi bisa lihat & pindahkan manual kalau perlu.
+  if (Array.isArray(d.evidencePurging) && d.evidencePurging.length) {
+    EV_GALLERIES.legacy = { photos: evMigrateOldSlots(d.evidencePurging), listId: 'evList_legacy', emptyMsg: '' };
+  } else {
+    delete EV_GALLERIES.legacy;
+  }
+
+  buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderPurgingEvidenceSections();
 }
 
 // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
@@ -2077,7 +2171,7 @@ function restoreDraftData(rec, editingId) {
 
 /* ══════════════════ INIT ══════════════════ */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
-buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderEvidenceList('purging');
+buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderPurgingEvidenceSections();
 renderPresetButtons();
 initCropDrag();
 initGenBackground();
