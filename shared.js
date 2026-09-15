@@ -1825,11 +1825,6 @@ function dbList(modul, callback) {
   // firebase_checksheet_id di bawah, kolom ini bisa belum ada kalau migration-nya
   // belum dijalankan -- fallback bertingkat.
   var AREA_COLS = 'asset,asset_desc,area';
-  // deleted_at -- kolom "Sampah" (soft-delete, lihat dbSoftDeleteRecord() di
-  // bawah) dibundel di tier select yang SAMA dengan AREA_COLS (sama-sama
-  // migration "baru", ditest bareng) -- kalau kolomnya belum ada, tier ini
-  // gagal dan fallback ke tier di bawahnya seperti biasa (Riwayat tetap
-  // tampil, cuma tidak bisa menyembunyikan record yang di-"sampah"-kan).
   function finishWith(rows) {
     // Sembunyikan record yang sudah dipindah ke Sampah dari Riwayat biasa --
     // kalau kolom deleted_at belum ke-select (migration belum jalan / fallback
@@ -1852,15 +1847,30 @@ function dbList(modul, callback) {
   // limit dinaikkan jauh -- sebelumnya 100 menyebabkan record lama (mis. O2
   // Weekly Inlet dari Desember 2024) ketutup rows modul lain yang lebih baru
   // di-update, jadi hilang dari Riwayat walau masih ada di database.
+  // 🔴 deleted_at (kolom Sampah) SENGAJA diberi tier fallback SENDIRI,
+  // TERPISAH dari AREA_COLS -- ditemukan 2026-09-15: sebelumnya dibundel di
+  // TIER YANG SAMA ("select=...,'+AREA_COLS+',deleted_at"), jadi begitu
+  // migration deleted_at belum dijalankan (kasus paling umum, baru
+  // ditambahkan), SELURUH tier itu gagal dan langsung lompat ke tier yang
+  // TIDAK PUNYA AREA_COLS SAMA SEKALI -- akibatnya nama dinamis "WO_Asset_
+  // AssetDesc" (Flow Switch, Maintenance Report, dst, lihat
+  // historyReportName()) mendadak hilang/balik ke nama modul mentah
+  // ("FLOW_SWITCH") padahal migration asset/asset_desc/area-nya SENDIRI
+  // sudah lama jalan -- regresi yang dilaporkan user. Sekarang 2 kolom
+  // "baru" itu independen: gagal salah satu TIDAK ikut menjatuhkan yang lain.
   supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status,' + AREA_COLS + ',deleted_at&order=updated_at.desc&limit=5000')
     .then(finishWith)
     .catch(function() {
-      supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status&order=updated_at.desc&limit=5000')
+      supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status,' + AREA_COLS + '&order=updated_at.desc&limit=5000')
         .then(finishWith)
         .catch(function() {
-          supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + '&order=updated_at.desc&limit=5000')
+          supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status&order=updated_at.desc&limit=5000')
             .then(finishWith)
-            .catch(function(){ callback([]); });
+            .catch(function() {
+              supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + '&order=updated_at.desc&limit=5000')
+                .then(finishWith)
+                .catch(function(){ callback([]); });
+            });
         });
     });
 }
