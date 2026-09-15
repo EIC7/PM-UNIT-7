@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260915d"></script>
+<script src="shared.js?v=20260915e"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -1250,8 +1250,15 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
             }
         }
     } else {
+        // 🆕 2026-09-15 (permintaan eksplisit user): foto evidence BARU di file
+        // ini otomatis mulai di mode Preset+Landscape (bukan Default lagi) --
+        // TETAP bisa dipindah ke Default/Potrait/Manual manual oleh user kalau
+        // perlu (BEDA dari O2 Weekly Outlet yang mode Default-nya disembunyikan
+        // total khusus evidence per channel -- di sini berlaku ke semua
+        // evidence & tombol Default TIDAK disembunyikan).
         document.getElementById('cropWcm').value = 5; document.getElementById('cropHcm').value = 5;
-        setCropMode('default');
+        setCropMode('preset');
+        setCropOrientation('landscape');
     }
     var img = document.getElementById('cropImg');
     img.onload = function() {

@@ -6,7 +6,7 @@
     <title>Maintenance Report</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="shared.js?v=20260915d"></script>
+    <script src="shared.js?v=20260915e"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
@@ -269,6 +269,8 @@
         <div class="crop-dialog">
             <div class="crop-header">
                 <div class="crop-header-title">✂️ Crop Gambar</div>
+                <div id="cropQueueProgress" style="display:none;font-size:11px;font-weight:700;color:#159957"></div>
+                <button type="button" id="cropQueueCancelBtn" onclick="cropQueueCancelRest()" style="display:none;font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:transparent;color:#c0392b;cursor:pointer">✕ Batalkan Sisa</button>
                 <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
             </div>
             <div id="cropWrap">
@@ -313,8 +315,11 @@
                         <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                     </div>
                 </div>
+                <input type="text" id="cropCaptionInput" placeholder="Keterangan foto (opsional)..." style="width:100%;margin-bottom:10px;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:6px;box-sizing:border-box">
                 <div class="crop-btns">
                     <button class="crop-btn crop-btn-outline" onclick="openImageEditor()">🖍️ Edit Gambar</button>
+                    <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
+                    <button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
                     <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
                     <button class="crop-btn crop-btn-outline" onclick="closeCropModal()">Batal</button>
                     <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>

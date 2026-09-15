@@ -2286,7 +2286,18 @@ function cropReset() {
 function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
   var modal = document.getElementById('cropModal');
   var cropImg = document.getElementById('cropImg');
-  modal._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
+  var ridx = (replaceIdx!==undefined?replaceIdx:-1);
+  modal._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:ridx};
+
+  // Keterangan (caption) -- pre-isi dari foto lama kalau ini crop-ulang,
+  // kosong kalau foto baru. Diedit di sini (SELAMA crop berlangsung, bukan
+  // cuma sesudahnya di galeri) -- lihat cropAndSave()/skipCrop() yang
+  // membaca nilai input ini saat menyimpan.
+  var capInput = document.getElementById('cropCaptionInput');
+  if (capInput) {
+    var existingCap = (ridx >= 0 && imgArr[ridx]) ? (imgArr[ridx].caption || '') : '';
+    capInput.value = existingCap;
+  }
 
   function initCropBox() {
     var box = document.getElementById('cropBox');
@@ -2305,9 +2316,17 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
     document.getElementById('cropOutH').value = ih;
     document.getElementById('cropNatSize').textContent = iw + ' x ' + ih + ' px';
     initDragCrop(box, wrap);
+    cropStartHistoryTracking(); // Fitur Undo/Redo -- mulai rekam ulang riwayat utk foto INI
+    cropUpdateQueueProgressUI(); // Fitur antrean multi-crop -- tampilkan "Foto X dari Y" kalau lagi jalan
   }
 
-  cropImg.onload = function() { initCropBox(); };
+  cropImg.onload = function() {
+    // SENGAJA di-skip kalau lagi proses Undo/Redo (cropApplyState() ganti
+    // cropImg.src sendiri lewat handler onload SEMENTARA yang berbeda,
+    // TIDAK PERNAH lewat sini) -- guard ini murni jaga-jaga tambahan.
+    if (cropObserverSuppressed) return;
+    initCropBox();
+  };
   cropImg.onerror = function() {
     modal.style.display = 'none';
     imgCompressAndStore(null, name, imgArr, side, modulePrefix, dataUrl);
@@ -2315,6 +2334,163 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
   modal.style.display = 'flex';
   cropImg.src = ''; cropImg.src = dataUrl;
   if (cropImg.complete && cropImg.naturalWidth) { initCropBox(); }
+}
+
+/* ══════════════════ FITUR UNDO/REDO CROP (2026-09-15) ══════════════════
+   Direkam lewat MutationObserver yang mengawasi atribut style #cropImg &
+   #cropBox -- BUKAN dengan mengubah satu-satu fungsi rotate/preset yang
+   tersebar (rotateCropImage/setCropMode/dst DIDUPLIKASI per file, beda-beda
+   isinya di banyak modul), karena SEMUA fungsi itu pada akhirnya cuma
+   memutasi .style/.src kedua elemen ini -- jadi cukup diawasi generik dari
+   sini, otomatis kepakai di SEMUA modul yang pakai imgOpenCropper() shared
+   ini tanpa perlu sentuh fungsi rotate/preset masing-masing modul. */
+var cropHistory = { stack: [], idx: -1 };
+var cropHistoryObserver = null;
+var cropHistoryDebounceTimer = null;
+var cropObserverSuppressed = false;
+
+function cropSnapshotState() {
+  var img = document.getElementById('cropImg');
+  var box = document.getElementById('cropBox');
+  if (!img || !box) return null;
+  return {
+    imgStyle: img.getAttribute('style') || '',
+    boxStyle: box.getAttribute('style') || '',
+    imgSrc: img.src,
+    outW: (document.getElementById('cropOutW')||{}).value,
+    outH: (document.getElementById('cropOutH')||{}).value
+  };
+}
+function cropUpdateUndoRedoButtons() {
+  var u = document.getElementById('cropUndoBtn'), r = document.getElementById('cropRedoBtn');
+  if (u) u.disabled = cropHistory.idx <= 0;
+  if (r) r.disabled = cropHistory.idx >= cropHistory.stack.length - 1;
+}
+function cropPushHistory() {
+  var state = cropSnapshotState();
+  if (!state) return;
+  var last = cropHistory.stack[cropHistory.idx];
+  if (last && last.imgStyle === state.imgStyle && last.boxStyle === state.boxStyle && last.imgSrc === state.imgSrc) return;
+  cropHistory.stack = cropHistory.stack.slice(0, cropHistory.idx + 1); // buang cabang redo lama kalau user sempat undo lalu berubah arah
+  cropHistory.stack.push(state);
+  cropHistory.idx = cropHistory.stack.length - 1;
+  cropUpdateUndoRedoButtons();
+}
+function cropStartHistoryTracking() {
+  cropStopHistoryTracking();
+  var initial = cropSnapshotState();
+  cropHistory = initial ? { stack: [initial], idx: 0 } : { stack: [], idx: -1 };
+  cropUpdateUndoRedoButtons();
+  var img = document.getElementById('cropImg');
+  var box = document.getElementById('cropBox');
+  if (!img || !box || typeof MutationObserver === 'undefined') return;
+  cropHistoryObserver = new MutationObserver(function() {
+    if (cropObserverSuppressed) return;
+    clearTimeout(cropHistoryDebounceTimer);
+    // Debounce -- drag/resize memicu banyak mutasi berturut-turut per detik,
+    // cuma keadaan AKHIR (sesudah user lepas jari/mouse ~400ms) yang dicatat
+    // sbg 1 checkpoint undo, bukan tiap piksel pergerakan.
+    cropHistoryDebounceTimer = setTimeout(cropPushHistory, 400);
+  });
+  cropHistoryObserver.observe(img, {attributes:true, attributeFilter:['style','src']});
+  cropHistoryObserver.observe(box, {attributes:true, attributeFilter:['style']});
+}
+function cropStopHistoryTracking() {
+  if (cropHistoryObserver) { cropHistoryObserver.disconnect(); cropHistoryObserver = null; }
+  clearTimeout(cropHistoryDebounceTimer);
+  cropHistory = { stack: [], idx: -1 };
+}
+function cropApplyState(state) {
+  if (!state) return;
+  var img = document.getElementById('cropImg');
+  var box = document.getElementById('cropBox');
+  cropObserverSuppressed = true;
+  function finish() {
+    img.setAttribute('style', state.imgStyle);
+    box.setAttribute('style', state.boxStyle);
+    var wEl = document.getElementById('cropOutW'), hEl = document.getElementById('cropOutH');
+    if (wEl && state.outW !== undefined) wEl.value = state.outW;
+    if (hEl && state.outH !== undefined) hEl.value = state.outH;
+    cropUpdateUndoRedoButtons();
+    setTimeout(function(){ cropObserverSuppressed = false; }, 60);
+  }
+  if (img.src !== state.imgSrc) {
+    // Rotasi mengganti src (dimensi gambar ikut berubah) -- pasang handler
+    // onload SEKALI PAKAI supaya initCropBox() (yang me-refit ulang crop box
+    // ke tengah, MENIMPA style yang mau kita pulihkan) TIDAK ikut terpanggil
+    // dari jalur ini sama sekali.
+    var prevOnload = img.onload;
+    img.onload = function() { img.onload = prevOnload; finish(); };
+    img.src = state.imgSrc;
+  } else {
+    finish();
+  }
+}
+function cropUndo() {
+  if (cropHistory.idx <= 0) return;
+  cropHistory.idx--;
+  cropApplyState(cropHistory.stack[cropHistory.idx]);
+}
+function cropRedo() {
+  if (cropHistory.idx >= cropHistory.stack.length - 1) return;
+  cropHistory.idx++;
+  cropApplyState(cropHistory.stack[cropHistory.idx]);
+}
+
+/* ══════════════════ FITUR ANTREAN MULTI-CROP (2026-09-15) ══════════════════
+   Dipanggil ganti evHandleMultiUpload/puHandleMultiUpload-style "skip-crop
+   otomatis" di modul yang mau foto-foto hasil pilih-banyak-sekaligus di-crop
+   BERGANTIAN satu-satu (bukan langsung disimpan apa adanya). imgArr/side/
+   modulePrefix SAMA seperti imgOpenCropper() -- dipakai identik utk SEMUA
+   foto dalam antrean ini (replaceIdx selalu -1, semua foto BARU/ditambahkan,
+   bukan crop-ulang). */
+var cropQueue = null;
+function imgOpenCropperQueue(files, imgArr, side, modulePrefix) {
+  var fileArr = Array.prototype.slice.call(files || []);
+  if (!fileArr.length) return;
+  cropQueue = { files: fileArr, idx: 0, imgArr: imgArr, side: side, modulePrefix: modulePrefix, total: fileArr.length };
+  cropQueueOpenCurrent();
+}
+function cropQueueOpenCurrent() {
+  if (!cropQueue) return;
+  var file = cropQueue.files[cropQueue.idx];
+  if (!file) { cropQueue = null; return; }
+  var afterDataUrl = function(dataUrl) {
+    if (!cropQueue) return; // sempat dibatalkan (cropQueueCancelRest) selagi menunggu konversi file
+    if (!dataUrl) { cropQueueAdvance(); return; } // gagal baca file ini -- lanjut ke berikutnya, jangan macet
+    imgOpenCropper(dataUrl, file.name, file.type || 'image/jpeg', cropQueue.imgArr, cropQueue.side, cropQueue.modulePrefix, -1);
+  };
+  if (typeof fileToJpegDataUrl === 'function') fileToJpegDataUrl(file, afterDataUrl);
+  else { var r = new FileReader(); r.onload = function(e){ afterDataUrl(e.target.result); }; r.readAsDataURL(file); }
+}
+function cropQueueAdvance() {
+  if (!cropQueue) return;
+  cropQueue.idx++;
+  if (cropQueue.idx < cropQueue.files.length) cropQueueOpenCurrent();
+  else { cropQueue = null; cropUpdateQueueProgressUI(); }
+}
+// Batalkan SISA antrean (foto yang sudah di-Simpan/Lewati sebelumnya TETAP
+// tersimpan, cuma yang belum sempat di-crop dibuang) -- dipanggil tombol
+// "Batalkan Sisa" yang cuma muncul kalau antrean sedang aktif.
+function cropQueueCancelRest() {
+  if (!cropQueue) return;
+  var remaining = cropQueue.files.length - cropQueue.idx - 1;
+  if (remaining > 0 && !confirm(remaining + ' foto sisanya belum di-crop/simpan. Batalkan sisa foto tersebut?')) return;
+  cropQueue = null;
+  cropStopHistoryTracking();
+  var modal = document.getElementById('cropModal');
+  if (modal) modal.style.display = 'none';
+  cropUpdateQueueProgressUI();
+}
+function cropUpdateQueueProgressUI() {
+  var el = document.getElementById('cropQueueProgress');
+  var cancelBtn = document.getElementById('cropQueueCancelBtn');
+  var show = !!(cropQueue && cropQueue.total > 1);
+  if (el) {
+    el.style.display = show ? 'block' : 'none';
+    if (show) el.textContent = '📷 Foto ' + (cropQueue.idx + 1) + ' dari ' + cropQueue.total;
+  }
+  if (cancelBtn) cancelBtn.style.display = show ? 'inline-block' : 'none';
 }
 
 function initDragCrop(box, wrap) {
@@ -2380,27 +2556,39 @@ function cropAndSave() {
   canvas.width = outW; canvas.height = outH;
   canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
   modal.style.display = 'none';
-  var caption = '';
   var existing = (p.replaceIdx >= 0 && p.imgArr[p.replaceIdx]) ? p.imgArr[p.replaceIdx] : null;
-  if (existing) caption = existing.caption || '';
+  // Keterangan dibaca dari input di crop modal (Fitur: caption saat crop,
+  // 2026-09-15) -- sudah di-pre-isi imgOpenCropper() dari foto lama kalau
+  // ini crop-ulang, jadi nilainya SELALU sumber kebenaran terkini (baik
+  // dibiarkan apa adanya atau diedit user barusan).
+  var capInput = document.getElementById('cropCaptionInput');
+  var caption = capInput ? capInput.value : (existing ? (existing.caption || '') : '');
   imgCompressAndStore(canvas, p.name, p.imgArr, p.side, p.modulePrefix, null, caption, existing ? p.replaceIdx : -1);
+  cropStopHistoryTracking();
+  if (cropQueue) cropQueueAdvance(); // Fitur antrean multi-crop -- lanjut ke foto berikutnya kalau ada
 }
 
 function skipCrop() {
   var modal = document.getElementById('cropModal');
   var p = modal._pending;
   modal.style.display = 'none';
-  var caption = '';
   var existing = (p.replaceIdx >= 0 && p.imgArr[p.replaceIdx]) ? p.imgArr[p.replaceIdx] : null;
-  if (existing) caption = existing.caption || '';
+  var capInput = document.getElementById('cropCaptionInput');
+  var caption = capInput ? capInput.value : (existing ? (existing.caption || '') : '');
   var img2 = new Image();
   img2.onload = function(){
     var c = document.createElement('canvas');
     c.width = img2.naturalWidth; c.height = img2.naturalHeight;
     c.getContext('2d').drawImage(img2,0,0);
     imgCompressAndStore(c, p.name, p.imgArr, p.side, p.modulePrefix, null, caption, existing ? p.replaceIdx : -1);
+    cropStopHistoryTracking();
+    if (cropQueue) cropQueueAdvance();
   };
-  img2.onerror = function(){ imgCompressAndStore(null, p.name, p.imgArr, p.side, p.modulePrefix, p.dataUrl, caption, existing ? p.replaceIdx : -1); };
+  img2.onerror = function(){
+    imgCompressAndStore(null, p.name, p.imgArr, p.side, p.modulePrefix, p.dataUrl, caption, existing ? p.replaceIdx : -1);
+    cropStopHistoryTracking();
+    if (cropQueue) cropQueueAdvance();
+  };
   img2.src = p.dataUrl;
 }
 
