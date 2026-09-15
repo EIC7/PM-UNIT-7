@@ -138,6 +138,7 @@
       <div class="meta-field"><label>Unit</label><input type="text" id="hUnit" value="U7"></div>
       <div class="meta-field"><label>Asset Tag</label><input type="text" id="hAssetTag" value="7BG-FAN-500"></div>
       <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><input type="text" id="hAssetDesc" value="INDUCED DRAFT FAN 7"></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Work To Be Done</label><input type="text" id="hWorkToBeDone" value="3 Monthly - Inspect and make sure instrument air regulator for moving blade actuator is set at 5.5"></div>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--text3)">
       Flow Transmitter yang dipantau: <b>7BG-FT-933A</b> (ID Fan 7A Inlet Stall Flow Transmitter) &amp; <b>7BG-FT-933B</b> (ID Fan 7B Inlet Stall Flow Transmitter)
@@ -147,6 +148,7 @@
   <!-- TABLE CHECKLIST -->
   <div class="panel">
     <div class="section-label">Checklist — Impulse Line Purging</div>
+    <button type="button" class="btn btn-outline" onclick="checkAllChecklistY()" style="margin-bottom:10px">&#9989; Centang Semua Y</button>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="manual-table" id="t2Table" style="min-width:900px">
         <thead>
@@ -1416,19 +1418,37 @@ function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, functi
    "No 7" di checklist karena langkah 7 adalah tabel pengukuran terpisah,
    lihat MEASUREMENT_DATA di bawah). Setiap baris punya 2 pasang checkbox
    Pass/Fail independen: satu untuk 7BG-FT-933A, satu untuk 7BG-FT-933B. */
+/* yText/nText = keterangan otomatis yang diisi ke kolom Remarks begitu
+   Pass (Y)/Fail (N) dipilih (lihat toggleChecklistFlag()/checkAllChecklistY()
+   di bawah) -- kalimat lengkap yang menjelaskan hasil pemeriksaan baris itu,
+   BUKAN cuma "Not"/"No" polos (contoh logika dari user, bukan teks final).
+   Poin 9 (Raise new WO) SENGAJA kebalikan makna: Pass = "tidak ada defect"
+   (bagus), Fail = "ada defect, WO baru diajukan") -- lihat catatan di
+   checkAllChecklistY() kenapa baris ini DIKECUALIKAN dari tombol Centang
+   Semua Y. */
 var CHECKLIST_DATA = [
-  {no:1,  activity:'Make sure PTW already issue.', kriteria:'OK'},
-  {no:2,  activity:'Prepare tool & material required.', kriteria:'OK'},
-  {no:3,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading is on "hold / Forced" Condition before access.', kriteria:'Forced'},
-  {no:4,  activity:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', kriteria:'Cleanliness'},
-  {no:5,  activity:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). *Replace if required.', kriteria:'No dust or dirty / No sign of water ingress / No broken condition'},
-  {no:6,  activity:'Check connection was tighted and no looses.', kriteria:'Tight Connection'},
-  {no:8,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading back to normal "Unforced".', kriteria:'Unforced'},
-  {no:9,  activity:'Raise new WO & repair if any defect found.', kriteria:'OK'},
-  {no:10, activity:'Leave the location within safe condition.', kriteria:'OK'}
+  {no:1,  activity:'Make sure PTW already issue.', kriteria:'OK',
+    yText:'PTW Sudah Diterbitkan dan Berlaku', nText:'PTW Belum Diterbitkan / Belum Berlaku'},
+  {no:2,  activity:'Prepare tool & material required.', kriteria:'OK',
+    yText:'Tool & Material Sudah Disiapkan dan Siap Pakai', nText:'Tool & Material Belum Lengkap / Belum Siap'},
+  {no:3,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading is on "hold / Forced" Condition before access.', kriteria:'Forced',
+    yText:'Reading Sudah Di-Forced Sebelum Akses', nText:'Reading Belum Di-Forced, Akses Belum Aman Dilakukan'},
+  {no:4,  activity:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', kriteria:'Cleanliness',
+    yText:'Panel Sudah Dibersihkan, Kondisi Bersih', nText:'Panel Belum Dibersihkan / Masih Kotor'},
+  {no:5,  activity:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). *Replace if required.', kriteria:'No dust or dirty / No sign of water ingress / No broken condition',
+    yText:'Sealing & Conduit Dalam Kondisi Baik, Tidak Ada Debu/Air Masuk', nText:'Ditemukan Debu, Indikasi Air Masuk, atau Kondisi Rusak pada Sealing/Conduit'},
+  {no:6,  activity:'Check connection was tighted and no looses.', kriteria:'Tight Connection',
+    yText:'Koneksi Sudah Kencang, Tidak Ada yang Kendor', nText:'Ditemukan Koneksi yang Kendor, Perlu Dikencangkan'},
+  {no:8,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading back to normal "Unforced".', kriteria:'Unforced',
+    yText:'Reading Sudah Kembali Normal (Unforced)', nText:'Reading Belum Kembali Normal, Masih Dalam Kondisi Forced'},
+  {no:9,  activity:'Raise new WO & repair if any defect found.', kriteria:'OK',
+    yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
+  {no:10, activity:'Leave the location within safe condition.', kriteria:'OK',
+    yText:'Lokasi Kerja Sudah Ditinggalkan dalam Kondisi Aman dan Rapi', nText:'Lokasi Kerja Belum dalam Kondisi Aman / Masih Perlu Dirapikan'}
 ].map(function(r){
-  return {no:r.no, activity:r.activity, kriteria:r.kriteria, passA:false, failA:false, passB:false, failB:false, remarks:''};
+  return {no:r.no, activity:r.activity, kriteria:r.kriteria, yText:r.yText, nText:r.nText, passA:false, failA:false, passB:false, failB:false, remarks:''};
 });
+var ID_FAN_WORK_TO_BE_DONE = '3 Monthly - Inspect and make sure instrument air regulator for moving blade actuator is set at 5.5';
 
 /* Table Measurement — "Purging Line Flow Transmitter — Card Value" (Langkah 7).
    2 parameter, tiap parameter punya 4 kolom angka: Before/After x 933A/933B.
@@ -1476,6 +1496,21 @@ function buildChecklistTable() {
     tbody.appendChild(tr);
   });
 }
+/* Remarks HANYA 1 kolom dipakai bersama utk 933A & 933B (lihat header
+   tabel) -- kalau kedua sisi sepakat (sama-sama Pass atau sama-sama Fail),
+   Remarks diisi 1 kalimat yText/nText saja. Kalau berbeda (mis. 933A Pass
+   tapi 933B Fail, atau salah satu belum dipilih), Remarks digabung per sisi
+   supaya tidak ada informasi yang hilang. SELALU menimpa Remarks lama
+   (mengikuti pilihan Pass/Fail TERKINI), pola sama dgn stkSetCheck() di
+   pm_stacker.html utk baris Alarm/No Alarm. */
+function computeChecklistRemark(row) {
+  var aState = row.passA ? 'Y' : row.failA ? 'N' : null;
+  var bState = row.passB ? 'Y' : row.failB ? 'N' : null;
+  if (aState === null && bState === null) return row.remarks; // belum ada yang dipilih, jangan diubah
+  if (aState === bState) return aState === 'Y' ? row.yText : row.nText;
+  var txt = function(s){ return s === 'Y' ? row.yText : s === 'N' ? row.nText : '-'; };
+  return '933A: ' + txt(aState) + ' | 933B: ' + txt(bState);
+}
 function toggleChecklistFlag(idx, key, checked) {
   var row = CHECKLIST_DATA[idx];
   row[key] = checked;
@@ -1485,6 +1520,24 @@ function toggleChecklistFlag(idx, key, checked) {
     var pairKey = (key === 'passA') ? 'failA' : (key === 'failA') ? 'passA' : (key === 'passB') ? 'failB' : 'passB';
     row[pairKey] = false;
   }
+  row.remarks = computeChecklistRemark(row);
+  buildChecklistTable();
+}
+/* Centang Semua Y -- shortcut isi Pass utk semua baris SEKALIGUS, KECUALI
+   poin 9 "Raise new WO & repair if any defect found." yang SENGAJA
+   dikecualikan & di-default-kan ke Fail ("No") -- baris ini menentukan
+   ADA/TIDAKNYA defect, jadi tombol shortcut TIDAK BOLEH diam-diam
+   mengasumsikan "tidak ada defect" (Pass); teknisi wajib meninjau &
+   mengubahnya manual jadi Pass kalau memang benar tidak ada defect. */
+function checkAllChecklistY() {
+  CHECKLIST_DATA.forEach(function(row) {
+    if (row.no === 9) {
+      row.passA = false; row.failA = true; row.passB = false; row.failB = true;
+    } else {
+      row.passA = true; row.failA = false; row.passB = true; row.failB = false;
+    }
+    row.remarks = computeChecklistRemark(row);
+  });
   buildChecklistTable();
 }
 
@@ -1696,6 +1749,7 @@ function resetAll() {
   document.getElementById('hUnit').value = 'U7';
   document.getElementById('hAssetTag').value = '7BG-FAN-500';
   document.getElementById('hAssetDesc').value = 'INDUCED DRAFT FAN 7';
+  document.getElementById('hWorkToBeDone').value = ID_FAN_WORK_TO_BE_DONE;
   CHECKLIST_DATA.forEach(function(r){ r.passA=false; r.failA=false; r.passB=false; r.failB=false; r.remarks=''; });
   MEASUREMENT_DATA.forEach(function(r){ r.beforeA=''; r.afterA=''; r.beforeB=''; r.afterB=''; });
   EV_GALLERIES.cleaning.photos = [];
@@ -1819,6 +1873,7 @@ function buildAndShowPdf() {
     ['Unit', document.getElementById('hUnit').value],
     ['Asset Tag', document.getElementById('hAssetTag').value],
     ['Asset Description', document.getElementById('hAssetDesc').value],
+    ['Work To Be Done', document.getElementById('hWorkToBeDone').value],
     ['Flow Transmitters', '7BG-FT-933A (ID Fan 7A Inlet Stall) / 7BG-FT-933B (ID Fan 7B Inlet Stall)']
   ], 40);
 
@@ -1955,6 +2010,7 @@ function dbCollectData(modul) {
       assetTag: document.getElementById('hAssetTag').value || '',
       assetDescription: document.getElementById('hAssetDesc').value || '',
       unit: document.getElementById('hUnit').value || 'U7',
+      workToBeDone: document.getElementById('hWorkToBeDone').value || '',
       checklist: CHECKLIST_DATA,
       measurement: MEASUREMENT_DATA,
       evidenceCleaning: EV_GALLERIES.cleaning.photos,
@@ -1973,6 +2029,7 @@ function applyRecordToForm(rec, editingId) {
   document.getElementById('hUnit').value = d.unit || rec.unit || 'U7';
   document.getElementById('hAssetTag').value = d.assetTag || '7BG-FAN-500';
   document.getElementById('hAssetDesc').value = d.assetDescription || 'INDUCED DRAFT FAN 7';
+  document.getElementById('hWorkToBeDone').value = d.workToBeDone || ID_FAN_WORK_TO_BE_DONE;
 
   if (Array.isArray(d.checklist) && d.checklist.length) {
     CHECKLIST_DATA.forEach(function(row, idx) {
