@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260915c"></script>
+<script src="shared.js?v=20260915d"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -239,7 +239,7 @@
   <!-- BUTTONS -->
 
   <div class="btn-row">
-    <button class="btn btn-primary" onclick="so2DownloadPdf()">⬇ Download PDF Report</button>
+    <button class="btn btn-primary" onclick="so2DownloadPdf()">⬇ Preview & Download PDF Report</button>
     <button class="btn" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('so2')">💾 Simpan ke Database</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=so2DownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="so2Reset()">✕ Reset</button>
@@ -365,7 +365,7 @@
         <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
         <div class="pdf-preview-footer">
             <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
-            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Preview & Download PDF</button>
         </div>
     </div>
 </div>
@@ -2099,6 +2099,27 @@ function so2DownloadPdf() {
   }); // end so2EnsureReportBackground
 }
 
+/* Nama laporan dinamis "SO2 Scrubber Inlet (<Frekuensi>)" -- checklist file
+   ini SATU form gabungan lintas frekuensi (weekly/2weekly/monthly/2monthly/
+   3monthly/6monthly, lihat SO2_CHECKS/.cat), BUKAN tab per-frekuensi seperti
+   pm-hg-analyzer.html, jadi frekuensinya tidak bisa dibaca dari 1 dropdown
+   tunggal. Ditentukan dari kategori PALING TINGGI yang punya minimal 1 item
+   Y/N tercentang (checklist "Following <freq lebih rendah> - ..." di setiap
+   kategori naik menunjukkan kategori tinggi SELALU mencakup item kategori
+   di bawahnya, jadi kategori tertinggi yang aktif = frekuensi laporan ini). */
+var SO2_FREQ_ORDER = ['weekly','2weekly','monthly','2monthly','3monthly','6monthly'];
+var SO2_FREQ_LABEL = {weekly:'Weekly','2weekly':'2 Weekly',monthly:'Monthly','2monthly':'2 Monthly','3monthly':'3 Monthly','6monthly':'6 Monthly'};
+function so2DetectFrequencyLabel(checks) {
+  var highestIdx = -1;
+  SO2_CHECKS.forEach(function(item, idx){
+    if (item.header) return;
+    var c = checks[idx];
+    if (!c || !(c.aY || c.aN || c.bY || c.bN)) return;
+    var rank = SO2_FREQ_ORDER.indexOf(item.cat);
+    if (rank > highestIdx) highestIdx = rank;
+  });
+  return highestIdx >= 0 ? SO2_FREQ_LABEL[SO2_FREQ_ORDER[highestIdx]] : '';
+}
 /* ── dbCollectData untuk modul SO2 ── */
 function dbCollectData(modul) {
   if (modul !== 'so2') return null;
@@ -2115,7 +2136,8 @@ function dbCollectData(modul) {
     };
   });
   var analyzer={aDCS:gv2('s2aDCS'),aLocal:gv2('s2aLocal'),aZero:gv2('s2aZero'),aSpan:gv2('s2aSpan'),aBefore:gv2('s2aBefore'),aAfter:gv2('s2aAfter'),cDCS:gv2('s2cDCS'),cLocal:gv2('s2cLocal'),cZero:gv2('s2cZero'),cSpan:gv2('s2cSpan'),cBefore:gv2('s2cBefore'),cAfter:gv2('s2cAfter')};
-  return {modul:'SO2 Scrubber Inlet', tanggal:gv2('s2Date'), pic:gv2('s2PIC'), work_order:gv2('s2WO'), unit:'Unit 7', data:{checks:checks,analyzer:analyzer,notes:{note7A:gv2('s2Note7A'),note7B:gv2('s2Note7B')},photos:so2Photos}};
+  var freqLabel = so2DetectFrequencyLabel(checks);
+  return {modul:'SO2 Scrubber Inlet' + (freqLabel ? ' (' + freqLabel + ')' : ''), tanggal:gv2('s2Date'), pic:gv2('s2PIC'), work_order:gv2('s2WO'), unit:'Unit 7', data:{checks:checks,analyzer:analyzer,notes:{note7A:gv2('s2Note7A'),note7B:gv2('s2Note7B')},photos:so2Photos}};
 }
 
 /* ── AUTOSAVE DRAFT (pola shared.js) ── */

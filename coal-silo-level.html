@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260915c"></script>
+<script src="shared.js?v=20260915d"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -191,7 +191,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   </div>
 
   <div class="btn-row" style="margin-top:20px">
-    <button class="btn btn-pdf" onclick="csDownloadPdf()">&#11015; Download PDF Report</button>
+    <button class="btn btn-pdf" onclick="csDownloadPdf()">&#11015; Preview & Download PDF Report</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('coal_silo_level')">&#128190; Simpan ke Database</button>
     <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=csDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="csReset()">&#10005; Reset</button>
@@ -320,7 +320,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
         <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
         <div class="pdf-preview-footer">
             <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
-            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Preview & Download PDF</button>
         </div>
     </div>
 </div>

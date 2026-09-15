@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PM HG Analyzer — Unit 7</title>
-<script src="shared.js?v=20260915c"></script>
+<script src="shared.js?v=20260915d"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -202,7 +202,7 @@ input[type="checkbox"]:checked::after {
     </div>
 
     <div class="btn-row" id="hgActionRow">
-      <button class="btn btn-primary" id="hgBtnPdf" onclick="hgDownloadPdf()">&#128438; Download PDF</button>
+      <button class="btn btn-primary" id="hgBtnPdf" onclick="hgDownloadPdf()">&#128438; Preview & Download PDF</button>
       <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('PM HG Analyzer')">&#128190; Simpan ke Database</button>
       <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=hgDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
       <button class="btn btn-danger" onclick="hgResetAll()">&#10005; Reset</button>
@@ -2166,7 +2166,14 @@ function dbCollectData(modul) {
   var t54Out = {};
   TABLE54.forEach(function(r){ t54Out[r.no] = {selesai: !!table54State[r.no].selesai}; });
   return {
-    modul: HG_MODUL_NAME,
+    // Nama laporan dinamis "PM HG Analyzer (<Frekuensi>)" -- dikirim ke
+    // Riwayat & Review Approval Dashboard (historyReportName()/
+    // raSendFinalPdfToFirebaseDashboard() di shared.js keduanya fallback ke
+    // record.modul apa adanya kalau tidak ada override khusus/asset field,
+    // jadi cukup ubah di sini saja). Argumen `modul` yang di-cek di baris
+    // atas (dbCollectData(modul)) TETAP HG_MODUL_NAME polos (tanpa frekuensi)
+    // -- itu cuma buat validasi pemanggil, bukan nilai yang disimpan.
+    modul: HG_MODUL_NAME + ' (' + (FREQ_LABEL[activeFreq] || activeFreq) + ')',
     tanggal: document.getElementById('hgTanggal').value || '',
     pic: document.getElementById('hgPIC').value || '',
     work_order: document.getElementById('hgWorkOrder').value || '',
@@ -2487,7 +2494,7 @@ function renderStepTableHtml(month) {
         <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
         <div class="pdf-preview-footer">
             <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
-            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Preview & Download PDF</button>
         </div>
     </div>
 </div>

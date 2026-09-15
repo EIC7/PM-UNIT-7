@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260915c"></script>
+<script src="shared.js?v=20260915d"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -490,7 +490,7 @@ body{
 
   <!-- ACTION BUTTONS -->
   <div class="btn-row" style="margin-top:20px">
-    <button class="btn btn-pdf" onclick="dcsDownloadPdf()">&#11015; Download PDF Report</button>
+    <button class="btn btn-pdf" onclick="dcsDownloadPdf()">&#11015; Preview & Download PDF Report</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('dcs_hmi')">&#128190; Simpan ke Database</button>
     <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=dcsDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="dcsReset()">&#10005; Reset</button>
@@ -620,7 +620,7 @@ body{
         <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
         <div class="pdf-preview-footer">
             <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
-            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Preview & Download PDF</button>
         </div>
     </div>
 </div>

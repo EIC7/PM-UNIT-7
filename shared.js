@@ -1405,14 +1405,16 @@ function dbShowSavingOverlay(show, msg, submsg) {
         +     '<div id="dbSavingProgressPct" style="font-size:12px;font-weight:700;color:#fff;margin-top:5px;display:none"></div>'
         +     '<div id="dbSavingOverlaySub" style="font-size:clamp(9px,2.8vw,11px);font-weight:400;margin-top:8px;color:rgba(255,255,255,0.75);line-height:1.3"></div>'
         +     '<button id="dbSavingRetryBtn" type="button" style="display:none;margin-top:14px;padding:9px 22px;border:none;border-radius:8px;background:#2ecc71;color:#fff;font-size:13px;font-weight:700;cursor:pointer;z-index:2">&#8635; Coba Lagi</button>'
+        +     '<button id="dbSavingOkBtn" type="button" style="display:none;margin-top:14px;padding:9px 28px;border:none;border-radius:8px;background:#2ecc71;color:#fff;font-size:13px;font-weight:700;cursor:pointer;z-index:2">OK</button>'
         +   '</div>'
         + '<div id="dbSavingOverlayTapHint" style="display:none;font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);margin-top:14px;letter-spacing:0.3px;z-index:1">Tap dimana saja untuk menutup</div>';
       document.body.appendChild(ov);
-      // Tap-to-close HANYA berfungsi kalau overlay lagi dalam mode error
-      // (ov._isError === true) -- supaya overlay TIDAK bisa ke-tap-tutup
-      // sengaja/gak-sengaja pas proses simpan/muat masih benar-benar berjalan.
+      // Tap-to-close berlaku kalau overlay lagi dalam mode error ATAU sukses
+      // (ov._dismissible === true) -- TIDAK berlaku selagi proses simpan/muat
+      // masih benar-benar berjalan (dbShowSavingOverlay(true,...) SELALU set
+      // ini false lagi tiap mulai siklus baru).
       ov.addEventListener('click', function() {
-        if (ov._isError) dbShowSavingOverlay(false);
+        if (ov._dismissible) dbShowSavingOverlay(false);
       });
       // Tombol Coba Lagi -- stopPropagation supaya klik di tombol ini TIDAK
       // ikut kena listener "tap dimana saja untuk menutup" di atas (yang
@@ -1423,6 +1425,13 @@ function dbShowSavingOverlay(show, msg, submsg) {
         ov._retryFn = null;
         if (typeof fn === 'function') fn();
       });
+      // Tombol OK (mode sukses) -- cuma nutup, stopPropagation sekadar
+      // konsisten dgn tombol Coba Lagi (tidak ada efek beda krn klik di
+      // luar tombol pun sudah menutup lewat listener di atas).
+      document.getElementById('dbSavingOkBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        dbShowSavingOverlay(false);
+      });
     }
     document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Menyimpan data, mohon tunggu...';
     document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
@@ -1430,6 +1439,7 @@ function dbShowSavingOverlay(show, msg, submsg) {
     // buat proses baru -- jaga-jaga kalau sebelumnya sempat ditinggal dalam
     // mode error (mestinya sudah ditutup manual, tapi ini pengaman tambahan).
     ov._isError = false;
+    ov._dismissible = false; // proses baru mulai -- tidak boleh ke-tap-tutup sampai sukses/gagal
     ov.style.cursor = 'default';
     ov.style.backgroundColor = '#060a10';
     document.getElementById('dbSavingFolderAnim').style.display = 'flex';
@@ -1437,12 +1447,14 @@ function dbShowSavingOverlay(show, msg, submsg) {
     document.getElementById('dbSavingSuccessIcon').style.display = 'none';
     document.getElementById('dbSavingOverlayTapHint').style.display = 'none';
     document.getElementById('dbSavingRetryBtn').style.display = 'none';
+    document.getElementById('dbSavingOkBtn').style.display = 'none';
     ov._retryFn = null;
     ov.style.display = 'flex';
     dbStartFakeProgress(); // langsung tampil & jalan 0% -> ~90%, di-override begitu ada progress asli
   } else if (ov) {
     ov.style.display = 'none';
     ov._isError = false;
+    ov._dismissible = false;
     dbStopFakeProgress();
     dbSetSavingProgress(null);
   }
@@ -1455,29 +1467,33 @@ function dbShowSavingOverlay(show, msg, submsg) {
    menyimpan/diperbarui, bukan hanya tulisan kecil" -- toast kecil gampang
    kelewat/tidak meyakinkan sbg konfirmasi, apalagi setelah insiden "toast
    sukses palsu" yang baru diperbaiki. sekarang layar penuh, jelas, tidak
-   bisa kelewat) sama seperti dbShowSavingOverlayError, cuma pakai ikon
-   centang hijau (bukan silang merah) dan TERTUTUP OTOMATIS sesudah ~1.4
-   detik (bukan menunggu tap user -- ini konfirmasi positif, bukan error
-   yang perlu perhatian aktif). Pola identik dgn pmHideManualSubmitOverlay
-   (overlay submit) supaya seluruh app konsisten satu bahasa visual utk
-   "berhasil". */
+   bisa kelewat) sama seperti dbShowSavingOverlayError, pakai ikon centang
+   hijau (bukan silang merah).
+   🔴 Revisi 2026-09-15 (permintaan eksplisit user: "notifikasi simpan/
+   upload sukses jangan ditutup otomatis, biarkan user yang menutupnya,
+   bisa klik area mana saja atau tombol OK") -- SEBELUMNYA tertutup
+   otomatis sesudah ~1.4 detik, SEKARANG tetap nempel sampai user sendiri
+   yang tap di mana saja ATAU klik tombol "OK" (pola tap-to-close yang sama
+   dgn dbShowSavingOverlayError, cuma beda ikon/warna). */
 function dbShowSavingOverlaySuccess(msg) {
   var ov = document.getElementById('dbSavingOverlay');
   if (!ov) return;
   dbStopFakeProgress();
   dbSetSavingProgress(null);
   ov._isError = false;
-  ov.style.cursor = 'default';
-  ov.style.backgroundColor = '#060a10';
+  ov._dismissible = true;
+  ov.style.cursor = 'pointer';
+  ov.style.backgroundColor = '#06140a'; // semburat hijau gelap solid, beda dari overlay normal/error
   document.getElementById('dbSavingFolderAnim').style.display = 'none';
   document.getElementById('dbSavingErrorIcon').style.display = 'none';
   document.getElementById('dbSavingSuccessIcon').style.display = 'flex';
   document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Berhasil tersimpan!';
   document.getElementById('dbSavingOverlaySub').textContent = '';
   document.getElementById('dbSavingRetryBtn').style.display = 'none';
-  document.getElementById('dbSavingOverlayTapHint').style.display = 'none';
+  document.getElementById('dbSavingOkBtn').style.display = 'inline-block';
+  document.getElementById('dbSavingOverlayTapHint').textContent = 'Tap dimana saja atau tombol OK untuk menutup';
+  document.getElementById('dbSavingOverlayTapHint').style.display = 'block';
   ov.style.display = 'flex';
-  setTimeout(function(){ dbShowSavingOverlay(false); }, 1400);
 }
 
 /* ── OVERLAY MODE ERROR ──
@@ -1499,6 +1515,7 @@ function dbShowSavingOverlayError(msg, submsg, retryFn) {
   dbStopFakeProgress();
   dbSetSavingProgress(null);
   ov._isError = true;
+  ov._dismissible = true;
   ov._retryFn = retryFn || null;
   ov.style.cursor = 'pointer';
   ov.style.backgroundColor = '#1a0505'; // semburat merah gelap solid, beda dari overlay normal
@@ -1507,6 +1524,7 @@ function dbShowSavingOverlayError(msg, submsg, retryFn) {
   document.getElementById('dbSavingOverlayMsg').textContent = msg || 'Terjadi kesalahan, proses tidak selesai.';
   document.getElementById('dbSavingOverlaySub').textContent = submsg || '';
   document.getElementById('dbSavingRetryBtn').style.display = retryFn ? 'inline-block' : 'none';
+  document.getElementById('dbSavingOkBtn').style.display = 'none';
   document.getElementById('dbSavingOverlayTapHint').textContent = retryFn
     ? 'Tap "Coba Lagi" untuk mengulang, atau tap di luar untuk menutup'
     : 'Tap dimana saja untuk menutup';
@@ -3521,34 +3539,45 @@ function pmShowManualSubmitOverlay() {
   document.body.appendChild(ov);
 }
 // ok=true (laporan benar-benar sudah masuk Review Approval Dashboard) --
-// overlay ganti jadi konfirmasi sukses lalu hilang sendiri. ok=false --
-// overlay TIDAK hilang otomatis (submit ke Firebase gagal/timeout, akan
-// dicoba lagi otomatis di kunjungan berikutnya lewat
-// raRetryPendingFirebaseSyncs -- tapi user perlu tahu itu SEKARANG, bukan
-// cuma lewat toast yang gampang kelewat), dikasih tombol Tutup manual.
+// overlay ganti jadi konfirmasi sukses. ok=false -- submit ke Firebase
+// gagal/timeout, akan dicoba lagi otomatis di kunjungan berikutnya lewat
+// raRetryPendingFirebaseSyncs.
+// 🔴 Revisi 2026-09-15 (permintaan eksplisit user: "notifikasi simpan/
+// upload sukses jangan ditutup otomatis, biarkan user yang menutupnya,
+// bisa klik area mana saja atau tombol OK") -- kasus ok=true SEBELUMNYA
+// `setTimeout(...remove()...,1500)`, SEKARANG disamakan dgn kasus ok=false
+// yang dari awal sudah butuh dismiss manual: klik dimana saja di overlay
+// ATAU tombol "OK"/"Tutup".
 function pmHideManualSubmitOverlay(ok, err) {
   var ov = document.getElementById('pmManualSubmitOverlay');
   if (!ov) return;
   var spinner = document.getElementById('pmManualSubmitAnim');
   var title = document.getElementById('pmManualSubmitTitle');
   var msg = document.getElementById('pmManualSubmitMsg');
+  function addCloseAffordance(btnLabel) {
+    ov.style.cursor = 'pointer';
+    ov.onclick = function(){ ov.remove(); };
+    if (!document.getElementById('pmManualSubmitCloseBtn')) {
+      var btn = document.createElement('button');
+      btn.id = 'pmManualSubmitCloseBtn';
+      btn.textContent = btnLabel;
+      btn.style.cssText = 'margin-top:6px;padding:10px 28px;border:none;border-radius:8px;background:#38bdf8;color:#04202e;font-weight:700;font-size:14px;cursor:pointer';
+      // stopPropagation sekadar konsisten (klik di luar tombol pun sudah
+      // menutup lewat ov.onclick di atas, jadi tidak ada beda perilaku).
+      btn.onclick = function(e){ e.stopPropagation(); ov.remove(); };
+      ov.appendChild(btn);
+    }
+  }
   if (ok) {
     if (spinner) spinner.outerHTML = '<div style="font-size:44px;line-height:1">✅</div>';
     if (title) title.textContent = 'BERHASIL DIKIRIM';
     if (msg) msg.textContent = 'Laporan sudah masuk ke Review Approval Dashboard.';
-    setTimeout(function(){ ov.remove(); }, 1500);
+    addCloseAffordance('OK');
   } else {
     if (spinner) spinner.outerHTML = '<div style="font-size:44px;line-height:1">⚠️</div>';
     if (title) title.textContent = 'BELUM SAMPAI';
     if (msg) msg.textContent = 'Laporan sudah tersimpan, tapi belum sukses terkirim ke Review Approval Dashboard' + (err ? (' (' + String((err && err.message) || err).slice(0, 150) + ')') : '') + '. Sistem akan mencoba lagi otomatis di kunjungan berikutnya.';
-    if (!document.getElementById('pmManualSubmitCloseBtn')) {
-      var btn = document.createElement('button');
-      btn.id = 'pmManualSubmitCloseBtn';
-      btn.textContent = 'Tutup';
-      btn.style.cssText = 'margin-top:6px;padding:10px 28px;border:none;border-radius:8px;background:#38bdf8;color:#04202e;font-weight:700;font-size:14px;cursor:pointer';
-      btn.onclick = function(){ ov.remove(); };
-      ov.appendChild(btn);
-    }
+    addCloseAffordance('Tutup');
   }
 }
 function raSubmitReport() {
