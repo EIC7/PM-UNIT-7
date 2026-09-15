@@ -131,6 +131,8 @@
       <div class="meta-field"><label>Date / Time</label><input type="date" id="bsDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="bsPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="bsWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Asset</label><input type="text" id="bsAsset" value="Conveyor 200A / 200B"></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="bsAssetDesc" value="Belt Scale Weightometer — Belt Conveyor E2-E3"></div>
     </div>
   </div>
 
@@ -2054,6 +2056,8 @@ function bsDownloadPdf() {
       ['Date/Time', safe(gv('bsDate'))],
       ['PIC', safe(gv('bsPIC'))],
       ['Work Order', safe(gv('bsWO'))],
+      ['Asset', safe(gv('bsAsset'))],
+      ['Asset Description', safe(gv('bsAssetDesc'))],
       ['Unit', safe(unit)||'-'],
       ['Doc', safe(BS_CFG.doc)],
       ['Dicetak', safe(nowStr)]
@@ -2389,7 +2393,7 @@ function dbCollectData(modul) {
     '1': bsImages['1'].map(keepImage),
     '2': bsImages['2'].map(keepImage)
   };
-  return {modul:'BELT CONVEYOR E2-E3', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},threeMonthlyChecks:threeMonthlyChecks,threeMonthlyValues:threeMonthlyValues,images:images}};
+  return {modul:'BELT CONVEYOR E2-E3', tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:BS_KEY,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},threeMonthlyChecks:threeMonthlyChecks,threeMonthlyValues:threeMonthlyValues,images:images,asset:gv4('bsAsset'),assetDesc:gv4('bsAssetDesc')}};
 }
 
 /* ── AUTOSAVE DRAFT (pola shared.js) ── */
@@ -2401,6 +2405,8 @@ function applyRecordToForm(rec, editingId) {
   if (editingId) window._editingId = editingId;
   var gv = function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
   gv('bsDate',rec.tanggal); gv('bsPIC',rec.pic); gv('bsWO',rec.work_order);
+  if (data.asset) gv('bsAsset',data.asset);
+  if (data.assetDesc) gv('bsAssetDesc',data.assetDesc);
   if (data.notes) { gv('bsNote1',data.notes.note1||''); gv('bsNote2',data.notes.note2||''); }
   if (data.checks) {
     Object.keys(data.checks).forEach(function(i){

@@ -149,6 +149,8 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       <div class="meta-field"><label>Date</label><input type="date" id="phDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="phPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="phWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Asset</label><input type="text" id="phAsset" value="CWT-AIT-502/503/507/512/513/936"></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="phAssetDesc" value="Analyzer Indicator Transmitter (pH)"></div>
     </div>
   </div>
 
@@ -2013,7 +2015,7 @@ function dbCollectData(modul){
     pic:gv('phPIC'),
     work_order:gv('phWO'),
     unit:'CWT',
-    data:{activeUnits:Object.keys(phActiveUnits).filter(function(k){return phActiveUnits[k];}),steps:steps,images:images,notes:notes,docNo:gv('phDocNo')}
+    data:{activeUnits:Object.keys(phActiveUnits).filter(function(k){return phActiveUnits[k];}),steps:steps,images:images,notes:notes,docNo:gv('phDocNo'),asset:gv('phAsset'),assetDesc:gv('phAssetDesc')}
   };
 }
 
@@ -2084,6 +2086,8 @@ function phDownloadPdf(){
         ['Tanggal', safe(gv('phDate'))],
         ['PIC', safe(gv('phPIC'))],
         ['Work Order', safe(gv('phWO'))],
+        ['Asset', safe(gv('phAsset'))],
+        ['Asset Description', safe(gv('phAssetDesc'))],
         ['Program', safe(gv('phDocNo'))],
         ['Dicetak', safe(nowStr)]
       ];
@@ -2339,6 +2343,8 @@ function applyRecordToForm(rec, editingId) {
   var sv=function(eid,val){var e=document.getElementById(eid);if(e)e.value=val||'';};
   sv('phDate',rec.tanggal); sv('phPIC',rec.pic); sv('phWO',rec.work_order);
   if(data.docNo) sv('phDocNo',data.docNo);
+  if(data.asset) sv('phAsset',data.asset);
+  if(data.assetDesc) sv('phAssetDesc',data.assetDesc);
 
   // Restore active units
   if(data.activeUnits&&data.activeUnits.length){

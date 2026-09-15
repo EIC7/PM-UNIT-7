@@ -140,6 +140,7 @@
       <div class="meta-field"><label>Serial Number</label><input type="text" id="s2SN" value="18944251"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="s2PIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="s2WO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="s2AssetDesc" value="SO2 Scrubber Analyzer — HORIBA ENDA-5000"></div>
     </div>
   </div>
 
@@ -1841,6 +1842,7 @@ function so2DownloadPdf() {
       ['Serial Number', safe(gv('s2SN'))],
       ['PIC', safe(gv('s2PIC'))],
       ['Work Order', safe(gv('s2WO'))],
+      ['Asset Description', safe(gv('s2AssetDesc'))],
       ['Dicetak', safe(nowStr)]
     ];
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
@@ -2137,7 +2139,7 @@ function dbCollectData(modul) {
   });
   var analyzer={aDCS:gv2('s2aDCS'),aLocal:gv2('s2aLocal'),aZero:gv2('s2aZero'),aSpan:gv2('s2aSpan'),aBefore:gv2('s2aBefore'),aAfter:gv2('s2aAfter'),cDCS:gv2('s2cDCS'),cLocal:gv2('s2cLocal'),cZero:gv2('s2cZero'),cSpan:gv2('s2cSpan'),cBefore:gv2('s2cBefore'),cAfter:gv2('s2cAfter')};
   var freqLabel = so2DetectFrequencyLabel(checks);
-  return {modul:'SO2 Scrubber Inlet' + (freqLabel ? ' (' + freqLabel + ')' : ''), tanggal:gv2('s2Date'), pic:gv2('s2PIC'), work_order:gv2('s2WO'), unit:'Unit 7', data:{checks:checks,analyzer:analyzer,notes:{note7A:gv2('s2Note7A'),note7B:gv2('s2Note7B')},photos:so2Photos}};
+  return {modul:'SO2 Scrubber Inlet' + (freqLabel ? ' (' + freqLabel + ')' : ''), tanggal:gv2('s2Date'), pic:gv2('s2PIC'), work_order:gv2('s2WO'), unit:'Unit 7', data:{checks:checks,analyzer:analyzer,notes:{note7A:gv2('s2Note7A'),note7B:gv2('s2Note7B')},photos:so2Photos,assetNum:gv2('s2AssetNum'),assetDesc:gv2('s2AssetDesc')}};
 }
 
 /* ── AUTOSAVE DRAFT (pola shared.js) ── */
@@ -2148,6 +2150,8 @@ function applyRecordToForm(rec, editingId) {
   if (editingId) window._editingId = editingId;
   var gv=function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
   gv('s2Date',rec.tanggal); gv('s2PIC',rec.pic); gv('s2WO',rec.work_order);
+  if (data.assetNum) gv('s2AssetNum',data.assetNum);
+  if (data.assetDesc) gv('s2AssetDesc',data.assetDesc);
   if (data.analyzer) { var a=data.analyzer; gv('s2aDCS',a.aDCS);gv('s2aLocal',a.aLocal);gv('s2aZero',a.aZero);gv('s2aSpan',a.aSpan);gv('s2aBefore',a.aBefore);gv('s2aAfter',a.aAfter);gv('s2cDCS',a.cDCS);gv('s2cLocal',a.cLocal);gv('s2cZero',a.cZero);gv('s2cSpan',a.cSpan);gv('s2cBefore',a.cBefore);gv('s2cAfter',a.cAfter); }
   if (data.notes) { gv('s2Note7A',data.notes.note7A||''); gv('s2Note7B',data.notes.note7B||''); }
   if (data.checks) {

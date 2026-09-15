@@ -136,6 +136,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       <div class="meta-field"><label>PIC</label><input type="text" id="fmPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="fmWO" placeholder="Work Order..."></div>
     </div>
+    <div class="meta-field" style="margin-bottom:12px"><label>Asset Description</label><input type="text" id="fmAssetDesc" value="Flow Meter FGD Inlet & Quencher Spray Water (4 titik)" style="width:100%;box-sizing:border-box"></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
       <div class="meta-field"><label>Asset 7FC-FT-101 (FGD-A Quencher Spray Water Flow Transmitter)</label><input type="text" id="fmAsset101" value="7FC-FT-101"></div>
       <div class="meta-field"><label>Asset 7FC-FT-103 (FGD-A Inlet Spray Water Flow Transmitter)</label><input type="text" id="fmAsset103" value="7FC-FT-103"></div>
@@ -1974,7 +1975,8 @@ function fmDownloadPdf() {
         ['Date / Time', safe(gv('fmDate'))],
         ['PIC', safe(gv('fmPIC'))],
         ['Work Order', safe(gv('fmWO'))],
-        ['Asset', assetLine]
+        ['Asset', assetLine],
+        ['Asset Description', safe(gv('fmAssetDesc'))]
       ];
 
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
@@ -2241,7 +2243,7 @@ function dbCollectData(modul) {
 
   return {
     modul: FM_MODUL_NAME, tanggal: gv('fmDate'), pic: gv('fmPIC'), work_order: gv('fmWO'), unit: 'Unit 7',
-    data: { jenis_pekerjaan: gv('fmJenis'), assets: assets, checks: checks, reading: reading, params: params, dims: dims, notes: notes, images: images }
+    data: { jenis_pekerjaan: gv('fmJenis'), assets: assets, assetDesc: gv('fmAssetDesc'), checks: checks, reading: reading, params: params, dims: dims, notes: notes, images: images }
   };
 }
 
@@ -2272,6 +2274,7 @@ function applyRecordToForm(rec, editingId) {
   sv('fmDate', rec.tanggal); sv('fmPIC', rec.pic); sv('fmWO', rec.work_order);
   if (data.jenis_pekerjaan) sv('fmJenis', data.jenis_pekerjaan);
   if (data.assets) FM_ASSETS.forEach(function(a){ if (data.assets[a.key]) sv('fmAsset'+a.key, data.assets[a.key]); });
+  if (data.assetDesc) sv('fmAssetDesc', data.assetDesc);
   if (data.notes) FM_ASSETS.forEach(function(a){ sv('fmNote'+a.key, data.notes[a.key]||''); });
   if (data.reading) {
     FM_ASSETS.forEach(function(a){ sv('fmRead_before_'+a.key, data.reading.before?data.reading.before[a.key]:''); sv('fmRead_after_'+a.key, data.reading.after?data.reading.after[a.key]:''); });

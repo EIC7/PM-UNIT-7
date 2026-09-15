@@ -155,6 +155,8 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       <div class="meta-field"><label>Date</label><input type="date" id="csDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="csPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="csWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Asset</label><input type="text" id="csAsset" value="BF-LI-500A/B/C/D/E/F"></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="csAssetDesc" value="Level Transmitter — Coal Silo"></div>
     </div>
     <div class="meta-field" style="margin-top:10px">
       <label>Work To Be Done</label>
@@ -2048,7 +2050,7 @@ function dbCollectData(modul){
     pic:gv('csPIC'),
     work_order:gv('csWO'),
     unit:'Unit 7',
-    data:{activeUnits:Object.keys(csActiveUnits).filter(function(k){return csActiveUnits[k];}),steps:steps,images:images,notes:notes,workToBeDone:gv('csWTBD'),tabMode:window.csTabMode}
+    data:{activeUnits:Object.keys(csActiveUnits).filter(function(k){return csActiveUnits[k];}),steps:steps,images:images,notes:notes,workToBeDone:gv('csWTBD'),tabMode:window.csTabMode,asset:gv('csAsset'),assetDesc:gv('csAssetDesc')}
   };
 }
 
@@ -2117,6 +2119,8 @@ function csDownloadPdf(){
         ['Tanggal', safe(gv('csDate'))],
         ['PIC', safe(gv('csPIC'))],
         ['Work Order', safe(gv('csWO'))],
+        ['Asset', safe(gv('csAsset'))],
+        ['Asset Description', safe(gv('csAssetDesc'))],
         ['Work To Be Done', safe(gv('csWTBD'))],
         ['Dicetak', safe(nowStr)]
       ];
@@ -2359,6 +2363,8 @@ function applyRecordToForm(rec, editingId) {
   window._editingId=editingId;
   var sv=function(eid,val){var e=document.getElementById(eid);if(e)e.value=val||'';};
   sv('csDate',rec.tanggal); sv('csPIC',rec.pic); sv('csWO',rec.work_order);
+  if (data.asset) sv('csAsset', data.asset);
+  if (data.assetDesc) sv('csAssetDesc', data.assetDesc);
   sv('csWTBD', data.workToBeDone);
 
   // Restore active units

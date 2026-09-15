@@ -118,6 +118,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">
       <div class="meta-field"><label>Asset 7A</label><input type="text" id="opAsset7A" value="7BG-AIT-813A"></div>
       <div class="meta-field"><label>Asset 7B</label><input type="text" id="opAsset7B" value="7BG-AIT-813B"></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="opAssetDesc" value="Opacity Monitor — ID Fan Inlet 7A & 7B"></div>
       <div class="meta-field"><label>Date / Time</label><input type="date" id="opDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="opPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="opWO" placeholder="Work Order..."></div>
@@ -1799,9 +1800,11 @@ function opDownloadPdf() {
       y += infoTotalH + 6;
 
       // Asset line
-      checkPage(8);
+      checkPage(14);
       doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(50,70,130);
       doc.text('Asset 7A: '+safe(gv('opAsset7A'))+'   |   Asset 7B: '+safe(gv('opAsset7B')), marginX+3, y);
+      y += 6;
+      doc.text('Asset Description: '+safe(gv('opAssetDesc')), marginX+3, y);
       y += 8;
 
       // Section header
@@ -2012,7 +2015,7 @@ function dbCollectData(modul) {
     return o;
   };
   return {modul:'Opacity Monitor',tanggal:gv('opDate'),pic:gv('opPIC'),work_order:gv('opWO'),unit:'Unit 7',
-    data:{checks:checks,notes:{note7A:gv('opNote7A'),note7B:gv('opNote7B')},images:{'7A':opImages['7A'].map(ki),'7B':opImages['7B'].map(ki)}}};
+    data:{checks:checks,notes:{note7A:gv('opNote7A'),note7B:gv('opNote7B')},images:{'7A':opImages['7A'].map(ki),'7B':opImages['7B'].map(ki)},assetDesc:gv('opAssetDesc')}};
 }
 
 /* ── AUTOSAVE DRAFT (pola shared.js) ── */
@@ -2023,6 +2026,7 @@ function applyRecordToForm(rec, editingId) {
   if (editingId) window._editingId = editingId;
   var sv=function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
   sv('opDate',rec.tanggal); sv('opPIC',rec.pic); sv('opWO',rec.work_order);
+  if(data.assetDesc) sv('opAssetDesc',data.assetDesc);
   if(data.notes){sv('opNote7A',data.notes.note7A||'');sv('opNote7B',data.notes.note7B||'');}
   if(data.images){
     var restoreImg=function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.offsetX)o.offsetX=img.offsetX;if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;return o;};

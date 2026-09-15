@@ -46,6 +46,8 @@
       <div class="meta-field"><label>Date / Time</label><input type="date" id="bsDate"></div>
       <div class="meta-field"><label>PIC</label><input type="text" id="bsPIC" placeholder="Nama PIC..."></div>
       <div class="meta-field"><label>Work Order Ref.</label><input type="text" id="bsWO" placeholder="Work Order..."></div>
+      <div class="meta-field"><label>Asset</label><input type="text" id="bsAsset"></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="bsAssetDesc"></div>
     </div>
   </div>
 
@@ -195,6 +197,9 @@ function initPage(key) {
   document.getElementById('bsNote1Label').textContent = '📷 ' + cfg.a.note;
   document.getElementById('bsNote2Label').textContent = '📷 ' + cfg.b.note;
   document.title = cfg.label + ' — Unit 7';
+  var assetEl=document.getElementById('bsAsset'), assetDescEl=document.getElementById('bsAssetDesc');
+  if (assetEl && !assetEl.value) assetEl.value = cfg.a.name + ' / ' + cfg.b.name;
+  if (assetDescEl && !assetDescEl.value) assetDescEl.value = 'Belt Scale Weightometer — ' + cfg.label;
   bsBuildTable();
   var el=document.getElementById('bsDate');
   if(el&&!el.value){var t=new Date();el.value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
@@ -308,7 +313,7 @@ function bsDownloadPdf() {
     doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(140,175,225);doc.text('PT POMI - PLTU Paiton - '+safe(cfg.label),pw/2,18,{align:'center'});
     doc.text(safe(cfg.doc)+'  |  '+safe(cfg.subtitle),pw/2,23,{align:'center'});
     var y=34;
-    doc.setDrawColor(200,210,240);doc.setLineWidth(0.3);doc.rect(12,y,pw-24,18,'S');
+    doc.setDrawColor(200,210,240);doc.setLineWidth(0.3);doc.rect(12,y,pw-24,25,'S');
     var u78=document.getElementById('bsU78'),cch=document.getElementById('bsCCH');
     var unit=(u78&&u78.checked?'U78 ':'')+(cch&&cch.checked?'CCH':'');
     var info=[['Date/Time',gv('bsDate')],['PIC',gv('bsPIC')],['Work Order',gv('bsWO')]];
@@ -316,7 +321,9 @@ function bsDownloadPdf() {
     info.forEach(function(it,i){doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(55,80,140);doc.text(it[0]+':',14+i*cw,y+7);doc.setFont('helvetica','normal');doc.setTextColor(20,30,25);doc.text(safe(it[1]),14+i*cw+24,y+7);});
     doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(55,80,140);doc.text('Unit:',14,y+14);doc.setFont('helvetica','normal');doc.setTextColor(20,30,25);doc.text(safe(unit)||'-',14+24,y+14);
     doc.text('Dicetak:',14+cw,y+14);doc.text(safe(nowStr),14+cw+24,y+14);
-    y+=22;
+    doc.setFont('helvetica','bold');doc.setTextColor(55,80,140);doc.text('Asset:',14,y+21);doc.setFont('helvetica','normal');doc.setTextColor(20,30,25);doc.text(safe(gv('bsAsset')),14+24,y+21);
+    doc.setFont('helvetica','bold');doc.setTextColor(55,80,140);doc.text('Asset Desc:',14+cw,y+21);doc.setFont('helvetica','normal');doc.setTextColor(20,30,25);doc.text(safe(gv('bsAssetDesc')),14+cw+28,y+21);
+    y+=29;
     doc.setFont('helvetica','bold');doc.setFontSize(9.5);doc.setTextColor(44,62,48);doc.text('STEP OF WORK',14,y);doc.setLineWidth(0.4);doc.line(14,y+2,pw-14,y+2);y+=7;
     var rows=[];
     BS_CHECKS.forEach(function(item,idx){
@@ -361,7 +368,7 @@ function dbCollectData(modul) {
   var images={'1':bsImages['1'].map(keepImage),
               '2':bsImages['2'].map(keepImage)};
   var mk=bsCurrent==='e45'?'BELT CONVEYOR E4-E5':bsCurrent==='e23'?'BELT CONVEYOR E2-E3':'BELT CONVEYOR B1-B2';
-  return {modul:mk, tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:bsCurrent,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},images:images}};
+  return {modul:mk, tanggal:gv4('bsDate'), pic:gv4('bsPIC'), work_order:gv4('bsWO'), unit:'Unit 7', data:{checks:checks,config:bsCurrent,notes:{note1:gv4('bsNote1'),note2:gv4('bsNote2')},images:images,asset:gv4('bsAsset'),assetDesc:gv4('bsAssetDesc')}};
 }
 
 /* ── INIT — baca key dari URL ── */
@@ -381,6 +388,8 @@ function dbCollectData(modul) {
       var gv=function(id2,val){var e=document.getElementById(id2);if(e)e.value=val||'';};
       setTimeout(function(){
         gv('bsDate',rec.tanggal); gv('bsPIC',rec.pic); gv('bsWO',rec.work_order);
+        if(data.asset) gv('bsAsset',data.asset);
+        if(data.assetDesc) gv('bsAssetDesc',data.assetDesc);
         if(data.notes){gv('bsNote1',data.notes.note1||'');gv('bsNote2',data.notes.note2||'');}
         if(data.checks){Object.keys(data.checks).forEach(function(i){var c=data.checks[i];var aEl=document.getElementById('bsA_'+i),bEl=document.getElementById('bsB_'+i);if(aEl){if(aEl.type==='checkbox')aEl.checked=!!c.a;else aEl.value=c.a||'';}if(bEl){if(bEl.type==='checkbox')bEl.checked=!!c.b;else bEl.value=c.b||'';}});bsRefreshAllChecks();}
         if(data.images){bsImages['1']=(data.images['1']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});bsImages['2']=(data.images['2']||[]).map(function(img){return {name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg'};});bsRenderPreviews('1');bsRenderPreviews('2');}

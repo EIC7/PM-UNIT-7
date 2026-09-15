@@ -400,6 +400,14 @@ body{
         <input type="text" id="dcsWO" placeholder="Work Order...">
       </div>
       <div class="meta-field">
+        <label>Asset</label>
+        <input type="text" id="dcsAsset" value="Drop 200 / 7EC-DROP-210~213 / CEC-CONS-CR1">
+      </div>
+      <div class="meta-field">
+        <label>Asset Description</label>
+        <input type="text" id="dcsAssetDesc" value="DCS HMI/OIS — U7 MCR Operator Workstation">
+      </div>
+      <div class="meta-field">
         <label>Unit</label>
         <select id="dcsUnit" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:#fff;font-size:13px;color:var(--text)">
           <option value="U7">U7</option>
@@ -2307,6 +2315,8 @@ function dcsDownloadPdf() {
       var infoFields = [
         ['Tanggal', safe(date||'-')],
         ['PIC', safe(pic||'-')],
+        ['Asset', safe(gv('dcsAsset')||'-')],
+        ['Asset Description', safe(gv('dcsAssetDesc')||'-')],
         ['Unit', safe(unit||'-')],
         ['Work Order', safe(wo||'-')],
         ['Program', safe(prog||'-')],
@@ -2575,7 +2585,9 @@ function dbCollectData(modul) {
       activeDrops: DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; }).map(function(d){ return d.id; }),
       checks:   checks,
       notes:    { general: gv('dcsNoteGeneral'), defect: gv('dcsNoteDefect') },
-      images:   { general: dcsImages.general.map(ki), defect: dcsImages.defect.map(ki) }
+      images:   { general: dcsImages.general.map(ki), defect: dcsImages.defect.map(ki) },
+      asset: gv('dcsAsset'),
+      assetDesc: gv('dcsAssetDesc')
     }
   };
 }
@@ -2591,6 +2603,8 @@ function applyRecordToForm(rec, editingId) {
   sv('dcsDate',    rec.tanggal    || data.tanggal    || '');
   sv('dcsPIC',     rec.pic        || data.pic        || '');
   sv('dcsWO',      rec.work_order || data.work_order || '');
+  if (data.asset) sv('dcsAsset', data.asset);
+  if (data.assetDesc) sv('dcsAssetDesc', data.assetDesc);
   sv('dcsUnit',    rec.unit       || data.unit       || 'U7');
   sv('dcsProgram', data.program   || 'JP-DROP');
   if (data.notes){ sv('dcsNoteGeneral',data.notes.general||''); sv('dcsNoteDefect',data.notes.defect||''); }

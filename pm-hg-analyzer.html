@@ -157,6 +157,8 @@ input[type="checkbox"]:checked::after {
       <div class="meta-field"><label>Tanggal</label><input type="date" id="hgTanggal"></div>
       <div class="meta-field"><label>Work Order</label><input type="text" id="hgWorkOrder" placeholder="Nomor Work Order..."></div>
       <div class="meta-field"><label>Nama Operator / PIC</label><input type="text" id="hgPIC" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Asset</label><input type="text" id="hgAsset" value="HM-1400 TRX 2"></div>
+      <div class="meta-field"><label>Asset Description</label><input type="text" id="hgAssetDesc" value="Total Mercury Analyzer — Unit 7"></div>
     </div>
 
     <div style="margin-top:18px;border:1px solid var(--panel-border);border-radius:8px;padding:10px 14px;background:#f8faf9">
@@ -1856,7 +1858,9 @@ function hgDownloadPdf() {
         ['Frequency', pdfSafe(FREQ_LABEL[activeFreq]||'')],
         ['Tanggal', pdfSafe(gv('hgTanggal'))],
         ['Work Order', pdfSafe(gv('hgWorkOrder'))],
-        ['PIC', pdfSafe(gv('hgPIC'))]
+        ['PIC', pdfSafe(gv('hgPIC'))],
+        ['Asset', pdfSafe(gv('hgAsset'))],
+        ['Asset Description', pdfSafe(gv('hgAssetDesc'))]
       ];
 
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
@@ -2178,7 +2182,7 @@ function dbCollectData(modul) {
     pic: document.getElementById('hgPIC').value || '',
     work_order: document.getElementById('hgWorkOrder').value || '',
     unit: 'Unit 7',
-    data: { frequency: activeFreq, steps: stepsOut, table54: t54Out }
+    data: { frequency: activeFreq, steps: stepsOut, table54: t54Out, asset: document.getElementById('hgAsset').value || '', assetDesc: document.getElementById('hgAssetDesc').value || '' }
   };
 }
 
@@ -2189,6 +2193,8 @@ function hgRestoreRecord(rec, opts) {
   document.getElementById('hgTanggal').value = rec.tanggal || '';
   document.getElementById('hgWorkOrder').value = rec.work_order || '';
   document.getElementById('hgPIC').value = rec.pic || '';
+  if (data.asset) document.getElementById('hgAsset').value = data.asset;
+  if (data.assetDesc) document.getElementById('hgAssetDesc').value = data.assetDesc;
   if (data.steps) {
     Object.keys(data.steps).forEach(function(no){
       var s = data.steps[no];
