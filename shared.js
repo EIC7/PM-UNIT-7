@@ -651,8 +651,17 @@ function uploadFotoKeGDrive(dataUrlBase64, fileName, modul, keterangan, entry) {
    lokasi/koneksi yang sama, bukan ketahuan berbulan-bulan kemudian.
    Return: array nama foto yang MASIH gagal setelah semua percobaan
    (kosong = semua sukses, aman lanjut simpan). */
-function _pmEnsureAllPhotosOnDrive(dataObj, modul) {
-  var MAX_ATTEMPTS = 3;
+function _pmEnsureAllPhotosOnDrive(dataObj, modul, maxAttempts) {
+  // maxAttempts opsional -- default 3 (dbSave()/raResaveInPlace(), simpan
+  // manual, HARUS menjamin foto benar2 ke Drive sebelum lapor sukses).
+  // dbSaveSilent() (autosave latar belakang) sengaja kirim 1 supaya tidak
+  // menahan window._dbSaving lama-lama kalau ada foto yang lambat/gagal --
+  // lihat komentar revisi 2026-09-15 di dbSaveSilent().
+  var MAX_ATTEMPTS = maxAttempts || 3;
+  // Foto yang SUDAH punya driveUrl (artinya sukses ke-upload sebelumnya, isi
+  // gambarnya TIDAK diubah lagi oleh user) otomatis TIDAK PERNAH masuk daftar
+  // ini (lihat filter `!o.driveUrl` di bawah) -- tidak ada panggilan jaringan
+  // apa pun ke Drive untuk foto yang sudah aman & tidak berubah.
   function collectPending(obj) {
     var found = [];
     (function walk(o) {
@@ -1589,10 +1598,16 @@ function _pmDbSavingWatchdog(silent) {
     // tidak boleh ikut mematikan _dbSaving milik siklus yang baru itu.
     if (window._dbSaving && window._dbSavingStartedAt === startedAt) {
       window._dbSaving = false;
+      window._dbSavingKind = null;
       // silent=true dipakai autosave (dbSaveSilent) -- autosave SENGAJA
       // tidak boleh mengganggu user (lihat komentar di atas dbSaveSilent),
       // jadi cukup log diam-diam, JANGAN munculkan overlay error besar.
-      if (silent) { console.warn('[autosave-server] watchdog: proses macet >90s, _dbSaving direset diam-diam.'); return; }
+      if (silent) {
+        console.warn('[autosave-server] watchdog: proses macet >90s, _dbSaving direset diam-diam.');
+        _pmAutosaveFailedIndicator();
+        _pmRunQueuedManualSave(); // lepaskan Simpan manual yang sempat diantre, jangan sampai nyangkut nunggu siklus yang sudah macet
+        return;
+      }
       dbShowSavingOverlayError(
         'Proses menyimpan terlalu lama / macet.',
         'Kemungkinan koneksi internet Anda bermasalah. Coba lagi.',
@@ -1604,8 +1619,19 @@ function _pmDbSavingWatchdog(silent) {
 
 /* ── DB SAVE (generic — modul-specific dbCollectData defined per page) ── */
 function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
-  if (window._dbSaving) return; // cegah klik dobel saat masih proses simpan
   var _dbSaveRetryArgs = arguments; // dipakai tombol "Coba Lagi" -- ulang panggilan ini persis kalau gagal
+  if (window._dbSaving) {
+    // Kalau yang lagi jalan itu AUTOSAVE latar belakang (bukan simpan
+    // manual lain yang sedang double-klik) -- ANTRE panggilan ini, jangan
+    // diam-diam dibuang. Lihat komentar revisi di _pmRunQueuedManualSave().
+    if (window._dbSavingKind === 'autosave') {
+      if (!window._pmQueuedManualSave && typeof dbShowToast === 'function') {
+        dbShowToast('⏳ Auto-save latar belakang sedang berjalan, akan disimpan otomatis setelah selesai...');
+      }
+      window._pmQueuedManualSave = function(){ dbSave.apply(null, _dbSaveRetryArgs); };
+    }
+    return; // manual lain masih jalan (double-klik) -- cegah tabrakan, seperti sebelumnya
+  }
   var rec, existingId, callback;
   if (arg6 !== undefined && typeof arg6 === 'object') {
     rec = { modul:modul, tanggal:arg2||null, pic:arg3||null, work_order:arg4||null,
@@ -1624,6 +1650,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   try { btn = event && event.target && event.target.tagName === 'BUTTON' ? event.target : null; } catch(e){}
   var origText = btn ? btn.innerHTML : '';
   window._dbSaving = true;
+  window._dbSavingKind = 'manual';
   _pmDbSavingWatchdog();
   if (btn) { btn.innerHTML = '⏳ Menyimpan...'; btn.disabled = true; }
   dbShowSavingOverlay(true, existingId ? 'Memperbarui data, mohon tunggu...' : 'Menyimpan data, mohon tunggu...', 'Mengupload foto ke Google Drive dulu, mohon tunggu...');
@@ -1639,6 +1666,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
   }).then(function(stillFailed) {
     if (stillFailed.length) {
       window._dbSaving = false;
+      window._dbSavingKind = null;
       if (btn) { btn.innerHTML = origText; btn.disabled = false; }
       dbShowSavingOverlayError(
         'Gagal upload ' + stillFailed.length + ' foto ke Google Drive.',
@@ -1684,6 +1712,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
           throw new Error('Record ini sudah tidak ada di database (mungkin sudah dihapus lewat sesi/tab lain). Perubahan TIDAK tersimpan -- buat entri baru atau muat ulang halaman.');
         }
         window._dbSaving = false;
+        window._dbSavingKind = null;
         if (btn) { btn.innerHTML = origText; btn.disabled = false; }
         var savedId = (rows && rows[0] && rows[0].id) ? rows[0].id : existingId;
         // PENTING: tetap "nempel" ke record yang sama (bukan di-null-kan) supaya
@@ -1705,6 +1734,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
       })
       .catch(function(err) {
         window._dbSaving = false;
+        window._dbSavingKind = null;
         if (btn) { btn.innerHTML = origText; btn.disabled = false; }
         // Sengaja TIDAK pakai dbShowToast di sini -- toast otomatis hilang
         // dalam 3 detik, jadi kalau user lagi AFK/HP diletak pas errornya
@@ -1726,7 +1756,18 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
    (rec) sama persis seperti dbSave: dari dbCollectData(modul), foto
    di-strip base64-nya kalau sudah punya driveUrl. */
 function raResaveInPlace(modul, callback) {
-  if (window._dbSaving) return;
+  if (window._dbSaving) {
+    // Sama seperti dbSave() -- antre kalau yang jalan itu autosave latar
+    // belakang, jangan diam2 dibuang. Lihat komentar revisi di
+    // _pmRunQueuedManualSave().
+    if (window._dbSavingKind === 'autosave') {
+      if (!window._pmQueuedManualSave && typeof dbShowToast === 'function') {
+        dbShowToast('⏳ Auto-save latar belakang sedang berjalan, akan disimpan otomatis setelah selesai...');
+      }
+      window._pmQueuedManualSave = function(){ raResaveInPlace(modul, callback); };
+    }
+    return;
+  }
   if (typeof dbCollectData !== 'function') { alert('dbCollectData tidak ditemukan'); return; }
   var rec = dbCollectData(modul);
   if (!rec) return;
@@ -1734,6 +1775,7 @@ function raResaveInPlace(modul, callback) {
   if (!existingId) { alert('Tidak ada record yang sedang dibuka untuk diedit.'); return; }
 
   window._dbSaving = true;
+  window._dbSavingKind = 'manual';
   _pmDbSavingWatchdog();
   dbShowSavingOverlay(true, 'Menyimpan perubahan, mohon tunggu...', 'Mengupload banyak gambar membutuhkan waktu yang lama');
   // Sama seperti dbSave() -- upload ke Drive WAJIB berhasil dulu sebelum
@@ -1746,6 +1788,7 @@ function raResaveInPlace(modul, callback) {
   }).then(function(stillFailed) {
     if (stillFailed.length) {
       window._dbSaving = false;
+      window._dbSavingKind = null;
       dbShowSavingOverlayError(
         'Gagal upload ' + stillFailed.length + ' foto ke Google Drive.',
         'Perubahan BELUM disimpan supaya foto tidak nyangkut/hilang. Cek koneksi internet, lalu coba lagi. Foto: ' + stillFailed.slice(0, 3).join(', ') + (stillFailed.length > 3 ? ', dll.' : ''),
@@ -1760,6 +1803,7 @@ function raResaveInPlace(modul, callback) {
     };
     raUpdateRecord(existingId, patch, function(err, updated) {
       window._dbSaving = false;
+      window._dbSavingKind = null;
       if (err) {
         dbShowSavingOverlayError('Gagal menyimpan perubahan.', err, function(){ raResaveInPlace(modul, callback); });
         return;
@@ -2431,20 +2475,95 @@ function autosaveTrigger() {
    menghindari request Supabase yang percuma. */
 var RA_SERVER_AUTOSAVE_INTERVAL = 60000;
 
-function _raServerAutosaveIndicator() {
+function _pmAutosaveIndicatorEl() {
   var el = document.getElementById('raServerAutosaveIndicator');
   if (!el) {
     el = document.createElement('div');
     el.id = 'raServerAutosaveIndicator';
     el.className = 'no-print';
-    el.style.cssText = 'position:fixed;bottom:14px;right:14px;background:rgba(16,80,40,0.78);color:#d7ffe6;font-size:11px;padding:5px 11px;border-radius:14px;z-index:99998;pointer-events:none;opacity:0;transition:opacity .35s';
+    el.style.cssText = 'position:fixed;bottom:14px;right:14px;font-size:11px;padding:5px 11px;border-radius:14px;z-index:99998;pointer-events:none;opacity:0;transition:opacity .35s,background .2s,color .2s';
     document.body.appendChild(el);
   }
+  return el;
+}
+function _raServerAutosaveIndicator() {
+  var el = _pmAutosaveIndicatorEl();
   var t = new Date();
+  el.style.background = 'rgba(16,80,40,0.78)';
+  el.style.color = '#d7ffe6';
   el.textContent = '☁️ Auto-tersimpan ' + String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0');
   el.style.opacity = '1';
   clearTimeout(el._t);
   el._t = setTimeout(function(){ el.style.opacity = '0'; }, 2500);
+}
+/* 🔴 Revisi 2026-09-15 (laporan user: "auto saving sering kali membingungkan
+   user, tombol Simpan Database tidak bisa dipencet saat auto save berjalan")
+   -- akar masalahnya: dbSaveSilent() (autosave server, tiap 60 detik) pakai
+   LOCK YANG SAMA (window._dbSaving) dengan dbSave() (tombol Simpan manual).
+   Kalau autosave lagi mengupload banyak foto ke Drive (bisa makan waktu utk
+   modul yang fotonya banyak), window._dbSaving tetap true selama itu --
+   dbSave() yang dipanggil manual di tengah-tengah cuma `return;` diam-diam
+   TANPA keterangan apa pun, kelihatan seperti tombolnya rusak/tidak
+   merespon. 3 perbaikan (semua generik, berlaku di SEMUA modul via
+   shared.js, tidak perlu sentuh file modul manapun):
+   1. Indikator kecil ("☁️ Sedang auto-save...") SEKARANG muncul SELAMA
+      dbSaveSilent() berjalan (bukan cuma sesudah sukses) -- lihat
+      _pmAutosaveBusyIndicator()/_pmAutosaveFailedIndicator() di bawah.
+   2. dbSaveSilent() sekarang cuma 1x percobaan upload foto per siklus
+      (bukan sampai 3x retry berturut-turut dalam 1 siklus) -- foto yang
+      masih gagal dicoba lagi siklus 60 detik BERIKUTNYA, bukan ditahan
+      sinkron di siklus yang sama. Ini yang paling menentukan lama/tidaknya
+      window._dbSaving ditahan autosave utk modul dengan banyak foto.
+      Simpan manual (dbSave()/raResaveInPlace()) TETAP 3x percobaan --
+      keduanya memang harus menjamin foto benar2 ke Drive dulu sebelum
+      lapor sukses ke user, beda kebutuhan dari autosave latar belakang.
+   3. dbSave()/raResaveInPlace() yang terpanggil SAAT window._dbSaving masih
+      true KARENA autosave (window._dbSavingKind==='autosave') sekarang
+      TIDAK diam-diam `return` -- panggilan itu DIANTRE
+      (window._pmQueuedManualSave) dan OTOMATIS dijalankan ulang PERSIS
+      begitu siklus autosave yang sedang jalan selesai (sukses/gagal),
+      plus toast penjelasan supaya user tahu kenapa belum langsung
+      tersimpan. Kalau _dbSaving true karena SIMPAN MANUAL LAIN yang masih
+      jalan (window._dbSavingKind==='manual', mis. double-klik), perilaku
+      lama (diam2 return) TETAP dipakai -- itu memang harus dicegah, tombol
+      manualnya sendiri sudah divisualkan disabled selama proses ini.
+   Poin ketiga dari revisi user ("gambar yang sudah tersimpan & tidak
+   berubah tidak perlu upload ulang") TERNYATA SUDAH jadi perilaku
+   _pmEnsureAllPhotosOnDrive() sejak awal -- collectPending() di situ cuma
+   mengambil foto yang BELUM punya driveUrl, foto yang sudah sukses ke
+   Drive otomatis dilewati tanpa panggilan jaringan apa pun. Tidak ada
+   perubahan diperlukan di titik itu. */
+function _pmAutosaveBusyIndicator(show) {
+  var el = _pmAutosaveIndicatorEl();
+  clearTimeout(el._t);
+  if (!show) { el.style.opacity = '0'; return; }
+  el.style.background = 'rgba(16,80,40,0.78)';
+  el.style.color = '#d7ffe6';
+  el.textContent = '☁️ Sedang auto-save di latar belakang...';
+  el.style.opacity = '1';
+  // SENGAJA TIDAK di-fade otomatis di sini -- baru hilang lewat
+  // _raServerAutosaveIndicator() (siklus ini sukses) atau
+  // _pmAutosaveFailedIndicator() (siklus ini gagal) di bawah, supaya user
+  // benar-benar tahu KAPAN autosave-nya selesai, bukan cuma "kelihatan lagi
+  // jalan sebentar lalu hilang sendiri" walau prosesnya masih berlangsung.
+}
+function _pmAutosaveFailedIndicator() {
+  var el = _pmAutosaveIndicatorEl();
+  clearTimeout(el._t);
+  el.style.background = 'rgba(120,40,20,0.82)';
+  el.style.color = '#ffd7cf';
+  el.textContent = '⚠️ Auto-save gagal, dicoba lagi nanti';
+  el.style.opacity = '1';
+  el._t = setTimeout(function(){ el.style.opacity = '0'; }, 3000);
+}
+/* Dipanggil begitu 1 siklus dbSaveSilent() selesai (sukses/gagal/macet
+   lewat watchdog) -- kalau ada panggilan Simpan/Edit-in-place MANUAL yang
+   sempat diantre (lihat komentar revisi di atas), jalankan sekarang. */
+function _pmRunQueuedManualSave() {
+  if (!window._pmQueuedManualSave) return;
+  var fn = window._pmQueuedManualSave;
+  window._pmQueuedManualSave = null;
+  fn();
 }
 
 function dbSaveSilent(modul) {
@@ -2455,7 +2574,9 @@ function dbSaveSilent(modul) {
   rec.updated_at = new Date().toISOString();
   var existingId = window._editingId || null;
   window._dbSaving = true;
+  window._dbSavingKind = 'autosave';
   _pmDbSavingWatchdog(true);
+  _pmAutosaveBusyIndicator(true); // "☁️ Sedang auto-save..." -- lihat komentar revisi 2026-09-15 di atas _pmAutosaveBusyIndicator()
   // Autosave TIDAK BOLEH blok/ganggu user kalau upload foto gagal (beda dari
   // dbSave()/raResaveInPlace() yang menolak simpan) -- tapi tetap WAJIB coba
   // upload dulu (bukan cuma strip yang SUDAH punya driveUrl) supaya tiap
@@ -2465,8 +2586,13 @@ function dbSaveSilent(modul) {
   // setelah retry cuma di-log, TIDAK menghentikan autosave -- draft tetap
   // tersimpan (base64 apa adanya untuk foto yang masih gagal), user tidak
   // boleh kehilangan pekerjaan cuma karena 1 foto lambat ke Drive.
+  // CUMA 1x percobaan per siklus (maxAttempts=1, beda dari dbSave()/
+  // raResaveInPlace() yang 3x) -- foto yang masih gagal dicoba lagi siklus
+  // 60 detik BERIKUTNYA, bukan ditahan retry sinkron di siklus yang sama.
+  // Ini yang paling menentukan lama/tidaknya window._dbSaving (dan karenanya
+  // tombol Simpan manual) ketahan autosave utk modul dengan banyak foto.
   waitForPendingDriveUploads().then(function() {
-    return _pmEnsureAllPhotosOnDrive(rec.data, modul);
+    return _pmEnsureAllPhotosOnDrive(rec.data, modul, 1);
   }).then(function(stillFailed) {
     if (stillFailed.length) console.warn('[autosave-server] ' + stillFailed.length + ' foto masih gagal ke Drive, akan dicoba lagi siklus autosave berikutnya:', stillFailed);
     rec.data = _pmStripBase64ForSave(rec.data);
@@ -2483,15 +2609,20 @@ function dbSaveSilent(modul) {
           throw new Error('Record ini sudah tidak ada di database (mungkin sudah dihapus lewat sesi/tab lain).');
         }
         window._dbSaving = false;
+        window._dbSavingKind = null;
         var savedId = (rows && rows[0] && rows[0].id) ? rows[0].id : existingId;
         window._editingId = savedId || null;
         window._raDirty = false;
         if (typeof autosaveClear === 'function') autosaveClear(); // draft lokal tidak perlu lagi, sudah kepakai di server
         _raServerAutosaveIndicator();
+        _pmRunQueuedManualSave(); // Simpan manual yang sempat diantre (lihat komentar revisi di atas) -- jalankan sekarang
       })
       .catch(function(err) {
         window._dbSaving = false;
+        window._dbSavingKind = null;
         console.warn('[autosave-server] gagal simpan otomatis, akan dicoba lagi ~1 menit ke depan:', err);
+        _pmAutosaveFailedIndicator();
+        _pmRunQueuedManualSave();
       });
   });
 }
