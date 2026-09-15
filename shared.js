@@ -1825,10 +1825,20 @@ function dbList(modul, callback) {
   // firebase_checksheet_id di bawah, kolom ini bisa belum ada kalau migration-nya
   // belum dijalankan -- fallback bertingkat.
   var AREA_COLS = 'asset,asset_desc,area';
+  // deleted_at -- kolom "Sampah" (soft-delete, lihat dbSoftDeleteRecord() di
+  // bawah) dibundel di tier select yang SAMA dengan AREA_COLS (sama-sama
+  // migration "baru", ditest bareng) -- kalau kolomnya belum ada, tier ini
+  // gagal dan fallback ke tier di bawahnya seperti biasa (Riwayat tetap
+  // tampil, cuma tidak bisa menyembunyikan record yang di-"sampah"-kan).
   function finishWith(rows) {
-    if (!modul) { callback(rows || []); return; }
+    // Sembunyikan record yang sudah dipindah ke Sampah dari Riwayat biasa --
+    // kalau kolom deleted_at belum ke-select (migration belum jalan / fallback
+    // tier di bawah kepakai), r.deleted_at selalu undefined utk SEMUA baris,
+    // jadi filter ini otomatis jadi no-op (aman, tidak menyembunyikan apa pun).
+    rows = (rows || []).filter(function(r){ return !r.deleted_at; });
+    if (!modul) { callback(rows); return; }
     var normFilter = normalizeModul(modul);
-    var filtered = (rows || []).filter(function(r) {
+    var filtered = rows.filter(function(r) {
       return normalizeModul(r.modul) === normFilter;
     });
     callback(filtered);
@@ -1842,7 +1852,7 @@ function dbList(modul, callback) {
   // limit dinaikkan jauh -- sebelumnya 100 menyebabkan record lama (mis. O2
   // Weekly Inlet dari Desember 2024) ketutup rows modul lain yang lebih baru
   // di-update, jadi hilang dari Riwayat walau masih ada di database.
-  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status,' + AREA_COLS + '&order=updated_at.desc&limit=5000')
+  supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status,' + AREA_COLS + ',deleted_at&order=updated_at.desc&limit=5000')
     .then(finishWith)
     .catch(function() {
       supaFetch('GET', SUPA_TABLE + '?select=' + BASE_COLS + ',firebase_checksheet_id,ra_notified_status&order=updated_at.desc&limit=5000')
@@ -1853,6 +1863,139 @@ function dbList(modul, callback) {
             .catch(function(){ callback([]); });
         });
     });
+}
+
+/* ── SAMPAH (soft-delete, ditambahkan 2026-09-15) ──
+   Sebelumnya "Hapus" di Riwayat/jsa_history.html langsung DELETE permanen
+   dari pm_records, TANPA cara memulihkan -- laporan user: tidak sengaja
+   menghapus Maintenance Report yang sudah SUBMITTED, tidak bisa dikembalikan
+   sama sekali (Review Approval Dashboard-nya juga sudah dihapus terpisah,
+   dan tidak ada akses Supabase Pro utk point-in-time recovery).
+   Sekarang "Hapus" cuma menandai kolom deleted_at (bukan DELETE beneran) --
+   record itu otomatis disembunyikan dari Riwayat (lihat filter di dbList()
+   di atas) tapi masih ada di database, bisa dipulihkan lewat Sampah selama
+   RA_TRASH_RETENTION_DAYS hari. scripts/purge-trash.js (cron harian, GitHub
+   Actions, independen dari aplikasi) yang benar-benar menghapus permanen
+   record yang sudah lewat masa retensi itu.
+   ⚠️ WAJIB migration dulu (SEBELUM fitur ini dipakai):
+     ALTER TABLE pm_records ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+     NOTIFY pgrst, 'reload schema';
+   Tanpa ini dbSoftDeleteRecord()/dbRestoreRecord()/dbListTrash() akan gagal
+   (PostgREST menolak field/filter yang bukan kolom asli) -- TAPI dbList()
+   (Riwayat biasa) tetap aman jalan seperti biasa berkat fallback bertingkat
+   yang sudah ada dari awal. */
+var RA_TRASH_RETENTION_DAYS = 7;
+function dbSoftDeleteRecord(id, callback) {
+  supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + id, { deleted_at: new Date().toISOString() })
+    .then(function(){ callback(null); })
+    .catch(function(err){ callback(err); });
+}
+function dbRestoreRecord(id, callback) {
+  supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + id, { deleted_at: null })
+    .then(function(){ callback(null); })
+    .catch(function(err){ callback(err); });
+}
+// Hapus PERMANEN dari Sampah (skip masa tunggu) -- BEDA dari dbSoftDeleteRecord(),
+// ini benar-benar DELETE, tidak bisa dibatalkan lagi. Dipakai tombol "Hapus
+// Permanen Sekarang" di dalam tampilan Sampah, BUKAN tombol Hapus biasa di
+// Riwayat (yang sekarang soft-delete).
+function dbHardDeleteRecord(id, callback) {
+  supaFetch('DELETE', SUPA_TABLE + '?id=eq.' + id)
+    .then(function(){ callback(null); })
+    .catch(function(err){ callback(err); });
+}
+// Daftar isi Sampah (deleted_at terisi), diurutkan yang PALING BARU dihapus
+// duluan. Gagal (kolom belum ada/migration belum jalan) -> anggap Sampah
+// kosong (bukan error yang mengganggu UI) supaya halaman yang memanggil ini
+// tetap aman dibuka walau migration belum sempat dijalankan.
+function dbListTrash(callback) {
+  var COLS = 'id,modul,tanggal,pic,work_order,updated_at,deleted_at';
+  supaFetch('GET', SUPA_TABLE + '?select=' + COLS + '&deleted_at=not.is.null&order=deleted_at.desc&limit=500')
+    .then(function(rows){ callback(rows || []); })
+    .catch(function(){ callback([]); });
+}
+function pmTrashCount(callback) {
+  dbListTrash(function(rows){ callback(rows.length); });
+}
+
+/* ── Modal generik "Sampah" -- dipakai history.html & jsa_history.html (dan
+   modul lain ke depan kalau perlu) supaya UI-nya tidak duplikat 2x. Dibangun
+   lazy (document.createElement) begitu dipanggil pertama kali, pola sama
+   dengan dbShowSavingOverlay(). onChange (opsional) dipanggil tiap kali ada
+   pemulihan/hapus permanen dari dalam modal ini, supaya halaman pemanggil
+   bisa refresh daftar/badge count miliknya sendiri. */
+function pmTrashEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function pmOpenTrashModal(onChange) {
+  var modal = document.getElementById('pmTrashModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pmTrashModal';
+    modal.style.cssText = 'display:flex;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999990;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px';
+    modal.innerHTML =
+      '<div style="background:#fff;border-radius:12px;width:min(94vw,640px);max-height:82vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.3)">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #e5e9f0">' +
+          '<div style="font-size:16px;font-weight:700;color:#1a2040">🗑️ Sampah</div>' +
+          '<button onclick="pmCloseTrashModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#8a94a8;line-height:1">&times;</button>' +
+        '</div>' +
+        '<div style="padding:10px 18px;font-size:12px;color:#6b7a90;border-bottom:1px solid #eef1f6">Laporan di sini otomatis terhapus permanen ' + RA_TRASH_RETENTION_DAYS + ' hari setelah dipindahkan ke Sampah.</div>' +
+        '<div id="pmTrashList" style="overflow-y:auto;padding:10px 18px;flex:1"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function(e){ if (e.target === modal) pmCloseTrashModal(); });
+  }
+  modal.style.display = 'flex';
+  modal._onChange = onChange || null;
+  pmRefreshTrashModal();
+}
+function pmCloseTrashModal() {
+  var modal = document.getElementById('pmTrashModal');
+  if (modal) modal.style.display = 'none';
+}
+function pmRefreshTrashModal() {
+  var listEl = document.getElementById('pmTrashList');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#8a94a8;font-size:12px">Memuat...</div>';
+  dbListTrash(function(rows) {
+    if (!rows.length) {
+      listEl.innerHTML = '<div style="text-align:center;padding:24px;color:#8a94a8;font-size:12px">Sampah kosong.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(function(r) {
+      var deletedAt = new Date(r.deleted_at);
+      var daysLeft = Math.max(0, RA_TRASH_RETENTION_DAYS - Math.floor((Date.now() - deletedAt.getTime()) / 86400000));
+      return '<div style="border:1px solid #e5e9f0;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:12.5px">' +
+        '<div style="font-weight:700;color:#1a2040">' + pmTrashEsc(r.modul) + '</div>' +
+        '<div style="color:#6b7a90;margin-top:2px">Tanggal: ' + pmTrashEsc(r.tanggal||'-') + ' &middot; PIC: ' + pmTrashEsc(r.pic||'-') + ' &middot; WO: ' + pmTrashEsc(r.work_order||'-') + '</div>' +
+        '<div style="color:' + (daysLeft <= 1 ? '#c0392b' : '#6b7a90') + ';margin-top:2px;font-weight:600">' + (daysLeft > 0 ? 'Terhapus permanen dalam ' + daysLeft + ' hari lagi' : 'Akan segera terhapus permanen') + '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:8px">' +
+          '<button onclick="pmTrashRestore(\'' + r.id + '\')" style="padding:6px 12px;border:none;border-radius:6px;background:#2ecc71;color:#fff;font-weight:600;font-size:11.5px;cursor:pointer">♻️ Pulihkan</button>' +
+          '<button onclick="pmTrashHardDelete(\'' + r.id + '\')" style="padding:6px 12px;border:none;border-radius:6px;background:#c0392b;color:#fff;font-weight:600;font-size:11.5px;cursor:pointer">🗑 Hapus Permanen Sekarang</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  });
+}
+function pmTrashRestore(id) {
+  dbRestoreRecord(id, function(err) {
+    if (err) { alert('Gagal memulihkan: ' + (err.message || err)); return; }
+    if (typeof dbShowToast === 'function') dbShowToast('✓ Laporan dipulihkan');
+    pmRefreshTrashModal();
+    var modal = document.getElementById('pmTrashModal');
+    if (modal && modal._onChange) modal._onChange();
+  });
+}
+function pmTrashHardDelete(id) {
+  // Satu-satunya aksi yang BENAR-BENAR permanen di alur baru ini -- pakai
+  // confirm() bawaan (bukan modal ketik "HAPUS" custom) supaya tetap ada
+  // 1 lapis gerbang tanpa membangun modal terpisah lagi di dalam modal Sampah.
+  if (!confirm('Hapus PERMANEN laporan ini? Tindakan ini TIDAK BISA dibatalkan lagi (beda dari "Pulihkan" yang masih bisa diulang).')) return;
+  dbHardDeleteRecord(id, function(err) {
+    if (err) { alert('Gagal menghapus: ' + (err.message || err)); return; }
+    if (typeof dbShowToast === 'function') dbShowToast('Laporan dihapus permanen');
+    pmRefreshTrashModal();
+    var modal = document.getElementById('pmTrashModal');
+    if (modal && modal._onChange) modal._onChange();
+  });
 }
 
 /* ── NORMALIZE MODUL NAME ── */

@@ -1,0 +1,21 @@
+name: Purge Trash (Soft-Deleted Records)
+
+# Hapus PERMANEN record pm_records yang sudah lebih dari 7 hari berada di
+# Sampah (soft-delete, lihat "SAMPAH" di shared.js dan
+# scripts/purge-trash.js untuk detail lengkap). Tidak butuh presisi waktu
+# sama sekali (retensi 7 hari punya banyak slack) -- cron bawaan GitHub
+# Actions cukup, tidak perlu trigger eksternal seperti cron-job.org.
+on:
+  schedule:
+    - cron: '0 19 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/purge-trash.js

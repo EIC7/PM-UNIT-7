@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Riwayat PM — Unit 7</title>
-<script src="shared.js?v=20260915a"></script>
+<script src="shared.js?v=20260915b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -34,6 +34,10 @@
     <button id="pmDiagBtn" class="pm-hist-icon-btn" onclick="pmShowDiagnosisModal(true)">
       🩺<span class="pm-hist-btn-label">Diagnosis</span>
       <span id="pmDiagBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center"></span>
+    </button>
+    <button id="pmTrashBtn" class="pm-hist-icon-btn" onclick="pmOpenTrashModal(function(){ pmHistRefresh(); pmHistRefreshTrashBadge(); })">
+      🗑️<span class="pm-hist-btn-label">Sampah</span>
+      <span id="pmTrashBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e67e22;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center"></span>
     </button>
     <div class="live-dot"></div>
   </div>
@@ -83,13 +87,14 @@
      jsa_history.html, disesuaikan ke tema terang halaman ini. -->
 <div id="histDelModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px">
   <div style="background:#fff;border-radius:12px;width:min(94vw,420px);padding:20px;box-shadow:0 20px 50px rgba(0,0,0,0.3)">
-    <div style="font-size:16px;font-weight:700;color:var(--fail);margin-bottom:14px">⚠️ Hapus Laporan Ini?</div>
+    <div style="font-size:16px;font-weight:700;color:var(--fail);margin-bottom:14px">⚠️ Pindahkan Laporan ke Sampah?</div>
     <div id="histDelSummary" style="background:#f4f6fa;border:1px solid #dde4ef;border-radius:8px;padding:12px;margin-bottom:14px;font-size:12.5px"></div>
+    <div style="font-size:11.5px;color:var(--text3);margin:-8px 0 12px">Laporan akan hilang dari Riwayat, tapi masih bisa dipulihkan lewat tombol "🗑️ Sampah" selama 7 hari sebelum benar-benar terhapus permanen.</div>
     <label style="display:block;font-size:0.85em;color:var(--text3);margin-bottom:6px;font-weight:600">Ketik <b>HAPUS</b> untuk konfirmasi:</label>
     <input type="text" id="histDelConfirmInput" placeholder="HAPUS" autocomplete="off" oninput="histDelCheckInput()" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:1em;margin-bottom:14px;box-sizing:border-box">
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button onclick="histDelCloseModal()" style="padding:9px 16px;border-radius:6px;border:none;font-weight:600;cursor:pointer;font-size:0.9em;background:#e5e9f0;color:#333">Batal</button>
-      <button id="histDelConfirmBtn" class="hist-del-confirm" onclick="histDelConfirmDo()" disabled style="padding:9px 16px;border-radius:6px;border:none;font-weight:600;font-size:0.9em">🗑 Hapus Permanen</button>
+      <button id="histDelConfirmBtn" class="hist-del-confirm" onclick="histDelConfirmDo()" disabled style="padding:9px 16px;border-radius:6px;border:none;font-weight:600;font-size:0.9em">🗑 Pindah ke Sampah</button>
     </div>
   </div>
 </div>
@@ -312,6 +317,19 @@ function pmHistUpdateRefreshLabel() {
   var el = document.getElementById('pmHistRefreshLabel');
   if (!el || !pmHistLastRefreshed) return;
   el.textContent = 'Terakhir diperbarui: ' + pmHistLastRefreshed.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// Badge angka di tombol "🗑️ Sampah" -- lihat pmTrashCount()/pmOpenTrashModal()
+// di shared.js. Sengaja badge SAJA yang di-refresh berkala, BUKAN buka modal-nya
+// otomatis -- modal cuma dibuka lewat klik tombol manual.
+function pmHistRefreshTrashBadge() {
+  if (typeof pmTrashCount !== 'function') return;
+  pmTrashCount(function(n) {
+    var badge = document.getElementById('pmTrashBadge');
+    if (!badge) return;
+    if (n > 0) { badge.textContent = n > 99 ? '99+' : String(n); badge.style.display = 'block'; }
+    else { badge.style.display = 'none'; }
+  });
 }
 
 setInterval(function(){
@@ -566,18 +584,24 @@ function histDelConfirmDo() {
   var id = histDelTarget.id;
   var btn = document.getElementById('histDelConfirmBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ Menghapus...';
-  supaFetch('DELETE', SUPA_TABLE + '?id=eq.' + id)
-    .then(function() {
-      historyDelCloseModal();
-      dbShowToast('Data berhasil dihapus');
-      loadHistory(pmHistCurrentFilter);
-    })
-    .catch(function(err) {
-      alert('Gagal hapus: ' + (err.message || err));
-      btn.textContent = '🗑 Hapus Permanen';
+  btn.textContent = '⏳ Memindahkan...';
+  // Soft-delete (tandai deleted_at, BUKAN DELETE beneran) -- lihat bagian
+  // "SAMPAH" di shared.js. Bisa dipulihkan lewat tombol "🗑️ Sampah" selama
+  // RA_TRASH_RETENTION_DAYS hari, baru benar-benar hilang lewat
+  // scripts/purge-trash.js setelah masa itu lewat.
+  dbSoftDeleteRecord(id, function(err) {
+    if (err) {
+      alert('Gagal memindahkan ke Sampah: ' + (err.message || err));
+      btn.textContent = '🗑 Pindah ke Sampah';
       btn.disabled = false;
-    });
+      return;
+    }
+    historyDelCloseModal();
+    dbShowToast('Laporan dipindah ke Sampah (bisa dipulihkan ' + RA_TRASH_RETENTION_DAYS + ' hari)');
+    loadHistory(pmHistCurrentFilter);
+    pmHistUpdateFilterCounts();
+    pmHistRefreshTrashBadge();
+  });
 }
 document.getElementById('histDelModal').addEventListener('click', function(e) {
   if (e.target === this) historyDelCloseModal();
@@ -776,6 +800,11 @@ pmCheckSyncDiagnosis(function(problems) {
 /* Auto-load all on open */
 loadHistory('');
 pmHistUpdateFilterCounts();
+pmHistRefreshTrashBadge();
+setInterval(function(){
+  if (document.hidden) return;
+  pmHistRefreshTrashBadge();
+}, 20000);
 </script>
 </body>
 </html>

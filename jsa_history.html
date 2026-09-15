@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JSA History</title>
-<script src="shared.js?v=20260915a"></script>
+<script src="shared.js?v=20260915b"></script>
 <script src="db-helper.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -17,6 +17,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .header .btn-back:hover{background:#232c40}
 .header .btn-eic7-portal{padding:8px 16px;background:rgba(124,58,237,0.18);border:1.5px solid #b794f6;color:#fff;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:0.9em;transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .header .btn-eic7-portal:hover{background:rgba(124,58,237,0.34)}
+.header .btn-trash{position:relative;padding:8px 16px;background:rgba(230,126,34,0.16);border:1.5px solid #e67e22;color:#f5b878;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:0.9em}
+.header .btn-trash:hover{background:rgba(230,126,34,0.3)}
+.header .btn-trash .badge{display:none;position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 5px;min-width:14px;text-align:center}
 
 .tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #2a3348}
 .tab-btn{padding:10px 20px;font-size:0.9em;font-weight:700;border:none;background:transparent;color:#7c8698;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
@@ -101,6 +104,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn-create-jsa" onclick="openJsaPopup()">+ Create New JSA</button>
+      <button class="btn-trash" onclick="pmOpenTrashModal(function(){ jsaHistLoad(); jsaHistRefreshTrashBadge(); })">🗑️ Sampah<span class="badge" id="jsaTrashBadge"></span></button>
       <a class="btn-eic7-portal" href="https://eenputra.github.io/EIC7-PORTAL/index.html#" target="_blank" rel="noopener">🔗 Portal EIC7</a>
       <button class="btn-back" onclick="window.location.href='index.html'">← Kembali ke Dashboard PM I&amp;C</button>
     </div>
@@ -150,16 +154,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
      ini dilepas lagi. Lihat CLAUDE.md. -->
 <iframe id="jsaDownloadFrame" style="display:none" title="jsa-download"></iframe>
 
-<!-- Modal konfirmasi Hapus -->
+<!-- Modal konfirmasi Hapus (soft-delete -- pindah ke Sampah, lihat
+     jsaDelConfirmDo()/dbSoftDeleteRecord() -- BUKAN lagi DELETE permanen
+     langsung) -->
 <div class="jsa-del-modal" id="jsaDelModal">
   <div class="jsa-del-dialog">
-    <h3>⚠️ Hapus Laporan JSA?</h3>
+    <h3>⚠️ Pindahkan Laporan JSA ke Sampah?</h3>
     <div class="jsa-del-summary" id="jsaDelSummary"></div>
+    <div style="font-size:12px;color:#8a94a8;margin:-4px 0 10px">Laporan akan disembunyikan dari daftar ini, tapi masih bisa dipulihkan lewat "🗑️ Sampah" selama 7 hari sebelum benar-benar terhapus permanen.</div>
     <label>Ketik <b>HAPUS</b> untuk konfirmasi:</label>
     <input type="text" id="jsaDelConfirmInput" placeholder="HAPUS" autocomplete="off" oninput="jsaDelCheckInput()">
     <div class="jsa-del-actions">
       <button class="jsa-del-cancel" onclick="jsaDelCloseModal()">Batal</button>
-      <button class="jsa-del-confirm" id="jsaDelConfirmBtn" onclick="jsaDelConfirmDo()" disabled>🗑 Hapus Permanen</button>
+      <button class="jsa-del-confirm" id="jsaDelConfirmBtn" onclick="jsaDelConfirmDo()" disabled>🗑 Pindah ke Sampah</button>
     </div>
   </div>
 </div>
@@ -190,22 +197,36 @@ document.addEventListener('keydown', function(e) {
 // teks murni), jadi `data` JSONB-nya SELALU kecil -- aman diambil penuh
 // lewat query khusus ini, beda dari dbList() yang menghindarinya demi
 // modul lain yang bisa punya puluhan foto per record.
+function jsaHistFinishLoad(rows) {
+  // Sembunyikan yang sudah dipindah ke Sampah (soft-delete) -- lihat
+  // jsaHistDelConfirmDo()/dbSoftDeleteRecord() di shared.js. Kalau kolom
+  // deleted_at belum ke-select (migration belum jalan / fallback di bawah
+  // kepakai), r.deleted_at selalu undefined utk semua baris = no-op.
+  rows = (rows || []).filter(function(r){ return !r.deleted_at; });
+  jsaHistRowsCA = [];
+  jsaHistRowsRT = [];
+  rows.forEach(function(r) {
+    var n = normalizeModul(r.modul);
+    if (n === 'JSA_CONDITION_ACCESS') jsaHistRowsCA.push(r);
+    else if (n === 'JSA_REPORT') jsaHistRowsRT.push(r);
+  });
+  document.getElementById('cntCA').textContent = '(' + jsaHistRowsCA.length + ')';
+  document.getElementById('cntRT').textContent = '(' + jsaHistRowsRT.length + ')';
+  jsaHistRender();
+}
 function jsaHistLoad() {
-  supaFetch('GET', 'pm_records?select=id,modul,tanggal,pic,work_order,updated_at,data&modul=ilike.*JSA*&order=updated_at.desc&limit=500')
-    .then(function(rows) {
-      jsaHistRowsCA = [];
-      jsaHistRowsRT = [];
-      (rows || []).forEach(function(r) {
-        var n = normalizeModul(r.modul);
-        if (n === 'JSA_CONDITION_ACCESS') jsaHistRowsCA.push(r);
-        else if (n === 'JSA_REPORT') jsaHistRowsRT.push(r);
-      });
-      document.getElementById('cntCA').textContent = '(' + jsaHistRowsCA.length + ')';
-      document.getElementById('cntRT').textContent = '(' + jsaHistRowsRT.length + ')';
-      jsaHistRender();
-    })
-    .catch(function(err) {
-      document.getElementById('jsaHistList').innerHTML = '<div class="empty-msg">Gagal memuat riwayat: ' + (err.message || err) + '</div>';
+  // Coba select DENGAN deleted_at dulu (fitur Sampah) -- PostgREST menolak
+  // SELURUH select kalau ada 1 kolom yang belum ada (migration belum
+  // dijalankan), jadi fallback ke select TANPA kolom itu supaya Riwayat JSA
+  // tidak ikut rusak total gara-gara ini.
+  supaFetch('GET', 'pm_records?select=id,modul,tanggal,pic,work_order,updated_at,data,deleted_at&modul=ilike.*JSA*&order=updated_at.desc&limit=500')
+    .then(jsaHistFinishLoad)
+    .catch(function() {
+      supaFetch('GET', 'pm_records?select=id,modul,tanggal,pic,work_order,updated_at,data&modul=ilike.*JSA*&order=updated_at.desc&limit=500')
+        .then(jsaHistFinishLoad)
+        .catch(function(err) {
+          document.getElementById('jsaHistList').innerHTML = '<div class="empty-msg">Gagal memuat riwayat: ' + (err.message || err) + '</div>';
+        });
     });
 }
 
@@ -338,24 +359,41 @@ function jsaDelConfirmDo() {
   var id = jsaDelTarget.id;
   var btn = document.getElementById('jsaDelConfirmBtn');
   btn.disabled = true;
-  btn.textContent = '⏳ Menghapus...';
-  supaFetch('DELETE', 'pm_records?id=eq.' + id)
-    .then(function() {
-      jsaDelCloseModal();
-      if (typeof dbShowToast === 'function') dbShowToast('Laporan JSA berhasil dihapus ✓');
-      jsaHistLoad();
-    })
-    .catch(function(err) {
-      alert('Gagal menghapus: ' + (err.message || err));
-      btn.textContent = '🗑 Hapus Permanen';
+  btn.textContent = '⏳ Memindahkan...';
+  // Soft-delete (tandai deleted_at, BUKAN DELETE beneran) -- lihat
+  // dbSoftDeleteRecord()/bagian "SAMPAH" di shared.js. Record ini masih bisa
+  // dipulihkan lewat tombol "🗑️ Sampah" di atas selama RA_TRASH_RETENTION_DAYS
+  // hari, baru benar-benar hilang lewat scripts/purge-trash.js setelah itu.
+  dbSoftDeleteRecord(id, function(err) {
+    if (err) {
+      alert('Gagal memindahkan ke Sampah: ' + (err.message || err));
+      btn.textContent = '🗑 Pindah ke Sampah';
       btn.disabled = false;
-    });
+      return;
+    }
+    jsaDelCloseModal();
+    if (typeof dbShowToast === 'function') dbShowToast('Laporan JSA dipindah ke Sampah (bisa dipulihkan ' + RA_TRASH_RETENTION_DAYS + ' hari) ✓');
+    jsaHistLoad();
+    jsaHistRefreshTrashBadge();
+  });
 }
 document.getElementById('jsaDelModal').addEventListener('click', function(e) {
   if (e.target === this) jsaDelCloseModal();
 });
 
+// Badge angka di tombol "🗑️ Sampah" -- lihat pmTrashCount() di shared.js.
+function jsaHistRefreshTrashBadge() {
+  if (typeof pmTrashCount !== 'function') return;
+  pmTrashCount(function(n) {
+    var badge = document.getElementById('jsaTrashBadge');
+    if (!badge) return;
+    if (n > 0) { badge.textContent = n > 99 ? '99+' : String(n); badge.style.display = 'block'; }
+    else { badge.style.display = 'none'; }
+  });
+}
+
 jsaHistLoad();
+jsaHistRefreshTrashBadge();
 </script>
 </body>
 </html>
