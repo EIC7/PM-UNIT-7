@@ -123,6 +123,16 @@
 .o2-channel-tag-input{flex:1;min-width:140px;border:1px solid var(--panel-border);border-radius:6px;padding:6px 9px;font-size:16px;background:#fff;color:var(--text)}
 .o2-catatan-label{font-size:14px;color:var(--text3);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:4px}
 .o2-catatan-textarea{width:100%;border:1.5px solid var(--panel-border);border-radius:6px;padding:8px 10px;font-family:Arial,sans-serif;font-size:14px;color:var(--text);resize:vertical;box-sizing:border-box}
+/* Load Data (Gas Ratio Before Calibration) -- popup pilih 1 dari 3 sesi
+   kalibrasi sebelumnya, lihat o2OpenLoadDataModal() dkk. Reuse struktur
+   overlay .pdf-preview-modal yang sudah ada (fixed, center, backdrop gelap). */
+.o2ld-box{background:#fff;border-radius:14px;max-width:560px;width:92%;max-height:86vh;overflow-y:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.35)}
+.o2ld-option{border:1.5px solid var(--panel-border);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,background .15s}
+.o2ld-option:hover{border-color:#159957;background:#f0fbf5}
+.o2ld-option.o2ld-recommended{border-color:#159957;background:#f0fbf5}
+.o2ld-badge{display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#159957;border-radius:20px;padding:2px 10px;margin-left:8px;vertical-align:middle}
+.o2ld-fill-ok{color:#159957;font-weight:700}
+.o2ld-fill-warn{color:var(--warn,#f39c12);font-weight:700}
 /* Catatan: ukuran topbar/page-header/badge/section-label/meta-field yang
    dulu di-override khusus di sini SEKARANG sudah jadi standar site-wide di
    shared.css (lihat commit ukuran teks site-wide) -- override lokal
@@ -214,7 +224,10 @@
 
     <!-- Section 3: Gas Ratios Before Calibration -->
     <div class="o2-readings-wrap">
-      <div class="o2-readings-title">📊 Gas Ratios Before Calibration</div>
+      <div class="o2-readings-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span>📊 Gas Ratios Before Calibration</span>
+        <button type="button" class="btn btn-outline" style="font-size:13px;padding:6px 14px" onclick="o2OpenLoadDataModal()">📥 Load Data</button>
+      </div>
       <div id="o2GasRatioBeforeGrid" style="display:flex;flex-direction:column;gap:12px"></div>
     </div>
 
@@ -1640,6 +1653,110 @@ function o2UpdateChannelField(ck, field, val) {
   o2ChannelData[ck][field] = val;
 }
 
+/* ══════════════════ LOAD DATA — Gas Ratio Before Calibration ══════════════════
+   Tombol "📥 Load Data" di Section 3 -- ambil nilai Gas Ratio Span & Zero
+   AFTER Calibration dari sesi kalibrasi SEBELUMNYA (record tersimpan lain,
+   modul PM_O2_WEEKLY_INLET) untuk dipakai sebagai Gas Ratio Span & Zero
+   BEFORE Calibration sesi saat ini -- logikanya: hasil "after" minggu lalu
+   jadi acuan "before" minggu ini. Popup menampilkan 3 sesi terakhir (by
+   tanggal kalibrasi, BUKAN by updated_at) supaya teknisi bisa pilih; sesi
+   yang datanya paling LENGKAP (banyak channel yang after-nya terisi) DAN
+   paling baru ditandai "Direkomendasikan" -- supaya tidak salah pilih draft/
+   percobaan yang datanya belum lengkap. */
+function o2LdEsc(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+var O2_LD_MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+// JANGAN pakai new Date(string) polos utk format "DD NamaBulan YYYY" --
+// parser bawaan JS gagal utk Mei/Agustus/Oktober/Desember (lihat catatan
+// bug trend di CLAUDE.md, bulan yg prefix 3-hurufnya beda dari bhs Inggris).
+function o2LdParseTanggal(str) {
+  var parts = String(str||'').trim().split(' ');
+  if (parts.length !== 3) return null;
+  var dd = parseInt(parts[0], 10);
+  var mm = O2_LD_MONTHS.indexOf(parts[1]);
+  var yyyy = parseInt(parts[2], 10);
+  if (isNaN(dd) || mm < 0 || isNaN(yyyy)) return null;
+  return new Date(yyyy, mm, dd).getTime();
+}
+function o2LdFillCount(chData) {
+  var n = 0;
+  O2_CHANNELS.forEach(function(c){
+    var d = (chData && chData['ch'+c.id]) || {};
+    if (d.gasRatioSpanAfter || d.gasRatioZeroAfter) n++;
+  });
+  return n;
+}
+function o2OpenLoadDataModal() {
+  document.getElementById('o2LoadDataModal').classList.add('show');
+  var listEl = document.getElementById('o2LoadDataList');
+  listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)">Memuat data...</div>';
+  var excludeId = window._editingId ? '&id=neq.' + window._editingId : '';
+  supaFetchRetry('pm_records?select=id,tanggal,pic,work_order,updated_at,data&modul=eq.PM_O2_WEEKLY_INLET' + excludeId + '&order=updated_at.desc&limit=20')
+    .then(function(rows) {
+      // Dedupe by tanggal (kalau sesi yang sama sempat disimpan/diedit
+      // beberapa kali -- ambil versi TERBARU/updated_at paling baru per
+      // tanggal, karena hasil query sudah terurut updated_at.desc), lalu
+      // urutkan ulang berdasar TANGGAL KALIBRASI (bukan updated_at) supaya
+      // "3 sesi terakhir" benar-benar berarti 3 tanggal kalibrasi terakhir.
+      var seen = {}, uniq = [];
+      (rows||[]).forEach(function(r){
+        var t = (r.tanggal||'').trim();
+        if (!t || t === '—' || seen[t]) return;
+        seen[t] = true; uniq.push(r);
+      });
+      uniq.forEach(function(r){ r._ts = o2LdParseTanggal(r.tanggal); });
+      uniq = uniq.filter(function(r){ return r._ts !== null; });
+      uniq.sort(function(a,b){ return b._ts - a._ts; });
+      var candidates = uniq.slice(0, 3);
+      if (!candidates.length) {
+        listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3)">Belum ada data sesi kalibrasi sebelumnya yang tersimpan.</div>';
+        return;
+      }
+      candidates.forEach(function(r){ r._fillCount = o2LdFillCount((r.data||{}).channels); });
+      // Rekomendasi: fillCount terbanyak dulu, kalau seri pilih yang tanggalnya
+      // lebih baru (candidates sudah terurut tanggal desc, jadi cukup cari
+      // index fillCount max pertama).
+      var bestIdx = 0;
+      candidates.forEach(function(r, i){ if (r._fillCount > candidates[bestIdx]._fillCount) bestIdx = i; });
+      window._o2LdCandidates = candidates;
+      listEl.innerHTML = candidates.map(function(r, i){
+        var fillCls = r._fillCount === 8 ? 'o2ld-fill-ok' : 'o2ld-fill-warn';
+        var badge = (i === bestIdx) ? '<span class="o2ld-badge">&#11088; Direkomendasikan</span>' : '';
+        return '<div class="o2ld-option'+(i===bestIdx?' o2ld-recommended':'')+'" onclick="o2ApplyLoadData('+i+')">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">'+
+            '<div style="font-weight:700;color:var(--steel);font-size:15px">'+o2LdEsc(r.tanggal)+badge+'</div>'+
+            '<div class="'+fillCls+'" style="font-size:13px">'+r._fillCount+'/8 channel lengkap</div>'+
+          '</div>'+
+          '<div style="font-size:12.5px;color:var(--text3);margin-top:4px">PIC: '+o2LdEsc(r.pic||'-')+' &middot; WO: '+o2LdEsc(r.work_order||'-')+'</div>'+
+        '</div>';
+      }).join('');
+    })
+    .catch(function(err) {
+      listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--fail)">Gagal memuat data: '+o2LdEsc(err.message||String(err))+'</div>';
+    });
+}
+function o2CloseLoadDataModal() {
+  document.getElementById('o2LoadDataModal').classList.remove('show');
+}
+function o2ApplyLoadData(idx) {
+  var r = (window._o2LdCandidates||[])[idx];
+  if (!r) return;
+  var channels = (r.data||{}).channels || {};
+  O2_CHANNELS.forEach(function(c){
+    var ck = 'ch'+c.id;
+    var src = channels[ck] || {};
+    ['gasRatioSpanBefore','gasRatioZeroBefore'].forEach(function(field){
+      var srcField = field === 'gasRatioSpanBefore' ? 'gasRatioSpanAfter' : 'gasRatioZeroAfter';
+      var val = src[srcField] || '';
+      if (!o2ChannelData[ck]) o2ChannelData[ck] = o2EmptyChannelData();
+      o2ChannelData[ck][field] = val;
+      var el = document.getElementById('o2fld_'+ck+'_'+field);
+      if (el) el.value = val;
+    });
+  });
+  o2CloseLoadDataModal();
+  if (typeof dbShowToast === 'function') dbShowToast('✓ Gas Ratio Before Calibration diisi dari sesi ' + r.tanggal);
+}
+
 // Galeri foto: 'pressure'/'before'/'after' = 1 galeri gabungan (session-level /
 // mewakili semua channel — Section 1, 2, 5), 'calib_ch'+id = 1 galeri per
 // channel (Section 4). Semua cuma punya 1 phase 'evidence' (bukan
@@ -2550,6 +2667,20 @@ pmNumpadInit();
   });
 })();
 </script>
+<!-- LOAD DATA MODAL (Gas Ratio Before Calibration) -->
+<div id="o2LoadDataModal" class="pdf-preview-modal">
+  <div class="o2ld-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:17px;font-weight:700;color:var(--steel)">📥 Load Data Gas Ratio</div>
+      <button type="button" onclick="o2CloseLoadDataModal()" aria-label="Tutup" style="background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:var(--text3)">&times;</button>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">
+      Pilih salah satu sesi kalibrasi sebelumnya. Nilai <b>Gas Ratio Span &amp; Zero (After Calibration)</b> dari sesi yang dipilih akan otomatis mengisi kolom <b>Before Calibration</b> untuk ke-8 channel saat ini.
+    </div>
+    <div id="o2LoadDataList"></div>
+  </div>
+</div>
+
 <!-- PDF PREVIEW MODAL -->
 <div id="pdfPreviewModal" class="pdf-preview-modal">
     <div class="pdf-preview-dialog">
