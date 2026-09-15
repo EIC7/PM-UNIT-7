@@ -1,4 +1,4 @@
-> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai R di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M → N → O → P → Q → R**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-18 huruf (A–R) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai R.**
+> **PERINTAH UTAMA (cek setiap kali dokumen ini dibuka):** Cek **SEMUA fitur A sampai U di bawah, satu per satu, sampai tuntas** — jangan berhenti di tengah dan jangan cuma cek fitur yang "kelihatannya relevan" dari permintaan user. Urutannya: **A → B → C → D → E → F → G → H → I → J → K → L → M → N → O → P → Q → R → S → T → U**. Untuk tiap huruf: (1) baca isinya, (2) `grep` nama fungsi/id terkait di HTML tujuan, (3) bandingkan dengan versi di dokumen ini, (4) kalau beda/kurang → terapkan; kalau sudah sama → lanjut ke huruf berikutnya. Baru boleh dianggap selesai kalau ke-21 huruf (A–U) sudah dicek semua, walaupun user cuma minta "perbaiki crop modal" atau semacamnya — karena satu perbaikan sering menyeret fitur lain yang saling terhubung (mis. fix di B bisa berdampak ke C/D/E yang sama-sama pakai `imgArr`/`cropModalState`, dan T/U yang sama-sama pakai `#cropImg`/`#cropBox`/`closeCropModal()`). **Jangan laporkan "sudah selesai" ke user sebelum benar-benar menuntaskan pengecekan A sampai U.**
 
 
 
@@ -9,6 +9,7 @@
 
 | Versi | Tanggal | Perubahan |
 |---|---|---|
+| v1.16 | 2026-09-15 | **Tambah Fitur T (Undo/Redo Crop) dan Fitur U (Keterangan saat Crop + Antrean Multi-Crop Sekuensial)** — dibuat di `shared.js` (generik, dipakai bareng oleh SEMUA pola crop: Fitur A/System-shared langsung MAUPUN System C/lokal-per-file), lalu **Fitur T di-roll-out ke SEMUA 26 file yang punya crop modal** (2 file `imgOpenCropper` generik shared.js + 22 file salinan lokal `imgOpenCropper`/System C + 2 file `openCropModal`/System B — lihat Fitur T untuk daftar & titik hook persisnya). **Fitur U baru diterapkan ke 2 file** (`beltscale.html`, `maintenance_report_form.html`) yang murni panggil fungsi crop shared.js tanpa override lokal — BELUM di-roll-out ke 24 file lain (System B/C), tapi mekanismenya generik dan siap dipakai kalau diminta nanti (lihat catatan roll-out di Fitur U). Juga: **Fitur L diperkuat** dengan syarat wajib 5 field Informasi Pekerjaan (Work Order, PIC, Tanggal, Asset, Asset Description) untuk SEMUA modul checksheet baru — lihat catatan tambahan di Fitur L dan baris baru di tabel "Checklist Konfigurasi per File Baru". **Pelajaran testing (BUKAN bug produksi)**: waktu verifikasi Fitur T/U pakai headless Chrome, sempat salah curiga pola `cropImg.src=''; cropImg.src=dataUrl;` (dipakai luas di banyak file, force-reset supaya `onload` tetap fire walau src baru kebetulan sama dgn yg lama) sbg penyebab `onload` tidak pernah fire — **investigasi ulang membuktikan itu SALAH**, akar masalah sebenarnya cuma base64 PNG fixture di test yang korup/rusak (retest dgn PNG valid + pola reset yg sama = `onload` fire normal). Dicatat di sini murni supaya kalau ada yg menemukan gejala serupa lagi nanti, **curigai dulu validitas data gambar yang dipakai TES**, jangan buru-buru curiga pola `src=''` reset yang sudah lama & luas dipakai ini. |
 | v1.15 | 2026-08-29 | **2 file baru ditambahkan ke cakupan dokumen ini**: `weekly_calibration_o2_inlet.html` (8 channel) dan `weekly_calibration_o2_outlet.html` (6 channel) — di-clone dari `form_o2_report.html` versi terbaru (sudah termasuk fix dangling-else driveFileId dari v1.14, dicek ulang di kedua file baru dan aman), lalu galeri per-channelnya direstrukturisasi jadi beberapa section terpisah (bukan 1 galeri/channel) mengikuti desain referensi eksternal — lihat `CLAUDE.md` bagian "Restrukturisasi modul O2" untuk detail. **Budget kompresi foto diturunkan dari 1MB jadi 500KB per galeri** — ternyata perubahan ini SEBELUMNYA cuma pernah diterapkan ke fungsi generik `imgCompressAndStore()` di `shared.js`, sementara SEMUA 20 file modul (termasuk 2 file baru di atas) punya salinan kode kompresi sendiri-sendiri yang tidak ikut ter-update. Sudah diperbaiki di seluruh 20 file (`var MAX = 500*1024`), termasuk kode contoh di Fitur J bawah ini. **Root cause (duplikasi kode, bukan panggil fungsi shared) BELUM dibenahi** — lihat peringatan di `CLAUDE.md`, kalau budget ini berubah lagi harus diubah manual di tiap file. |
 | v1.14 | 2026-08-29 | **Audit menyeluruh sebelum bikin file HTML checksheet baru.** (1) **Isi gap dokumentasi lama**: bagian Fitur B sebelumnya cuma bilang "kode `cropAndSave`/`closeCropModal`/`cropReset`/`reshapeCropBoxToRatio` lengkap ada di dump Fitur J di bawah" — **padahal kode itu TIDAK PERNAH benar-benar ada di dokumen ini** (dicek: 0 hasil untuk `function cropAndSave` di seluruh file). Sekarang kode aslinya (sumber: `form_o2_report.html`, termasuk kompresi adaptif budget 1MB, in-place replace Fitur C, render callback generik) ditempel langsung di Fitur B, plus `rotateCropImage()` (Fitur R). (2) **Bug baru ditemukan & didokumentasikan** (belum diperbaiki di semua file, cek per file kalau audit ulang): dangling-else di `cropAndSave()` pada blok hapus foto lama dari Drive — kalau `else`-nya salah nempel ke kondisi `driveFileId` (bukan ke `existing`), foto yang di-crop-ulang tapi belum py `driveFileId` bisa dobel muncul di galeri (lihat catatan tambahan di Fitur C). (3) **Verifikasi cakupan**: `beltscale.html` (polos, beda dari `beltscale-b12/e23/e45.html`) dan `checksheet-level-switch.html` dicek — **keduanya TIDAK punya sistem crop/upload foto sama sekali** (bukan gap, memang di luar cakupan dokumen ini). Tidak ada file checksheet lain yang belum pernah disebut di tabel riwayat ini. |
 | v1.13 | 2026-08-26 | **Tambah Signature Pad System di `shared.js`** — sistem tanda tangan digital lengkap yang terintegrasi dengan workflow 3-level di `maintenance_report_form.html`. Fungsi baru di `shared.js`: `raSignPadShow(opts)` (modal pad TTD interaktif, canvas draw, upload ke Supabase Storage bucket `signatures` sebagai PNG, update `RA_SIGNATURE_FILE_MAP` in-memory), `raSignPadSave()`, `raSignPadClear()`, `raSignPadCancel()`, `raGetSignatureDataUrl(displayName, callback)` (fetch signed URL → blob → dataUrl, fallback-safe), `raRenderSignatureToElement(displayName, role, elementId, showPadIfMissing)`. Update `maintenance_report_form.html`: panel Checker box kini punya preview TTD (`<img id="raCheckerTtdImg">`) + tombol "✍️ Gambar / Update TTD" (`raOpenSignPadChecker()`), dropdown onchange memicu `raPreviewCheckerTtd()`; panel SPV box punya preview TTD (`<img id="raSpvTtdImg">`) + tombol `raOpenSignPadSpv()`; kedua preview otomatis load saat panel muncul via override `raRenderWorkflowUI`. **Alur TTD:** login sebagai checker/spv → klik tombol TTD → gambar di canvas → simpan ke Storage bucket → TTD muncul di preview → Verifikasi/Approve → TTD ikut tersimpan di record via `raGetSignatureUrl`. Filename di Storage = slug dari `display_name` (`zaini_nur_hidayat.png`). `RA_SIGNATURE_FILE_MAP` tetap sebagai in-memory cache — setelah `raSignPadSave()` berhasil, entry baru langsung ditambahkan ke map tanpa perlu reload halaman. |
@@ -47,7 +48,7 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 
 ---
 
-## Daftar Fitur — Checklist A→Q (cek SEMUA, urut, jangan lompat)
+## Daftar Fitur — Checklist A→U (cek SEMUA, urut, jangan lompat)
 - [ ] [A. Upload Gambar (kamera/galeri + convert + HEIC)](#a-upload-gambar)
 - [ ] [B. Crop Modal 3-Mode (Default / Preset / Manual)](#b-crop-modal-3-mode)
 - [ ] [C. Crop Ulang (✂️ scissors, re-edit tanpa upload baru)](#c-crop-ulang)
@@ -66,7 +67,10 @@ Semua pakai `cdnjs.cloudflare.com` (bukan `unpkg.com`) — sesuai konvensi Track
 - [ ] [P. Header + Baris Foto Pertama Tidak Terpisah Halaman](#p-header--baris-foto-pertama-tidak-terpisah-halaman)
 - [ ] [Q. Sinkronisasi Caption SEBELUM Array Diubah](#q-sinkronisasi-caption-sebelum-array-diubah)
 - [ ] [R. Rotasi Gambar 90° di Crop Modal](#r-rotasi-gambar-90-di-crop-modal)
-- [ ] [Checklist Konfigurasi per File Baru](#checklist-konfigurasi)
+- [ ] [S. Status Warna Dinamis di Input (Hijau/Kuning/Merah)](#s-status-warna-dinamis-di-input-hijaukuningmerah--melawan-global-input-color-fix)
+- [ ] [T. Undo/Redo Crop](#t-undoredo-crop)
+- [ ] [U. Keterangan (Caption) saat Crop + Antrean Multi-Crop Sekuensial](#u-keterangan-caption-saat-crop--antrean-multi-crop-sekuensial)
+- [ ] [Checklist Konfigurasi per File Baru](#checklist-konfigurasi-per-file-baru)
 - [ ] [⚠️ Potensi Konflik Global](#potensi-konflik-global)
 
 > Checklist `[ ]` di atas cuma alat bantu baca — dokumen ini statis (bukan tempat centang beneran). Yang WAJIB: setiap kali menerapkan fitur ke HTML lain, telusuri A→M ini di kepala/kerja sendiri sampai semuanya ke-cek, baru selesai.
@@ -1750,6 +1754,11 @@ y += totalH + 6;
 
 **Butuh dari user:** daftar `infoFields` (nama label + urutan) persis sesuai form tujuan, dan lebar `labelColW` kalau label form itu jauh lebih panjang/pendek dari 40mm — **jangan menebak**, baca dari form yang diupload atau tanya user.
 
+**🔴 WAJIB (ditambahkan 2026-09-15, audit menyeluruh atas permintaan user):** `infoFields` modul checksheet BARU manapun **HARUS** memuat 5 field ini — **Work Order, PIC, Tanggal, Asset, Asset Description** — tidak peduli seberapa sederhana modulnya. Field lain (silakan tambah sesuai kebutuhan) TIDAK menggantikan 5 ini. Audit yang dilakukan menemukan 10+ file checksheet lama yang sudah production tapi kelewat Asset/Asset Description sejak awal dibuat (`beltscale.html`+b12/e23/e45, `coal-silo-level.html`, `dcs-console-chcb/wwtp.html`, `dcs-hmi-inspection.html`, `flow-meter-fgd.html`, `ph-analyzer.html`, `pm-hg-analyzer.html`, `opacity.html`, `so2.html`) — semuanya sudah diperbaiki, tapi ini pelajaran supaya modul BARU tidak mengulangi gap yang sama:
+- Untuk modul **fixed-equipment** (equipment tetap/tunggal per file — belt conveyor, DCS console drop tetap, analyzer tetap seperti CEMS/pH/PM HG/O2 dst.): Asset/Asset Description BOLEH `readonly`/prefilled dengan tag equipment file itu sendiri (contoh: `<input type="text" id="xxAssetDesc" value="Opacity Monitor — ID Fan Inlet 7A & 7B">`) — TIDAK perlu jadi input bebas kalau memang cuma ada 1 equipment tetap untuk seluruh file. Yang WAJIB: field itu **ada di DOM**, **ikut dikirim di `dbCollectData()`** (`assetDesc:gv('xxAssetDesc')` di dalam `data:{...}`), **ikut dipulihkan di `applyRecordToForm()`** kalau buka record lama, dan **ikut tercetak** di grid Informasi Pekerjaan PDF (Fitur L) — bukan sekadar teks statis yang cuma tampil di layar tapi tidak pernah masuk data/PDF.
+- Untuk modul **freeform** (equipment berbeda-beda tiap laporan, mis. `maintenance_report_form.html`): Asset/Asset Description jadi input teks bebas yang diisi user tiap laporan.
+- `dbList()` (Riwayat) **TIDAK PERNAH** fetch kolom `data` (JSONB, berat) — kalau ke depan Asset/Asset Description modul baru perlu tampil di label Riwayat (bukan cuma di dalam PDF/record), pertimbangkan pola `maintenance_report_form.html` (3 kolom ringan top-level `asset`/`asset_desc`/`area` di `pm_records`, migration SQL `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`) — TAPI ini opsional, kebanyakan modul cukup simpan Asset/Asset Description di dalam `data` JSONB biasa seperti pola di atas.
+
 ---
 
 ## M. Upload Otomatis Foto ke Google Drive
@@ -2074,6 +2083,65 @@ Untuk PDF (jsPDF autoTable), gunakan `didParseCell` untuk set `cellData.cell.sty
 
 ---
 
+## T. Undo/Redo Crop
+
+**Ditambahkan:** 2026-09-15, `shared.js`. **Cakupan:** SEMUA 26 file yang punya crop modal (2 file yang panggil fungsi crop generik `shared.js` langsung + 22 file System C/salinan lokal `imgOpenCropper` + 2 file System B/`openCropModal` — daftar lengkap lihat riwayat v1.16 di atas).
+
+**Tujuan:** kalau user drag/resize kotak crop beberapa kali dan berubah pikiran, bisa Undo balik ke posisi sebelumnya (sampai paling awal) atau Redo maju lagi — TANPA perlu klik "Reset" (yang mengembalikan ke posisi default awal, bukan ke langkah sebelumnya).
+
+**Mekanisme (generik di `shared.js`, TIDAK perlu didefinisikan ulang di file manapun):**
+- `cropHistory = {stack:[], idx:-1}` — array snapshot state (`imgStyle`/`boxStyle`/`imgSrc`/`outW`/`outH` dari `#cropImg`/`#cropBox`/`#cropOutW`/`#cropOutH`) + index posisi sekarang.
+- `cropStartHistoryTracking()` — reset `cropHistory` ke snapshot AWAL (state crop-box SAAT DIPANGGIL), lalu pasang `MutationObserver` yang mengawasi atribut `style`/`src` di `#cropImg` dan `style` di `#cropBox`. Setiap mutasi (drag/resize/preset/orientasi/rotasi — SEMUA aksi itu ujung-ujungnya cuma memutasi `.style`/`.src` kedua elemen ini) di-debounce 400ms lalu dicatat sebagai 1 checkpoint via `cropPushHistory()`.
+- `cropStopHistoryTracking()` — lepas observer + kosongkan `cropHistory` (dipanggil saat modal ditutup, supaya history foto SEBELUMNYA tidak nyangkut ke foto BERIKUTNYA).
+- `cropUndo()`/`cropRedo()` — geser `cropHistory.idx` mundur/maju, terapkan state via `cropApplyState()` (kalau `imgSrc` berubah — kasus rotasi — pasang `onload` sekali-pakai dulu sebelum restore `style`, supaya `initCropBox()`/refit otomatis TIDAK ikut menimpa balik yang baru saja di-restore).
+- `cropUpdateUndoRedoButtons()` — toggle `disabled` tombol `#cropUndoBtn`/`#cropRedoBtn` berdasar posisi `idx` (awal = keduanya disabled, di tengah = keduanya enabled, di ujung terbaru = Redo disabled).
+
+**HTML yang perlu ditambahkan** (di `.crop-btns`, antara tombol "🖍️ Edit Gambar" dan "↺ Reset" — posisi ini KONSISTEN di semua 26 file):
+```html
+<button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
+<button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
+```
+
+**3 titik hook WAJIB kalau file tujuan pakai System C/B (salinan lokal `imgOpenCropper`/`openCropModal`, BUKAN panggil fungsi `shared.js` generik langsung)** — kalau file tujuan pakai fungsi `shared.js` generik apa adanya (tidak override lokal), 3 titik ini SUDAH otomatis ada, tidak perlu apa-apa lagi:
+1. Di akhir `img.onload = function(){ ... }` milik `imgOpenCropper`/`openCropModal` (SETELAH baris `if (cropModalState._mode === 'default') fitCropBoxToFullImage(); else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();`, SEBELUM `};` penutup) — tambahkan `cropStartHistoryTracking();`. **Kalau file itu juga punya alur "Edit Gambar" (anotasi/markup) yang me-reload `#cropImg` lagi setelah anotasi diterapkan** (cari `cropImg.onload = function(){...}` KEDUA di fungsi `applyImageEdits()`), tambahkan panggilan yang SAMA di situ juga — di SEMUA 22 file System C, pola ini SELALU muncul PERSIS 2x per file (satu di `imgOpenCropper` utama, satu lagi di alur anotasi).
+2. Di dalam `closeCropModal(){ ... }` — tambahkan `cropStopHistoryTracking();` (posisi bebas di dalam fungsi itu, biasanya setelah `cropModalState.classList.remove('show');`). Ini SATU-SATUNYA titik yang perlu disentuh untuk "stop" karena `closeCropModal()` adalah titik keluar TUNGGAL yang dipanggil baik oleh `skipCrop()`/tombol "Batal", MAUPUN oleh `cropAndSave()` di akhir prosesnya — TIDAK perlu duplikasi ke kedua fungsi itu.
+3. Tombol HTML (lihat di atas).
+
+**Cara cepat verifikasi apakah 22 file System C di repo ini masih 100% seragam** (kalau mau nambah field/logic baru ke pola ini lagi ke depan, PENTING dicek dulu supaya tahu bisa `sed` massal atau harus manual per file): `grep -c "onclick=\"openImageEditor()\">.*Edit Gambar</button>"` dan `grep -c "else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();"` di semua file System C — per 2026-09-15 SEMUA menghasilkan `1` dan `2` (berarti template identik, aman disunting massal via 1 sed script yang sama utk semua file sekaligus, JANGAN per-file manual kalau template masih terbukti seragam seperti ini).
+
+**⚠️ Potensi Konflik:** tambah `cropStartHistoryTracking`/`cropStopHistoryTracking`/`cropUndo`/`cropRedo`/`cropSnapshotState`/`cropPushHistory`/`cropApplyState`/`cropUpdateUndoRedoButtons`/`cropHistory`/`cropHistoryObserver`/`cropObserverSuppressed` ke daftar nama fungsi/variabel rawan bentrok di "⚠️ Potensi Konflik Global" — cek dulu kalau file tujuan kebetulan sudah punya salah satu nama ini dengan arti beda.
+
+---
+
+## U. Keterangan (Caption) saat Crop + Antrean Multi-Crop Sekuensial
+
+**Ditambahkan:** 2026-09-15, `shared.js`. **Cakupan:** BARU 2 file (`beltscale.html`, `maintenance_report_form.html`) — keduanya yang panggil fungsi crop generik `shared.js` (`imgOpenCropper`/`cropAndSave`/`skipCrop`) TANPA override lokal. **BELUM di-roll-out** ke 24 file System B/C lainnya (beda dari Fitur T yang sudah 26/26) — kalau diminta lanjutkan ke situ, mekanismenya SAMA PERSIS (generik, baca poin "Titik integrasi" di bawah), tinggal terapkan pola yang sama ke `cropAndSave()`/`skipCrop()` lokal tiap file.
+
+**Tujuan (2 sub-fitur terpisah, sama-sama baru):**
+1. **Keterangan (caption) foto bisa diisi/diedit LANGSUNG di crop modal** (bukan cuma sesudahnya di galeri thumbnail seperti pola lama) — pre-diisi dari foto lama kalau ini crop-ulang (`replaceIdx>=0`), kosong kalau foto baru.
+2. **Upload banyak foto sekaligus (multi-select) di-crop BERGANTIAN satu-per-satu** (bukan langsung disimpan mentah/skip-crop otomatis seperti pola lama beberapa modul) — indikator "📷 Foto X dari Y" + tombol "✕ Batalkan Sisa" muncul otomatis kalau antreannya >1 foto.
+
+**HTML yang perlu ditambahkan:**
+```html
+<!-- Di header crop modal (dekat judul), utk indikator antrean -->
+<div id="cropQueueProgress" style="display:none;font-size:11px;font-weight:700;color:#159957"></div>
+<button type="button" id="cropQueueCancelBtn" onclick="cropQueueCancelRest()" style="display:none;...">✕ Batalkan Sisa</button>
+
+<!-- Di footer crop modal, SEBELUM tombol Reset/Lewati/Simpan -->
+<input type="text" id="cropCaptionInput" placeholder="Keterangan foto (opsional)..." style="width:100%;margin-bottom:10px;...">
+```
+
+**Titik integrasi:**
+- `imgOpenCropper()` shared.js sudah otomatis pre-isi `#cropCaptionInput` dari `imgArr[replaceIdx].caption` (kalau ada) setiap kali modal dibuka — TIDAK perlu kode tambahan di pemanggil.
+- `cropAndSave()`/`skipCrop()` shared.js sudah otomatis BACA `#cropCaptionInput` untuk `caption` entry yang disimpan (menggantikan pola lama yang cuma warisi `existing.caption` tanpa bisa diedit di titik ini) — kalau file tujuan punya `cropAndSave()`/`skipCrop()` LOKAL sendiri (System B/C), baris `var caption = existing ? (existing.caption||'') : '';` yang lama perlu diganti `var capInput = document.getElementById('cropCaptionInput'); var caption = capInput ? capInput.value : (existing ? (existing.caption||'') : '');`.
+- Antrean multi-crop dipicu via `imgOpenCropperQueue(files, imgArr, side, modulePrefix)` (BUKAN `imgOpenCropper()` langsung) — dipanggil dari handler `<input type="file" multiple>` sebagai pengganti pola lama "loop semua file lalu compress/skip-crop otomatis tanpa modal". Fungsi ini otomatis membuka modal utk foto pertama, dan `cropAndSave()`/`skipCrop()` shared.js otomatis maju ke foto berikutnya (`cropQueueAdvance()`) setelah tiap foto selesai diproses — pemanggil TIDAK perlu logic loop manual apa pun.
+
+**⚠️ Potensi Konflik:** tambah `imgOpenCropperQueue`/`cropQueue`/`cropQueueOpenCurrent`/`cropQueueAdvance`/`cropQueueCancelRest`/`cropUpdateQueueProgressUI` ke daftar nama rawan bentrok di "⚠️ Potensi Konflik Global". Kalau file tujuan sudah punya pola "upload banyak foto → auto-compress tanpa crop" (skip-crop-otomatis, umum di modul lama), **tanya dulu ke user** apakah mau diganti ke alur crop-bergantian ini (perubahan perilaku, bukan cuma tambahan) — jangan langsung timpa.
+
+---
+
+
+## Checklist Konfigurasi per File Baru
 
 Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditanyakan:
 
@@ -2087,9 +2155,11 @@ Sebelum menerapkan fitur-fitur di atas ke file baru, ini yang perlu dicek/ditany
 | 6 | Apakah file itu sudah punya alur download-langsung tanpa preview | Kalau ya dan mau diubah ke preview-dulu → **tanya user dulu** |
 | 7 | Lokasi persis loop `doc.addImage(...)` di fungsi export PDF-nya | Baca langsung dari kode file yang diupload |
 | 8 | Bentuk objek `rec`/`dbCollectData(modul)` file itu, untuk `applyRecordToForm` | Baca langsung dari kode file yang diupload |
+| 9 | **WAJIB (2026-09-15): 5 field Informasi Pekerjaan** — Work Order, PIC, Tanggal, Asset, Asset Description — HARUS ada di panel Informasi Pekerjaan setiap modul checksheet baru, terhubung penuh HTML → `dbCollectData()` → `applyRecordToForm()` → grid PDF (lihat Fitur L). Untuk modul **fixed-equipment** (equipment-nya tetap/tunggal per file, bukan pilihan bebas per laporan — mis. belt conveyor, DCS console, analyzer tetap) — Asset/Asset Description BOLEH prefilled/readonly dengan tag equipment itu sendiri (tidak perlu jadi input bebas), yang penting field & tag-nya tetap ADA & ikut tersimpan/tercetak, bukan sekadar teks statis di HTML tanpa dikirim ke `dbCollectData()`. | **Tanya user** kalau modul baru unik/tidak jelas equipment-nya tetap atau bebas |
+| 10 | Sistem crop apa yang mau dipakai file baru: **(a)** panggil langsung fungsi generik `shared.js` (`imgOpenCropper`/`cropAndSave`/`skipCrop`, TANPA didefinisikan ulang di file — otomatis dapat Fitur T **dan** U tanpa kerja tambahan), atau **(b)** salin lokal ke file (System C, kalau butuh kustomisasi khusus per modul mis. paksa 1:1/landscape — lihat Fitur B/T) — kalau (b), Fitur T (Undo/Redo) WAJIB di-hook manual (3 titik, lihat Fitur T), Fitur U (caption+antrean) belum wajib tapi bisa ditambah kalau diminta | **Default ke (a)** kalau tidak ada kebutuhan kustomisasi khusus — lebih sedikit kode & otomatis dapat fitur lebih banyak |
 
 ## ⚠️ Potensi Konflik Global
 Karena semua fitur di atas dan fungsi bawaan `shared.js` sama-sama pakai **global function declaration** (bukan modul/namespace), nama-nama berikut **rawan bentrok** kalau file tujuan sudah punya fungsi dengan nama sama tapi perilaku beda:
-`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `applySquarePreset`, `fitCropBoxToFullImage`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`, `drawCheckboxBs`.
+`cropReset`, `cropAndSave`, `skipCrop`, `imgOpenCropper`, `openCropModal`, `closeCropModal`, `setCropMode`, `setCropOrientation`, `applySquarePreset`, `fitCropBoxToFullImage`, `renderPresetButtons`, `highlightPreset`, `printReport`, `exportPdf`, `showPdfPreview`, `nudgeImage`, `nudgeImageInArray`, `reEditCrop`, `initCropDrag`, `openImageEditor`, `closeImageEditor`, `applyImageEdits`, `setEditTool`, `setEditColor`, `setEditThickness`, `addShape`, `deleteSelectedShape`, `editSelectedText`, `deselectShape`, `setSelectedShape`, `getShapeById`, `renderAllShapes`, `ieForceHideKeyboard`, `iePhotoDrawSize`, `ieRotatePoint`, `ieHandleR`, `ieHandleHitR`, `ieMakeHandle`, `uploadFotoKeGDrive`, `GDRIVE_WEB_APP_URL`, `GDRIVE_SECRET_TOKEN`, `drawCheckboxBs`, `cropStartHistoryTracking`, `cropStopHistoryTracking`, `cropUndo`, `cropRedo`, `cropSnapshotState`, `cropPushHistory`, `cropApplyState`, `cropUpdateUndoRedoButtons`, `cropHistory`, `cropHistoryObserver`, `cropObserverSuppressed` (Fitur T), `imgOpenCropperQueue`, `cropQueue`, `cropQueueOpenCurrent`, `cropQueueAdvance`, `cropQueueCancelRest`, `cropUpdateQueueProgressUI` (Fitur U).
 
 **Sebelum menempel kode dari dokumen ini, selalu `grep` dulu nama-nama fungsi di atas pada file tujuan.** Kalau sudah ada dan isinya beda, diskusikan dulu ke user mana yang mau dipakai / digabung, jangan main timpa.
