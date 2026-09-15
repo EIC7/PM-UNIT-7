@@ -399,6 +399,8 @@
             </div>
             <div class="crop-btns">
                 <button class="crop-btn crop-btn-outline" onclick="openImageEditor()">🖍️ Edit Gambar</button>
+                <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
+                <button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
                 <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
                 <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
                 <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
@@ -1258,6 +1260,7 @@ function applyImageEdits(){
                 cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
                 if (cropModalState._mode === 'default') fitCropBoxToFullImage();
                 else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+                cropStartHistoryTracking();
             };
             cropImg.src = outUrl;
             closeImageEditor(false);
@@ -1310,12 +1313,14 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
         box.style.left = ((ww-bw)/2)+'px'; box.style.top = ((wh-bh)/2)+'px';
         if (cropModalState._mode === 'default') fitCropBoxToFullImage();
         else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+        cropStartHistoryTracking();
     };
     img.src = dataUrl;
     cropModalState.classList.add('show');
 }
 function closeCropModal() {
     cropModalState.classList.remove('show');
+    cropStopHistoryTracking();
     cropModalState._pending = null;
 }
 
