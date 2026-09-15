@@ -1453,14 +1453,21 @@ var CHECKLIST_DATA = [
 var ID_FAN_WORK_TO_BE_DONE = '3 Monthly - Inspect and make sure instrument air regulator for moving blade actuator is set at 5.5';
 
 /* Table Measurement — "Purging Line Flow Transmitter" (Langkah 8).
-   4 parameter (Card Value & Flow sudah ada dari awal, Blade Pitch Control &
-   Inlet Pressure STALL ditambahkan 2026-09-15 -- lihat revisi user), tiap
-   parameter punya 4 kolom angka: Before/After x 933A/933B. Sengaja
-   dibiarkan kosong (bukan contoh terisi) sebagai template kosong. */
+   4 parameter, tiap parameter punya 4 kolom angka: Before/After x 933A/933B.
+   Sengaja dibiarkan kosong (bukan contoh terisi) sebagai template kosong.
+   Revisi 2026-09-15 (lanjutan): "ID Fan Air Flow Blade Pitch Control (%)"
+   diganti jadi "Card Value Pressure Transmitter" (mA, BUKAN % lagi) --
+   pasangan raw-signal (mA) utk Inlet Pressure STALL, persis pola "Card
+   Value" existing yang jadi pasangan raw-signal utk Flow. "Card Value"
+   sendiri diganti nama jadi "Card Value Flow Transmitter" biar tidak
+   ambigu sekarang ada 2 "Card Value" (Flow & Pressure). Posisi ARRAY TIDAK
+   berubah (cuma ganti nama & unit di index 0 dan 2) -- restore dari record
+   lama tetap benar krn applyRecordToForm() memetakan by-index, bukan
+   by-nama, utk tabel ini. */
 var MEASUREMENT_DATA = [
-  {parameter:'Card Value', unit:'mA'},
+  {parameter:'Card Value Flow Transmitter', unit:'mA'},
   {parameter:'Flow', unit:'T/H'},
-  {parameter:'ID Fan Air Flow Blade Pitch Control', unit:'%'},
+  {parameter:'Card Value Pressure Transmitter', unit:'mA'},
   {parameter:'ID Fan Inlet Pressure STALL', unit:'KPaG'}
 ].map(function(r){
   return {parameter:r.parameter, unit:r.unit, beforeA:'', afterA:'', beforeB:'', afterB:''};
@@ -1475,14 +1482,20 @@ var MEASUREMENT_DATA = [
    lewat renderPurgingEvidenceSections() (pola sama dengan
    renderEvidenceSections() di pm_stacker.html) supaya tidak perlu menulis
    ulang markup 8x. */
+/* gk (a_cardvalue/a_bladepitch/dst) SENGAJA TIDAK diubah walau labelnya
+   sekarang "Card Value Pressure Transmitter" (bukan lagi Blade Pitch
+   Control) -- gk ini dipakai sebagai KEY penyimpanan evidence
+   (evidencePurgingGroups[gk], lihat dbCollectData()/applyRecordToForm()),
+   ganti key akan bikin foto yang sempat tersimpan hari ini (2026-09-15,
+   sebelum revisi nama ini) di key lama jadi tidak kebaca lagi. */
 var PURGING_EVIDENCE_GROUPS = [
-  {gk:'a_cardvalue',      label:'ID Fan A (7BG-FT-933A) — Card Value (mA) — Before/After'},
+  {gk:'a_cardvalue',      label:'ID Fan A (7BG-FT-933A) — Card Value Flow Transmitter (mA) — Before/After'},
   {gk:'a_flow',           label:'ID Fan A (7BG-FT-933A) — Flow (T/H) — Before/After'},
-  {gk:'a_bladepitch',     label:'ID Fan A (7BG-FT-933A) — Air Flow Blade Pitch Control (%) — Before/After'},
+  {gk:'a_bladepitch',     label:'ID Fan A (7BG-FT-933A) — Card Value Pressure Transmitter (mA) — Before/After'},
   {gk:'a_inletpressure',  label:'ID Fan A (7BG-FT-933A) — Inlet Pressure STALL (KPaG) — Before/After'},
-  {gk:'b_cardvalue',      label:'ID Fan B (7BG-FT-933B) — Card Value (mA) — Before/After'},
+  {gk:'b_cardvalue',      label:'ID Fan B (7BG-FT-933B) — Card Value Flow Transmitter (mA) — Before/After'},
   {gk:'b_flow',           label:'ID Fan B (7BG-FT-933B) — Flow (T/H) — Before/After'},
-  {gk:'b_bladepitch',     label:'ID Fan B (7BG-FT-933B) — Air Flow Blade Pitch Control (%) — Before/After'},
+  {gk:'b_bladepitch',     label:'ID Fan B (7BG-FT-933B) — Card Value Pressure Transmitter (mA) — Before/After'},
   {gk:'b_inletpressure',  label:'ID Fan B (7BG-FT-933B) — Inlet Pressure STALL (KPaG) — Before/After'}
 ];
 
