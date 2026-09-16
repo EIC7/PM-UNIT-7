@@ -1766,6 +1766,17 @@ var dcsNotes = {};  // key: '<dropId>_defect' -> string catatan temuan/defect dr
 var dcsActiveDrops = {};
 DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = true; }); /* default: semua aktif */
 
+/* Area tujuan review (2026-09-16) -- kartu modul ini muncul di 3 tab
+   (Boiler/Common CHCB/Turbine) di index.html; area yang benar-benar
+   dikirim ke Review Approval Dashboard ditentukan dari TAB/kartu yang
+   diklik user (?area=... di URL, lihat pmExtractHref()/filterCards()
+   di index.html), BUKAN dropdown di form ini. Fallback ke rec.area
+   kalau ini record lama yang dibuka ulang dari Riwayat (lihat
+   applyRecordToForm()). null kalau dibuka langsung tanpa ?area= --
+   raSendFinalPdfToFirebaseDashboard() (shared.js) fallback ke
+   RA_MODUL_AREA['DCS_HMI'] ('common') kalau null. */
+var dcsAreaOverride = new URLSearchParams(window.location.search).get('area') || null;
+
 /* ══════════════════════════════════════════════
    BACKGROUND (same as opacity)
 ══════════════════════════════════════════════ */
@@ -2515,6 +2526,7 @@ function dbCollectData(modul) {
     pic:        gv('dcsPIC'),
     work_order: gv('dcsWO'),
     unit:       gv('dcsUnit'),
+    area:       dcsAreaOverride, // kolom top-level, lihat catatan di deklarasi dcsAreaOverride
     data: {
       program:  gv('dcsProgram'),
       activeDrops: DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; }).map(function(d){ return d.id; }),
@@ -2534,6 +2546,9 @@ function applyRecordToForm(rec, editingId) {
   var data = rec.data || {};
   if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { data = {}; } }
   window._editingId = editingId;
+  // Record lama dibuka dari Riwayat TANPA ?area= di URL -- pakai area yang
+  // sudah tersimpan di record itu sendiri, jangan sampai jadi null lagi.
+  if (rec.area) dcsAreaOverride = rec.area;
   var sv = function(id2,val){ var e=document.getElementById(id2); if(e) e.value=val||''; };
   sv('dcsDate',    rec.tanggal    || data.tanggal    || '');
   sv('dcsPIC',     rec.pic        || data.pic        || '');

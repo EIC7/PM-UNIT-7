@@ -1097,13 +1097,16 @@
             <div class="line"></div>
         </div>
 
-        <div class="cards-grid">
-            <!-- No Results -->
-            <div class="no-results" id="noResults">
-                <div class="nr-icon">🔎</div>
-                <div class="nr-text">Modul tidak ditemukan</div>
-                <div class="nr-sub">Coba kata kunci lain</div>
-            </div>
+        <!-- No Results -- SENGAJA di luar #cardsGrid/#searchResultsGrid (dipakai
+             BERSAMA oleh keduanya, mode tab & mode pencarian) supaya tidak ikut
+             ke-display:none kalau salah satu grid disembunyikan. -->
+        <div class="no-results" id="noResults">
+            <div class="nr-icon">🔎</div>
+            <div class="nr-text">Modul tidak ditemukan</div>
+            <div class="nr-sub">Coba kata kunci lain</div>
+        </div>
+
+        <div class="cards-grid" id="cardsGrid">
             <!-- Submit Report (Review Approval Dashboard) — link ke deployment GitHub Pages terpisah -->
             <div class="pm-card" onclick="window.open('https://eic7.github.io/CHECK-SHEET-POMI-ELEKTRIK-ONLINE/Review_Approval_Dashboard.html','_blank')" style="--card-color: #2563eb;">
                 <div class="card-index">REPORT</div>
@@ -1555,6 +1558,13 @@
             </div>
 
         </div>
+
+        <!-- Hasil pencarian (menembus SEMUA tab, lihat filterCards()) -- kartu
+             multi-area (data-area > 1 token) di-clone SATU PER AREA dengan label
+             "Area — Judul", supaya area tujuan review jelas sebelum diklik.
+             Disembunyikan (display:none) selama kolom cari kosong -- .cards-grid
+             asli di atas tetap dipakai utk mode tab biasa. -->
+        <div class="cards-grid" id="searchResultsGrid" style="display:none"></div>
     </div>
 
     <!-- RIWAYAT PM SECTION -->
@@ -1768,29 +1778,85 @@
             searchInput.focus();
         }
 
+        // Label tampilan area utk prefix hasil pencarian -- SAMA PERSIS teks tab
+        // di areaTabs di atas, supaya konsisten (bukan RA_AREA_LABEL_C7 di
+        // shared.js, itu utk konteks lain/lebih verbose).
+        var AREA_SEARCH_LABEL = { boiler: 'Boiler', turbine: 'Turbine', common: 'Common CHCB', wwtp: 'Common WWTP' };
+
+        // Ambil target navigasi dari onclick="window.location.href='...'" polos --
+        // SEMUA kartu multi-area saat ini (DCS HMI, Flow Switch, Conductivity)
+        // pakai pola ini, tidak ada popup/JS function call. Kartu lain yang
+        // kebetulan tidak match (return null) tetap aman -- clone-nya jatuh ke
+        // jalur "areas.length<=1" yang tidak butuh href sama sekali.
+        function pmExtractHref(card) {
+            var oc = card.getAttribute('onclick') || '';
+            var m = oc.match(/window\.location\.href\s*=\s*'([^']+)'/);
+            return m ? m[1] : null;
+        }
+
         function filterCards() {
             var q = searchInput.value.trim().toLowerCase();
-            var cards = document.querySelectorAll('.pm-card');
+            var cards = document.querySelectorAll('#cardsGrid .pm-card');
+            var cardsGrid = document.getElementById('cardsGrid');
+            var resultsGrid = document.getElementById('searchResultsGrid');
             var visible = 0;
 
-            cards.forEach(function(card) {
-                var text = card.innerText.toLowerCase();
-                var textMatch = !q || text.includes(q);
-                var cardAreaRaw = (card.getAttribute('data-area') || '').trim();
-                // Tab "Form, Report, Trend, WH, Asset" (__general__) menampilkan kartu
-                // yang TIDAK terikat 1 area tetap (tidak punya atribut data-area sama
-                // sekali) -- kartu equipment per-area lain masuk tab Boiler/Turbine/
-                // Common CHCB/Common WWTP sesuai data-area-nya masing-masing.
-                var areaMatch = (activeTabArea === '__general__')
-                    ? (cardAreaRaw === '')
-                    : cardAreaRaw.split(' ').includes(activeTabArea);
-                var match = textMatch && areaMatch;
-                card.style.display = match ? '' : 'none';
-                if (match) visible++;
-            });
-
-            noResults.style.display = (visible === 0) ? 'block' : 'none';
-            searchCount.textContent = q ? (visible + ' modul ditemukan') : '';
+            if (q) {
+                // Mode PENCARIAN: menembus SEMUA tab (area aktif diabaikan). Kartu
+                // multi-area (data-area > 1 token) dipecah jadi satu hasil PER area,
+                // diberi label "Area — Judul", supaya area tujuan review jelas
+                // sebelum diklik (lihat pmMaybeAppendAreaParam() di modul tujuan).
+                cardsGrid.style.display = 'none';
+                resultsGrid.style.display = '';
+                resultsGrid.innerHTML = '';
+                cards.forEach(function(card) {
+                    var text = card.innerText.toLowerCase();
+                    if (!text.includes(q)) return;
+                    var areas = (card.getAttribute('data-area') || '').trim().split(' ').filter(Boolean);
+                    if (areas.length <= 1) {
+                        var clone = card.cloneNode(true);
+                        clone.style.display = '';
+                        resultsGrid.appendChild(clone);
+                        visible++;
+                        return;
+                    }
+                    var href = pmExtractHref(card);
+                    areas.forEach(function(area) {
+                        var clone = card.cloneNode(true);
+                        clone.style.display = '';
+                        var titleEl = clone.querySelector('.card-title');
+                        if (titleEl) {
+                            var prefix = document.createElement('div');
+                            prefix.style.cssText = 'font-size:11px;font-weight:700;color:var(--card-color, #2563eb);letter-spacing:0.5px;margin-bottom:2px';
+                            prefix.textContent = (AREA_SEARCH_LABEL[area] || area) + ' —';
+                            titleEl.parentNode.insertBefore(prefix, titleEl);
+                        }
+                        if (href) {
+                            var sep = href.indexOf('?') >= 0 ? '&' : '?';
+                            clone.setAttribute('onclick', "window.location.href='" + href + sep + "area=" + area + "'");
+                        }
+                        resultsGrid.appendChild(clone);
+                        visible++;
+                    });
+                });
+                noResults.style.display = (visible === 0) ? 'block' : 'none';
+                searchCount.textContent = visible + ' modul ditemukan';
+            } else {
+                // Mode TAB biasa (kolom cari kosong) -- perilaku lama, difilter oleh
+                // tab aktif saja, tidak dipecah per area.
+                cardsGrid.style.display = '';
+                resultsGrid.style.display = 'none';
+                cards.forEach(function(card) {
+                    var cardAreaRaw = (card.getAttribute('data-area') || '').trim();
+                    var areaMatch = (activeTabArea === '__general__')
+                        ? (cardAreaRaw === '')
+                        : cardAreaRaw.split(' ').includes(activeTabArea);
+                    card.style.display = areaMatch ? '' : 'none';
+                    if (areaMatch) visible++;
+                });
+                noResults.style.display = (visible === 0) ? 'block' : 'none';
+                searchCount.textContent = '';
+            }
         }
     </script>
 </body>
