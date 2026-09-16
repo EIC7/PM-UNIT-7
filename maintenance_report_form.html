@@ -55,13 +55,6 @@
         .img-nudge-controls{display:flex;align-items:center;justify-content:center;gap:3px}
         .img-nudge button{width:18px;height:18px;border-radius:4px;border:1px solid #ddd;background:#f2f2f2;color:#333;font-size:9px;cursor:pointer;padding:0;line-height:1}
         .img-nudge span{font-size:9px;color:#666;min-width:28px;text-align:center}
-        /* OVERLAY NOTIFIKASI MULTI-UPLOAD */
-        #imgUploadOverlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.8);flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
-        #imgUploadOverlay.show{display:flex}
-        #imgUploadOverlaySpinner{width:38px;height:38px;border:4px solid rgba(255,255,255,0.25);border-top-color:#2ecc71;border-radius:50%;animation:imgUploadSpin 0.8s linear infinite;margin-bottom:16px}
-        @keyframes imgUploadSpin{to{transform:rotate(360deg)}}
-        #imgUploadOverlayTitle{font-size:15px;font-weight:700;color:#fff}
-        #imgUploadOverlaySub{font-size:12px;color:#c9d6cf;margin-top:6px;max-width:280px}
         /* CROP MODAL */
         #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
         #cropModal.show{display:flex}
@@ -321,7 +314,7 @@
                     <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
                     <button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
                     <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
-                    <button class="crop-btn crop-btn-outline" onclick="closeCropModal()">Batal</button>
+                    <button class="crop-btn crop-btn-outline" onclick="cropCancelCurrent()">Batal</button>
                     <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
                 </div>
             </div>
@@ -329,13 +322,6 @@
     </div>
 
     <input type="file" id="fileInput" accept="image/*,.heic,.heif" style="display:none" multiple>
-
-    <!-- Overlay notifikasi multi-upload (mengikuti pola cems_calibration.html) -->
-    <div id="imgUploadOverlay" onclick="imgHideUploadOverlay()">
-        <div id="imgUploadOverlaySpinner"></div>
-        <div id="imgUploadOverlayTitle"></div>
-        <div id="imgUploadOverlaySub"></div>
-    </div>
 
     <!-- PDF PREVIEW MODAL -->
     <div id="pdfPreviewModal" class="pdf-preview-modal">
@@ -1768,14 +1754,13 @@ function applyImageEdits(){
 
         // ── Upload item: 1 file → crop modal seperti biasa (replaceIdx dipertahankan
         // kalau ini upload pengganti foto lewat klik thumbnail);
-        // multi-select → skip crop (pakai ukuran default penuh) + overlay progress ──
+        // multi-select → antrean crop bergantian satu-per-satu (Fitur U), BUKAN lagi
+        // auto-compress-skip-crop -- setiap foto tetap bisa di-crop + diberi keterangan. ──
         function handleItemFiles(files, type, idx, replaceIdx) {
             var fileArr = Array.prototype.slice.call(files || []);
             if (!fileArr.length || !sections[type] || !sections[type][idx]) return;
-            var isMulti = fileArr.length > 1;
-            var imgArr = sections[type][idx].images;
 
-            if (!isMulti) {
+            if (fileArr.length === 1) {
                 cropModal._pending = {type:type, idx:idx, replaceIdx: (replaceIdx===undefined?-1:replaceIdx)};
                 fileToDataUrl(fileArr[0], function(dataUrl) {
                     if (!dataUrl) return;
@@ -1784,89 +1769,39 @@ function applyImageEdits(){
                 return;
             }
 
-            var total = fileArr.length, done = 0;
-            imgShowUploadOverlay('loading', done, total);
-            var finishOne = function() {
-                done++;
-                if (done < total) imgShowUploadOverlay('loading', done, total);
-                else imgShowUploadOverlay('done');
-            };
-            fileArr.forEach(function(file) {
-                fileToDataUrl(file, function(rawDataUrl) {
-                    if (!rawDataUrl) { finishOne(); return; }
-                    imgCompressFullImage(rawDataUrl, imgArr, function(finalDataUrl) {
-                        if (!finalDataUrl) { finishOne(); return; }
-                        var slotIdx = imgArr.length;
-                        var entry = {name:(file.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
-                        imgArr.push(entry);
-                        renderSection(type, type + 'Box');
-                        if (typeof uploadFotoKeGDrive === 'function') {
-                            var gdriveFileName = 'maintenance_' + type + '_' + idx + '_' + slotIdx + '.jpg';
-                            uploadFotoKeGDrive(entry.dataUrl, gdriveFileName, window.CURRENT_MODUL, type || '', entry);
-                        }
-                        finishOne();
-                    });
-                });
+            cropQueue = { files: fileArr, idx: 0, type: type, itemIdx: idx, total: fileArr.length };
+            cropQueueOpenCurrent();
+        }
+
+        /* ── Fitur U: antrean multi-crop sekuensial (versi lokal file ini -- pakai
+           openCropModal()/cropModal._pending {type,idx,replaceIdx} sendiri, BEDA dari
+           imgOpenCropperQueue() shared.js yang mengasumsikan signature imgOpenCropper()).
+           cropQueue sendiri adalah variabel global yang SAMA dengan punya shared.js
+           (cropUpdateQueueProgressUI() generik dari shared.js otomatis ikut jalan). ── */
+        function cropQueueOpenCurrent() {
+            if (!cropQueue) return;
+            var file = cropQueue.files[cropQueue.idx];
+            if (!file) { cropQueue = null; return; }
+            cropModal._pending = {type: cropQueue.type, idx: cropQueue.itemIdx, replaceIdx: -1};
+            fileToDataUrl(file, function(dataUrl) {
+                if (!cropQueue) return; // sempat dibatalkan (cropQueueCancelRest) selagi menunggu konversi file
+                if (!dataUrl) { cropQueueAdvance(); return; }
+                openCropModal(dataUrl);
             });
         }
-
-        /* ── Overlay notifikasi multi-upload: "memproses foto X dari Y" ── */
-        var imgUploadOverlayTimer = null;
-        function imgShowUploadOverlay(mode, current, total) {
-            var ov = document.getElementById('imgUploadOverlay');
-            var spinner = document.getElementById('imgUploadOverlaySpinner');
-            var title = document.getElementById('imgUploadOverlayTitle');
-            var sub = document.getElementById('imgUploadOverlaySub');
-            if (!ov) return;
-            if (imgUploadOverlayTimer) { clearTimeout(imgUploadOverlayTimer); imgUploadOverlayTimer = null; }
-            if (mode === 'loading') {
-                spinner.style.display = '';
-                title.textContent = 'Memproses foto ' + Math.min(current+1,total) + ' dari ' + total;
-                sub.textContent = 'Upload banyak gambar mungkin membutuhkan waktu';
-                ov.classList.add('show');
-            } else if (mode === 'done') {
-                spinner.style.display = 'none';
-                title.textContent = 'Selesai — semua foto berhasil diupload';
-                sub.textContent = 'Ketuk di mana saja untuk menutup';
-                ov.classList.add('show');
-                imgUploadOverlayTimer = setTimeout(imgHideUploadOverlay, 3000);
-            }
+        function cropQueueAdvance() {
+            if (!cropQueue) return;
+            cropQueue.idx++;
+            if (cropQueue.idx < cropQueue.files.length) cropQueueOpenCurrent();
+            else { cropQueue = null; cropUpdateQueueProgressUI(); }
         }
-        function imgHideUploadOverlay() {
-            var ov = document.getElementById('imgUploadOverlay');
-            if (ov) ov.classList.remove('show');
-            if (imgUploadOverlayTimer) { clearTimeout(imgUploadOverlayTimer); imgUploadOverlayTimer = null; }
-        }
-
-        /* ── Compress dataUrl gambar penuh (tanpa dipotong) mengikuti budget ukuran
-           yang sama seperti cropAndSave, dipakai untuk auto-skip-crop multi-upload ── */
-        function imgCompressFullImage(dataUrl, imgArr, cb) {
-            var img = new Image();
-            img.onload = function() {
-                var canvas = document.createElement('canvas');
-                canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-                canvas.getContext('2d').drawImage(img, 0, 0);
-                var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
-                var out;
-                for (var q=0.9; q>=0.25; q-=0.1) {
-                    out = canvas.toDataURL('image/jpeg', q);
-                    var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
-                    var newSize = out.length*0.75;
-                    if (currentTotal+newSize <= MAX) break;
-                    if (q<=0.25) {
-                        var factor = Math.sqrt(MAX/(currentTotal+newSize));
-                        var c2 = document.createElement('canvas');
-                        c2.width = Math.max(50, Math.floor(canvas.width*factor));
-                        c2.height = Math.max(50, Math.floor(canvas.height*factor));
-                        c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
-                        out = c2.toDataURL('image/jpeg', 0.7);
-                        break;
-                    }
-                }
-                cb(out);
-            };
-            img.onerror = function(){ cb(null); };
-            img.src = dataUrl;
+        function cropQueueCancelRest() {
+            if (!cropQueue) return;
+            var remaining = cropQueue.files.length - cropQueue.idx - 1;
+            if (remaining > 0 && !confirm(remaining + ' foto sisanya belum di-crop/simpan. Batalkan sisa foto tersebut?')) return;
+            cropQueue = null;
+            closeCropModal();
+            cropUpdateQueueProgressUI();
         }
 
         function fileToDataUrl(file, callback) {
@@ -1912,6 +1847,19 @@ function applyImageEdits(){
         function openCropModal(dataUrl, preferredSize) {
             cropModal._orientation = 'portrait';
             cropModal._activePresetIdx = -1;
+            // Fitur U: Keterangan foto pre-diisi dari foto lama kalau ini crop-ulang
+            // (replaceIdx>=0), kosong kalau foto baru -- cropModal._pending sudah
+            // di-set pemanggil ({type, idx, replaceIdx}) SEBELUM openCropModal() ini.
+            var capInput = document.getElementById('cropCaptionInput');
+            if (capInput) {
+                var pend = cropModal._pending;
+                var existingCap = '';
+                if (pend && pend.replaceIdx >= 0 && sections[pend.type] && sections[pend.type][pend.idx]) {
+                    var exImg = sections[pend.type][pend.idx].images[pend.replaceIdx];
+                    existingCap = exImg ? (exImg.caption || '') : '';
+                }
+                capInput.value = existingCap;
+            }
             if (preferredSize && preferredSize.w && preferredSize.h) {
                 document.getElementById('cropWcm').value = preferredSize.w;
                 document.getElementById('cropHcm').value = preferredSize.h;
@@ -1941,7 +1889,7 @@ function applyImageEdits(){
             img.onload = function() {
                 if (img._loadToken !== token) return;
                 cropModal.classList.add('show');
-                setTimeout(cropReset, 80);
+                setTimeout(function(){ cropReset(); cropStartHistoryTracking(); cropUpdateQueueProgressUI(); }, 80);
             };
             img.onerror = function() {
                 if (img._loadToken !== token) return;
@@ -1951,7 +1899,7 @@ function applyImageEdits(){
             img.src = dataUrl;
             if (img.complete && img.naturalWidth) {
                 cropModal.classList.add('show');
-                setTimeout(cropReset, 80);
+                setTimeout(function(){ cropReset(); cropStartHistoryTracking(); cropUpdateQueueProgressUI(); }, 80);
             }
         }
 
@@ -1985,6 +1933,16 @@ function applyImageEdits(){
             cropModal.classList.remove('show');
             img.removeAttribute('src');
             document.getElementById('fileInput').value = '';
+            cropStopHistoryTracking();
+        }
+
+        // "Batal" (1 foto ini saja) -- beda dari cropQueueCancelRest() ("Batalkan
+        // Sisa", membuang seluruh antrean yang belum diproses). Kalau lagi di
+        // tengah antrean multi-crop, foto ini dilewati tapi antrean tetap lanjut
+        // ke foto berikutnya.
+        function cropCancelCurrent() {
+            closeCropModal();
+            if (cropQueue) cropQueueAdvance();
         }
 
         function cropAndSave() {
@@ -2042,7 +2000,12 @@ function applyImageEdits(){
                 }
             }
 
-            var entry = {dataUrl: dataUrl, caption: existing && existing.caption ? existing.caption : ''};
+            // Fitur U: keterangan dibaca dari input di crop modal (sudah di-pre-isi
+            // openCropModal() dari foto lama kalau ini crop-ulang) -- sumber kebenaran
+            // terkini, baik dibiarkan apa adanya atau diedit user barusan.
+            var capInput = document.getElementById('cropCaptionInput');
+            var caption = capInput ? capInput.value : (existing && existing.caption ? existing.caption : '');
+            var entry = {dataUrl: dataUrl, caption: caption};
             if (existing && existing.name) { entry.name = existing.name; }
             if (existing && existing.type) { entry.type = existing.type; }
             if (existing && existing.offsetX) { entry.offsetX = existing.offsetX; }
@@ -2065,6 +2028,7 @@ function applyImageEdits(){
 
             closeCropModal();
             renderSection(p.type, p.type + 'Box');
+            if (cropQueue) cropQueueAdvance(); // Fitur U: lanjut ke foto berikutnya kalau lagi dalam antrean multi-crop
         }
 
         // ── DRAG & RESIZE ───────────────────────────────────────────────────────────
