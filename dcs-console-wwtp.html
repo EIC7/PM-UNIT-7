@@ -437,50 +437,20 @@ body{
   <!-- CATATAN & FOTO -->
   <div class="panel">
     <div class="section-label">Catatan &amp; Evidence Photo</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px">
 
-      <!-- Note General -->
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#128247; Evidence Photo &amp; Catatan</div>
-        <textarea id="dcsNoteGeneral" rows="3" placeholder="Catatan umum pekerjaan DCS Console WWTP..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px;box-sizing:border-box"></textarea>
-        <div id="dcsImgDropGeneral" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2)"
-          onclick="toggleSourceChoices('dcsSourceGeneral')"
-          ondragover="event.preventDefault()"
-          ondrop="dcsHandleDrop(event,'general')">
-          <input type="file" id="dcsImgInputGeneral" accept="image/*,.heic,.heif" multiple style="display:none" onchange="dcsHandleFiles(this.files,'general')">
-          <div style="font-size:24px;margin-bottom:6px">&#128444;&#65039;</div>
-          <div style="font-size:12px;color:var(--text3)">Klik untuk pilih sumber atau drag file</div>
-          <div id="dcsSourceGeneral" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">
-            <button type="button" onclick="event.stopPropagation();openFileInputSource('dcsImgInputGeneral','storage')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Penyimpanan</button>
-            <button type="button" onclick="event.stopPropagation();openFileInputSource('dcsImgInputGeneral','camera')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Kamera</button>
-          </div>
-        </div>
-        <div id="dcsImgPreviewgeneral" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
-        <div id="dcsSizeInfogeneral" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
-      </div>
-
-      <!-- Note Defect -->
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#9888;&#65039; Temuan &amp; Defect</div>
-        <textarea id="dcsNoteDefect" rows="3" placeholder="Catat temuan / defect yang ditemukan..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px;box-sizing:border-box"></textarea>
-        <div id="dcsImgDropDefect" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2)"
-          onclick="toggleSourceChoices('dcsSourceDefect')"
-          ondragover="event.preventDefault()"
-          ondrop="dcsHandleDrop(event,'defect')">
-          <input type="file" id="dcsImgInputDefect" accept="image/*,.heic,.heif" multiple style="display:none" onchange="dcsHandleFiles(this.files,'defect')">
-          <div style="font-size:24px;margin-bottom:6px">&#128444;&#65039;</div>
-          <div style="font-size:12px;color:var(--text3)">Foto temuan / defect</div>
-          <div id="dcsSourceDefect" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">
-            <button type="button" onclick="event.stopPropagation();openFileInputSource('dcsImgInputDefect','storage')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Penyimpanan</button>
-            <button type="button" onclick="event.stopPropagation();openFileInputSource('dcsImgInputDefect','camera')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Kamera</button>
-          </div>
-        </div>
-        <div id="dcsImgPreviewdefect" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
-        <div id="dcsSizeInfodefect" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:'Courier New',monospace">0 KB / 1024 KB</div>
-      </div>
-
+    <!-- Catatan Umum -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;color:var(--steel);margin-bottom:10px">&#128221; Catatan Umum</div>
+      <textarea id="dcsNoteGeneral" rows="3" placeholder="Catatan umum pekerjaan DCS Console WWTP..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:0;box-sizing:border-box"></textarea>
     </div>
 
+    <!-- Evidence per drop aktif -- dibangun dinamis oleh renderDcsEvidenceSections()
+         (revisi 2026-09-16: SEBELUMNYA 1 set Before/After/Defect utk semua drop,
+         SEKARANG 1 set per drop yang dicentang aktif di Unit Bar di atas, supaya
+         foto antar drop tidak tercampur). -->
+    <div id="dcsEvidenceContainer"></div>
+
+  </div>
     <!-- Catatan footer sesuai excel -->
     <div style="margin-top:18px;padding:12px 16px;background:#f0f7ff;border-left:4px solid #1d74c7;border-radius:4px;font-size:12px;color:var(--text2)">
       <strong>Note:</strong><br>
@@ -1782,7 +1752,8 @@ var DCS_DROPS = [
   {id:'dropwwt2', label:'CEC-DROP-WWT2', desc:'WWT Area - Operator Interface Station Console No 2'},
 ];
 
-var dcsImages = {general:[], defect:[]};
+var dcsImages = {}; // key: '<dropId>_before'/'<dropId>_after'/'<dropId>_defect' -> array foto
+var dcsNotes = {};  // key: '<dropId>_defect' -> string catatan temuan/defect drop itu
 var dcsActiveDrops = {};
 DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = true; }); /* default: semua aktif */
 
@@ -1863,6 +1834,7 @@ function dcsBuildUnitBar() {
       dcsActiveDrops[d.id] = e.target.checked;
       tag.classList.toggle('active', e.target.checked);
       dcsBuildTable();
+      dcsRenderEvidenceSections();
     };
     bar.appendChild(tag);
   });
@@ -1870,6 +1842,56 @@ function dcsBuildUnitBar() {
 
 function dcsGetActiveDrops() {
   return DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; });
+}
+
+/* Registry evidence per-drop AKTIF (revisi 2026-09-16, permintaan eksplisit
+   user: foto Before/After/Defect tiap drop TIDAK BOLEH tercampur) -- dibangun
+   ULANG setiap kali pilihan drop aktif berubah (checkbox Unit Bar), BUKAN
+   sekali di awal, supaya galeri yang ditampilkan selalu sesuai drop yang
+   sedang dicentang. gk = '<dropId>_before' / '<dropId>_after' / '<dropId>_defect'. */
+function dcsGetEvidenceGroups() {
+  var groups = [];
+  dcsGetActiveDrops().forEach(function(d) {
+    groups.push({gk: d.id+'_before', label: 'Evidence '+d.label+' — Before Cleaning', note:false});
+    groups.push({gk: d.id+'_after',  label: 'Evidence '+d.label+' — After Cleaning',  note:false});
+    groups.push({gk: d.id+'_defect', label: 'Evidence '+d.label+' — Defect / Finding', note:true});
+  });
+  return groups;
+}
+function dcsEsc(s) { return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function dcsRenderEvidenceSections() {
+  var wrap = document.getElementById('dcsEvidenceContainer');
+  if (!wrap) return;
+  var groups = dcsGetEvidenceGroups();
+  var html = '';
+  groups.forEach(function(g, i) {
+    if (!dcsImages[g.gk]) dcsImages[g.gk] = [];
+    var noteHtml = g.note ? (
+      '<textarea id="dcsNote_'+g.gk+'" rows="2" placeholder="Catat temuan / defect yang ditemukan..." ' +
+      'oninput="dcsNotes[\''+g.gk+'\']=this.value" ' +
+      'style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;resize:vertical;margin-bottom:10px;box-sizing:border-box">' +
+      dcsEsc(dcsNotes[g.gk]||'') + '</textarea>'
+    ) : '';
+    html +=
+      '<div style="'+(i>0?'margin-top:16px;padding-top:14px;border-top:1px solid var(--border);':'')+'">' +
+        '<div style="font-size:12.5px;font-weight:600;margin-bottom:6px;color:var(--text2,#334155)">'+dcsEsc(g.label)+'</div>' +
+        noteHtml +
+        '<div id="dcsImgDrop_'+g.gk+'" style="position:relative;border:2px dashed var(--border);border-radius:4px;padding:16px;text-align:center;cursor:pointer;background:var(--bg2)" ' +
+          'onclick="toggleSourceChoices(\''+'dcsSrc_'+g.gk+'\')" ondragover="event.preventDefault()" ondrop="dcsHandleDrop(event,\''+g.gk+'\')">' +
+          '<input type="file" id="dcsImgInput_'+g.gk+'" accept="image/*,.heic,.heif" multiple style="display:none" onchange="dcsHandleFiles(this.files,\''+g.gk+'\')">' +
+          '<div style="font-size:24px;margin-bottom:6px">&#128444;&#65039;</div>' +
+          '<div style="font-size:12px;color:var(--text3)">Klik untuk pilih sumber atau drag file</div>' +
+          '<div id="dcsSrc_'+g.gk+'" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,0.12);padding:10px;gap:8px;z-index:10">' +
+            '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+'dcsImgInput_'+g.gk+'\',\'storage\')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Penyimpanan</button>' +
+            '<button type="button" onclick="event.stopPropagation();openFileInputSource(\''+'dcsImgInput_'+g.gk+'\',\'camera\')" style="padding:8px 12px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:100px">Kamera</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="dcsImgPreview'+g.gk+'" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>' +
+        '<div id="dcsSizeInfo'+g.gk+'" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:\'Courier New\',monospace">0 KB / 1024 KB</div>' +
+      '</div>';
+  });
+  wrap.innerHTML = html || '<div style="font-size:12px;color:var(--text3);font-style:italic">Belum ada drop yang dicentang aktif di Unit Bar di atas.</div>';
+  groups.forEach(function(g){ dcsRenderPreviews(g.gk); });
 }
 
 /* ══════════════════════════════════════════════
@@ -2151,10 +2173,10 @@ function dcsReset() {
   DCS_DROPS.forEach(function(drop){ var el=document.getElementById('dcsAllDrop_'+drop.id); if(el) el.checked=false; });
   var allEl = document.getElementById('dcsAllCheck');
   if (allEl) allEl.checked = false;
-  ['dcsDate','dcsPIC','dcsWO','dcsNoteGeneral','dcsNoteDefect'].forEach(function(id){ var e=document.getElementById(id); if(e)e.value=''; });
-  dcsImages = {general:[], defect:[]};
-  ['dcsImgPreviewgeneral','dcsImgPreviewdefect'].forEach(function(id){ var e=document.getElementById(id); if(e)e.innerHTML=''; });
-  updateSizeIndicator('dcs','general'); updateSizeIndicator('dcs','defect');
+  ['dcsDate','dcsPIC','dcsWO','dcsNoteGeneral'].forEach(function(id){ var e=document.getElementById(id); if(e)e.value=''; });
+  dcsImages = {};
+  dcsNotes = {};
+  dcsRenderEvidenceSections();
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
@@ -2372,9 +2394,10 @@ function dcsDownloadPdf() {
 
       /* Catatan */
       var noteGeneral = safe(gv('dcsNoteGeneral'));
-      var noteDefect  = safe(gv('dcsNoteDefect'));
+      var evGroups = dcsGetEvidenceGroups();
+      var anyEvidence = evGroups.some(function(g){ return (dcsImages[g.gk]||[]).length || (g.note && dcsNotes[g.gk]); });
 
-      if (noteGeneral || noteDefect || dcsImages.general.length || dcsImages.defect.length) {
+      if (noteGeneral || anyEvidence) {
         checkPage(14);
         doc.setFillColor(30,58,95); doc.rect(marginX, y, contentW, 6, 'F');
         doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
@@ -2419,8 +2442,10 @@ function dcsDownloadPdf() {
           }
         }
 
-        addSection('Evidence Photo & Catatan Umum:', noteGeneral, dcsImages.general);
-        addSection('Temuan & Defect:', noteDefect, dcsImages.defect);
+        addSection('Catatan Umum:', noteGeneral, []);
+        evGroups.forEach(function(g){
+          addSection(g.label+':', g.note ? safe(dcsNotes[g.gk]||'') : '', dcsImages[g.gk]||[]);
+        });
       }
 
       /* Note footer */
@@ -2444,7 +2469,7 @@ function dcsDownloadPdf() {
       alert('PDF Error: '+err.message); console.error(err);
     }
   }
-  var totalImgs = dcsImages.general.length + dcsImages.defect.length;
+  var totalImgs = Object.keys(dcsImages).reduce(function(a,gk){ return a+dcsImages[gk].length; },0);
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
   /* Coba load background, timeout 1.5s langsung generate */
@@ -2485,8 +2510,8 @@ function dbCollectData(modul) {
       program:  gv('dcsProgram'),
       activeDrops: DCS_DROPS.filter(function(d){ return dcsActiveDrops[d.id]; }).map(function(d){ return d.id; }),
       checks:   checks,
-      notes:    { general: gv('dcsNoteGeneral'), defect: gv('dcsNoteDefect') },
-      images:   { general: dcsImages.general.map(ki), defect: dcsImages.defect.map(ki) },
+      notes:    { general: gv('dcsNoteGeneral'), defect: dcsNotes },
+      images:   Object.keys(dcsImages).reduce(function(acc,gk){ acc[gk] = dcsImages[gk].map(ki); return acc; }, {}),
       asset: gv('dcsAsset'),
       assetDesc: gv('dcsAssetDesc')
     }
@@ -2508,19 +2533,31 @@ function applyRecordToForm(rec, editingId) {
   if (data.assetDesc) sv('dcsAssetDesc', data.assetDesc);
   sv('dcsUnit',    rec.unit       || data.unit       || 'U7');
   sv('dcsProgram', data.program   || 'JP-DROP');
-  if (data.notes){ sv('dcsNoteGeneral',data.notes.general||''); sv('dcsNoteDefect',data.notes.defect||''); }
-  if (data.images){
-    var mapImg = function(i){ return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||'',widthCm:i.widthCm,heightCm:i.heightCm,offsetX:i.offsetX||0}; };
-    dcsImages.general = (data.images.general||[]).map(mapImg);
-    dcsImages.defect  = (data.images.defect||[]).map(mapImg);
-    dcsRenderPreviews('general'); dcsRenderPreviews('defect');
-  }
-  /* Restore active drops — rebuild unit bar + table */
+  if (data.notes) sv('dcsNoteGeneral', data.notes.general||'');
+  /* Restore active drops DULU (rebuild unit bar + table + evidence container)
+     SEBELUM restore images/notes per-drop -- galeri per-drop (gk = '<dropId>_before'
+     dst) baru ADA di DOM setelah dcsRenderEvidenceSections() dipanggil, jadi
+     urutannya WAJIB begini, tidak boleh dibalik. */
   if (data.activeDrops) {
     DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = false; });
     (data.activeDrops || []).forEach(function(did){ if (dcsActiveDrops.hasOwnProperty(did)) dcsActiveDrops[did] = true; });
     dcsBuildUnitBar();
     dcsBuildTable();
+  }
+  dcsRenderEvidenceSections();
+  if (data.images || data.notes) {
+    var mapImg = function(i){ return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||'',widthCm:i.widthCm,heightCm:i.heightCm,offsetX:i.offsetX||0}; };
+    Object.keys(data.images||{}).forEach(function(gk){
+      dcsImages[gk] = (data.images[gk]||[]).map(mapImg);
+      dcsRenderPreviews(gk);
+    });
+    if (data.notes && data.notes.defect && typeof data.notes.defect === 'object') {
+      Object.keys(data.notes.defect).forEach(function(gk){
+        dcsNotes[gk] = data.notes.defect[gk] || '';
+        var ta = document.getElementById('dcsNote_'+gk);
+        if (ta) ta.value = dcsNotes[gk];
+      });
+    }
   }
   if (data.checks){
     Object.keys(data.checks).forEach(function(i){
@@ -2627,6 +2664,7 @@ setInterval(function(){
 
 dcsBuildUnitBar();
 dcsBuildTable();
+dcsRenderEvidenceSections();
 initReportBackground();
 renderPresetButtons();
 initCropDrag();
