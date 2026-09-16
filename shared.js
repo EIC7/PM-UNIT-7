@@ -4779,3 +4779,84 @@ function pmMarkRevisionSaved() {
     btn.title = '';
   });
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   QUICK SAVE BUTTON DI TOPBAR (2026-09-16) -- tombol "💾 Simpan" ringkas yang
+   mirror tombol "Simpan ke Database" ASLI tiap modul, ditempel ke topbar yang
+   sticky (position:sticky, tidak ikut ke-scroll) supaya user bisa Simpan
+   tanpa harus scroll ke bawah dulu. Tombol asli TIDAK dihapus/disembunyikan
+   sama sekali -- ini murni tambahan.
+   Generik lewat shared.js (pola sama dengan pmFindSubmitButtons() di atas) --
+   TIDAK perlu markup manual di HTML tiap file modul, otomatis aktif di
+   halaman mana pun yang punya elemen .topbar DAN minimal 1 tombol
+   onclick="dbSave(...)" (kalau salah satu tidak ada -- mis. index.html,
+   history.html, trend/*, JSA -- fungsi ini no-op, tidak menambah apa pun).
+   Desktop: tombol ditaruh di ujung kanan .topbar-right (sejajar jam/live-dot).
+   Mobile (≤600px): .topbar-right sudah kehabisan tempat, jadi tombolnya
+   pindah ke baris kedua (.topbar2) yang disisipkan otomatis persis di bawah
+   .topbar -- sticky juga, warna sedikit beda supaya kelihatan sbg lapisan
+   terpisah (lihat shared.css). ═════════════════════════════════════════ */
+function pmFindMainSaveButton() {
+  var btns = document.querySelectorAll('button[onclick*="dbSave("]');
+  for (var i = 0; i < btns.length; i++) {
+    if (btns[i].offsetParent !== null) return btns[i]; // tombol yang lagi kelihatan (mis. tab aktif di fegt.html)
+  }
+  return btns[0] || null; // semua tersembunyi (jarang) -- tetap pegang salah satu drpd null total
+}
+function pmQuickSaveClick() {
+  var target = pmFindMainSaveButton();
+  if (target) target.click();
+}
+function pmSyncQuickSaveStyle() {
+  var target = pmFindMainSaveButton();
+  if (!target) return;
+  ['pmQuickSaveBtn', 'pmQuickSaveBtnMobile'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (!b) return;
+    if (target.style.background) b.style.background = target.style.background;
+    if (target.style.borderColor) b.style.borderColor = target.style.borderColor;
+    b.style.color = target.style.color || '#fff';
+    b.disabled = !!target.disabled;
+  });
+}
+function pmInitQuickSaveTopbar() {
+  var topbar = document.querySelector('.topbar');
+  var allSaveBtns = document.querySelectorAll('button[onclick*="dbSave("]');
+  if (!topbar || !allSaveBtns.length) return;
+
+  var topbarRight = topbar.querySelector('.topbar-right');
+  if (topbarRight && !document.getElementById('pmQuickSaveBtn')) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'topbar-quicksave'; btn.id = 'pmQuickSaveBtn';
+    btn.innerHTML = '💾 Simpan';
+    btn.onclick = pmQuickSaveClick;
+    topbarRight.appendChild(btn); // paling kanan, setelah jam/live-dot
+  }
+
+  if (!document.getElementById('pmTopbar2')) {
+    var row2 = document.createElement('div');
+    row2.className = 'topbar2'; row2.id = 'pmTopbar2';
+    var btn2 = document.createElement('button');
+    btn2.type = 'button'; btn2.className = 'topbar-quicksave'; btn2.id = 'pmQuickSaveBtnMobile';
+    btn2.innerHTML = '💾 Simpan';
+    btn2.onclick = pmQuickSaveClick;
+    row2.appendChild(btn2);
+    topbar.parentNode.insertBefore(row2, topbar.nextSibling);
+    // top harus PERSIS setinggi topbar (yang tingginya pakai clamp(), tidak
+    // tetap) supaya baris kedua menempel tanpa celah -- dihitung dari tinggi
+    // sungguhan, bukan angka tebakan.
+    var syncTop = function () { row2.style.top = topbar.offsetHeight + 'px'; };
+    syncTop();
+    window.addEventListener('resize', syncTop);
+  }
+
+  pmSyncQuickSaveStyle();
+  // Sinkron ulang warna/status disabled kalau tombol asli berubah (mis.
+  // validasi Fitur L men-toggle disabled, atau ganti tab di file yang punya
+  // >1 tombol Simpan seperti fegt.html).
+  var mo = new MutationObserver(pmSyncQuickSaveStyle);
+  allSaveBtns.forEach(function (b) {
+    mo.observe(b, { attributes: true, attributeFilter: ['disabled', 'style'] });
+  });
+}
+document.addEventListener('DOMContentLoaded', pmInitQuickSaveTopbar);
