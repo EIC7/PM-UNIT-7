@@ -240,7 +240,7 @@
   <!-- BUTTONS -->
 
   <div class="btn-row">
-    <button class="btn btn-primary" onclick="so2DownloadPdf()">⬇ Preview & Download PDF Report</button>
+    <button class="btn btn-primary" onclick="so2DownloadPdf()">⬇ Print Preview & Download PDF Report</button>
     <button class="btn" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('so2')">💾 Simpan ke Database</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=so2DownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="so2Reset()">✕ Reset</button>
@@ -293,6 +293,7 @@
                     <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                 </div>
             </div>
+            <input type="text" id="cropCaptionInput" placeholder="Keterangan foto (opsional)..." style="width:100%;margin-bottom:10px;padding:7px 8px;font-size:12px;border:1px solid #3a4f42;border-radius:5px;background:#0f1512;color:#e0f0e8;box-sizing:border-box">
             <div class="crop-btns">
                 <button class="crop-btn crop-btn-outline" onclick="openImageEditor()">🖍️ Edit Gambar</button>
                 <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
@@ -368,7 +369,7 @@
         <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
         <div class="pdf-preview-footer">
             <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
-            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Preview & Download PDF</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
         </div>
     </div>
 </div>
@@ -1290,6 +1291,19 @@ function applyImageEdits(){
 function openCropModal(dataUrl, preferredSize) {
     cropModalState._orientation = 'portrait';
     cropModalState._activePresetIdx = -1;
+    // Fitur U: Keterangan foto pre-diisi dari foto lama kalau ini crop-ulang
+    // (replaceIdx>=0), kosong kalau foto baru -- cropModalState._pending sudah
+    // di-set pemanggil ({groupKey, replaceIdx}) SEBELUM openCropModal() ini.
+    var capInput = document.getElementById('cropCaptionInput');
+    if (capInput) {
+        var pend = cropModalState._pending;
+        var existingCap = '';
+        if (pend && pend.replaceIdx >= 0) {
+            var pendArr = getPhotoArr(pend.groupKey);
+            existingCap = (pendArr && pendArr[pend.replaceIdx]) ? (pendArr[pend.replaceIdx].caption || '') : '';
+        }
+        capInput.value = existingCap;
+    }
     if (preferredSize && preferredSize.w && preferredSize.h) {
         document.getElementById('cropWcm').value = preferredSize.w;
         document.getElementById('cropHcm').value = preferredSize.h;
@@ -1405,7 +1419,9 @@ function cropAndSave() {
         }
     }
 
-    var entry = {dataUrl: dataUrl, caption: existing && existing.caption ? existing.caption : ''};
+    var capInput2 = document.getElementById('cropCaptionInput');
+    var caption = capInput2 ? capInput2.value : (existing && existing.caption ? existing.caption : '');
+    var entry = {dataUrl: dataUrl, caption: caption};
     if (existing && existing.offsetX) entry.offsetX = existing.offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
     var slotIdx = (p.replaceIdx >= 0) ? p.replaceIdx : imgArr.length;

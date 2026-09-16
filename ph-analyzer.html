@@ -58,13 +58,6 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 /* ── CROP MODAL (3-mode) ── */
 #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
 #cropModal.show{display:flex}
-/* ── MULTI-UPLOAD NOTIFICATION OVERLAY (Fitur N) ── */
-#puUploadOverlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.8);flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
-#puUploadOverlay.show{display:flex}
-#puUploadOverlaySpinner{width:38px;height:38px;border:4px solid rgba(255,255,255,0.25);border-top-color:#2ecc71;border-radius:50%;animation:puSpin 0.8s linear infinite;margin-bottom:16px}
-#puUploadOverlayTitle{font-size:15px;font-weight:700;color:#fff}
-#puUploadOverlaySub{font-size:12px;color:#c9d6cf;margin-top:6px;max-width:280px}
-@keyframes puSpin{to{transform:rotate(360deg)}}
 .crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
 .crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
 .crop-header-title{font-weight:700;font-size:16px;color:#e0f0e8;letter-spacing:0.5px}
@@ -179,7 +172,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   </div>
 
   <div class="btn-row" style="margin-top:20px">
-    <button class="btn btn-pdf" onclick="phDownloadPdf()">&#11015; Preview & Download PDF Report</button>
+    <button class="btn btn-pdf" onclick="phDownloadPdf()">&#11015; Print Preview & Download PDF Report</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('ph_transmitter')">&#128190; Simpan ke Database</button>
     <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=phDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
     <button class="btn btn-danger" onclick="phReset()">&#10005; Reset</button>
@@ -192,6 +185,8 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
     <div class="crop-dialog">
         <div class="crop-header">
             <div class="crop-header-title">✂️ Crop Gambar</div>
+            <div id="cropQueueProgress" style="display:none;font-size:11px;font-weight:700;color:#7fd9a4"></div>
+            <button type="button" id="cropQueueCancelBtn" onclick="cropQueueCancelRest()" style="display:none;font-size:10px;padding:3px 8px;border:1px solid #3a4f42;border-radius:5px;background:transparent;color:#e5695c;cursor:pointer">✕ Batalkan Sisa</button>
             <div class="crop-header-hint">Drag pojok/sisi untuk resize • Drag tengah untuk pindah</div>
         </div>
         <div id="cropWrap">
@@ -231,6 +226,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
                     <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                 </div>
             </div>
+            <input type="text" id="cropCaptionInput" placeholder="Keterangan foto (opsional)..." style="width:100%;margin-bottom:10px;padding:7px 8px;font-size:12px;border:1px solid #3a4f42;border-radius:5px;background:#0f1512;color:#e0f0e8;box-sizing:border-box">
             <div class="crop-btns">
                 <button class="crop-btn crop-btn-outline" onclick="openImageEditor()">🖍️ Edit Gambar</button>
                 <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
@@ -243,12 +239,6 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
     </div>
 </div>
 
-<!-- MULTI-UPLOAD NOTIFICATION OVERLAY (Fitur N) -->
-<div id="puUploadOverlay" onclick="puHideUploadOverlay()">
-    <div id="puUploadOverlaySpinner"></div>
-    <div id="puUploadOverlayTitle"></div>
-    <div id="puUploadOverlaySub"></div>
-</div>
 
 <!-- ═══ EDIT GAMBAR (Insert Shape: Teks/Panah/Garis/Kotak/Oval) ═══ -->
 <div id="editImgModal" class="pdf-preview-modal">
@@ -310,7 +300,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
         <div class="pdf-preview-body"><div id="pdfPreviewFrame" class="pdf-canvas-container"></div></div>
         <div class="pdf-preview-footer">
             <button class="crop-btn crop-btn-outline" onclick="closePdfPreview()">✏️ Tutup, Edit Lagi</button>
-            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Preview & Download PDF</button>
+            <button class="crop-btn crop-btn-save" onclick="confirmDownloadPdf()">⬇ Download PDF</button>
         </div>
     </div>
 </div>
@@ -908,6 +898,7 @@ function applyImageEdits(){
                 if (cropModalState._mode === 'default') fitCropBoxToFullImage();
                 else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
                 cropStartHistoryTracking();
+        cropUpdateQueueProgressUI(); // Fitur U: tampilkan "Foto X dari Y" kalau lagi jalan antrean multi-crop
             };
             cropImg.src = outUrl;
             closeImageEditor(false);
@@ -1167,6 +1158,8 @@ function reshapeCropBoxToRatio() {
 function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
     cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
     var existing = (replaceIdx>=0 && imgArr[replaceIdx]) ? imgArr[replaceIdx] : null;
+    var capInput = document.getElementById('cropCaptionInput');
+    if (capInput) capInput.value = existing ? (existing.caption || '') : '';
     var preferredSize = (existing && existing.widthCm && existing.heightCm) ? {w:existing.widthCm, h:existing.heightCm} : null;
     cropModalState._orientation = 'portrait';
     cropModalState._activePresetIdx = -1;
@@ -1206,6 +1199,7 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
         if (cropModalState._mode === 'default') fitCropBoxToFullImage();
         else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
         cropStartHistoryTracking();
+        cropUpdateQueueProgressUI(); // Fitur U: tampilkan "Foto X dari Y" kalau lagi jalan antrean multi-crop
     };
     img.src = dataUrl;
     cropModalState.classList.add('show');
@@ -1220,7 +1214,7 @@ function cropReset() {
     var p = cropModalState._pending;
     if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
 }
-function skipCrop() { closeCropModal(); }
+function skipCrop() { closeCropModal(); if (cropQueue) cropQueueAdvance(); }
 
 /* ── Fitur R: Rotasi gambar 90° kiri/kanan di dalam modal crop ──
    dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise).
@@ -1266,7 +1260,8 @@ function cropAndSave() {
 
     var imgArr = p.imgArr;
     var existing = (p.replaceIdx >= 0 && imgArr[p.replaceIdx]) ? imgArr[p.replaceIdx] : null;
-    var caption = existing ? (existing.caption||'') : '';
+    var capInput2 = document.getElementById('cropCaptionInput');
+    var caption = capInput2 ? capInput2.value : (existing ? (existing.caption||'') : '');
     var offsetX = existing ? (existing.offsetX||0) : 0;
     var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
     var otherTotal = imgArr.reduce(function(a,im,i){ return a+((existing && i===p.replaceIdx) ? 0 : (im.dataUrl?im.dataUrl.length*0.75:0)); }, 0);
@@ -1313,6 +1308,8 @@ function cropAndSave() {
     // Panggil render callback modul terkait secara dinamis: {prefix}RenderPreviews(side)
     var renderFnName = p.modulePrefix + 'RenderPreviews';
     if (typeof window[renderFnName] === 'function') window[renderFnName](p.side);
+
+    if (cropQueue) cropQueueAdvance(); // Fitur U: lanjut ke foto berikutnya kalau lagi dalam antrean multi-crop
 }
 
 /* ── Geser posisi gambar (nudge) — generik untuk array manapun ── */
@@ -1326,98 +1323,6 @@ function nudgeImageInArray(imgArr, imgIdx, delta, rerenderFn) {
     if (typeof rerenderFn === 'function') rerenderFn();
 }
 
-/* ── Fitur N: Upload Multi-Gambar — Skip-Crop Otomatis + Overlay Notifikasi ──
-   Dipakai bareng oleh *HandleFiles saat file yang dipilih user > 1: modal crop
-   di-skip otomatis, tiap gambar disimpan PENUH (tanpa dipotong) dengan ukuran
-   cetak default (DEFAULT_CROP_W_CM x DEFAULT_CROP_H_CM), sama seperti kalau
-   user manual pilih mode Default lalu Simpan. */
-var puUploadOverlayTimer = null;
-function puShowUploadOverlay(mode) {
-    var ov = document.getElementById('puUploadOverlay');
-    var spinner = document.getElementById('puUploadOverlaySpinner');
-    var title = document.getElementById('puUploadOverlayTitle');
-    var sub = document.getElementById('puUploadOverlaySub');
-    if (!ov) return;
-    if (puUploadOverlayTimer) { clearTimeout(puUploadOverlayTimer); puUploadOverlayTimer = null; }
-    if (mode === 'loading') {
-        spinner.style.display = '';
-        title.textContent = 'Sedang mengupload gambar';
-        sub.textContent = 'Upload banyak gambar mungkin membutuhkan waktu';
-        ov.classList.add('show');
-    } else if (mode === 'done') {
-        spinner.style.display = 'none';
-        title.textContent = 'Silahkan crop gambar secara manual per item';
-        sub.textContent = 'Ketuk di mana saja untuk menutup';
-        ov.classList.add('show');
-        puUploadOverlayTimer = setTimeout(puHideUploadOverlay, 3000);
-    }
-}
-function puHideUploadOverlay() {
-    var ov = document.getElementById('puUploadOverlay');
-    if (ov) ov.classList.remove('show');
-    if (puUploadOverlayTimer) { clearTimeout(puUploadOverlayTimer); puUploadOverlayTimer = null; }
-}
-
-function puCompressFullImage(dataUrl, imgArr, cb) {
-    var img = new Image();
-    img.onload = function() {
-        var canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-        canvas.getContext('2d').drawImage(img, 0, 0);
-        var MAX = 500*1024; // disamakan dengan budget shared.js imgCompressAndStore -- lihat catatan di sana
-        var out;
-        for (var q=0.9; q>=0.25; q-=0.1) {
-            out = canvas.toDataURL('image/jpeg', q);
-            var currentTotal = imgArr.reduce(function(a,im){ return a+(im.dataUrl?im.dataUrl.length*0.75:0); }, 0);
-            var newSize = out.length*0.75;
-            if (currentTotal+newSize <= MAX) break;
-            if (q<=0.25) {
-                var factor = Math.sqrt(MAX/(currentTotal+newSize));
-                var c2 = document.createElement('canvas');
-                c2.width = Math.max(50, Math.floor(canvas.width*factor));
-                c2.height = Math.max(50, Math.floor(canvas.height*factor));
-                c2.getContext('2d').drawImage(canvas,0,0,c2.width,c2.height);
-                out = c2.toDataURL('image/jpeg', 0.7);
-                break;
-            }
-        }
-        cb(out);
-    };
-    img.onerror = function(){ cb(null); };
-    img.src = dataUrl;
-}
-
-function puHandleMultiUpload(fileArr, imgArr, side, modulePrefix) {
-    puShowUploadOverlay('loading');
-    var pending = fileArr.length;
-    var renderFnName = modulePrefix + 'RenderPreviews';
-    var doRender = function(){ if (typeof window[renderFnName] === 'function') window[renderFnName](side); };
-    var finishOne = function() { pending--; if (pending <= 0) puShowUploadOverlay('done'); };
-    fileArr.forEach(function(file) {
-        if (!isImageFile(file)) {
-            var r = new FileReader();
-            r.onload = function(ev){
-                imgArr.push({name:file.name,dataUrl:ev.target.result,type:file.type||'application/octet-stream',caption:''});
-                doRender();
-                finishOne();
-            };
-            r.onerror = finishOne;
-            r.readAsDataURL(file);
-            return;
-        }
-        fileToJpegDataUrl(file, function(rawDataUrl){
-            if (!rawDataUrl) { finishOne(); return; }
-            puCompressFullImage(rawDataUrl, imgArr, function(finalDataUrl){
-                if (!finalDataUrl) { finishOne(); return; }
-                var entry = {name:file.name.replace(/\.[^.]+$/,'.jpg'), dataUrl:finalDataUrl, type:'image/jpeg', caption:'', widthCm: DEFAULT_CROP_W_CM, heightCm: DEFAULT_CROP_H_CM};
-                imgArr.push(entry);
-                doRender();
-                if (typeof uploadFotoKeGDrive === 'function') uploadFotoKeGDrive(entry.dataUrl, entry.name, modulePrefix, side || '', entry);
-                finishOne();
-            });
-        });
-    });
-}
 
 /* ── Drag & resize kotak crop (mousedown+touchstart) ── */
 function initCropDrag() {
@@ -1836,7 +1741,7 @@ function phHandleDrop(e, uid){ e.preventDefault(); phHandleFiles(e.dataTransfer.
 function phHandleFiles(files, uid){
   var uid2=uid.replace(/-/g,'_');
   var fileArr = Array.from(files);
-  if (fileArr.length > 1) { puHandleMultiUpload(fileArr, phImages[uid], uid, 'ph'); return; }
+  if (fileArr.length > 1) { imgOpenCropperQueue(fileArr, phImages[uid], uid, 'ph'); return; }
   fileArr.forEach(function(file){
     if(!isImageFile(file)){
       var r=new FileReader(); r.onload=function(ev){phImages[uid].push({name:file.name,dataUrl:ev.target.result,type:file.type||'',caption:''});phRenderPreviews(uid);}; r.readAsDataURL(file); return;
