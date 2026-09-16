@@ -616,40 +616,41 @@
             min-height: 18px;
         }
 
-        .area-filter-wrap {
-            max-width: 560px;
-            margin: 14px auto 0;
+        .area-tabs-wrap {
+            max-width: 900px;
+            margin: 16px auto 0;
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
         }
 
-        .area-filter-label {
-            font-size: 12.5px;
-            color: var(--text-light);
-            white-space: nowrap;
-        }
-
-        .area-filter-select {
-            flex: 1;
-            max-width: 260px;
-            padding: 10px 14px;
+        .area-tab {
+            padding: 9px 16px;
             border: 2px solid var(--border);
-            border-radius: 12px;
+            border-radius: 999px;
             background: var(--bg2);
-            font-size: 13.5px;
+            font-size: 13px;
             font-family: inherit;
-            color: var(--text-dark);
+            font-weight: 600;
+            color: var(--text-light);
             outline: none;
             cursor: pointer;
-            transition: all 0.25s;
+            white-space: nowrap;
+            transition: all 0.2s;
             box-shadow: var(--shadow-sm);
         }
 
-        .area-filter-select:focus {
+        .area-tab:hover {
             border-color: var(--primary-blue);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+            color: var(--text-dark);
+        }
+
+        .area-tab.active {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: #fff;
         }
 
         .no-results {
@@ -1079,15 +1080,12 @@
             <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
         </div>
         <div class="search-count" id="searchCount"></div>
-        <div class="area-filter-wrap">
-            <label class="area-filter-label" for="areaFilter">Filter Berdasarkan Area</label>
-            <select id="areaFilter" class="area-filter-select">
-                <option value="">Semua Area</option>
-                <option value="boiler">Boiler</option>
-                <option value="turbine">Turbine</option>
-                <option value="common">Common CHCB</option>
-                <option value="wwtp">Common WWTP</option>
-            </select>
+        <div class="area-tabs-wrap" id="areaTabs" role="tablist">
+            <button type="button" class="area-tab active" data-tab-area="__general__" role="tab" aria-selected="true">Form, Report, Trend, WH, Asset</button>
+            <button type="button" class="area-tab" data-tab-area="boiler" role="tab" aria-selected="false">Boiler</button>
+            <button type="button" class="area-tab" data-tab-area="turbine" role="tab" aria-selected="false">Turbine</button>
+            <button type="button" class="area-tab" data-tab-area="common" role="tab" aria-selected="false">Common CHCB</button>
+            <button type="button" class="area-tab" data-tab-area="wwtp" role="tab" aria-selected="false">Common WWTP</button>
         </div>
     </div>
 
@@ -1739,7 +1737,8 @@
         var searchClear = document.getElementById('searchClear');
         var searchCount = document.getElementById('searchCount');
         var noResults = document.getElementById('noResults');
-        var areaFilter = document.getElementById('areaFilter');
+        var areaTabs = document.getElementById('areaTabs');
+        var activeTabArea = '__general__';
 
         searchInput.addEventListener('input', function() {
             var q = this.value.trim().toLowerCase();
@@ -1747,9 +1746,20 @@
             filterCards();
         });
 
-        areaFilter.addEventListener('change', function() {
-            filterCards();
+        areaTabs.querySelectorAll('.area-tab').forEach(function(tabBtn) {
+            tabBtn.addEventListener('click', function() {
+                activeTabArea = tabBtn.getAttribute('data-tab-area');
+                areaTabs.querySelectorAll('.area-tab').forEach(function(b) {
+                    var isActive = (b === tabBtn);
+                    b.classList.toggle('active', isActive);
+                    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                });
+                filterCards();
+            });
         });
+
+        filterCards(); // tab default "__general__" aktif sejak load -- WAJIB dipanggil di sini,
+                        // beda dari dropdown Semua Area lama yang tidak menyembunyikan apa pun.
 
         function clearSearch() {
             searchInput.value = '';
@@ -1760,27 +1770,27 @@
 
         function filterCards() {
             var q = searchInput.value.trim().toLowerCase();
-            var area = areaFilter.value; // '' = Semua Area (tidak difilter)
             var cards = document.querySelectorAll('.pm-card');
             var visible = 0;
 
             cards.forEach(function(card) {
                 var text = card.innerText.toLowerCase();
                 var textMatch = !q || text.includes(q);
-                var cardAreas = (card.getAttribute('data-area') || '').split(' ');
-                var areaMatch = !area || cardAreas.includes(area);
+                var cardAreaRaw = (card.getAttribute('data-area') || '').trim();
+                // Tab "Form, Report, Trend, WH, Asset" (__general__) menampilkan kartu
+                // yang TIDAK terikat 1 area tetap (tidak punya atribut data-area sama
+                // sekali) -- kartu equipment per-area lain masuk tab Boiler/Turbine/
+                // Common CHCB/Common WWTP sesuai data-area-nya masing-masing.
+                var areaMatch = (activeTabArea === '__general__')
+                    ? (cardAreaRaw === '')
+                    : cardAreaRaw.split(' ').includes(activeTabArea);
                 var match = textMatch && areaMatch;
                 card.style.display = match ? '' : 'none';
                 if (match) visible++;
             });
 
             noResults.style.display = (visible === 0) ? 'block' : 'none';
-
-            if (q || area) {
-                searchCount.textContent = visible + ' modul ditemukan';
-            } else {
-                searchCount.textContent = '';
-            }
+            searchCount.textContent = q ? (visible + ' modul ditemukan') : '';
         }
     </script>
 </body>
