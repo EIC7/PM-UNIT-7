@@ -40,11 +40,11 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 /* ── CROP MODAL (3-mode) ── */
 #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
 #cropModal.show{display:flex}
-.crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
-.crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.crop-dialog{background:#1a221e;border:1px solid #2a3a30;border-radius:10px;width:min(96vw,540px);max-height:calc(100vh - 24px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5);display:flex;flex-direction:column}
+.crop-header{background:#243228;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .crop-header-title{font-weight:700;font-size:16px;color:#e0f0e8;letter-spacing:0.5px}
 .crop-header-hint{font-size:10px;color:#8aab96}
-#cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none}
+#cropWrap{position:relative;width:100%;height:min(55vw,320px);background:#111;overflow:hidden;user-select:none;-webkit-user-select:none;flex-shrink:0}
 .crop-rotate-toolbar{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:6}
 .crop-rotate-btn{width:34px;height:34px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35)}
 .crop-rotate-btn:active{background:rgba(0,0,0,0.85)}
@@ -57,7 +57,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .crop-handle.s{width:10px;height:10px;bottom:-5px;left:50%;transform:translateX(-50%);cursor:s-resize}
 .crop-handle.w{width:10px;height:10px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize}
 .crop-handle.e{width:10px;height:10px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize}
-.crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30}
+.crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;overflow-y:auto;flex:1 1 auto;min-height:0}
 .crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
 .crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;touch-action:manipulation}
 .crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
