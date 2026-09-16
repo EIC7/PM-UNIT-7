@@ -204,7 +204,7 @@
     </div>
   </div>
 
-  <!-- EVIDENCE: PURGING LINE FLOW TRANSMITTER (LANGKAH 8) -- 8 galeri dinamis,
+  <!-- EVIDENCE: PURGING LINE FLOW TRANSMITTER (LANGKAH 8) -- 10 galeri dinamis,
        lihat PURGING_EVIDENCE_GROUPS/renderPurgingEvidenceSections() -->
   <div class="panel">
     <div class="section-label">Foto Evidence — Purging Line Flow Transmitter (Langkah 8)</div>
@@ -1488,15 +1488,18 @@ var MEASUREMENT_DATA = [
   return {parameter:r.parameter, unit:r.unit, beforeA:'', afterA:'', beforeB:'', afterB:''};
 });
 
-/* Evidence Langkah 8 (Purging Line Flow Transmitter) dipecah jadi 8 galeri
-   terpisah (4 parameter x 2 flow transmitter, urutan: SEMUA parameter 933A
-   dulu baru SEMUA parameter 933B -- persis urutan yang diminta user), 1 per
-   kombinasi parameter+transmitter -- BUKAN 1 galeri gabungan seperti
-   sebelumnya, supaya foto before/after tiap parameter bisa dikelompokkan
-   jelas alih-alih bercampur semua jadi satu tumpukan. Dibangun dinamis
-   lewat renderPurgingEvidenceSections() (pola sama dengan
-   renderEvidenceSections() di pm_stacker.html) supaya tidak perlu menulis
-   ulang markup 8x. */
+/* Evidence Langkah 8 (Purging Line Flow Transmitter) dipecah jadi 10 galeri
+   terpisah (5 parameter x 2 flow transmitter -- 4 parameter terukur +
+   "Cleaning Hole / Line Flow Transmitter" evidence-only, ditambahkan
+   2026-09-16, urutan: SEMUA parameter 933A dulu baru SEMUA parameter 933B --
+   persis urutan yang diminta user), 1 per kombinasi parameter+transmitter --
+   BUKAN 1 galeri gabungan seperti sebelumnya, supaya foto before/after tiap
+   parameter bisa dikelompokkan jelas alih-alih bercampur semua jadi satu
+   tumpukan. Dibangun dinamis lewat renderPurgingEvidenceSections() (pola
+   sama dengan renderEvidenceSections() di pm_stacker.html) supaya tidak
+   perlu menulis ulang markup 10x -- setiap blok juga dikasih warna aksen
+   biru (ID Fan A) / oranye (ID Fan B) di border kiri + label supaya kedua
+   kelompok gampang dibedakan sekilas. */
 /* gk (a_cardvalue/a_bladepitch/dst) SENGAJA TIDAK diubah walau labelnya
    sekarang "Card Value Pressure Transmitter" (bukan lagi Blade Pitch
    Control) -- gk ini dipakai sebagai KEY penyimpanan evidence
@@ -1508,17 +1511,19 @@ var PURGING_EVIDENCE_GROUPS = [
   {gk:'a_flow',           label:'ID Fan A (7BG-FT-933A) — Flow (T/H) — Before/After'},
   {gk:'a_bladepitch',     label:'ID Fan A (7BG-FT-933A) — Card Value Pressure Transmitter (mA) — Before/After'},
   {gk:'a_inletpressure',  label:'ID Fan A (7BG-FT-933A) — Inlet Pressure STALL (KPaG) — Before/After'},
+  {gk:'a_cleaninghole',   label:'ID Fan A (7BG-FT-933A) — Cleaning Hole / Line Flow Transmitter — Before/After'},
   {gk:'b_cardvalue',      label:'ID Fan B (7BG-FT-933B) — Card Value Flow Transmitter (mA) — Before/After'},
   {gk:'b_flow',           label:'ID Fan B (7BG-FT-933B) — Flow (T/H) — Before/After'},
   {gk:'b_bladepitch',     label:'ID Fan B (7BG-FT-933B) — Card Value Pressure Transmitter (mA) — Before/After'},
-  {gk:'b_inletpressure',  label:'ID Fan B (7BG-FT-933B) — Inlet Pressure STALL (KPaG) — Before/After'}
+  {gk:'b_inletpressure',  label:'ID Fan B (7BG-FT-933B) — Inlet Pressure STALL (KPaG) — Before/After'},
+  {gk:'b_cleaninghole',   label:'ID Fan B (7BG-FT-933B) — Cleaning Hole / Line Flow Transmitter — Before/After'}
 ];
 
 /* Registry galeri evidence -- array datar berisi objek foto {name,dataUrl,
    type,caption,offsetX,widthCm,heightCm,driveFileId,driveUrl}, pola SAMA
    PERSIS dengan so2Photos/renderPhotoGallery() di so2.html (thumbnail kecil
    72x72 + Urutkan Foto/Fitur O + Geser Posisi/Fitur D). 'cleaning' statis
-   (1 galeri tetap, Langkah 5); 8 galeri PURGING_EVIDENCE_GROUPS + 'legacy'
+   (1 galeri tetap, Langkah 5); 10 galeri PURGING_EVIDENCE_GROUPS + 'legacy'
    (migrasi data lama, lihat applyRecordToForm()) dibuat dinamis oleh
    renderPurgingEvidenceSections(). */
 var EV_GALLERIES = {
@@ -1743,9 +1748,14 @@ function renderPurgingEvidenceSections() {
   var html = '';
   groups.forEach(function(g, i) {
     if (!EV_GALLERIES[g.gk]) EV_GALLERIES[g.gk] = { photos: [], listId: 'evList_'+g.gk, emptyMsg: 'Belum ada foto. Klik "+ Tambah Foto" untuk menambahkan.' };
+    // Bedakan visual 5 evidence ID Fan A (biru) vs 5 evidence ID Fan B (oranye)
+    // supaya gampang dipindai mana kelompok A dan mana kelompok B -- warna
+    // cuma dekorasi (border kiri + tint label), tidak mengubah gk/label asli.
+    var accent = g.gk.indexOf('a_') === 0 ? '#2563eb' : (g.gk.indexOf('b_') === 0 ? '#c2410c' : '#64748b');
+    var tint = g.gk.indexOf('a_') === 0 ? '#eff6ff' : (g.gk.indexOf('b_') === 0 ? '#fff7ed' : '#f1f5f9');
     html +=
-      '<div style="'+(i>0?'margin-top:16px;padding-top:14px;border-top:1px solid var(--border);':'')+'">'+
-        '<div style="font-size:12.5px;font-weight:600;margin-bottom:6px;color:var(--text2,#334155)">'+escapeHtmlG(g.label)+'</div>'+
+      '<div style="'+(i>0?'margin-top:16px;':'')+'padding:10px 12px;border-left:4px solid '+accent+';background:'+tint+';border-radius:0 6px 6px 0;">'+
+        '<div style="font-size:12.5px;font-weight:700;margin-bottom:6px;color:'+accent+'">'+escapeHtmlG(g.label)+'</div>'+
         '<button type="button" class="btn btn-outline" onclick="toggleSourceChoices(\'evSrcChoices_'+g.gk+'\')">+ Tambah Foto</button>'+
         '<div class="source-choices" id="evSrcChoices_'+g.gk+'" style="display:none;gap:8px;margin-top:8px">'+
           '<button type="button" onclick="evTriggerSource(\''+g.gk+'\',\'camera\')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>'+
@@ -2005,7 +2015,7 @@ function buildAndShowPdf() {
     willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
-  // EVIDENCE — PURGING LINE FLOW TRANSMITTER (LANGKAH 8) -- 8 galeri per
+  // EVIDENCE — PURGING LINE FLOW TRANSMITTER (LANGKAH 8) -- 10 galeri per
   // parameter x 933A/933B (urutan A dulu semua, baru B, sesuai revisi user),
   // + 'legacy' (foto migrasi dari format lama, kalau ada).
   PURGING_EVIDENCE_GROUPS.forEach(function(g) {
@@ -2046,7 +2056,7 @@ function dbCollectData(modul) {
       checklist: CHECKLIST_DATA,
       measurement: MEASUREMENT_DATA,
       evidenceCleaning: EV_GALLERIES.cleaning.photos,
-      // 8 galeri terpisah (parameter x 933A/933B, Langkah 8) -- ganti dari
+      // 10 galeri terpisah (parameter x 933A/933B, Langkah 8) -- ganti dari
       // 1 galeri gabungan "evidencePurging" (format lama, dibaca kembali di
       // applyRecordToForm() sbg migrasi ke bucket 'legacy').
       evidencePurgingGroups: PURGING_EVIDENCE_GROUPS.reduce(function(acc, g){
@@ -2112,7 +2122,7 @@ function applyRecordToForm(rec, editingId) {
     EV_GALLERIES[g.gk] = { photos: evMigrateOldSlots(purgingGroups[g.gk]), listId: 'evList_'+g.gk, emptyMsg: 'Belum ada foto. Klik "+ Tambah Foto" untuk menambahkan.' };
   });
   // Record LAMA (sebelum revisi 2026-09-15) masih menyimpan 1 galeri gabungan
-  // "evidencePurging" (bukan 8 galeri per parameter) -- foto-foto itu TIDAK
+  // "evidencePurging" (bukan 10 galeri per parameter) -- foto-foto itu TIDAK
   // BISA dipetakan otomatis ke parameter yang benar (tidak ada info lagi
   // foto itu punya Card Value/Flow/dst), jadi ditampung ke bucket 'legacy'
   // supaya tidak hilang, biar teknisi bisa lihat & pindahkan manual kalau perlu.
