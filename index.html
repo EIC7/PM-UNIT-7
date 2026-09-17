@@ -1768,6 +1768,18 @@
             });
         });
 
+        // Simpan href ASLI kartu multi-area SEKALI di sini (sebelum filterCards() manapun
+        // sempat menimpa onclick-nya) -- dipakai ulang tiap kali tab aktif berganti supaya
+        // perhitungan "href + ?area=<tab>" selalu mulai dari href bersih, TIDAK menumpuk
+        // "?area=lama&area=baru" kalau dihitung dari onclick yang sudah pernah dimodifikasi.
+        document.querySelectorAll('#cardsGrid .pm-card').forEach(function(card) {
+            var areas = (card.getAttribute('data-area') || '').trim().split(' ').filter(Boolean);
+            if (areas.length > 1) {
+                var href = pmExtractHref(card);
+                if (href) card.setAttribute('data-base-href', href);
+            }
+        });
+
         filterCards(); // tab default "__general__" aktif sejak load -- WAJIB dipanggil di sini,
                         // beda dari dropdown Semua Area lama yang tidak menyembunyikan apa pun.
 
@@ -1820,7 +1832,13 @@
                         visible++;
                         return;
                     }
-                    var href = pmExtractHref(card);
+                    // WAJIB pakai data-base-href (href ASLI, disimpan sekali di init) --
+                    // BUKAN pmExtractHref(card) langsung, karena onclick kartu ini bisa saja
+                    // SUDAH dimodifikasi (ikut ?area=<tab lain>) oleh cabang mode-tab di
+                    // bawah kalau user sempat browsing tab sebelum mengetik pencarian --
+                    // pakai yang sudah "tercemar" itu akan menghasilkan URL dobel
+                    // "?area=lama&area=baru" yang salah.
+                    var href = card.getAttribute('data-base-href') || pmExtractHref(card);
                     areas.forEach(function(area) {
                         var clone = card.cloneNode(true);
                         clone.style.display = '';
@@ -1842,17 +1860,33 @@
                 noResults.style.display = (visible === 0) ? 'block' : 'none';
                 searchCount.textContent = visible + ' modul ditemukan';
             } else {
-                // Mode TAB biasa (kolom cari kosong) -- perilaku lama, difilter oleh
-                // tab aktif saja, tidak dipecah per area.
+                // Mode TAB biasa (kolom cari kosong) -- difilter oleh tab aktif, tidak
+                // dipecah jadi banyak kartu per area seperti mode pencarian.
                 cardsGrid.style.display = '';
                 resultsGrid.style.display = 'none';
                 cards.forEach(function(card) {
                     var cardAreaRaw = (card.getAttribute('data-area') || '').trim();
+                    var areas = cardAreaRaw.split(' ').filter(Boolean);
                     var areaMatch = (activeTabArea === '__general__')
                         ? (cardAreaRaw === '')
-                        : cardAreaRaw.split(' ').includes(activeTabArea);
+                        : areas.includes(activeTabArea);
                     card.style.display = areaMatch ? '' : 'none';
                     if (areaMatch) visible++;
+                    // Kartu multi-area (mis. DCS HMI, Flow Switch, Conductivity) -- routing
+                    // area ke Review Approval Dashboard HARUS ikut tab yang sedang aktif saat
+                    // diklik (BUKAN cuma saat pencarian, itu sudah benar duluan -- lihat
+                    // cabang if(q) di atas). Sebelum fix ini, onclick kartu tidak pernah
+                    // disentuh di mode tab biasa, jadi klik dari tab MANAPUN selalu memakai
+                    // href polos tanpa ?area=, dan ujung-ujungnya jatuh ke default statis
+                    // RA_MODUL_AREA (mis. DCS HMI selalu ke 'common' walau diklik dari tab
+                    // Turbine) -- bug yang dilaporkan user.
+                    if (areaMatch && areas.length > 1 && activeTabArea !== '__general__') {
+                        var baseHref = card.getAttribute('data-base-href');
+                        if (baseHref) {
+                            var sep = baseHref.indexOf('?') >= 0 ? '&' : '?';
+                            card.setAttribute('onclick', "window.location.href='" + baseHref + sep + "area=" + activeTabArea + "'");
+                        }
+                    }
                 });
                 noResults.style.display = (visible === 0) ? 'block' : 'none';
                 searchCount.textContent = '';
