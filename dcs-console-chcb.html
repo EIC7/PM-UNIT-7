@@ -1756,7 +1756,7 @@ var DCS_DROPS = [
   {id:'dropch2', label:'CEC-DROP-CH2', desc:'Common Coal Handling - Operator Interface Station Console No 2'},
 ];
 
-var dcsImages = {}; // key: '<dropId>_before'/'<dropId>_after'/'<dropId>_defect' -> array foto
+var dcsImages = {}; // key: '<dropId>_evidence'/'<dropId>_defect' -> array foto
 var dcsNotes = {};  // key: '<dropId>_defect' -> string catatan temuan/defect drop itu
 var dcsActiveDrops = {};
 DCS_DROPS.forEach(function(d){ dcsActiveDrops[d.id] = true; }); /* default: semua aktif */
@@ -1852,13 +1852,13 @@ function dcsGetActiveDrops() {
    user: foto Before/After/Defect tiap drop TIDAK BOLEH tercampur) -- dibangun
    ULANG setiap kali pilihan drop aktif berubah (checkbox Unit Bar), BUKAN
    sekali di awal, supaya galeri yang ditampilkan selalu sesuai drop yang
-   sedang dicentang. gk = '<dropId>_before' / '<dropId>_after' / '<dropId>_defect'. */
+   sedang dicentang. gk = '<dropId>_evidence' / '<dropId>_defect' (revisi
+   2026-09-17: before/after DIHAPUS, cukup 1 evidence umum per drop). */
 function dcsGetEvidenceGroups() {
   var groups = [];
   dcsGetActiveDrops().forEach(function(d) {
-    groups.push({gk: d.id+'_before', label: 'Evidence '+d.label+' — Before Cleaning', note:false});
-    groups.push({gk: d.id+'_after',  label: 'Evidence '+d.label+' — After Cleaning',  note:false});
-    groups.push({gk: d.id+'_defect', label: 'Evidence '+d.label+' — Defect / Finding', note:true});
+    groups.push({gk: d.id+'_evidence', label: 'Evidence '+d.label, note:false});
+    groups.push({gk: d.id+'_defect',   label: 'Evidence '+d.label+' — Defect / Finding', note:true});
   });
   return groups;
 }
@@ -2539,7 +2539,7 @@ function applyRecordToForm(rec, editingId) {
   sv('dcsProgram', data.program   || 'JP-DROP');
   if (data.notes) sv('dcsNoteGeneral', data.notes.general||'');
   /* Restore active drops DULU (rebuild unit bar + table + evidence container)
-     SEBELUM restore images/notes per-drop -- galeri per-drop (gk = '<dropId>_before'
+     SEBELUM restore images/notes per-drop -- galeri per-drop (gk = '<dropId>_evidence'
      dst) baru ADA di DOM setelah dcsRenderEvidenceSections() dipanggil, jadi
      urutannya WAJIB begini, tidak boleh dibalik. */
   if (data.activeDrops) {
@@ -2553,8 +2553,20 @@ function applyRecordToForm(rec, editingId) {
     var mapImg = function(i){ return {name:i.name,dataUrl:i.dataUrl,type:i.type||'image/jpeg',caption:i.caption||'',widthCm:i.widthCm,heightCm:i.heightCm,offsetX:i.offsetX||0}; };
     Object.keys(data.images||{}).forEach(function(gk){
       dcsImages[gk] = (data.images[gk]||[]).map(mapImg);
-      dcsRenderPreviews(gk);
     });
+    // Migrasi record lama (sebelum revisi 2026-09-17 -- evidence per-drop
+    // dulu masih dipecah before/after) -- gabung ke 1 bucket '_evidence'
+    // per drop supaya foto lama tidak hilang dari tampilan.
+    DCS_DROPS.forEach(function(d){
+      var beforeArr = dcsImages[d.id+'_before'];
+      var afterArr = dcsImages[d.id+'_after'];
+      if (beforeArr || afterArr) {
+        dcsImages[d.id+'_evidence'] = (dcsImages[d.id+'_evidence']||[]).concat(beforeArr||[]).concat(afterArr||[]);
+        delete dcsImages[d.id+'_before'];
+        delete dcsImages[d.id+'_after'];
+      }
+    });
+    Object.keys(dcsImages).forEach(function(gk){ dcsRenderPreviews(gk); });
     if (data.notes && data.notes.defect && typeof data.notes.defect === 'object') {
       Object.keys(data.notes.defect).forEach(function(gk){
         dcsNotes[gk] = data.notes.defect[gk] || '';
