@@ -6,7 +6,7 @@
     <title>Maintenance Report</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="shared.js?v=20260916a"></script>
+    <script src="shared.js?v=20260917a"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
@@ -314,6 +314,7 @@
                     <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
                     <button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
                     <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                    <button class="crop-btn crop-btn-outline" id="cropRestoreOrigBtn" onclick="cropRestoreOriginal()" disabled>⏮ Foto Asli</button>
                     <button class="crop-btn crop-btn-outline" onclick="cropCancelCurrent()">Batal</button>
                     <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
                 </div>
@@ -1069,6 +1070,7 @@ function applyImageEdits(){
                 cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
                 if (cropModal._mode === 'default') fitCropBoxToFullImage();
                 else if (cropModal._ratioLocked) reshapeCropBoxToRatio();
+                cropUpdateRestoreOriginalButton();
             };
             cropImg.src = outUrl;
             closeImageEditor(false);
@@ -1844,21 +1846,29 @@ function applyImageEdits(){
         }
 
         // ── CROP MODAL ─────────────────────────────────────────────────────────────
-        function openCropModal(dataUrl, preferredSize) {
+        function openCropModal(dataUrl, preferredSize, origDataUrl) {
             cropModal._orientation = 'portrait';
             cropModal._activePresetIdx = -1;
             // Fitur U: Keterangan foto pre-diisi dari foto lama kalau ini crop-ulang
             // (replaceIdx>=0), kosong kalau foto baru -- cropModal._pending sudah
             // di-set pemanggil ({type, idx, replaceIdx}) SEBELUM openCropModal() ini.
             var capInput = document.getElementById('cropCaptionInput');
+            var pend = cropModal._pending;
+            var exImg = null;
+            if (pend && pend.replaceIdx >= 0 && sections[pend.type] && sections[pend.type][pend.idx]) {
+                exImg = sections[pend.type][pend.idx].images[pend.replaceIdx];
+            }
             if (capInput) {
-                var pend = cropModal._pending;
-                var existingCap = '';
-                if (pend && pend.replaceIdx >= 0 && sections[pend.type] && sections[pend.type][pend.idx]) {
-                    var exImg = sections[pend.type][pend.idx].images[pend.replaceIdx];
-                    existingCap = exImg ? (exImg.caption || '') : '';
-                }
-                capInput.value = existingCap;
+                capInput.value = exImg ? (exImg.caption || '') : '';
+            }
+            // Fitur "Kembalikan ke Foto Asli" (2026-09-17, session-only) -- origDataUrl
+            // dipakai INTERNAL oleh cropRestoreOriginal() supaya diketahui foto sumber
+            // yang benar-benar pertama diupload. Pemanggil EKSTERNAL (upload baru / klik
+            // "Crop Ulang" di galeri) TIDAK PERNAH mengisi param ini -- rotateCropImage()
+            // di file ini TIDAK menyentuh cropModal._pending sama sekali (baca komentar
+            // di atasnya), jadi tidak perlu passthrough khusus lewat cropReset() spt System C.
+            if (pend) {
+                pend.originalDataUrl = (origDataUrl !== undefined) ? origDataUrl : ((exImg && exImg.originalDataUrl) ? exImg.originalDataUrl : dataUrl);
             }
             if (preferredSize && preferredSize.w && preferredSize.h) {
                 document.getElementById('cropWcm').value = preferredSize.w;
@@ -1889,7 +1899,7 @@ function applyImageEdits(){
             img.onload = function() {
                 if (img._loadToken !== token) return;
                 cropModal.classList.add('show');
-                setTimeout(function(){ cropReset(); cropStartHistoryTracking(); cropUpdateQueueProgressUI(); }, 80);
+                setTimeout(function(){ cropReset(); cropStartHistoryTracking(); cropUpdateQueueProgressUI(); cropUpdateRestoreOriginalButton(); }, 80);
             };
             img.onerror = function() {
                 if (img._loadToken !== token) return;
@@ -1899,8 +1909,22 @@ function applyImageEdits(){
             img.src = dataUrl;
             if (img.complete && img.naturalWidth) {
                 cropModal.classList.add('show');
-                setTimeout(function(){ cropReset(); cropStartHistoryTracking(); cropUpdateQueueProgressUI(); }, 80);
+                setTimeout(function(){ cropReset(); cropStartHistoryTracking(); cropUpdateQueueProgressUI(); cropUpdateRestoreOriginalButton(); }, 80);
             }
+        }
+        function cropRestoreOriginal() {
+            var p = cropModal._pending;
+            var img = document.getElementById('cropImg');
+            if (!p || !p.originalDataUrl || !img) return;
+            if (img.src === p.originalDataUrl) return; // sudah di keadaan asli, tidak ada yg perlu dikembalikan
+            openCropModal(p.originalDataUrl, (cropModal._cropWcm && cropModal._cropHcm) ? {w:cropModal._cropWcm, h:cropModal._cropHcm} : null, p.originalDataUrl);
+        }
+        function cropUpdateRestoreOriginalButton() {
+            var btn = document.getElementById('cropRestoreOrigBtn');
+            if (!btn) return;
+            var p = cropModal._pending;
+            var img = document.getElementById('cropImg');
+            btn.disabled = !(p && p.originalDataUrl && img && img.src !== p.originalDataUrl);
         }
 
         function cropReset() {
@@ -2006,6 +2030,7 @@ function applyImageEdits(){
             var capInput = document.getElementById('cropCaptionInput');
             var caption = capInput ? capInput.value : (existing && existing.caption ? existing.caption : '');
             var entry = {dataUrl: dataUrl, caption: caption};
+            if (p.originalDataUrl) entry.originalDataUrl = p.originalDataUrl; // session-only, dibuang sblm simpan ke Supabase (_pmStripBase64ForSave, shared.js)
             if (existing && existing.name) { entry.name = existing.name; }
             if (existing && existing.type) { entry.type = existing.type; }
             if (existing && existing.offsetX) { entry.offsetX = existing.offsetX; }

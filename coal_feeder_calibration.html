@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260916a"></script>
+<script src="shared.js?v=20260917a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -523,6 +523,7 @@ function cfUpdateToggleLabel(type, on) {
                 <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
                 <button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
                 <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                <button class="crop-btn crop-btn-outline" id="cropRestoreOrigBtn" onclick="cropRestoreOriginal()" disabled>⏮ Foto Asli</button>
                 <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
                 <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
             </div>
@@ -1160,6 +1161,7 @@ function applyImageEdits(){
                 if (cropModalState._mode === 'default') fitCropBoxToFullImage();
                 else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
                 cropStartHistoryTracking();
+        cropUpdateRestoreOriginalButton();
         cropUpdateQueueProgressUI(); // Fitur U: tampilkan "Foto X dari Y" kalau lagi jalan antrean multi-crop
             };
             cropImg.src = outUrl;
@@ -1423,9 +1425,17 @@ function reshapeCropBoxToRatio() {
 /* imgOpenCropper: SAMA SIGNATURE dengan versi lama shared.js supaya semua
    pemanggil existing (ldHandleFiles/clHandleFiles/ldReEdit/clReEdit/inline
    onclick) tetap jalan tanpa diubah. */
-function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
-    cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:(replaceIdx!==undefined?replaceIdx:-1)};
-    var existing = (replaceIdx>=0 && imgArr[replaceIdx]) ? imgArr[replaceIdx] : null;
+function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx, origDataUrl) {
+    var ridx = (replaceIdx!==undefined?replaceIdx:-1);
+    var existing = (ridx>=0 && imgArr[ridx]) ? imgArr[ridx] : null;
+    // Fitur "Kembalikan ke Foto Asli" (2026-09-17, session-only) -- origDataUrl dipakai
+    // INTERNAL oleh cropReset()/cropRestoreOriginal() supaya foto asli tidak "lupa" walau
+    // sempat dirotasi (rotateCropImage mengganti cropImg.src TANPA lewat sini lagi).
+    // Pemanggil EKSTERNAL (upload baru / klik "Crop Ulang" di galeri) TIDAK PERNAH mengisi
+    // param ini -- otomatis fallback ke existing.originalDataUrl (kalau foto ini sudah
+    // sempat di-crop sebelumnya DI SESI YANG SAMA) atau ke dataUrl (upload baru).
+    var trueOriginal = (origDataUrl !== undefined) ? origDataUrl : ((existing && existing.originalDataUrl) ? existing.originalDataUrl : dataUrl);
+    cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:ridx, originalDataUrl:trueOriginal};
     var capInput = document.getElementById('cropCaptionInput');
     if (capInput) capInput.value = existing ? (existing.caption || '') : '';
     var preferredSize = (existing && existing.widthCm && existing.heightCm) ? {w:existing.widthCm, h:existing.heightCm} : null;
@@ -1467,6 +1477,7 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
         if (cropModalState._mode === 'default') fitCropBoxToFullImage();
         else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
         cropStartHistoryTracking();
+        cropUpdateRestoreOriginalButton();
         cropUpdateQueueProgressUI(); // Fitur U: tampilkan "Foto X dari Y" kalau lagi jalan antrean multi-crop
     };
     img.src = dataUrl;
@@ -1504,7 +1515,21 @@ function rotateCropImage(dir) {
 function cropReset() {
     var img = document.getElementById('cropImg');
     var p = cropModalState._pending;
-    if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx);
+    if (img && img.src && p) imgOpenCropper(img.src, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx, p.originalDataUrl);
+}
+function cropRestoreOriginal() {
+    var p = cropModalState._pending;
+    var img = document.getElementById('cropImg');
+    if (!p || !p.originalDataUrl || !img) return;
+    if (img.src === p.originalDataUrl) return; // sudah di keadaan asli, tidak ada yg perlu dikembalikan
+    imgOpenCropper(p.originalDataUrl, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx, p.originalDataUrl);
+}
+function cropUpdateRestoreOriginalButton() {
+    var btn = document.getElementById('cropRestoreOrigBtn');
+    if (!btn) return;
+    var p = cropModalState._pending;
+    var img = document.getElementById('cropImg');
+    btn.disabled = !(p && p.originalDataUrl && img && img.src !== p.originalDataUrl);
 }
 function skipCrop() { closeCropModal(); if (cropQueue) cropQueueAdvance(); }
 
@@ -1552,6 +1577,7 @@ function cropAndSave() {
     }
 
     var entry = {name:(p.name||'photo.jpg').replace(/\.[^.]+$/,'.jpg'), dataUrl: dataUrl, type:'image/jpeg', caption: caption};
+    if (p.originalDataUrl) entry.originalDataUrl = p.originalDataUrl; // session-only, dibuang sblm simpan ke Supabase (_pmStripBase64ForSave, shared.js)
     if (offsetX) entry.offsetX = offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
     // Foto yang di-edit ulang (replaceIdx>=0) ditaruh KEMBALI di posisi yang sama,

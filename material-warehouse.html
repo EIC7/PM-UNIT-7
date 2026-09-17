@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260916a"></script>
+<script src="shared.js?v=20260917a"></script>
 <style>
   :root {
     --bg: #f0f4f8;
@@ -1531,6 +1531,7 @@
                 <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
                 <button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
                 <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                <button class="crop-btn crop-btn-outline" id="cropRestoreOrigBtn" onclick="cropRestoreOriginal()" disabled>⏮ Foto Asli</button>
                 <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Batal</button>
                 <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
             </div>
@@ -2476,6 +2477,7 @@ function applyImageEdits(){
                 if (cropModalState._mode === 'default') fitCropBoxToFullImage();
                 else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
                 cropStartHistoryTracking();
+                cropUpdateRestoreOriginalButton();
             };
             cropImg.src = outUrl;
             closeImageEditor(false);
@@ -2756,6 +2758,7 @@ function openCropModal(dataUrl, isReEdit) {
         if (cropModalState._mode === 'default') fitCropBoxToFullImage();
         else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
         cropStartHistoryTracking();
+        cropUpdateRestoreOriginalButton();
     };
     img.src = dataUrl;
     cropModalState.classList.add('show');
@@ -2800,6 +2803,21 @@ function cropReset() {
     if (img && img.src && p) openCropModal(img.src);
 }
 function skipCrop() { closeCropModal(); }
+// Fitur "Kembalikan ke Foto Asli" (2026-09-17, session-only) -- file ini SUDAH
+// punya currentImageOriginalUrl (dipakai reEditCrop() supaya "Crop Ulang" tidak
+// kehilangan kualitas), jadi tinggal reuse langsung, tidak perlu struktur baru.
+function cropRestoreOriginal() {
+    var img = document.getElementById('cropImg');
+    if (!currentImageOriginalUrl || !img) return;
+    if (img.src === currentImageOriginalUrl) return; // sudah di keadaan asli
+    openCropModal(currentImageOriginalUrl, true);
+}
+function cropUpdateRestoreOriginalButton() {
+    var btn = document.getElementById('cropRestoreOrigBtn');
+    if (!btn) return;
+    var img = document.getElementById('cropImg');
+    btn.disabled = !(currentImageOriginalUrl && img && img.src !== currentImageOriginalUrl);
+}
 
 function cropAndSave() {
     var img = document.getElementById('cropImg');
@@ -2836,8 +2854,12 @@ function cropAndSave() {
         }
     }
 
-    // Simpan foto ASLI (sebelum crop) supaya "Crop Ulang" nanti tidak kehilangan kualitas
-    currentImageOriginalUrl = p.dataUrl;
+    // Simpan foto ASLI (sebelum crop) supaya "Crop Ulang" nanti tidak kehilangan kualitas.
+    // Guard "kalau belum ada" (2026-09-17) -- dulu SELALU ditimpa p.dataUrl di sini, yang
+    // kalau user sempat Rotate sebelum Simpan bikin originalUrl ikut "lupa" jadi versi
+    // hasil rotate (rotateCropImage menimpa p.dataUrl juga) -- foto asli sungguhan (sblm
+    // rotate sekalipun) jadi tidak pernah bisa dikembalikan lagi lewat tombol Foto Asli.
+    if (!currentImageOriginalUrl) currentImageOriginalUrl = p.dataUrl;
     currentImageMeta.offsetX = currentImageMeta.offsetX || 0;
     if (cropModalState._cropWcm && cropModalState._cropHcm) {
         currentImageMeta.widthCm = cropModalState._cropWcm;

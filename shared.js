@@ -239,6 +239,13 @@ function _pmStripBase64ForSave(obj) {
   if (typeof out.dataUrl === 'string' && out.dataUrl.indexOf('data:') === 0 && out.driveUrl) {
     out.dataUrl = '';
   }
+  // Fitur "Kembalikan ke Foto Asli" (2026-09-17) -- originalDataUrl (dataUrl foto
+  // SEBELUM crop pertama, dipakai tombol restore di crop modal) SENGAJA session-only,
+  // TIDAK PERNAH boleh ikut tersimpan ke Supabase (2x lipat ukuran data per foto kalau
+  // dibiarkan) -- dibuang di sini TANPA SYARAT (beda dari dataUrl di atas yang cuma
+  // dibuang KALAU sudah ada driveUrl), supaya tombol restore otomatis disabled lagi
+  // begitu record dibuka ulang dari Riwayat/reload halaman.
+  if ('originalDataUrl' in out) delete out.originalDataUrl;
   return out;
 }
 

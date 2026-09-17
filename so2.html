@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260916a"></script>
+<script src="shared.js?v=20260917a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -299,6 +299,7 @@
                 <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
                 <button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
                 <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
+                <button class="crop-btn crop-btn-outline" id="cropRestoreOrigBtn" onclick="cropRestoreOriginal()" disabled>⏮ Foto Asli</button>
                 <button class="crop-btn crop-btn-outline" onclick="closeCropModal()">Batal</button>
                 <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
             </div>
@@ -1278,6 +1279,7 @@ function applyImageEdits(){
                 if (cropModalState._mode === 'default') fitCropBoxToFullImage();
                 else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
                 cropStartHistoryTracking();
+                cropUpdateRestoreOriginalButton();
             };
             cropImg.src = outUrl;
             closeImageEditor(false);
@@ -1288,21 +1290,34 @@ function applyImageEdits(){
     svgImg.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
 }
 
-function openCropModal(dataUrl, preferredSize) {
+function openCropModal(dataUrl, preferredSize, origDataUrl) {
     cropModalState._orientation = 'portrait';
     cropModalState._activePresetIdx = -1;
     // Fitur U: Keterangan foto pre-diisi dari foto lama kalau ini crop-ulang
     // (replaceIdx>=0), kosong kalau foto baru -- cropModalState._pending sudah
     // di-set pemanggil ({groupKey, replaceIdx}) SEBELUM openCropModal() ini.
     var capInput = document.getElementById('cropCaptionInput');
+    var pend = cropModalState._pending;
+    var existingForOrig = null;
     if (capInput) {
-        var pend = cropModalState._pending;
         var existingCap = '';
         if (pend && pend.replaceIdx >= 0) {
             var pendArr = getPhotoArr(pend.groupKey);
-            existingCap = (pendArr && pendArr[pend.replaceIdx]) ? (pendArr[pend.replaceIdx].caption || '') : '';
+            existingForOrig = (pendArr && pendArr[pend.replaceIdx]) ? pendArr[pend.replaceIdx] : null;
+            existingCap = existingForOrig ? (existingForOrig.caption || '') : '';
         }
         capInput.value = existingCap;
+    } else if (pend && pend.replaceIdx >= 0) {
+        var pendArr2 = getPhotoArr(pend.groupKey);
+        existingForOrig = (pendArr2 && pendArr2[pend.replaceIdx]) ? pendArr2[pend.replaceIdx] : null;
+    }
+    // Fitur "Kembalikan ke Foto Asli" (2026-09-17, session-only) -- lihat
+    // catatan lengkap di imgOpenCropper() (shared.js) / dcs-hmi-inspection.html
+    // untuk penjelasan kenapa origDataUrl WAJIB di-passthrough eksplisit dari
+    // cropReset()/cropRestoreOriginal(), bukan diturunkan ulang dari dataUrl
+    // (yang bisa saja sudah hasil rotate, bukan foto asli lagi).
+    if (pend) {
+        pend.originalDataUrl = (origDataUrl !== undefined) ? origDataUrl : ((existingForOrig && existingForOrig.originalDataUrl) ? existingForOrig.originalDataUrl : dataUrl);
     }
     if (preferredSize && preferredSize.w && preferredSize.h) {
         document.getElementById('cropWcm').value = preferredSize.w;
@@ -1341,6 +1356,7 @@ function openCropModal(dataUrl, preferredSize) {
         if (cropModalState._mode === 'default') fitCropBoxToFullImage();
         else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
         cropStartHistoryTracking();
+        cropUpdateRestoreOriginalButton();
     };
     img.src = dataUrl;
     cropModalState.classList.add('show');
@@ -1375,7 +1391,22 @@ function rotateCropImage(dir) {
 }
 function cropReset() {
     var img = document.getElementById('cropImg');
-    if (img && img.src) openCropModal(img.src, (cropModalState._cropWcm && cropModalState._cropHcm) ? {w:cropModalState._cropWcm,h:cropModalState._cropHcm} : null);
+    var p = cropModalState._pending;
+    if (img && img.src) openCropModal(img.src, (cropModalState._cropWcm && cropModalState._cropHcm) ? {w:cropModalState._cropWcm,h:cropModalState._cropHcm} : null, p ? p.originalDataUrl : undefined);
+}
+function cropRestoreOriginal() {
+    var p = cropModalState._pending;
+    var img = document.getElementById('cropImg');
+    if (!p || !p.originalDataUrl || !img) return;
+    if (img.src === p.originalDataUrl) return; // sudah di keadaan asli, tidak ada yg perlu dikembalikan
+    openCropModal(p.originalDataUrl, (cropModalState._cropWcm && cropModalState._cropHcm) ? {w:cropModalState._cropWcm,h:cropModalState._cropHcm} : null, p.originalDataUrl);
+}
+function cropUpdateRestoreOriginalButton() {
+    var btn = document.getElementById('cropRestoreOrigBtn');
+    if (!btn) return;
+    var p = cropModalState._pending;
+    var img = document.getElementById('cropImg');
+    btn.disabled = !(p && p.originalDataUrl && img && img.src !== p.originalDataUrl);
 }
 
 function cropAndSave() {
@@ -1422,6 +1453,7 @@ function cropAndSave() {
     var capInput2 = document.getElementById('cropCaptionInput');
     var caption = capInput2 ? capInput2.value : (existing && existing.caption ? existing.caption : '');
     var entry = {dataUrl: dataUrl, caption: caption};
+    if (p.originalDataUrl) entry.originalDataUrl = p.originalDataUrl; // session-only, dibuang sblm simpan ke Supabase (_pmStripBase64ForSave, shared.js)
     if (existing && existing.offsetX) entry.offsetX = existing.offsetX;
     if (cropModalState._cropWcm && cropModalState._cropHcm) { entry.widthCm = cropModalState._cropWcm; entry.heightCm = cropModalState._cropHcm; }
     var slotIdx = (p.replaceIdx >= 0) ? p.replaceIdx : imgArr.length;
