@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Riwayat PM — Unit 7</title>
-<script src="shared.js?v=20260917b"></script>
+<script src="shared.js?v=20260917c"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -435,6 +435,23 @@ function historyUpgradeStatusBadges(rows) {
             revisiBtn.style.cssText = 'padding:4px 10px;font-size:11px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px';
             revisiBtn.onclick = function(){ window.location.href = modulToUrl(r.modul, r.id); };
             actionCell.insertBefore(revisiBtn, actionCell.firstChild);
+          }
+        } else {
+          // Laporan yang SUDAH SUKSES tersubmit (bukan returned_to_technician)
+          // -- tombol "Submit Ulang" (BEDA dari Revisi di atas DAN dari
+          // Resubmit yang khusus laporan yang GAGAL sync, lihat submitBtn di
+          // atas) supaya user bisa koreksi data (mis. area yang salah dipilih
+          // saat submit pertama) TANPA harus di-return/gagal dulu. Begitu
+          // halaman modulnya dibuka, pmMaybeEnterUpdateSubmitMode() (shared.js)
+          // yang ganti label "Submit Laporan" jadi "Update Data Submit".
+          var actionCell2 = document.getElementById('histActionCell-' + r.id);
+          if (actionCell2 && !document.getElementById('histUpdateSubmitBtn-' + r.id)) {
+            var updateBtn = document.createElement('button');
+            updateBtn.id = 'histUpdateSubmitBtn-' + r.id;
+            updateBtn.textContent = '🔄 Submit Ulang';
+            updateBtn.style.cssText = 'padding:4px 10px;font-size:11px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:4px';
+            updateBtn.onclick = function(){ window.location.href = modulToUrl(r.modul, r.id); };
+            actionCell2.insertBefore(updateBtn, actionCell2.firstChild);
           }
         }
       }).catch(function(){}); // gagal query 1 baris tidak boleh ganggu baris lain

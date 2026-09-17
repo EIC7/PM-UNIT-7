@@ -1755,6 +1755,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         // permintaan eksplisit user, lihat komentar dbShowSavingOverlaySuccess().
         dbShowSavingOverlaySuccess(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
         pmMarkRevisionSaved();
+        pmMarkUpdateSubmitSaved();
         if (callback) callback(savedId);
       })
       .catch(function(err) {
@@ -4792,6 +4793,101 @@ function pmMarkRevisionSaved() {
     btn.style.cursor = '';
     btn.title = '';
   });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MODE "UPDATE DATA SUBMIT" (2026-09-17) -- BEDA dari Mode Revisi di atas
+   (khusus returned_to_technician) dan BEDA dari Resubmit (khusus laporan
+   yang GAGAL sync ke Firebase, lihat raSubmitReportAuto()). Ini untuk
+   laporan yang SUDAH SUKSES tersubmit (status SUBMITTED di Supabase,
+   firebase_checksheet_id sudah ada) tapi user perlu mengoreksi datanya
+   (mis. field `area` yang salah dipilih saat submit pertama) TANPA harus
+   menunggu laporan itu di-return atau gagal sync dulu.
+   Prioritas: kalau Mode Revisi (pmRevisionMode) sudah aktif duluan untuk
+   record yang sama, mode ini TIDAK ikut aktif -- Revisi menang (returned_
+   to_technician adalah kondisi yang lebih spesifik/mendesak).
+   Tombol Submit (selector generik SAMA dengan pmMaybeEnterRevisionMode)
+   diganti label "🔄 Update Data Submit" DAN atributnya diganti dari
+   raSubmitReport() jadi raUpdateSubmittedReport() lewat string-replace
+   pada onclick yang SUDAH ADA (bukan ditulis ulang dari nol) -- supaya
+   bagian "window._raBuildPdf=<fn>;" yang mendahuluinya tetap utuh, PDF
+   builder modul itu tetap ter-set benar saat tombol baru ini diklik. */
+var pmUpdateSubmitMode = false;
+var pmUpdateSubmitPending = false;
+
+function pmMaybeEnterUpdateSubmitMode(rec) {
+  if (!rec || !rec.firebase_checksheet_id) return;
+  if (String(rec.status || '').toUpperCase() !== 'SUBMITTED') return;
+  if (typeof Approvals === 'undefined') return;
+  Approvals.getByChecksheetId(rec.firebase_checksheet_id).then(function (appr) {
+    if (pmRevisionMode) return; // Mode Revisi sudah aktif duluan -- itu yang menang
+    if (appr && appr.status === 'returned_to_technician') return; // domain Mode Revisi, biar pmMaybeEnterRevisionMode yang urus
+    var btns = pmFindSubmitButtons();
+    if (!btns.length) return;
+    pmUpdateSubmitMode = true;
+    btns.forEach(function (btn) {
+      var oc = btn.getAttribute('onclick') || '';
+      if (oc.indexOf('raSubmitReport()') === -1) return;
+      btn.setAttribute('onclick', oc.replace('raSubmitReport()', 'raUpdateSubmittedReport()'));
+      btn.innerHTML = '🔄 Update Data Submit';
+    });
+  }).catch(function () {});
+}
+
+/* Dipanggil dari klik tombol "🔄 Update Data Submit" (menggantikan
+   raSubmitReport() untuk record yang sudah sukses tersubmit, lihat
+   pmMaybeEnterUpdateSubmitMode() di atas). Simpan data form TERKINI dulu
+   lewat dbSave() BIASA (status TETAP SUBMITTED, tidak pernah dicoba
+   diubah -- ini AMAN dari RLS "pm_records_submit_authenticated" yang
+   cuma membatasi TRANSISI status draft->SUBMITTED, bukan update field
+   lain pada baris yang statusnya sudah SUBMITTED). Begitu dbSave() sukses
+   (lihat pmMarkUpdateSubmitSaved() di bawah, dipanggil dari titik sukses
+   yang SAMA dengan pmMarkRevisionSaved()), PDF di-generate ulang dan
+   dikirim ke DOKUMEN FIRESTORE YANG SAMA (reuse firebase_checksheet_id,
+   mekanismenya sudah ada di raSendFinalPdfToFirebaseDashboard() -- BUKAN
+   bikin laporan baru), lalu notifikasi Telegram label "Update Data
+   Submit" dikirim (RPC status 'data_updated', SENGAJA tanpa klaim atomik
+   di sisi Postgres -- lihat migrasi SQL yang sudah dijalankan, supaya
+   notif tetap terkirim SETIAP kali tombol ini diklik, bukan cuma sekali). */
+function raUpdateSubmittedReport() {
+  if (!window._editingId) { alert('Tidak ada data tersimpan untuk laporan ini.'); return; }
+  if (!confirm('Perbarui data laporan yang SUDAH disubmit ini?\n\nData terbaru di form ini akan disimpan dan dikirim ulang ke Review Approval Dashboard (MENIMPA data/PDF yang sudah ada di sana, BUKAN membuat laporan baru).')) return;
+  pmUpdateSubmitPending = true;
+  // SENGAJA belum panggil pmShowManualSubmitOverlay() di sini -- dbSave()
+  // di bawah sudah punya overlay "Menyimpan..." sendiri (dbShowSavingOverlay),
+  // dobel overlay akan tumpang tindih. Overlay submit baru ditampilkan di
+  // pmMarkUpdateSubmitSaved() persis saat fase kirim-ke-Firebase dimulai
+  // (fase yang TIDAK punya feedback visual sendiri).
+  dbSave(window.CURRENT_MODUL); // alur SAMA seperti tombol "Simpan ke Database" biasa
+}
+
+// Dipanggil dari dbSave() begitu simpan sukses -- titik yang SAMA dengan
+// pmMarkRevisionSaved() di atas. Lanjutkan proses "Update Data Submit"
+// kalau memang sedang menunggu (pmUpdateSubmitPending): ambil metadata
+// record TERKINI (ringan, tanpa kolom `data`), push ulang PDF ke Firestore,
+// baru notif Telegram -- SEMUA best-effort setelah titik ini, gagal kirim
+// notif TIDAK PERNAH boleh mengganggu status "sudah disimpan" yang sudah
+// pasti sukses di titik ini.
+function pmMarkUpdateSubmitSaved() {
+  if (!pmUpdateSubmitPending) return;
+  pmUpdateSubmitPending = false;
+  pmShowManualSubmitOverlay(); // fase kirim-ke-Firebase mulai di sini, dbSave() sendiri sudah tuntas
+  if (!window._editingId) { pmHideManualSubmitOverlay(false, 'Record tidak ditemukan setelah disimpan.'); return; }
+  supaFetch('GET', SUPA_TABLE + '?id=eq.' + window._editingId + '&select=id,modul,tanggal,pic,work_order,status,firebase_checksheet_id,area&limit=1')
+    .then(function (rows) {
+      var rec = rows && rows[0];
+      if (!rec) { pmHideManualSubmitOverlay(false, 'Record tidak ditemukan setelah disimpan.'); return; }
+      raSendFinalPdfToFirebaseDashboard(rec, rec.pic || '', function (ok, err) {
+        pmHideManualSubmitOverlay(ok, err);
+        if (ok && rec.firebase_checksheet_id) {
+          supaFetch('POST', 'rpc/notify_telegram_review_status', {
+            p_row_id: rec.id, p_status: 'data_updated',
+            p_modul: rec.modul || '', p_pic: rec.pic || '', p_wo: rec.work_order || ''
+          }).catch(function () {}); // notifikasi best-effort -- gagal kirim TIDAK boleh mengganggu alur update yang sudah sukses
+        }
+      });
+    })
+    .catch(function (e) { pmHideManualSubmitOverlay(false, e); });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
