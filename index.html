@@ -1794,12 +1794,16 @@
             });
         });
 
-        // Simpan href ASLI kartu multi-area SEKALI di sini (sebelum filterCards() manapun
-        // sempat menimpa onclick-nya) -- dipakai ulang tiap kali tab aktif berganti supaya
-        // perhitungan "href + ?area=<tab>" selalu mulai dari href bersih, TIDAK menumpuk
-        // "?area=lama&area=baru" kalau dihitung dari onclick yang sudah pernah dimodifikasi.
+        // Simpan href & warna ASLI tiap kartu SEKALI di sini (sebelum filterCards()
+        // manapun sempat menimpanya) -- data-base-href dipakai ulang tiap kali tab
+        // aktif berganti supaya perhitungan "href + ?area=<tab>" selalu mulai dari
+        // href bersih (TIDAK menumpuk "?area=lama&area=baru"); data-orig-color
+        // dipakai utk MENGEMBALIKAN warna kartu aslinya begitu kartu itu tampil di
+        // tab campuran __general__ (SATU-SATUNYA pengecualian yang tidak ikut
+        // diwarnai per-area, permintaan eksplisit user).
         document.querySelectorAll('#cardsGrid .pm-card').forEach(function(card) {
             var areas = (card.getAttribute('data-area') || '').trim().split(' ').filter(Boolean);
+            card.setAttribute('data-orig-color', card.style.getPropertyValue('--card-color') || '');
             if (areas.length > 1) {
                 var href = pmExtractHref(card);
                 if (href) card.setAttribute('data-base-href', href);
@@ -1809,13 +1813,24 @@
         filterCards(); // tab default "__general__" aktif sejak load -- WAJIB dipanggil di sini,
                         // beda dari dropdown Semua Area lama yang tidak menyembunyikan apa pun.
 
+        // Warna kanonik PER AREA (2026-09-17, permintaan eksplisit user) -- SEMUA
+        // kartu yang tampil di bawah tab area tertentu (Boiler/Turbine/Common CHCB/
+        // Common WWTP) memakai warna YANG SAMA utk ribbon MAUPUN aksen kartunya
+        // sendiri (border-top, ikon, hover), supaya area langsung kekenali dari
+        // warna tanpa perlu baca teks ribbon. Tab campuran (__general__) SENGAJA
+        // TIDAK disentuh -- kartu di situ tetap pakai --card-color asli per-modul.
+        var AREA_CARD_COLOR = { boiler: '#ea580c', turbine: '#2563eb', common: '#7c3aed', wwtp: '#0d9488' };
+
         // Ribbon area di pojok kartu (lihat CSS .card-area-badge) -- dipakai SAMA
         // baik di mode pencarian (per-clone) maupun mode tab biasa (kartu asli,
-        // diupdate ulang tiap ganti tab). area=null/'' -> ribbon dihapus.
+        // diupdate ulang tiap ganti tab). area=null/'' -> ribbon dihapus & warna
+        // kartu dikembalikan ke --card-color asli (data-orig-color).
         function pmSetCardAreaBadge(card, area) {
             var badge = card.querySelector('.card-area-badge');
             if (!area) {
                 if (badge) badge.remove();
+                var orig = card.getAttribute('data-orig-color');
+                if (orig !== null) card.style.setProperty('--card-color', orig);
                 return;
             }
             if (!badge) {
@@ -1824,6 +1839,8 @@
                 card.appendChild(badge);
             }
             badge.textContent = AREA_SEARCH_LABEL[area] || area;
+            var color = AREA_CARD_COLOR[area];
+            if (color) card.style.setProperty('--card-color', color);
         }
 
         function clearSearch() {
@@ -1871,6 +1888,12 @@
                     if (areas.length <= 1) {
                         var clone = card.cloneNode(true);
                         clone.style.display = '';
+                        // Kartu single-area (mis. CEMS Calibration = boiler) JUGA dapat
+                        // ribbon+warna area di hasil pencarian -- SEMUA kartu yang sudah
+                        // terfilter ke 1 area tertentu, bukan cuma yang multi-area. Kartu
+                        // tab campuran (areas.length===0, data-area kosong) TETAP TIDAK
+                        // disentuh -- itu satu-satunya pengecualian (permintaan user).
+                        if (areas.length === 1) pmSetCardAreaBadge(clone, areas[0]);
                         resultsGrid.appendChild(clone);
                         visible++;
                         return;
@@ -1923,12 +1946,17 @@
                             var sep = baseHref.indexOf('?') >= 0 ? '&' : '?';
                             card.setAttribute('onclick', "window.location.href='" + baseHref + sep + "area=" + activeTabArea + "'");
                         }
-                        // Ribbon area juga ditampilkan di mode tab biasa (bukan cuma saat
-                        // pencarian) -- permintaan eksplisit user, supaya area yang akan
-                        // dituju tetap kelihatan jelas walau bukan sedang mencari.
+                    }
+                    // Ribbon + warna area sekarang berlaku utk SEMUA kartu (bukan cuma
+                    // multi-area) yang match tab area TERTENTU -- KECUALI tab campuran
+                    // __general__ (permintaan eksplisit user, itu satu-satunya
+                    // pengecualian). Kartu single-area TIDAK perlu ?area= di onclick-nya
+                    // (blok di atas) krn RA_MODUL_AREA statisnya sendiri sudah benar,
+                    // tapi tetap dapat ribbon+warna biar konsisten visualnya.
+                    if (areaMatch && activeTabArea !== '__general__') {
                         pmSetCardAreaBadge(card, activeTabArea);
                     } else {
-                        pmSetCardAreaBadge(card, null); // bukan konteks multi-area aktif -- hapus ribbon lama kalau ada
+                        pmSetCardAreaBadge(card, null); // tab campuran / tidak match -- kembalikan warna asli, hapus ribbon
                     }
                 });
                 noResults.style.display = (visible === 0) ? 'block' : 'none';
