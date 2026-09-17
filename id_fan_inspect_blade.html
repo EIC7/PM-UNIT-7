@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ID Fan Flow Transmitter Line Purging — Unit 7</title>
+<title>Induced Draft Fan (ID Fan) Inspect Moving Blade Actuator — Unit 7</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="shared.js?v=20260917b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -105,9 +106,9 @@
   <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
   <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
   <div class="topbar-sep"></div>
-  <div class="topbar-logo">ID FAN PURGING</div>
+  <div class="topbar-logo">ID FAN BLADE ACTUATOR</div>
   <div class="topbar-sep"></div>
-  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; ID Fan Flow Transmitter Impulse Line Purging</div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; 3 Monthly Inspect Blade Actuator ID FAN</div>
   <div class="topbar-right">
     <div class="live-dot"></div>
     <div class="topbar-time" id="clock">--:--:--</div>
@@ -118,8 +119,8 @@
 
   <div class="page-header">
     <div>
-      <div class="page-header-sub">Preventive Maintenance — Impulse Line Purging</div>
-      <div class="page-header-title">ID Fan Flow Transmitter <span>Line Purging</span></div>
+      <div class="page-header-sub">Preventive Maintenance — 3 Monthly Inspect Blade Actuator</div>
+      <div class="page-header-title">Induced Draft Fan (ID Fan) <span>Inspect Moving Blade Actuator</span></div>
     </div>
     <div style="margin-bottom:8px">
       <span class="badge">7BG-FAN-500</span>
@@ -137,27 +138,27 @@
       <div class="meta-field"><label>Tanggal</label><input type="date" id="hTanggal"></div>
       <div class="meta-field"><label>Unit</label><input type="text" id="hUnit" value="U7"></div>
       <div class="meta-field"><label>Asset Tag</label><input type="text" id="hAssetTag" value="7BG-FAN-500"></div>
-      <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><input type="text" id="hAssetDesc" value="INDUCED DRAFT FAN 7"></div>
-      <div class="meta-field" style="grid-column:1/-1"><label>Work To Be Done</label><input type="text" id="hWorkToBeDone" value="Unit 7 Online ID FAN Flow Transmitters Impulse Line Purging"></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><input type="text" id="hAssetDesc" value="INDUCED DRAFT FAN 7 — Blade Actuator / Positioner Valve"></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Work To Be Done</label><input type="text" id="hWorkToBeDone" value="3 Monthly Inspect Blade Actuator ID FAN"></div>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--text3)">
-      Flow Transmitter yang dipantau: <b>7BG-FT-933A</b> (ID Fan 7A Inlet Stall Flow Transmitter) &amp; <b>7BG-FT-933B</b> (ID Fan 7B Inlet Stall Flow Transmitter)
+      Positioner Valve / Blade Actuator yang diperiksa: <b>7BG-FAN-500A</b> &amp; <b>7BG-FAN-500B</b>
     </div>
   </div>
 
   <!-- TABLE CHECKLIST -->
   <div class="panel">
-    <div class="section-label">Checklist — Impulse Line Purging</div>
+    <div class="section-label">Checklist — Inspect Moving Blade Actuator</div>
     <button type="button" class="btn btn-outline" onclick="checkAllChecklistY()" style="margin-bottom:10px">&#9989; Centang Semua Y</button>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="manual-table" id="t2Table" style="min-width:900px">
         <thead>
           <tr>
             <th rowspan="2" style="width:34px">No</th>
-            <th rowspan="2" style="min-width:230px">Activity</th>
-            <th rowspan="2" style="min-width:170px">Kriteria</th>
-            <th colspan="2">7BG-FT-933A</th>
-            <th colspan="2">7BG-FT-933B</th>
+            <th rowspan="2" style="min-width:230px">Step Of Work</th>
+            <th rowspan="2" style="min-width:170px">Criteria</th>
+            <th colspan="2">7BG-FAN-500A</th>
+            <th colspan="2">7BG-FAN-500B</th>
             <th rowspan="2" style="min-width:140px">Remarks</th>
           </tr>
           <tr>
@@ -170,33 +171,17 @@
     </div>
   </div>
 
-  <!-- EVIDENCE: CLEANING PANEL (LANGKAH 5) -->
+  <!-- TABLE PENGUKURAN (LANGKAH 3, 4, 5, 6) -->
   <div class="panel">
-    <div class="section-label">Foto Evidence — Cleaning Panel (Langkah 5)</div>
-    <button type="button" class="btn btn-outline" onclick="toggleSourceChoices('evSrcChoices_cleaning')">+ Tambah Foto</button>
-    <div class="source-choices" id="evSrcChoices_cleaning" style="display:none;gap:8px;margin-top:8px">
-      <button type="button" onclick="evTriggerSource('cleaning','camera')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>
-      <button type="button" onclick="evTriggerSource('cleaning','storage')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>
-    </div>
-    <input type="file" id="evFileInput_cleaning" accept="image/*" multiple style="display:none" onchange="evOnFileSelected('cleaning', event)">
-    <div id="evCleaningList"></div>
-  </div>
-
-  <!-- TABLE MEASUREMENT (LANGKAH 8) -->
-  <div class="panel">
-    <div class="section-label">Purging Line Flow Transmitter — Pengukuran (Langkah 8)</div>
+    <div class="section-label">Pengukuran — Feedback &amp; Instrument Air Regulator</div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table class="manual-table" id="t3Table" style="min-width:640px">
+      <table class="manual-table" id="t3Table" style="min-width:520px">
         <thead>
           <tr>
-            <th rowspan="2" style="min-width:140px">Parameter</th>
-            <th rowspan="2" style="width:70px">Unit</th>
-            <th colspan="2">7BG-FT-933A</th>
-            <th colspan="2">7BG-FT-933B</th>
-          </tr>
-          <tr>
-            <th style="min-width:90px">Before</th><th style="min-width:90px">After</th>
-            <th style="min-width:90px">Before</th><th style="min-width:90px">After</th>
+            <th style="min-width:220px">Parameter</th>
+            <th style="width:70px">Unit</th>
+            <th style="min-width:110px">7BG-FAN-500A</th>
+            <th style="min-width:110px">7BG-FAN-500B</th>
           </tr>
         </thead>
         <tbody id="t3Body"></tbody>
@@ -204,11 +189,26 @@
     </div>
   </div>
 
-  <!-- EVIDENCE: PURGING LINE FLOW TRANSMITTER (LANGKAH 8) -- 10 galeri dinamis,
-       lihat PURGING_EVIDENCE_GROUPS/renderPurgingEvidenceSections() -->
+  <!-- EVIDENCE: PENGUKURAN (LANGKAH 3, 4, 5, 6) -- 8 galeri dinamis (4 langkah
+       x Fan A/B), lihat PURGING_EVIDENCE_GROUPS/renderPurgingEvidenceSections() -->
   <div class="panel">
-    <div class="section-label">Foto Evidence — Purging Line Flow Transmitter (Langkah 8)</div>
+    <div class="section-label">Foto Evidence — Pengukuran (Langkah 3, 4, 5, 6)</div>
     <div id="purgingEvidenceContainer"></div>
+  </div>
+
+  <!-- FINDING / DEFECT -->
+  <div class="panel">
+    <div class="section-label">Finding / Defect</div>
+    <div class="meta-field" style="margin-bottom:12px"><label>Keterangan Defect</label>
+      <textarea id="hDefectNote" rows="3" placeholder="Catat temuan / defect yang ditemukan (kosongkan kalau tidak ada finding)..." style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+    <button type="button" class="btn btn-outline" onclick="toggleSourceChoices('evSrcChoices_defect')">+ Tambah Foto</button>
+    <div class="source-choices" id="evSrcChoices_defect" style="display:none;gap:8px;margin-top:8px">
+      <button type="button" onclick="evTriggerSource('defect','camera')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128247; Kamera</button>
+      <button type="button" onclick="evTriggerSource('defect','storage')" style="padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px">&#128444;&#65039; Galeri</button>
+    </div>
+    <input type="file" id="evFileInput_defect" accept="image/*" multiple style="display:none" onchange="evOnFileSelected('defect', event)">
+    <div id="evDefectList"></div>
   </div>
 
   <!-- CATATAN -->
@@ -222,7 +222,8 @@
   <div class="panel">
     <div class="btn-row">
       <button class="btn btn-pdf" id="btnPdf" onclick="runPdfPreview()">⬇ Print Preview & Download PDF</button>
-      <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('id_fan_line_purging')">💾 Simpan ke Database</button>
+      <button class="btn btn-outline" onclick="downloadChecksheetExcel()">📊 Download Checksheet (Excel)</button>
+      <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('id_fan_inspect_blade')">💾 Simpan ke Database</button>
       <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=runPdfPreview; raSubmitReport()">🔒 Submit Laporan</button>
       <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
     </div>
@@ -1464,118 +1465,90 @@ function closePdfPreview() {
     pdfPreviewState.doc = null;
 }
 /* ══════════════════════════════════════════════════════════════════════════
-   FITUR REUSABLE DI ATAS: copy verbatim dari generator_stator_leak_monitoring.html
-   (crop modal 3-mode, edit gambar, preview PDF). Mulai di sini: bagian
-   module-specific untuk ID FAN FLOW TRANSMITTER LINE PURGING.
+   FITUR REUSABLE DI ATAS: copy verbatim dari id_fan_line_purging.html (yang
+   sendiri turunan dari generator_stator_leak_monitoring.html) -- crop modal
+   3-mode, edit gambar, preview PDF. Mulai di sini: bagian module-specific
+   untuk ID FAN INSPECT MOVING BLADE ACTUATOR.
    ══════════════════════════════════════════════════════════════════════════ */
 function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
-/* ═══ DATA MODUL — ID FAN FLOW TRANSMITTER LINE PURGING ═══ */
+/* ═══ DATA MODUL — ID FAN INSPECT MOVING BLADE ACTUATOR ═══ */
 
-/* Checklist (10 aktivitas, penomoran mengikuti sheet asli — tidak ada baris
-   "No 8" di checklist karena langkah 8 adalah tabel pengukuran + evidence
-   Purging Line Flow Transmitter terpisah, lihat MEASUREMENT_DATA/
-   PURGING_EVIDENCE_GROUPS di bawah). Setiap baris punya 2 pasang checkbox
-   Pass/Fail independen: satu untuk 7BG-FT-933A, satu untuk 7BG-FT-933B. */
-/* yText/nText = keterangan otomatis yang diisi ke kolom Remarks begitu
-   Pass (Y)/Fail (N) dipilih (lihat toggleChecklistFlag()/checkAllChecklistY()
-   di bawah) -- kalimat lengkap yang menjelaskan hasil pemeriksaan baris itu,
-   BUKAN cuma "Not"/"No" polos (contoh logika dari user, bukan teks final).
-   Poin 10 (Raise new WO) SENGAJA kebalikan makna: Pass = "tidak ada defect"
-   (bagus), Fail = "ada defect, WO baru diajukan") -- lihat catatan di
-   checkAllChecklistY() kenapa baris ini DIKECUALIKAN dari tombol Centang
-   Semua Y.
-   Nomor "8" SENGAJA dilewati (langkah 8 = tabel pengukuran + evidence
-   Purging Line Flow Transmitter, lihat MEASUREMENT_DATA/PURGING_EVIDENCE_GROUPS
-   di bawah) -- direvisi 2026-09-15, menambah 1 langkah baru (no.4) yang
-   menggeser semua nomor sesudahnya +1 dari susunan awal. */
+/* Checklist (9 langkah, persis sesuai checksheet Excel ID_FAN_BLADE.xlsx).
+   Setiap baris punya 2 pasang checkbox Pass/Fail independen: satu untuk
+   7BG-FAN-500A, satu untuk 7BG-FAN-500B -- pola SAMA PERSIS dengan
+   id_fan_line_purging.html (lihat toggleChecklistFlag()/computeChecklistRemark()
+   di bawah, tidak diubah). Langkah 3, 4, 5, 6 SELAIN checkbox Pass/Fail di
+   sini JUGA punya pengukuran angka terpisah per fan (lihat MEASUREMENT_DATA)
+   -- kolom "Result/Remark" di Excel sumber cuma 1 kolom, TAPI user secara
+   eksplisit minta nilainya dipisah A dan B (beda dari checklist teks biasa
+   yang tetap 1 kolom Remarks gabungan, sama seperti modul purging). */
 var CHECKLIST_DATA = [
-  {no:1,  activity:'Make sure PTW already issue.', kriteria:'OK',
-    yText:'PTW Sudah Diterbitkan dan Berlaku', nText:'PTW Belum Diterbitkan / Belum Berlaku'},
-  {no:2,  activity:'Prepare tool & material required.', kriteria:'OK',
-    yText:'Tool & Material Sudah Disiapkan dan Siap Pakai', nText:'Tool & Material Belum Lengkap / Belum Siap'},
-  {no:3,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading is on "hold / Forced" Condition before access.', kriteria:'Forced',
-    yText:'Reading Sudah Di-Forced Sebelum Akses', nText:'Reading Belum Di-Forced, Akses Belum Aman Dilakukan'},
-  {no:4,  activity:'Make sure the Blade pitch control is in Manual Operation, work alternately between ID Fan A and B.', kriteria:'Manual',
-    yText:'Blade Pitch Control Sudah Manual, Bekerja Bergantian ID Fan A/B', nText:'Blade Pitch Control Belum Manual / Belum Bekerja Bergantian A-B'},
-  {no:5,  activity:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', kriteria:'Cleanliness',
-    yText:'Panel Sudah Dibersihkan, Kondisi Bersih', nText:'Panel Belum Dibersihkan / Masih Kotor'},
-  {no:6,  activity:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). *Replace if required.', kriteria:'No dust or dirty / No sign of water ingress / No broken condition',
-    yText:'Sealing & Conduit Dalam Kondisi Baik, Tidak Ada Debu/Air Masuk', nText:'Ditemukan Debu, Indikasi Air Masuk, atau Kondisi Rusak pada Sealing/Conduit'},
-  {no:7,  activity:'Check connection was tighted and no looses.', kriteria:'Tight Connection',
-    yText:'Koneksi Sudah Kencang, Tidak Ada yang Kendor', nText:'Ditemukan Koneksi yang Kendor, Perlu Dikencangkan'},
-  {no:9,  activity:'Make sure Pressure Transmitter and Flow Transmitter Reading back to normal "Unforced".', kriteria:'Unforced',
-    yText:'Reading Sudah Kembali Normal (Unforced)', nText:'Reading Belum Kembali Normal, Masih Dalam Kondisi Forced'},
-  {no:10, activity:'Raise new WO & repair if any defect found.', kriteria:'OK',
+  {no:1, activity:'Cleaning outside Positioner Valve', kriteria:'Cleanliness',
+    yText:'Positioner Valve Bagian Luar Sudah Dibersihkan, Kondisi Bersih', nText:'Positioner Valve Bagian Luar Belum Dibersihkan / Masih Kotor'},
+  {no:2, activity:'Make sure all sealing panel, conduit connection is good (no dust & water ingress)', kriteria:'No dust / No water ingress / No broken',
+    yText:'Sealing Panel & Conduit Dalam Kondisi Baik, Tidak Ada Debu/Air Masuk', nText:'Ditemukan Debu, Indikasi Air Masuk, atau Kondisi Rusak pada Sealing/Conduit'},
+  {no:3, activity:'Verification, Inspection Display Feedback Positioner Valve', kriteria:'Feedback (Percent)',
+    yText:'Display Feedback Positioner Valve Sudah Diverifikasi, Kondisi Sesuai', nText:'Display Feedback Positioner Valve Belum/Tidak Sesuai'},
+  {no:4, activity:'Make Sure Command and Feedback Positioner Valve are the same', kriteria:'Command (Percent)',
+    yText:'Command dan Feedback Positioner Valve Sudah Sama/Sesuai', nText:'Command dan Feedback Positioner Valve Tidak Sama/Sesuai'},
+  {no:5, activity:'Inspect moving blade actuator Feedback', kriteria:'Feedback (Percent)',
+    yText:'Moving Blade Actuator Feedback Sudah Diperiksa, Kondisi Sesuai', nText:'Moving Blade Actuator Feedback Belum/Tidak Sesuai'},
+  {no:6, activity:'Inspect and make sure instrument air regulator is set 5.5 Bar', kriteria:'IA Supply Regulator',
+    yText:'Instrument Air Regulator Sudah Diset 5.5 Bar', nText:'Instrument Air Regulator Belum Sesuai Setting 5.5 Bar'},
+  {no:7, activity:'Check Condition Pressure Indicator Inlet and Outlet Positioner Valve', kriteria:'bright or blurry',
+    yText:'Pressure Indicator Inlet & Outlet Positioner Valve Kondisi Jelas (Bright)', nText:'Pressure Indicator Inlet/Outlet Positioner Valve Buram (Blurry)'},
+  {no:8, activity:'Raise new WO & repair if any defect found.', kriteria:'No Finding',
     yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
-  {no:11, activity:'Leave the location within safe condition.', kriteria:'OK',
+  {no:9, activity:'Leave the location within safe condition', kriteria:'Safe',
     yText:'Lokasi Kerja Sudah Ditinggalkan dalam Kondisi Aman dan Rapi', nText:'Lokasi Kerja Belum dalam Kondisi Aman / Masih Perlu Dirapikan'}
 ].map(function(r){
   return {no:r.no, activity:r.activity, kriteria:r.kriteria, yText:r.yText, nText:r.nText, passA:false, failA:false, passB:false, failB:false, remarks:''};
 });
-var ID_FAN_WORK_TO_BE_DONE = 'Unit 7 Online ID FAN Flow Transmitters Impulse Line Purging';
+var ID_FAN_WORK_TO_BE_DONE = '3 Monthly Inspect Blade Actuator ID FAN';
 
-/* Table Measurement — "Purging Line Flow Transmitter" (Langkah 8).
-   4 parameter, tiap parameter punya 4 kolom angka: Before/After x 933A/933B.
-   Sengaja dibiarkan kosong (bukan contoh terisi) sebagai template kosong.
-   Revisi 2026-09-15 (lanjutan): "ID Fan Air Flow Blade Pitch Control (%)"
-   diganti jadi "Card Value Pressure Transmitter" (mA, BUKAN % lagi) --
-   pasangan raw-signal (mA) utk Inlet Pressure STALL, persis pola "Card
-   Value" existing yang jadi pasangan raw-signal utk Flow. "Card Value"
-   sendiri diganti nama jadi "Card Value Flow Transmitter" biar tidak
-   ambigu sekarang ada 2 "Card Value" (Flow & Pressure). Posisi ARRAY TIDAK
-   berubah (cuma ganti nama & unit di index 0 dan 2) -- restore dari record
-   lama tetap benar krn applyRecordToForm() memetakan by-index, bukan
-   by-nama, utk tabel ini. */
+/* Table Pengukuran — Feedback & Instrument Air Regulator (Langkah 3, 4, 5, 6
+   di checklist di atas). 4 parameter, tiap parameter punya 2 kolom angka
+   terpisah (valueA/valueB, permintaan eksplisit user -- BUKAN Before/After
+   seperti modul purging, karena checksheet ini murni 1 pembacaan per fan,
+   bukan pengukuran sebelum/sesudah). Sengaja dibiarkan kosong (bukan contoh
+   terisi) sebagai template kosong. */
 var MEASUREMENT_DATA = [
-  {parameter:'Card Value Flow Transmitter', unit:'mA'},
-  {parameter:'Flow', unit:'T/H'},
-  {parameter:'Card Value Pressure Transmitter', unit:'mA'},
-  {parameter:'ID Fan Inlet Pressure STALL', unit:'KPaG'}
+  {parameter:'Verification Feedback Positioner Valve', unit:'%'},
+  {parameter:'Command Feedback Positioner Valve', unit:'%'},
+  {parameter:'Inspect Moving Blade Actuator Feedback', unit:'%'},
+  {parameter:'Instrument Air Supply Regulator', unit:'Bar'}
 ].map(function(r){
-  return {parameter:r.parameter, unit:r.unit, beforeA:'', afterA:'', beforeB:'', afterB:''};
+  return {parameter:r.parameter, unit:r.unit, valueA:'', valueB:''};
 });
 
-/* Evidence Langkah 8 (Purging Line Flow Transmitter) dipecah jadi 10 galeri
-   terpisah (5 parameter x 2 flow transmitter -- 4 parameter terukur +
-   "Cleaning Hole / Line Flow Transmitter" evidence-only, ditambahkan
-   2026-09-16, urutan: SEMUA parameter 933A dulu baru SEMUA parameter 933B --
-   persis urutan yang diminta user), 1 per kombinasi parameter+transmitter --
-   BUKAN 1 galeri gabungan seperti sebelumnya, supaya foto before/after tiap
-   parameter bisa dikelompokkan jelas alih-alih bercampur semua jadi satu
-   tumpukan. Dibangun dinamis lewat renderPurgingEvidenceSections() (pola
-   sama dengan renderEvidenceSections() di pm_stacker.html) supaya tidak
-   perlu menulis ulang markup 10x -- setiap blok juga dikasih warna aksen
-   biru (ID Fan A) / oranye (ID Fan B) di border kiri + label supaya kedua
-   kelompok gampang dibedakan sekilas. */
-/* gk (a_cardvalue/a_bladepitch/dst) SENGAJA TIDAK diubah walau labelnya
-   sekarang "Card Value Pressure Transmitter" (bukan lagi Blade Pitch
-   Control) -- gk ini dipakai sebagai KEY penyimpanan evidence
-   (evidencePurgingGroups[gk], lihat dbCollectData()/applyRecordToForm()),
-   ganti key akan bikin foto yang sempat tersimpan hari ini (2026-09-15,
-   sebelum revisi nama ini) di key lama jadi tidak kebaca lagi. */
+/* Evidence Langkah 3, 4, 5, 6 dipecah jadi 8 galeri terpisah (4 parameter x
+   2 fan -- permintaan eksplisit user, BUKAN 1 galeri gabungan per langkah),
+   urutan: SEMUA parameter Fan A dulu baru SEMUA parameter Fan B, pola SAMA
+   PERSIS dengan PURGING_EVIDENCE_GROUPS di id_fan_line_purging.html.
+   Dibangun dinamis lewat renderPurgingEvidenceSections() (TIDAK diubah dari
+   file sumber, generik lewat gk) -- setiap blok dikasih warna aksen biru
+   (ID Fan A) / oranye (ID Fan B) di border kiri supaya gampang dibedakan. */
 var PURGING_EVIDENCE_GROUPS = [
-  {gk:'a_cardvalue',      label:'ID Fan A (7BG-FT-933A) — Card Value Flow Transmitter (mA) — Before/After'},
-  {gk:'a_flow',           label:'ID Fan A (7BG-FT-933A) — Flow (T/H) — Before/After'},
-  {gk:'a_bladepitch',     label:'ID Fan A (7BG-FT-933A) — Card Value Pressure Transmitter (mA) — Before/After'},
-  {gk:'a_inletpressure',  label:'ID Fan A (7BG-FT-933A) — Inlet Pressure STALL (KPaG) — Before/After'},
-  {gk:'a_cleaninghole',   label:'ID Fan A (7BG-FT-933A) — Cleaning Hole / Line Flow Transmitter — Before/After'},
-  {gk:'b_cardvalue',      label:'ID Fan B (7BG-FT-933B) — Card Value Flow Transmitter (mA) — Before/After'},
-  {gk:'b_flow',           label:'ID Fan B (7BG-FT-933B) — Flow (T/H) — Before/After'},
-  {gk:'b_bladepitch',     label:'ID Fan B (7BG-FT-933B) — Card Value Pressure Transmitter (mA) — Before/After'},
-  {gk:'b_inletpressure',  label:'ID Fan B (7BG-FT-933B) — Inlet Pressure STALL (KPaG) — Before/After'},
-  {gk:'b_cleaninghole',   label:'ID Fan B (7BG-FT-933B) — Cleaning Hole / Line Flow Transmitter — Before/After'}
+  {gk:'a_feedbackverif',    label:'ID Fan A (7BG-FAN-500A) — Verification Feedback Positioner Valve (%)'},
+  {gk:'a_commandfeedback',  label:'ID Fan A (7BG-FAN-500A) — Command Feedback Positioner Valve (%)'},
+  {gk:'a_bladeactuator',    label:'ID Fan A (7BG-FAN-500A) — Inspect Moving Blade Actuator Feedback (%)'},
+  {gk:'a_iaregulator',      label:'ID Fan A (7BG-FAN-500A) — Instrument Air Supply Regulator (Bar)'},
+  {gk:'b_feedbackverif',    label:'ID Fan B (7BG-FAN-500B) — Verification Feedback Positioner Valve (%)'},
+  {gk:'b_commandfeedback',  label:'ID Fan B (7BG-FAN-500B) — Command Feedback Positioner Valve (%)'},
+  {gk:'b_bladeactuator',    label:'ID Fan B (7BG-FAN-500B) — Inspect Moving Blade Actuator Feedback (%)'},
+  {gk:'b_iaregulator',      label:'ID Fan B (7BG-FAN-500B) — Instrument Air Supply Regulator (Bar)'}
 ];
 
 /* Registry galeri evidence -- array datar berisi objek foto {name,dataUrl,
    type,caption,offsetX,widthCm,heightCm,driveFileId,driveUrl}, pola SAMA
    PERSIS dengan so2Photos/renderPhotoGallery() di so2.html (thumbnail kecil
-   72x72 + Urutkan Foto/Fitur O + Geser Posisi/Fitur D). 'cleaning' statis
-   (1 galeri tetap, Langkah 5); 10 galeri PURGING_EVIDENCE_GROUPS + 'legacy'
-   (migrasi data lama, lihat applyRecordToForm()) dibuat dinamis oleh
-   renderPurgingEvidenceSections(). */
+   72x72 + Urutkan Foto/Fitur O + Geser Posisi/Fitur D). 'defect' statis
+   (1 galeri tetap, Finding/Defect gabungan -- Excel sumber TIDAK memisah
+   evidence defect per fan); 8 galeri PURGING_EVIDENCE_GROUPS dibuat dinamis
+   oleh renderPurgingEvidenceSections(). */
 var EV_GALLERIES = {
-  cleaning: { photos: [], listId: 'evCleaningList', emptyMsg: 'Belum ada evidence cleaning panel. Klik "+ Tambah Foto" untuk menambahkan.' }
+  defect: { photos: [], listId: 'evDefectList', emptyMsg: 'Belum ada foto finding/defect. Klik "+ Tambah Foto" untuk menambahkan.' }
 };
 var evReorderState = {};
 
@@ -1597,27 +1570,26 @@ function buildChecklistTable() {
     tbody.appendChild(tr);
   });
 }
-/* Remarks HANYA 1 kolom dipakai bersama utk 933A & 933B (lihat header
+/* Remarks HANYA 1 kolom dipakai bersama utk Fan A & Fan B (lihat header
    tabel) -- kalau kedua sisi sepakat (sama-sama Pass atau sama-sama Fail),
-   Remarks diisi 1 kalimat yText/nText saja. Kalau berbeda (mis. 933A Pass
-   tapi 933B Fail, atau salah satu belum dipilih), Remarks digabung per sisi
+   Remarks diisi 1 kalimat yText/nText saja. Kalau berbeda (mis. Fan A Pass
+   tapi Fan B Fail, atau salah satu belum dipilih), Remarks digabung per sisi
    supaya tidak ada informasi yang hilang. SELALU menimpa Remarks lama
-   (mengikuti pilihan Pass/Fail TERKINI), pola sama dgn stkSetCheck() di
-   pm_stacker.html utk baris Alarm/No Alarm. */
+   (mengikuti pilihan Pass/Fail TERKINI), pola sama dgn id_fan_line_purging.html. */
 function computeChecklistRemark(row) {
   var aState = row.passA ? 'Y' : row.failA ? 'N' : null;
   var bState = row.passB ? 'Y' : row.failB ? 'N' : null;
   if (aState === null && bState === null) return row.remarks; // belum ada yang dipilih, jangan diubah
   if (aState === bState) return aState === 'Y' ? row.yText : row.nText;
   var txt = function(s){ return s === 'Y' ? row.yText : s === 'N' ? row.nText : '-'; };
-  return '933A: ' + txt(aState) + ' | 933B: ' + txt(bState);
+  return '500A: ' + txt(aState) + ' | 500B: ' + txt(bState);
 }
 function toggleChecklistFlag(idx, key, checked) {
   var row = CHECKLIST_DATA[idx];
   row[key] = checked;
   if (checked) {
     // Pass & Fail saling eksklusif, TAPI hanya dalam pasangannya sendiri
-    // (933A tidak memengaruhi 933B dan sebaliknya).
+    // (Fan A tidak memengaruhi Fan B dan sebaliknya).
     var pairKey = (key === 'passA') ? 'failA' : (key === 'failA') ? 'passA' : (key === 'passB') ? 'failB' : 'passB';
     row[pairKey] = false;
   }
@@ -1625,14 +1597,14 @@ function toggleChecklistFlag(idx, key, checked) {
   buildChecklistTable();
 }
 /* Centang Semua Y -- shortcut isi Pass utk semua baris SEKALIGUS, KECUALI
-   poin 10 "Raise new WO & repair if any defect found." yang SENGAJA
+   poin 8 "Raise new WO & repair if any defect found." yang SENGAJA
    dikecualikan & di-default-kan ke Fail ("No") -- baris ini menentukan
    ADA/TIDAKNYA defect, jadi tombol shortcut TIDAK BOLEH diam-diam
    mengasumsikan "tidak ada defect" (Pass); teknisi wajib meninjau &
    mengubahnya manual jadi Pass kalau memang benar tidak ada defect. */
 function checkAllChecklistY() {
   CHECKLIST_DATA.forEach(function(row) {
-    if (row.no === 10) {
+    if (row.no === 8) {
       row.passA = false; row.failA = true; row.passB = false; row.failB = true;
     } else {
       row.passA = true; row.failA = false; row.passB = true; row.failB = false;
@@ -1642,7 +1614,7 @@ function checkAllChecklistY() {
   buildChecklistTable();
 }
 
-/* ══════════════════ TABLE MEASUREMENT (LANGKAH 7) ══════════════════ */
+/* ══════════════════ TABLE PENGUKURAN (LANGKAH 3, 4, 5, 6) ══════════════════ */
 function buildMeasurementTable() {
   var tbody = document.getElementById('t3Body');
   tbody.innerHTML = '';
@@ -1651,21 +1623,18 @@ function buildMeasurementTable() {
     tr.innerHTML =
       '<td>'+escapeHtmlG(row.parameter)+'</td>'+
       '<td style="text-align:center">'+escapeHtmlG(row.unit)+'</td>'+
-      '<td><input type="text" inputmode="decimal" value="'+escapeHtmlG(row.beforeA)+'" oninput="MEASUREMENT_DATA['+idx+'].beforeA=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
-      '<td><input type="text" inputmode="decimal" value="'+escapeHtmlG(row.afterA)+'" oninput="MEASUREMENT_DATA['+idx+'].afterA=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
-      '<td><input type="text" inputmode="decimal" value="'+escapeHtmlG(row.beforeB)+'" oninput="MEASUREMENT_DATA['+idx+'].beforeB=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
-      '<td><input type="text" inputmode="decimal" value="'+escapeHtmlG(row.afterB)+'" oninput="MEASUREMENT_DATA['+idx+'].afterB=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>';
+      '<td><input type="text" inputmode="decimal" value="'+escapeHtmlG(row.valueA)+'" oninput="MEASUREMENT_DATA['+idx+'].valueA=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>'+
+      '<td><input type="text" inputmode="decimal" value="'+escapeHtmlG(row.valueB)+'" oninput="MEASUREMENT_DATA['+idx+'].valueB=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>';
     tbody.appendChild(tr);
   });
 }
 /* ══════════════════ UPLOAD EVIDENCE — thumbnail grid + Urutkan Foto ══════════════════
    Pola SAMA PERSIS dengan renderPhotoGallery()/so2Photos di so2.html (Fitur
    O: Urutkan Foto, Fitur D: Geser Posisi -- lihat FITUR_REUSABLE_REFERENCE.md),
-   diparameterkan lewat gk ('cleaning', 8 key PURGING_EVIDENCE_GROUPS, atau
-   'legacy') supaya tidak ada duplikasi kode antar galeri. side yang
-   dikirim ke imgOpenCropper()/cropAndSave()
-   dikodekan sebagai 'ev_<gk>' (TANPA suffix id slot lagi -- 1 galeri = banyak
-   foto sekarang, bukan 1 slot = 1 foto). */
+   diparameterkan lewat gk ('defect' atau 8 key PURGING_EVIDENCE_GROUPS)
+   supaya tidak ada duplikasi kode antar galeri. side yang dikirim ke
+   imgOpenCropper()/cropAndSave() dikodekan sebagai 'ev_<gk>' (1 galeri =
+   banyak foto, bukan 1 slot = 1 foto). */
 function evTriggerSource(gk, source) {
   var el = document.getElementById('evSrcChoices_'+gk);
   if (el) el.style.display = 'none';
@@ -1776,23 +1745,19 @@ function renderEvidenceList(gk) {
 function evRenderPreview(side) {
   var gk = String(side).replace(/^ev_/, '');
   if (EV_GALLERIES[gk]) { renderEvidenceList(gk); return; }
-  renderEvidenceList('cleaning');
+  renderEvidenceList('defect');
   renderPurgingEvidenceSections();
 }
-/* Bangun 8 panel galeri Langkah 8 (PURGING_EVIDENCE_GROUPS) + panel
-   "legacy" (kalau ada foto migrasi dari format lama sebelum revisi ini,
-   lihat applyRecordToForm()) -- dipanggil ulang tiap kali daftar galeri
-   berubah (init halaman, resetAll, load record). Markup tiap sub-panel
-   MENIRU PERSIS gaya galeri Cleaning Panel yang sudah ada (tombol "+ Tambah
-   Foto" + popup sumber + input file + list), cuma dibangun lewat loop
-   supaya tidak perlu menulis ulang HTML yang sama 8x. */
+/* Bangun 8 panel galeri (PURGING_EVIDENCE_GROUPS, langkah 3/4/5/6 x fan A/B)
+   -- dipanggil ulang tiap kali daftar galeri berubah (init halaman,
+   resetAll, load record). Markup tiap sub-panel MENIRU PERSIS gaya galeri
+   evidence lain di repo ini (tombol "+ Tambah Foto" + popup sumber + input
+   file + list), cuma dibangun lewat loop supaya tidak perlu menulis ulang
+   HTML yang sama 8x. */
 function renderPurgingEvidenceSections() {
   var wrap = document.getElementById('purgingEvidenceContainer');
   if (!wrap) return;
   var groups = PURGING_EVIDENCE_GROUPS.slice();
-  if (EV_GALLERIES.legacy && EV_GALLERIES.legacy.photos.length) {
-    groups = groups.concat([{gk:'legacy', label:'Foto Evidence Lama (Sebelum Revisi Evidence per Parameter, 2026-09-15)'}]);
-  }
   var html = '';
   groups.forEach(function(g, i) {
     if (!EV_GALLERIES[g.gk]) EV_GALLERIES[g.gk] = { photos: [], listId: 'evList_'+g.gk, emptyMsg: 'Belum ada foto. Klik "+ Tambah Foto" untuk menambahkan.' };
@@ -1825,14 +1790,14 @@ function resetAll() {
   document.getElementById('hTanggal').value = todayStrG();
   document.getElementById('hUnit').value = 'U7';
   document.getElementById('hAssetTag').value = '7BG-FAN-500';
-  document.getElementById('hAssetDesc').value = 'INDUCED DRAFT FAN 7';
+  document.getElementById('hAssetDesc').value = 'INDUCED DRAFT FAN 7 — Blade Actuator / Positioner Valve';
   document.getElementById('hWorkToBeDone').value = ID_FAN_WORK_TO_BE_DONE;
+  document.getElementById('hDefectNote').value = '';
   CHECKLIST_DATA.forEach(function(r){ r.passA=false; r.failA=false; r.passB=false; r.failB=false; r.remarks=''; });
-  MEASUREMENT_DATA.forEach(function(r){ r.beforeA=''; r.afterA=''; r.beforeB=''; r.afterB=''; });
-  EV_GALLERIES.cleaning.photos = [];
+  MEASUREMENT_DATA.forEach(function(r){ r.valueA=''; r.valueB=''; });
+  EV_GALLERIES.defect.photos = [];
   PURGING_EVIDENCE_GROUPS.forEach(function(g){ if (EV_GALLERIES[g.gk]) EV_GALLERIES[g.gk].photos = []; });
-  delete EV_GALLERIES.legacy;
-  buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderPurgingEvidenceSections();
+  buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('defect'); renderPurgingEvidenceSections();
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
@@ -1940,7 +1905,7 @@ function buildAndShowPdf() {
 
   drawBg();
   doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(20,30,25);
-  doc.text('ID FAN FLOW TRANSMITTER IMPULSE LINE PURGING', pw/2, y, {align:'center'});
+  doc.text('INDUCED DRAFT FAN (ID FAN) INSPECT MOVING BLADE ACTUATOR', pw/2, y, {align:'center'});
   y += 8;
 
   // ═══ INFORMASI PEKERJAAN — grid full-width Label|Value ═══
@@ -1952,7 +1917,7 @@ function buildAndShowPdf() {
     ['Asset Tag', document.getElementById('hAssetTag').value],
     ['Asset Description', document.getElementById('hAssetDesc').value],
     ['Work To Be Done', document.getElementById('hWorkToBeDone').value],
-    ['Flow Transmitters', '7BG-FT-933A (ID Fan 7A Inlet Stall) / 7BG-FT-933B (ID Fan 7B Inlet Stall)']
+    ['ID Fan', '7BG-FAN-500A / 7BG-FAN-500B']
   ], 40);
 
   // Kotak centang digambar sebagai checkbox visual (kotak + centang vektor),
@@ -1981,9 +1946,9 @@ function buildAndShowPdf() {
   }
 
   // CHECKLIST
-  secHeader('CHECKLIST — IMPULSE LINE PURGING');
+  secHeader('CHECKLIST — INSPECT MOVING BLADE ACTUATOR');
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:7.2, cellPadding:1.4}, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom},
-    head: [['No','Activity','Kriteria','Pass A','Fail A','Pass B','Fail B','Remarks']],
+    head: [['No','Step Of Work','Kriteria','Pass A','Fail A','Pass B','Fail B','Remarks']],
     body: CHECKLIST_DATA.map(function(r){ return [r.no, r.activity, r.kriteria, '', '', '', '', r.remarks]; }),
     columnStyles:{0:{cellWidth:8,halign:'center'},3:{cellWidth:11,halign:'center'},4:{cellWidth:11,halign:'center'},5:{cellWidth:11,halign:'center'},6:{cellWidth:11,halign:'center'}},
     didDrawCell:function(d){
@@ -2053,26 +2018,29 @@ function buildAndShowPdf() {
     });
   }
 
-  // EVIDENCE — CLEANING PANEL (LANGKAH 5)
-  drawEvidenceSection('FOTO EVIDENCE — CLEANING PANEL (LANGKAH 5)', EV_GALLERIES.cleaning.photos);
-  // MEASUREMENT — PURGING LINE FLOW TRANSMITTER (LANGKAH 8)
-  secHeader('PURGING LINE FLOW TRANSMITTER — PENGUKURAN (LANGKAH 8)');
+  // PENGUKURAN — FEEDBACK & INSTRUMENT AIR REGULATOR (LANGKAH 3, 4, 5, 6)
+  secHeader('PENGUKURAN — FEEDBACK & INSTRUMENT AIR REGULATOR');
   doc.autoTable({ startY:y, theme:'grid', styles:{fontSize:8, cellPadding:1.8}, margin:{left:marginX,right:marginX,top:marginTop,bottom:marginBottom},
-    head: [['Parameter','Unit','Before 933A','After 933A','Before 933B','After 933B']],
-    body: MEASUREMENT_DATA.map(function(r){ return [r.parameter, r.unit, r.beforeA, r.afterA, r.beforeB, r.afterB]; }),
+    head: [['Parameter','Unit','7BG-FAN-500A','7BG-FAN-500B']],
+    body: MEASUREMENT_DATA.map(function(r){ return [r.parameter, r.unit, r.valueA, r.valueB]; }),
     willDrawPage:function(d){ if(d.pageNumber>1) drawBg(); } });
   y = doc.lastAutoTable.finalY + 6;
 
-  // EVIDENCE — PURGING LINE FLOW TRANSMITTER (LANGKAH 8) -- 10 galeri per
-  // parameter x 933A/933B (urutan A dulu semua, baru B, sesuai revisi user),
-  // + 'legacy' (foto migrasi dari format lama, kalau ada).
+  // EVIDENCE — PENGUKURAN (LANGKAH 3, 4, 5, 6) -- 8 galeri per parameter x
+  // Fan A/B (urutan A dulu semua, baru B).
   PURGING_EVIDENCE_GROUPS.forEach(function(g) {
     var photos = EV_GALLERIES[g.gk] ? EV_GALLERIES[g.gk].photos : [];
     drawEvidenceSection('FOTO EVIDENCE — ' + g.label.toUpperCase(), photos);
   });
-  if (EV_GALLERIES.legacy && EV_GALLERIES.legacy.photos.length) {
-    drawEvidenceSection('FOTO EVIDENCE — LAMA (SEBELUM REVISI EVIDENCE PER PARAMETER)', EV_GALLERIES.legacy.photos);
-  }
+
+  // FINDING / DEFECT
+  secHeader('FINDING / DEFECT');
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(20,30,25);
+  var defectText = document.getElementById('hDefectNote').value || 'Tidak ada finding / defect.';
+  var defectLines = doc.splitTextToSize(defectText, contentW);
+  checkPage(defectLines.length*4 + 6);
+  doc.text(defectLines, marginX, y); y += defectLines.length*4 + 6;
+  drawEvidenceSection('FOTO EVIDENCE — FINDING / DEFECT', EV_GALLERIES.defect.photos);
 
   // CATATAN
   secHeader('CATATAN');
@@ -2083,13 +2051,13 @@ function buildAndShowPdf() {
   doc.text(noteLines, marginX, y); y += noteLines.length*4 + 6;
 
   dbShowSavingOverlay(false);
-  showPdfPreview(doc, 'ID_Fan_Line_Purging_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');
+  showPdfPreview(doc, 'ID_Fan_Inspect_Blade_Actuator_' + (document.getElementById('hTanggal').value||'draft') + '.pdf');
 }
 /* ══════════════════ DB SAVE / LOAD (pola shared.js) ══════════════════ */
-window.CURRENT_MODUL = 'ID_FAN_LINE_PURGING'; // HARUS sama persis dengan check di dbCollectData(modul)
+window.CURRENT_MODUL = 'ID_FAN_INSPECT_BLADE'; // HARUS sama persis dengan check di dbCollectData(modul)
 
 function dbCollectData(modul) {
-  if (modul !== 'id_fan_line_purging') return null;
+  if (modul !== 'id_fan_inspect_blade') return null;
   return {
     modul: window.CURRENT_MODUL,
     tanggal: document.getElementById('hTanggal').value || '',
@@ -2101,13 +2069,12 @@ function dbCollectData(modul) {
       assetDescription: document.getElementById('hAssetDesc').value || '',
       unit: document.getElementById('hUnit').value || 'U7',
       workToBeDone: document.getElementById('hWorkToBeDone').value || '',
+      defectNote: document.getElementById('hDefectNote').value || '',
       checklist: CHECKLIST_DATA,
       measurement: MEASUREMENT_DATA,
-      evidenceCleaning: EV_GALLERIES.cleaning.photos,
-      // 10 galeri terpisah (parameter x 933A/933B, Langkah 8) -- ganti dari
-      // 1 galeri gabungan "evidencePurging" (format lama, dibaca kembali di
-      // applyRecordToForm() sbg migrasi ke bucket 'legacy').
-      evidencePurgingGroups: PURGING_EVIDENCE_GROUPS.reduce(function(acc, g){
+      evidenceDefect: EV_GALLERIES.defect.photos,
+      // 8 galeri terpisah (parameter x Fan A/B, Langkah 3/4/5/6).
+      evidenceGroups: PURGING_EVIDENCE_GROUPS.reduce(function(acc, g){
         acc[g.gk] = EV_GALLERIES[g.gk] ? EV_GALLERIES[g.gk].photos : [];
         return acc;
       }, {})
@@ -2124,16 +2091,13 @@ function applyRecordToForm(rec, editingId) {
   document.getElementById('hWorkOrder').value = rec.work_order || '';
   document.getElementById('hUnit').value = d.unit || rec.unit || 'U7';
   document.getElementById('hAssetTag').value = d.assetTag || '7BG-FAN-500';
-  document.getElementById('hAssetDesc').value = d.assetDescription || 'INDUCED DRAFT FAN 7';
+  document.getElementById('hAssetDesc').value = d.assetDescription || 'INDUCED DRAFT FAN 7 — Blade Actuator / Positioner Valve';
   document.getElementById('hWorkToBeDone').value = d.workToBeDone || ID_FAN_WORK_TO_BE_DONE;
+  document.getElementById('hDefectNote').value = d.defectNote || '';
 
-  // Dicocokkan lewat teks activity (BUKAN index/no) -- direvisi 2026-09-15,
-  // menambah 1 langkah baru (no.4 "Blade pitch control...") yang menggeser
-  // index & no semua langkah sesudahnya. Record LAMA (dibuat sebelum revisi
-  // ini) masih menyimpan array checklist SEBELUM langkah baru ditambahkan;
-  // mencocokkan by-index akan salah pasang (baris Cleaning lama ketuker ke
-  // baris Manual yang baru). Teks activity tidak pernah berubah untuk
-  // langkah yang sudah ada dari awal, jadi aman dipakai sbg kunci match.
+  // Dicocokkan lewat teks activity (BUKAN index/no), pola sama dgn
+  // id_fan_line_purging.html -- lebih tahan kalau urutan/isi checklist
+  // direvisi lagi di masa depan.
   if (Array.isArray(d.checklist) && d.checklist.length) {
     CHECKLIST_DATA.forEach(function(row) {
       var src = d.checklist.find(function(s){ return s && s.activity === row.activity; });
@@ -2143,13 +2107,13 @@ function applyRecordToForm(rec, editingId) {
   if (Array.isArray(d.measurement) && d.measurement.length) {
     MEASUREMENT_DATA.forEach(function(row, idx) {
       var src = d.measurement[idx];
-      if (src) { row.beforeA=src.beforeA||''; row.afterA=src.afterA||''; row.beforeB=src.beforeB||''; row.afterB=src.afterB||''; }
+      if (src) { row.valueA=src.valueA||''; row.valueB=src.valueB||''; }
     });
   }
 
   // Migrasi format lama "1 slot = 1 foto" ({id,caption,images:[img]}) ke
-  // array foto datar -- record yang dibuat SEBELUM redesign galeri Evidence
-  // (2026-09-14) masih tersimpan dalam bentuk lama, WAJIB tetap kebaca benar.
+  // array foto datar -- pola sama dgn modul lain (jaga-jaga kalau format
+  // galeri direvisi lagi di masa depan).
   function evMigrateOldSlots(raw) {
     return (Array.isArray(raw) ? raw : []).map(function(r){
       if (r && Array.isArray(r.images)) {
@@ -2163,24 +2127,14 @@ function applyRecordToForm(rec, editingId) {
       return r;
     }).filter(Boolean);
   }
-  EV_GALLERIES.cleaning.photos = evMigrateOldSlots(d.evidenceCleaning);
+  EV_GALLERIES.defect.photos = evMigrateOldSlots(d.evidenceDefect);
 
-  var purgingGroups = d.evidencePurgingGroups || {};
+  var evGroups = d.evidenceGroups || {};
   PURGING_EVIDENCE_GROUPS.forEach(function(g) {
-    EV_GALLERIES[g.gk] = { photos: evMigrateOldSlots(purgingGroups[g.gk]), listId: 'evList_'+g.gk, emptyMsg: 'Belum ada foto. Klik "+ Tambah Foto" untuk menambahkan.' };
+    EV_GALLERIES[g.gk] = { photos: evMigrateOldSlots(evGroups[g.gk]), listId: 'evList_'+g.gk, emptyMsg: 'Belum ada foto. Klik "+ Tambah Foto" untuk menambahkan.' };
   });
-  // Record LAMA (sebelum revisi 2026-09-15) masih menyimpan 1 galeri gabungan
-  // "evidencePurging" (bukan 10 galeri per parameter) -- foto-foto itu TIDAK
-  // BISA dipetakan otomatis ke parameter yang benar (tidak ada info lagi
-  // foto itu punya Card Value/Flow/dst), jadi ditampung ke bucket 'legacy'
-  // supaya tidak hilang, biar teknisi bisa lihat & pindahkan manual kalau perlu.
-  if (Array.isArray(d.evidencePurging) && d.evidencePurging.length) {
-    EV_GALLERIES.legacy = { photos: evMigrateOldSlots(d.evidencePurging), listId: 'evList_legacy', emptyMsg: '' };
-  } else {
-    delete EV_GALLERIES.legacy;
-  }
 
-  buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderPurgingEvidenceSections();
+  buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('defect'); renderPurgingEvidenceSections();
 }
 
 // Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
@@ -2192,9 +2146,59 @@ function restoreDraftData(rec, editingId) {
   }, 400);
 }
 
+/* ══════════════════ EXPORT CHECKSHEET KE EXCEL (permintaan eksplisit user) ══════════════════
+   Tombol tambahan TERPISAH dari alur PDF/Submit -- PDF tetap format yang
+   dikirim ke Review Approval Dashboard (sama seperti modul lain), Excel ini
+   MURNI unduhan tambahan berisi tabel checklist + pengukuran, meniru
+   struktur ID_FAN_BLADE.xlsx sumber (No | Step Of Work | Criteria | Check
+   500A | Check 500B | Result/Remark). Pakai SheetJS (xlsx.full.min.js),
+   generate 100% di browser, tidak ada server di baliknya. */
+function downloadChecksheetExcel() {
+  if (typeof XLSX === 'undefined') { alert('Library Excel belum termuat. Coba muat ulang halaman.'); return; }
+  function passFailText(row, side) {
+    var pass = side === 'A' ? row.passA : row.passB;
+    var fail = side === 'A' ? row.failA : row.failB;
+    return pass ? 'Y' : fail ? 'N' : '';
+  }
+  // Baris checklist -- utk langkah yang JUGA punya pengukuran (3,4,5,6),
+  // Result/Remark diisi "A: xx% | B: xx%" (gabungan) alih-alih remarks teks
+  // biasa, supaya nilai per-fan tetap kebaca di 1 file Excel yang sama.
+  var measureByStep = {3:0, 4:1, 5:2, 6:3}; // no langkah -> index MEASUREMENT_DATA
+  var rows = [['No','Step Of Work','Criteria','Check 7BG-FAN-500A','Check 7BG-FAN-500B','Result / Remark']];
+  CHECKLIST_DATA.forEach(function(r){
+    var remark = r.remarks;
+    if (measureByStep.hasOwnProperty(r.no)) {
+      var m = MEASUREMENT_DATA[measureByStep[r.no]];
+      remark = 'A: ' + (m.valueA || '-') + ' ' + m.unit + ' | B: ' + (m.valueB || '-') + ' ' + m.unit;
+    }
+    rows.push([r.no, r.activity, r.kriteria, passFailText(r,'A'), passFailText(r,'B'), remark]);
+  });
+  rows.push([]);
+  rows.push(['Finding / Defect']);
+  rows.push(['Keterangan Defect', document.getElementById('hDefectNote').value || '-']);
+
+  var wsInfo = [
+    ['Work Order', document.getElementById('hWorkOrder').value || ''],
+    ['PIC', document.getElementById('hPic').value || ''],
+    ['Tanggal', document.getElementById('hTanggal').value || ''],
+    ['Unit', document.getElementById('hUnit').value || ''],
+    ['Asset Tag', document.getElementById('hAssetTag').value || ''],
+    ['Asset Description', document.getElementById('hAssetDesc').value || ''],
+    ['Work To Be Done', document.getElementById('hWorkToBeDone').value || ''],
+    []
+  ];
+
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(wsInfo.concat(rows));
+  ws['!cols'] = [{wch:22},{wch:55},{wch:24},{wch:16},{wch:16},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Checksheet');
+  var fname = 'ID_Fan_Inspect_Blade_Actuator_' + (document.getElementById('hTanggal').value||'draft') + '.xlsx';
+  XLSX.writeFile(wb, fname);
+}
+
 /* ══════════════════ INIT ══════════════════ */
 setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
-buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('cleaning'); renderPurgingEvidenceSections();
+buildChecklistTable(); buildMeasurementTable(); renderEvidenceList('defect'); renderPurgingEvidenceSections();
 renderPresetButtons();
 initCropDrag();
 initGenBackground();

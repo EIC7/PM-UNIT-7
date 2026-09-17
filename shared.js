@@ -2092,6 +2092,12 @@ function normalizeModul(name) {
   if (n.indexOf('CONDUCTIVITY')>=0) return 'CONDUCTIVITY';
   if (n.indexOf('HG')>=0 || n.indexOf('MERCURY')>=0) return 'PM_HG_ANALYZER';
   if (n.indexOf('PH')>=0 || n.indexOf('TRANSMITTER')>=0 || n.indexOf('AIT')>=0 || n.indexOf('ANALYZER')>=0) return 'PH-ANALYZER';
+  // HARUS sebelum cek ID_FAN_LINE_PURGING generik di bawah -- modul dari
+  // id_fan_inspect_blade.html ('...ID FAN' / CURRENT_MODUL 'ID_FAN_INSPECT_BLADE')
+  // JUGA mengandung substring 'ID FAN'/'ID_FAN', jadi kalau urutan dibalik
+  // ke-normalize salah jadi 'ID_FAN_LINE_PURGING' lalu kebuka lewat
+  // id_fan_line_purging.html (file salah, struktur checklist beda total).
+  if (n.indexOf('BLADE')>=0 && (n.indexOf('ID FAN')>=0 || n.indexOf('ID_FAN')>=0)) return 'ID_FAN_INSPECT_BLADE';
   if (n.indexOf('ID FAN')>=0 || n.indexOf('ID_FAN')>=0 || n.indexOf('LINE PURGING')>=0 || n.indexOf('LINE_PURGING')>=0) return 'ID_FAN_LINE_PURGING';
   if (n.indexOf('FLOW SWITCH')>=0 || n.indexOf('FLOW_SWITCH')>=0) return 'FLOW_SWITCH';
   // Modul pm_stacker.html dinamis per tab ("PM 1Monthly Stacker Reclaimer
@@ -2129,6 +2135,7 @@ function raModulToUrl(modul, id) {
   if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
   if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
   if (norm === 'ID_FAN_LINE_PURGING')   return 'id_fan_line_purging.html?id=' + id;
+  if (norm === 'ID_FAN_INSPECT_BLADE')  return 'id_fan_inspect_blade.html?id=' + id;
   if (norm === 'CEC_CONSOLE_CHCB')      return 'dcs-console-chcb.html?id=' + id;
   if (norm === 'CEC_CONSOLE_WWTP')      return 'dcs-console-wwtp.html?id=' + id;
   if (norm === 'JSA_REPORT')            return 'jsa_report.html?id=' + id;
@@ -3382,7 +3389,7 @@ var RA_ASSET_LABEL = {
    salah satu diubah nanti. */
 var RA_MODUL_AREA = {
   FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
-  COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler', ID_FAN_LINE_PURGING: 'boiler',
+  COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler', ID_FAN_LINE_PURGING: 'boiler', ID_FAN_INSPECT_BLADE: 'boiler',
   BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common', CEC_CONSOLE_CHCB: 'common', PM_STACKER: 'common',
   'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp', CEC_CONSOLE_WWTP: 'wwtp',
   GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
