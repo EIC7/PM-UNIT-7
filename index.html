@@ -447,6 +447,32 @@
             transition: color 0.3s;
         }
 
+        /* Ribbon area (Boiler/Turbine/dst) di pojok kanan-atas kartu multi-area --
+           BESAR & mencolok (2026-09-17, permintaan eksplisit user) supaya tidak
+           ketuker area saat pencarian ATAUPUN saat browsing tab biasa. Ditaruh di
+           .pm-card yang SUDAH position:relative + overflow:hidden -- ribbon
+           diputar 45° dan diposisikan melebihi lebar kartu, ujung-ujungnya
+           otomatis terpotong rapi oleh overflow:hidden induknya (pola ribbon
+           badge standar). */
+        .card-area-badge {
+            position: absolute;
+            top: 15px;
+            right: -34px;
+            width: 138px;
+            padding: 4px 0;
+            background: var(--card-color, var(--primary-green));
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-align: center;
+            text-transform: uppercase;
+            transform: rotate(45deg);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            z-index: 2;
+            pointer-events: none;
+        }
+
         .pm-card:hover .card-title {
             color: var(--card-color, var(--primary-green));
         }
@@ -1384,7 +1410,7 @@
             </div>
 
             <!-- MOD-12 Inspection and Cleaning DCS HMI/OIS -->
-            <div class="pm-card" data-area="boiler common turbine" onclick="window.location.href='dcs-hmi-inspection.html'" style="--card-color: #3b82f6;">
+            <div class="pm-card" data-area="boiler turbine" onclick="window.location.href='dcs-hmi-inspection.html'" style="--card-color: #3b82f6;">
                 <div class="card-index">MOD-12</div>
                 <div class="card-icon">🖥️</div>
                 <div class="card-title">Inspection & Cleaning<br>DCS HMI/OIS</div>
@@ -1783,6 +1809,23 @@
         filterCards(); // tab default "__general__" aktif sejak load -- WAJIB dipanggil di sini,
                         // beda dari dropdown Semua Area lama yang tidak menyembunyikan apa pun.
 
+        // Ribbon area di pojok kartu (lihat CSS .card-area-badge) -- dipakai SAMA
+        // baik di mode pencarian (per-clone) maupun mode tab biasa (kartu asli,
+        // diupdate ulang tiap ganti tab). area=null/'' -> ribbon dihapus.
+        function pmSetCardAreaBadge(card, area) {
+            var badge = card.querySelector('.card-area-badge');
+            if (!area) {
+                if (badge) badge.remove();
+                return;
+            }
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'card-area-badge';
+                card.appendChild(badge);
+            }
+            badge.textContent = AREA_SEARCH_LABEL[area] || area;
+        }
+
         function clearSearch() {
             searchInput.value = '';
             searchClear.style.display = 'none';
@@ -1842,13 +1885,7 @@
                     areas.forEach(function(area) {
                         var clone = card.cloneNode(true);
                         clone.style.display = '';
-                        var titleEl = clone.querySelector('.card-title');
-                        if (titleEl) {
-                            var prefix = document.createElement('div');
-                            prefix.style.cssText = 'font-size:11px;font-weight:700;color:var(--card-color, #2563eb);letter-spacing:0.5px;margin-bottom:2px';
-                            prefix.textContent = (AREA_SEARCH_LABEL[area] || area) + ' —';
-                            titleEl.parentNode.insertBefore(prefix, titleEl);
-                        }
+                        pmSetCardAreaBadge(clone, area);
                         if (href) {
                             var sep = href.indexOf('?') >= 0 ? '&' : '?';
                             clone.setAttribute('onclick', "window.location.href='" + href + sep + "area=" + area + "'");
@@ -1886,6 +1923,12 @@
                             var sep = baseHref.indexOf('?') >= 0 ? '&' : '?';
                             card.setAttribute('onclick', "window.location.href='" + baseHref + sep + "area=" + activeTabArea + "'");
                         }
+                        // Ribbon area juga ditampilkan di mode tab biasa (bukan cuma saat
+                        // pencarian) -- permintaan eksplisit user, supaya area yang akan
+                        // dituju tetap kelihatan jelas walau bukan sedang mencari.
+                        pmSetCardAreaBadge(card, activeTabArea);
+                    } else {
+                        pmSetCardAreaBadge(card, null); // bukan konteks multi-area aktif -- hapus ribbon lama kalau ada
                     }
                 });
                 noResults.style.display = (visible === 0) ? 'block' : 'none';
