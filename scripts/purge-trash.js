@@ -13,7 +13,8 @@
 //  permanen laporan Maintenance Report yang sudah SUBMITTED, tanpa cara
 //  memulihkannya (tidak ada akses Supabase Pro utk point-in-time recovery,
 //  dan salinan di Review Approval Dashboard juga sudah kadung dihapus
-//  terpisah). Sekarang ada jeda 7 hari sebelum data benar-benar hilang.
+//  terpisah). Sekarang ada jeda 30 hari sebelum data benar-benar hilang
+//  (dinaikkan dari 7 hari 2026-09-17, permintaan eksplisit user).
 //
 //  TIDAK menghapus foto di Google Drive milik record yang di-purge (sama
 //  seperti hard-delete manual yang sudah ada dari awal, di luar scope
@@ -21,7 +22,7 @@
 //  terpisah (perlu scan `data` record dulu sebelum baris-nya hilang).
 //
 //  Jadwal cron (GitHub Actions `schedule:`) TIDAK perlu presisi sama sekali
-//  di sini -- retensi 7 hari punya banyak slack, telat beberapa jam/bahkan
+//  di sini -- retensi 30 hari punya banyak slack, telat beberapa jam/bahkan
 //  sehari (lihat catatan "GitHub Actions schedule: TERBUKTI SELALU TELAT"
 //  di CLAUDE.md) tidak masalah, BEDA dari notifikasi Telegram yang butuh
 //  cron-job.org eksternal karena harus cepat.
@@ -32,7 +33,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 // WAJIB SAMA dengan RA_TRASH_RETENTION_DAYS di shared.js -- kalau nanti mau
 // ubah masa retensi, ubah KEDUA tempat ini sekaligus.
-const RETENTION_DAYS = 7;
+const RETENTION_DAYS = 30;
 const BATCH_LIMIT = 200;
 
 async function fetchExpiredTrash() {

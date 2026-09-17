@@ -1920,7 +1920,7 @@ function dbList(modul, callback) {
    (PostgREST menolak field/filter yang bukan kolom asli) -- TAPI dbList()
    (Riwayat biasa) tetap aman jalan seperti biasa berkat fallback bertingkat
    yang sudah ada dari awal. */
-var RA_TRASH_RETENTION_DAYS = 7;
+var RA_TRASH_RETENTION_DAYS = 30; // dinaikkan dari 7 hari (2026-09-17, permintaan eksplisit user) -- WAJIB SAMA dengan RETENTION_DAYS di scripts/purge-trash.js
 function dbSoftDeleteRecord(id, callback) {
   supaFetch('PATCH', SUPA_TABLE + '?id=eq.' + id, { deleted_at: new Date().toISOString() })
     .then(function(){ callback(null); })
@@ -4814,6 +4814,14 @@ function pmMarkRevisionSaved() {
    builder modul itu tetap ter-set benar saat tombol baru ini diklik. */
 var pmUpdateSubmitMode = false;
 var pmUpdateSubmitPending = false;
+// true kalau status REAL di Firestore sudah 'approved' -- dipakai
+// raUpdateSubmittedReport() di bawah utk menampilkan peringatan
+// pmShowApprovedSubmitConfirm() (bukan confirm() polos) sebelum lanjut,
+// karena laporan APPROVED seharusnya sudah final (2026-09-17, permintaan
+// eksplisit user: submit ulang laporan APPROVED cuma boleh dari halaman
+// modul sendiri dgn peringatan tegas, TIDAK ada tombolnya lagi di
+// history.html -- lihat historyUpgradeStatusBadges()).
+var pmUpdateSubmitIsApproved = false;
 
 function pmMaybeEnterUpdateSubmitMode(rec) {
   if (!rec || !rec.firebase_checksheet_id) return;
@@ -4825,6 +4833,7 @@ function pmMaybeEnterUpdateSubmitMode(rec) {
     var btns = pmFindSubmitButtons();
     if (!btns.length) return;
     pmUpdateSubmitMode = true;
+    pmUpdateSubmitIsApproved = !!(appr && appr.status === 'approved');
     btns.forEach(function (btn) {
       var oc = btn.getAttribute('onclick') || '';
       if (oc.indexOf('raSubmitReport()') === -1) return;
@@ -4832,6 +4841,52 @@ function pmMaybeEnterUpdateSubmitMode(rec) {
       btn.innerHTML = '🔄 Update Data Submit';
     });
   }).catch(function () {});
+}
+
+/* Modal peringatan khusus laporan yang statusnya sudah 'approved' --
+   BEDA dari confirm() browser polos yang dipakai status lain (lihat
+   raUpdateSubmittedReport() di bawah), karena APPROVED seharusnya jadi
+   tahap final; tombol "OK" SENGAJA dikunci 5 detik (countdown) supaya
+   user tidak menekannya reflek/tidak sengaja. onConfirm dipanggil HANYA
+   kalau user benar-benar menekan OK setelah countdown selesai -- Batal/
+   klik area gelap/manapun sebelum itu TIDAK memanggil apa pun. */
+function pmShowApprovedSubmitConfirm(onConfirm) {
+  var old = document.getElementById('pmApprovedConfirmModal');
+  if (old) old.remove();
+  var modal = document.createElement('div');
+  modal.id = 'pmApprovedConfirmModal';
+  modal.style.cssText = 'display:flex;position:fixed;top:0;left:0;right:0;bottom:0;z-index:999996;background:rgba(0,0,0,0.62);align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:min(92vw,420px);padding:24px 22px;box-shadow:0 20px 50px rgba(0,0,0,0.35);text-align:center;font-family:inherit">' +
+      '<div style="font-size:32px;margin-bottom:10px">⚠️</div>' +
+      '<div style="font-size:15px;color:#1a2040;line-height:1.6;margin-bottom:6px">Status sudah <b>"APPROVED"</b>.</div>' +
+      '<div style="font-size:14px;color:#1a2040;line-height:1.6;margin-bottom:16px">Yakin untuk Submit ulang?</div>' +
+      '<div style="font-size:11.5px;color:#8a94a8;line-height:1.5;margin-bottom:18px">Data akan disimpan dan dikirim ulang ke Review Approval Dashboard, MENIMPA laporan yang sudah disetujui.</div>' +
+      '<div style="display:flex;gap:10px;justify-content:center">' +
+        '<button id="pmApprovedConfirmCancel" style="padding:10px 18px;font-size:13px;background:#e5e9f0;color:#1a2040;border:none;border-radius:8px;cursor:pointer;font-weight:600">Batal</button>' +
+        '<button id="pmApprovedConfirmOk" disabled style="padding:10px 18px;font-size:13px;background:#9ca3af;color:#fff;border:none;border-radius:8px;cursor:not-allowed;font-weight:700;min-width:78px">OK (5)</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  var okBtn = document.getElementById('pmApprovedConfirmOk');
+  var cancelBtn = document.getElementById('pmApprovedConfirmCancel');
+  var remaining = 5;
+  var timer = setInterval(function () {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(timer);
+      okBtn.disabled = false;
+      okBtn.style.background = '#dc2626';
+      okBtn.style.cursor = 'pointer';
+      okBtn.textContent = 'OK';
+    } else {
+      okBtn.textContent = 'OK (' + remaining + ')';
+    }
+  }, 1000);
+  function cleanup() { clearInterval(timer); modal.remove(); }
+  cancelBtn.onclick = cleanup;
+  okBtn.onclick = function () { if (okBtn.disabled) return; cleanup(); onConfirm(); };
+  modal.addEventListener('click', function (e) { if (e.target === modal) cleanup(); });
 }
 
 /* Dipanggil dari klik tombol "🔄 Update Data Submit" (menggantikan
@@ -4851,14 +4906,22 @@ function pmMaybeEnterUpdateSubmitMode(rec) {
    notif tetap terkirim SETIAP kali tombol ini diklik, bukan cuma sekali). */
 function raUpdateSubmittedReport() {
   if (!window._editingId) { alert('Tidak ada data tersimpan untuk laporan ini.'); return; }
+  function proceed() {
+    pmUpdateSubmitPending = true;
+    // SENGAJA belum panggil pmShowManualSubmitOverlay() di sini -- dbSave()
+    // di bawah sudah punya overlay "Menyimpan..." sendiri (dbShowSavingOverlay),
+    // dobel overlay akan tumpang tindih. Overlay submit baru ditampilkan di
+    // pmMarkUpdateSubmitSaved() persis saat fase kirim-ke-Firebase dimulai
+    // (fase yang TIDAK punya feedback visual sendiri).
+    dbSave(window.CURRENT_MODUL); // alur SAMA seperti tombol "Simpan ke Database" biasa
+  }
+  // Laporan yang statusnya sudah 'approved' -- peringatan lebih tegas
+  // (modal kustom + tombol OK terkunci 5 detik), BUKAN confirm() polos,
+  // krn laporan APPROVED seharusnya sudah final (2026-09-17, permintaan
+  // eksplisit user).
+  if (pmUpdateSubmitIsApproved) { pmShowApprovedSubmitConfirm(proceed); return; }
   if (!confirm('Perbarui data laporan yang SUDAH disubmit ini?\n\nData terbaru di form ini akan disimpan dan dikirim ulang ke Review Approval Dashboard (MENIMPA data/PDF yang sudah ada di sana, BUKAN membuat laporan baru).')) return;
-  pmUpdateSubmitPending = true;
-  // SENGAJA belum panggil pmShowManualSubmitOverlay() di sini -- dbSave()
-  // di bawah sudah punya overlay "Menyimpan..." sendiri (dbShowSavingOverlay),
-  // dobel overlay akan tumpang tindih. Overlay submit baru ditampilkan di
-  // pmMarkUpdateSubmitSaved() persis saat fase kirim-ke-Firebase dimulai
-  // (fase yang TIDAK punya feedback visual sendiri).
-  dbSave(window.CURRENT_MODUL); // alur SAMA seperti tombol "Simpan ke Database" biasa
+  proceed();
 }
 
 // Dipanggil dari dbSave() begitu simpan sukses -- titik yang SAMA dengan
