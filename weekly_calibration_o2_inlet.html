@@ -310,7 +310,7 @@
                 <button class="crop-btn crop-btn-outline" id="cropUndoBtn" onclick="cropUndo()" disabled>↶ Undo</button>
                 <button class="crop-btn crop-btn-outline" id="cropRedoBtn" onclick="cropRedo()" disabled>↷ Redo</button>
                 <button class="crop-btn crop-btn-outline" onclick="cropReset()">↺ Reset</button>
-                <button class="crop-btn crop-btn-outline" id="cropRestoreOrigBtn" onclick="cropRestoreOriginal()" disabled>⏮ Foto Asli</button>
+                <button class="crop-btn crop-btn-outline" id="cropRestoreOrigBtn" onclick="cropRestoreOriginal()">⏮ Foto Asli</button>
                 <button class="crop-btn crop-btn-outline" onclick="skipCrop()">Lewati</button>
                 <button class="crop-btn crop-btn-save" onclick="cropAndSave()">✓ Simpan</button>
             </div>
@@ -1323,16 +1323,23 @@ function cropReset() {
 function cropRestoreOriginal() {
     var p = cropModalState._pending;
     var img = document.getElementById('cropImg');
-    if (!p || !p.originalDataUrl || !img) return;
+    if (!p || !img) return;
+    if (!p.originalDataUrl) {
+        alert('Foto ini tidak bisa dikembalikan ke versi asli karena SUDAH TERSIMPAN ke database.\n\nSilakan upload ulang fotonya kalau ingin menggantinya.\n\n(Tombol ini cuma berfungsi untuk foto yang baru diupload/di-crop dan belum disimpan -- masih draft di sesi ini.)');
+        return;
+    }
     if (img.src === p.originalDataUrl) return; // sudah di keadaan asli, tidak ada yg perlu dikembalikan
     imgOpenCropper(p.originalDataUrl, p.name, p.type, p.imgArr, p.side, p.modulePrefix, p.replaceIdx, p.originalDataUrl);
 }
 function cropUpdateRestoreOriginalButton() {
     var btn = document.getElementById('cropRestoreOrigBtn');
     if (!btn) return;
-    var p = cropModalState._pending;
-    var img = document.getElementById('cropImg');
-    btn.disabled = !(p && p.originalDataUrl && img && img.src !== p.originalDataUrl);
+    // SENGAJA selalu enabled (2026-09-17) -- kalau di-disable pakai atribut HTML,
+    // klik tidak pernah sampai ke cropRestoreOriginal() sama sekali, jadi user
+    // TIDAK PERNAH lihat kenapa tombolnya tidak berfungsi (foto sudah tersimpan ke
+    // database). Ketersediaan sekarang dicek DI DALAM cropRestoreOriginal() sendiri,
+    // yang menampilkan alert penjelasan kalau originalDataUrl kosong.
+    btn.disabled = false;
 }
 function skipCrop() { closeCropModal(); if (cropQueue) cropQueueAdvance(); }
 
