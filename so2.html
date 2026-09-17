@@ -55,7 +55,7 @@
   repeating-linear-gradient(0deg,transparent,transparent 33.3%,rgba(255,255,255,0.08) 33.3%,rgba(255,255,255,0.08) 33.4%,transparent 33.4%,transparent 66.6%,rgba(255,255,255,0.08) 66.6%,rgba(255,255,255,0.08) 66.7%,transparent 66.7%),
   repeating-linear-gradient(90deg,transparent,transparent 33.3%,rgba(255,255,255,0.08) 33.3%,rgba(255,255,255,0.08) 33.4%,transparent 33.4%,transparent 66.6%,rgba(255,255,255,0.08) 66.6%,rgba(255,255,255,0.08) 66.7%,transparent 66.7%)}
 .crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;overflow-y:auto;flex:1 1 auto;min-height:0}
-.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
 .crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
 .crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
 .crop-btn-save{background:#2ecc71;color:#fff}
@@ -1317,7 +1317,16 @@ function openCropModal(dataUrl, preferredSize, origDataUrl) {
     // cropReset()/cropRestoreOriginal(), bukan diturunkan ulang dari dataUrl
     // (yang bisa saja sudah hasil rotate, bukan foto asli lagi).
     if (pend) {
-        pend.originalDataUrl = (origDataUrl !== undefined) ? origDataUrl : ((existingForOrig && existingForOrig.originalDataUrl) ? existingForOrig.originalDataUrl : dataUrl);
+        if (origDataUrl !== undefined) {
+            pend.originalDataUrl = origDataUrl;
+        } else if (existingForOrig) {
+            // Foto LAMA (crop-ulang) -- JANGAN fallback ke dataUrl (versi yang sudah
+            // di-crop/tersimpan), itu bikin tombol restore no-op diam-diam alih-alih
+            // menampilkan popup "sudah tersimpan ke database" (bug 2026-09-17).
+            pend.originalDataUrl = existingForOrig.originalDataUrl || null;
+        } else {
+            pend.originalDataUrl = dataUrl; // foto benar-benar baru diupload
+        }
     }
     if (preferredSize && preferredSize.w && preferredSize.h) {
         document.getElementById('cropWcm').value = preferredSize.w;

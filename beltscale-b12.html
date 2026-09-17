@@ -43,7 +43,7 @@
 .crop-handle.w{width:10px;height:10px;left:-5px;top:50%;transform:translateY(-50%);cursor:w-resize}
 .crop-handle.e{width:10px;height:10px;right:-5px;top:50%;transform:translateY(-50%);cursor:e-resize}
 .crop-footer{padding:10px 14px;background:#1a221e;border-top:1px solid #2a3a30;overflow-y:auto;flex:1 1 auto;min-height:0}
-.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.crop-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
 .crop-btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
 .crop-btn-outline{background:transparent;border:1px solid #4a6a55;color:#aac8b5}
 .crop-btn-save{background:#2ecc71;color:#fff}
@@ -1274,7 +1274,22 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
     // Pemanggil EKSTERNAL (upload baru / klik "Crop Ulang" di galeri) TIDAK PERNAH mengisi
     // param ini -- otomatis fallback ke existing.originalDataUrl (kalau foto ini sudah
     // sempat di-crop sebelumnya DI SESI YANG SAMA) atau ke dataUrl (upload baru).
-    var trueOriginal = (origDataUrl !== undefined) ? origDataUrl : ((existing && existing.originalDataUrl) ? existing.originalDataUrl : dataUrl);
+    var trueOriginal;
+    if (origDataUrl !== undefined) {
+        trueOriginal = origDataUrl;
+    } else if (existing) {
+        // Foto LAMA (crop-ulang) -- HANYA anggap "asli tersedia" kalau originalDataUrl
+        // benar-benar tercatat (masih sesi ini). JANGAN fallback ke dataUrl di sini --
+        // dataUrl di titik ini adalah versi yang SUDAH di-crop/tersimpan, BUKAN foto
+        // asli. Bug lama (2026-09-17): fallback ke dataUrl bikin tombol restore jadi
+        // no-op DIAM-DIAM (img.src kebetulan sudah sama dgn "originalDataUrl" palsu
+        // ini) alih-alih menampilkan popup "sudah tersimpan ke database" yang benar.
+        trueOriginal = existing.originalDataUrl || null;
+    } else {
+        // Foto BENAR-BENAR baru diupload -- dataUrl itu sendiri belum disentuh apa
+        // pun, jadi dataUrl INI-lah foto aslinya.
+        trueOriginal = dataUrl;
+    }
     cropModalState._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:ridx, originalDataUrl:trueOriginal};
     var capInput = document.getElementById('cropCaptionInput');
     if (capInput) capInput.value = existing ? (existing.caption || '') : '';
