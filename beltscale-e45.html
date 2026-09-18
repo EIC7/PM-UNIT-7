@@ -84,6 +84,13 @@
 .pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
 .pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
 .pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
+/* Widget Y/N khusus baris "Raise new WO & repair if any defect found" --
+   Y=merah (ada defect), N=hijau (aman), default N. Lihat bsRaiseWOCellHtml()
+   di JS. */
+.yn-pair-defect{display:inline-flex;gap:4px}
+.yn-btn-defect{width:28px;height:24px;border-radius:5px;border:1px solid var(--border);background:#fff;color:#333;font-weight:700;font-size:11px;cursor:pointer}
+.yn-btn-defect.y.active{background:#c0392b;color:#fff;border-color:#c0392b}
+.yn-btn-defect.n.active{background:#16a34a;color:#fff;border-color:#16a34a}
 </style>
 </head>
 <body>
@@ -1485,7 +1492,9 @@ var BS_CHECKS = [
   {no:'6a', label:'Error Zero Calibration', criteria:'', type:'input', placeholder:'e.g. 0.01%'},
   {no:'6b', label:'New Zero Change Value', criteria:'', type:'input', placeholder:'e.g. 966048'},
   {no:'6c', label:'Old Zero Change Value', criteria:'', type:'input', placeholder:'e.g. 966149'},
-  {no:9,  label:'Raise new WO & repair if any defect found.', criteria:'', type:'check'},
+  {no:'6d', label:'Hasil Pengukuran Tegangan Load Cell 1 (mV)', criteria:'', type:'input', placeholder:'e.g. 2.45'},
+  {no:'6e', label:'Hasil Pengukuran Tegangan Load Cell 2 (mV)', criteria:'', type:'input', placeholder:'e.g. 2.45'},
+  {no:9,  label:'Raise new WO & repair if any defect found.', criteria:'', type:'check', raiseWO:true},
   {no:10, label:'Leave the location within safe condition.', criteria:'', type:'check'},
 ];
 
@@ -1537,6 +1546,21 @@ function bsBuildTable() {
         '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
         '<td style="text-align:center"><input type="text" id="bsA_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>'+
         '<td style="text-align:center"><input type="text" id="bsB_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>';
+    } else if (item.raiseWO) {
+      // "Raise new WO & repair if any defect found" -- SENGAJA BUKAN checkbox
+      // konfirmasi-tugas biasa seperti baris lain (2026-09-18, permintaan
+      // eksplisit user): Y = DITEMUKAN defect (perlu WO baru), N = TIDAK ada
+      // defect (aman) -- makna Y/N di baris ini KEBALIKAN dari kesan umum
+      // "centang = OK", jadi dibuat widget Y/N terpisah (bukan checkbox
+      // polos) supaya jelas 2 pilihan eksplisit, bukan cuma tercentang/tidak.
+      // N (aman) HIJAU, Y (ada defect) MERAH, default N. Lihat
+      // bsRaiseWOCellHtml()/bsSetDefectYN() di bawah.
+      tr.innerHTML =
+        '<td style="text-align:center;font-size:12px;color:var(--text3)">'+(item.no||'')+'</td>'+
+        '<td style="font-size:12px;padding:6px 10px">'+item.label+'</td>'+
+        '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
+        '<td style="text-align:center">'+bsRaiseWOCellHtml('a', idx)+'</td>'+
+        '<td style="text-align:center">'+bsRaiseWOCellHtml('b', idx)+'</td>';
     } else {
       tr.innerHTML =
         '<td style="text-align:center;font-size:12px;color:var(--text3)">'+(item.no||'')+'</td>'+
@@ -1546,6 +1570,27 @@ function bsBuildTable() {
         '<td style="text-align:center"><input type="checkbox" id="bsB_'+idx+'" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>';
     }
     tbody.appendChild(tr);
+  });
+}
+function bsRaiseWOCellHtml(side, idx) {
+  return '<input type="hidden" id="bs'+side.toUpperCase()+'_'+idx+'" value="N">'+
+    '<div class="yn-pair-defect" id="bsYN_'+side+'_'+idx+'">'+
+      '<button type="button" data-val="Y" class="yn-btn-defect y" onclick="bsSetDefectYN('+idx+',\''+side+'\',\'Y\')">Y</button>'+
+      '<button type="button" data-val="N" class="yn-btn-defect n active" onclick="bsSetDefectYN('+idx+',\''+side+'\',\'N\')">N</button>'+
+    '</div>';
+}
+function bsSetDefectYN(idx, side, val) {
+  var hidden = document.getElementById('bs'+side.toUpperCase()+'_'+idx);
+  if (hidden) hidden.value = val;
+  bsSyncDefectYNVisual(idx, side);
+}
+function bsSyncDefectYNVisual(idx, side) {
+  var hidden = document.getElementById('bs'+side.toUpperCase()+'_'+idx);
+  var wrap = document.getElementById('bsYN_'+side+'_'+idx);
+  if (!hidden || !wrap) return;
+  var val = hidden.value || 'N';
+  wrap.querySelectorAll('button').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-val') === val);
   });
 }
 
@@ -1569,7 +1614,7 @@ function bsCheckAllSide(side, checked) {
 function bsRefreshAllChecks() {
   var allA = true, allB = true, hasCheck = false;
   BS_CHECKS.forEach(function(item, idx) {
-    if (item.type !== 'check') return;
+    if (item.type !== 'check' || item.raiseWO) return; // raiseWO bukan checkbox konfirmasi biasa, dikecualikan dari "Centang Semua"
     hasCheck = true;
     var a = document.getElementById('bsA_'+idx);
     var b = document.getElementById('bsB_'+idx);
@@ -1857,8 +1902,14 @@ function bsDownloadPdf() {
         return;
       }
       var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
-      var aVal=item.type==='input'?safe(aEl?aEl.value:''):(aEl&&aEl.checked?'__CHK__':'__BOX__');
-      var bVal=item.type==='input'?safe(bEl?bEl.value:''):(bEl&&bEl.checked?'__CHK__':'__BOX__');
+      var aVal, bVal;
+      if (item.raiseWO) {
+        aVal = (aEl && aEl.value === 'Y') ? '__DEFECT_Y__' : '__DEFECT_N__';
+        bVal = (bEl && bEl.value === 'Y') ? '__DEFECT_Y__' : '__DEFECT_N__';
+      } else {
+        aVal=item.type==='input'?safe(aEl?aEl.value:''):(aEl&&aEl.checked?'__CHK__':'__BOX__');
+        bVal=item.type==='input'?safe(bEl?bEl.value:''):(bEl&&bEl.checked?'__CHK__':'__BOX__');
+      }
       tableRows.push([String(item.no||''),safe(item.label),safe((item.criteria||'').replace(/\n/g,' / ')),aVal,bVal]);
     });
 
@@ -1876,8 +1927,18 @@ function bsDownloadPdf() {
         if (data.section !== 'body') return;
         if (data.column.index !== 3 && data.column.index !== 4) return;
         var val = data.cell.raw;
-        if (val !== '__CHK__' && val !== '__BOX__') return;
         var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,249,247];
+        if (val === '__DEFECT_Y__' || val === '__DEFECT_N__') {
+          doc.setFillColor(bg[0], bg[1], bg[2]);
+          doc.rect(data.cell.x+0.2, data.cell.y+0.2, data.cell.width-0.4, data.cell.height-0.4, 'F');
+          var isY = val === '__DEFECT_Y__';
+          doc.setFont('helvetica','bold'); doc.setFontSize(8);
+          doc.setTextColor(isY?192:22, isY?57:163, isY?43:74);
+          doc.text(isY ? 'Y' : 'N', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2 + 1, {align:'center'});
+          doc.setTextColor(20,30,25);
+          return;
+        }
+        if (val !== '__CHK__' && val !== '__BOX__') return;
         doc.setFillColor(bg[0], bg[1], bg[2]);
         doc.rect(data.cell.x+0.2, data.cell.y+0.2, data.cell.width-0.4, data.cell.height-0.4, 'F');
         drawCheckboxBs(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val === '__CHK__');
@@ -2016,8 +2077,10 @@ function applyRecordToForm(rec, editingId) {
     Object.keys(data.checks).forEach(function(i){
       var c=data.checks[i];
       var aEl=document.getElementById('bsA_'+i), bEl=document.getElementById('bsB_'+i);
-      if(aEl){if(aEl.type==='checkbox')aEl.checked=!!c.a;else aEl.value=c.a||'';}
-      if(bEl){if(bEl.type==='checkbox')bEl.checked=!!c.b;else bEl.value=c.b||'';}
+      if(aEl){if(aEl.type==='checkbox')aEl.checked=!!c.a;else aEl.value=(typeof c.a==='boolean'?'':c.a)||'';}
+      if(bEl){if(bEl.type==='checkbox')bEl.checked=!!c.b;else bEl.value=(typeof c.b==='boolean'?'':c.b)||'';}
+      // no-op utk baris selain "Raise new WO" (elemen #bsYN_<side>_<i> tidak ada)
+      bsSyncDefectYNVisual(i, 'a'); bsSyncDefectYNVisual(i, 'b');
     });
     bsRefreshAllChecks();
   }
