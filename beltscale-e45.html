@@ -84,17 +84,11 @@
 .pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
 .pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
 .pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
-/* Widget Y/N + Remark utk SEMUA baris "check" tabel Step of Work (kecuali
-   tabel isian) -- lihat bsCheckCellHtml() di JS. Baris biasa: Y=biru
-   (--ok, OK), N=merah (--fail, tidak OK). Baris "Raise new WO" (maknanya
-   kebalikan): Y=merah (ada defect), N=hijau (aman), default N. */
-.yn-toggle-bs{display:inline-flex;gap:4px;margin-bottom:4px}
-.yn-btn-bs{width:28px;height:24px;border-radius:5px;border:1px solid var(--border);background:#fff;color:#333;font-weight:700;font-size:11px;cursor:pointer}
-.yn-btn-bs.y.active{background:var(--ok,#2563eb);color:#fff;border-color:var(--ok,#2563eb)}
-.yn-btn-bs.n.active{background:var(--fail,#c0392b);color:#fff;border-color:var(--fail,#c0392b)}
-.yn-btn-bs.y-inv.active{background:#c0392b;color:#fff;border-color:#c0392b}
-.yn-btn-bs.n-inv.active{background:#16a34a;color:#fff;border-color:#16a34a}
-.bs-remark-input{width:100%;font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;box-sizing:border-box}
+/* Widget Pass/Fail (checkbox) + 1 kolom Remarks bersama utk SEMUA baris
+   "check" tabel Step of Work (kecuali tabel isian) -- lihat
+   bsToggleCheckFlag()/bsComputeRemark() di JS, meniru pola
+   id_fan_line_purging.html. Checkbox pakai style inline (accent-color),
+   tidak perlu class custom -- lihat bsBuildTable(). */
 </style>
 </head>
 <body>
@@ -147,11 +141,16 @@
       <table class="manual-table" id="bsCheckTable">
         <thead>
           <tr>
-            <th style="width:36px">No.</th>
-            <th>Step of Work</th>
-            <th>Criteria</th>
-            <th id="bsTh1" style="min-width:130px;text-align:center">CCH-SCAL-800A<br><span style="font-weight:400;font-size:10px">(CONVEYOR E-4)</span></th>
-            <th id="bsTh2" style="min-width:130px;text-align:center">CCH-SCAL-800B<br><span style="font-weight:400;font-size:10px">(CONVEYOR E-5)</span></th>
+            <th rowspan="2" style="width:34px">No.</th>
+            <th rowspan="2" style="min-width:180px">Step of Work</th>
+            <th rowspan="2" style="min-width:140px">Criteria</th>
+            <th colspan="2" id="bsTh1" style="text-align:center">CCH-SCAL-800A<br><span style="font-weight:400;font-size:10px">(CONVEYOR E-4)</span></th>
+            <th colspan="2" id="bsTh2" style="text-align:center">CCH-SCAL-800B<br><span style="font-weight:400;font-size:10px">(CONVEYOR E-5)</span></th>
+            <th rowspan="2" style="min-width:140px">Remarks</th>
+          </tr>
+          <tr>
+            <th style="width:50px">Pass</th><th style="width:50px">Fail</th>
+            <th style="width:50px">Pass</th><th style="width:50px">Fail</th>
           </tr>
         </thead>
         <tbody id="bsCheckBody"></tbody>
@@ -210,7 +209,7 @@
 
   <!-- BUTTONS -->
   <div class="btn-row" style="margin-top:16px">
-    <button class="btn btn-primary" onclick="bsCheckAll(true)">&#10003; Centang Semua (E4 &amp; E5)</button>
+    <button class="btn btn-primary" onclick="bsCheckAllY()">&#9989; Centang Semua Y (E4 &amp; E5)</button>
     <button class="btn btn-pdf" onclick="bsDownloadPdf()" style="padding:14px 22px;font-size:15px;min-height:48px;min-width:180px">&#8595; Print Preview & Download PDF</button>
     <button class="btn" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('beltscale')">&#128190; Simpan ke Database</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=bsDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
@@ -1486,20 +1485,31 @@ var BS_CFG = {
   b:{code:'CCH-SCAL-800B', name:'CONVEYOR E-5', note:'Panel E5'},
 };
 
+// yText/nText = Remark otomatis kalau Pass/Fail dipilih (lihat
+// bsComputeRemark()) -- persis pola id_fan_line_purging.html. Baris
+// "Raise new WO" (raiseWO:true): Pass = TIDAK ada defect (aman), Fail =
+// ADA defect (perlu WO baru) -- widget & warnanya SAMA dgn baris lain.
 var BS_CHECKS = [
-  {no:1,  label:'Make sure PTW already issue.',  criteria:'Ptw Issued', type:'check'},
-  {no:2,  label:'Prepare tool & material required.', criteria:'Tool Ready', type:'check'},
-  {no:3,  label:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', criteria:'Cleanliness', type:'check'},
-  {no:4,  label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). * replace if required', criteria:'No dust or dirty\nNo Sign of water ingress\nNo broken condition', yText:'No dust/water ingress/broken condition', type:'check'},
-  {no:5,  label:'Check connection was tightened and no looses.', criteria:'Tight Connection', type:'check'},
+  {no:1,  label:'Make sure PTW already issue.',  criteria:'Ptw Issued', type:'check',
+    yText:'PTW Sudah Diterbitkan dan Berlaku', nText:'PTW Belum Diterbitkan / Belum Berlaku'},
+  {no:2,  label:'Prepare tool & material required.', criteria:'Tool Ready', type:'check',
+    yText:'Tool & Material Sudah Disiapkan dan Siap Pakai', nText:'Tool & Material Belum Lengkap / Belum Siap'},
+  {no:3,  label:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', criteria:'Cleanliness', type:'check',
+    yText:'Panel Sudah Dibersihkan, Kondisi Bersih', nText:'Panel Belum Dibersihkan / Masih Kotor'},
+  {no:4,  label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). * replace if required', criteria:'No dust or dirty\nNo Sign of water ingress\nNo broken condition', type:'check',
+    yText:'Sealing & Conduit Dalam Kondisi Baik, Tidak Ada Debu/Air Masuk', nText:'Ditemukan Debu, Indikasi Air Masuk, atau Kondisi Rusak pada Sealing/Conduit'},
+  {no:5,  label:'Check connection was tightened and no looses.', criteria:'Tight Connection', type:'check',
+    yText:'Koneksi Sudah Kencang, Tidak Ada yang Kendor', nText:'Ditemukan Koneksi yang Kendor, Perlu Dikencangkan'},
   {no:'6', label:'Belt Scale Calibration', criteria:'', type:'header'},
   {no:'6a', label:'Error Zero Calibration', criteria:'', type:'input', placeholder:'e.g. 0.01%'},
   {no:'6b', label:'New Zero Change Value', criteria:'', type:'input', placeholder:'e.g. 966048'},
   {no:'6c', label:'Old Zero Change Value', criteria:'', type:'input', placeholder:'e.g. 966149'},
   {no:'6d', label:'Hasil Pengukuran Tegangan Load Cell 1 (mV)', criteria:'', type:'input', placeholder:'e.g. 2.45'},
   {no:'6e', label:'Hasil Pengukuran Tegangan Load Cell 2 (mV)', criteria:'', type:'input', placeholder:'e.g. 2.45'},
-  {no:9,  label:'Raise new WO & repair if any defect found.', criteria:'', type:'check', raiseWO:true, yText:'Ditemukan Defect, Perlu WO Baru', nText:'Tidak Ada Defect (Aman)'},
-  {no:10, label:'Leave the location within safe condition.', criteria:'Completed', type:'check'},
+  {no:9,  label:'Raise new WO & repair if any defect found.', criteria:'OK', type:'check', raiseWO:true,
+    yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
+  {no:10, label:'Leave the location within safe condition.', criteria:'Completed', type:'check',
+    yText:'Lokasi Kerja Sudah Ditinggalkan dalam Kondisi Aman dan Rapi', nText:'Lokasi Kerja Belum dalam Kondisi Aman / Masih Perlu Dirapikan'},
 ];
 
 var bsImages = {'1':[], '2':[]};
@@ -1529,17 +1539,10 @@ function initPage() {
 
 function bsBuildTable() {
   var tbody = document.getElementById('bsCheckBody'); tbody.innerHTML = '';
-  var trAll = document.createElement('tr');
-  trAll.style.cssText = 'background:#e8f0fb;border-left:4px solid #2563eb;';
-  trAll.innerHTML =
-    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#2563eb;font-weight:600">✓ Centang Semua Y</td>'+
-    '<td style="text-align:center"><input type="checkbox" id="bsAllA" title="'+BS_CFG.a.name+'" onchange="bsCheckAllSide(\'a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#2563eb"></td>'+
-    '<td style="text-align:center"><input type="checkbox" id="bsAllB" title="'+BS_CFG.b.name+'" onchange="bsCheckAllSide(\'b\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#2563eb"></td>';
-  tbody.appendChild(trAll);
   BS_CHECKS.forEach(function(item, idx) {
     var tr = document.createElement('tr');
     if (item.type === 'header') {
-      tr.innerHTML = '<td colspan="5" style="background:rgba(46,204,113,.08);border-left:4px solid var(--ok);padding:8px 14px;font-weight:700;font-size:13px">'+item.label+'</td>';
+      tr.innerHTML = '<td colspan="8" style="background:rgba(46,204,113,.08);border-left:4px solid var(--ok);padding:8px 14px;font-weight:700;font-size:13px">'+item.label+'</td>';
       tbody.appendChild(tr); return;
     }
     var cHtml = (item.criteria||'').replace(/\n/g,'<br>');
@@ -1548,109 +1551,76 @@ function bsBuildTable() {
         '<td style="text-align:center;font-size:12px;color:var(--text3)">'+(item.no||'')+'</td>'+
         '<td style="font-size:12px;padding:6px 10px;padding-left:24px">'+item.label+'</td>'+
         '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
-        '<td style="text-align:center"><input type="text" id="bsA_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>'+
-        '<td style="text-align:center"><input type="text" id="bsB_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>';
+        '<td colspan="2" style="text-align:center"><input type="text" id="bsA_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>'+
+        '<td colspan="2" style="text-align:center"><input type="text" id="bsB_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>'+
+        '<td></td>';
     } else {
-      // Semua baris "check" (kecuali tabel isian di atas) SEKARANG pakai
-      // widget Y/N + Remark (2026-09-18, permintaan eksplisit user) --
-      // BUKAN lagi checkbox konfirmasi-tugas polos. Baris normal: Y=OK
-      // (biru/--ok), N=Tidak OK (merah/--fail). Baris "Raise new WO"
-      // (item.raiseWO) maknanya KEBALIKAN: Y=ada defect (MERAH), N=aman
-      // (HIJAU), default N -- lihat bsCheckCellHtml()/bsApplyCheck().
+      // Semua baris "check" (kecuali tabel isian di atas) pakai widget
+      // Pass/Fail (checkbox, saling eksklusif per sisi) + SATU kolom
+      // Remarks bersama -- meniru PERSIS pola id_fan_line_purging.html.
+      // Baris "Raise new WO" (item.raiseWO) SENGAJA dapat widget & warna
+      // yang SAMA dgn baris lain -- makna Pass="tidak ada defect" murni
+      // lewat yText/nText, bukan lewat warna beda.
       tr.innerHTML =
         '<td style="text-align:center;font-size:12px;color:var(--text3)">'+(item.no||'')+'</td>'+
         '<td style="font-size:12px;padding:6px 10px">'+item.label+'</td>'+
         '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
-        '<td style="text-align:center">'+bsCheckCellHtml('a', idx, item)+'</td>'+
-        '<td style="text-align:center">'+bsCheckCellHtml('b', idx, item)+'</td>';
+        '<td style="text-align:center"><input type="checkbox" id="bsPassA_'+idx+'" onchange="bsToggleCheckFlag('+idx+',\'passA\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--ok,#16a34a)"></td>'+
+        '<td style="text-align:center"><input type="checkbox" id="bsFailA_'+idx+'" onchange="bsToggleCheckFlag('+idx+',\'failA\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--fail,#dc2626)"></td>'+
+        '<td style="text-align:center"><input type="checkbox" id="bsPassB_'+idx+'" onchange="bsToggleCheckFlag('+idx+',\'passB\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--ok,#16a34a)"></td>'+
+        '<td style="text-align:center"><input type="checkbox" id="bsFailB_'+idx+'" onchange="bsToggleCheckFlag('+idx+',\'failB\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--fail,#dc2626)"></td>'+
+        '<td><input type="text" id="bsRemark_'+idx+'" style="width:100%;min-width:120px;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box"></td>';
     }
     tbody.appendChild(tr);
   });
 }
-function bsCheckCellHtml(side, idx, item) {
-  var isInv = !!item.raiseWO;
-  var yClass = isInv ? 'y-inv' : 'y';
-  var nClass = isInv ? 'n-inv' : 'n';
-  var defaultVal = isInv ? 'N' : '';
-  var S = side.toUpperCase();
-  return '<input type="hidden" id="bs'+S+'_'+idx+'" value="'+defaultVal+'">'+
-    '<div class="yn-toggle-bs" id="bsYN_'+side+'_'+idx+'">'+
-      '<button type="button" data-val="Y" class="yn-btn-bs '+yClass+(defaultVal==='Y'?' active':'')+'" onclick="bsSetCheck('+idx+',\''+side+'\',\'Y\')">Y</button>'+
-      '<button type="button" data-val="N" class="yn-btn-bs '+nClass+(defaultVal==='N'?' active':'')+'" onclick="bsSetCheck('+idx+',\''+side+'\',\'N\')">N</button>'+
-    '</div>'+
-    '<input type="text" id="bsRemark'+S+'_'+idx+'" value="" placeholder="Remark..." class="bs-remark-input">';
+function bsComputeRemark(item, passA, failA, passB, failB, oldRemark) {
+  var aState = passA ? 'Y' : failA ? 'N' : null;
+  var bState = passB ? 'Y' : failB ? 'N' : null;
+  if (aState === null && bState === null) return oldRemark || '';
+  if (aState === bState) return aState === 'Y' ? (item.yText || item.criteria || '') : (item.nText || '');
+  var txt = function(s){ return s === 'Y' ? (item.yText||item.criteria||'-') : s === 'N' ? (item.nText||'-') : '-'; };
+  return BS_CFG.a.name + ': ' + txt(aState) + ' | ' + BS_CFG.b.name + ': ' + txt(bState);
 }
-function bsApplyCheck(idx, side, val) {
-  var S = side.toUpperCase();
-  var hidden = document.getElementById('bs'+S+'_'+idx);
-  if (!hidden) return;
-  hidden.value = val;
+function bsToggleCheckFlag(idx, key, checked) {
   var item = BS_CHECKS[idx];
-  var remarkEl = document.getElementById('bsRemark'+S+'_'+idx);
-  if (remarkEl && item) {
-    if (item.yText || item.nText) {
-      if (val === 'Y') remarkEl.value = item.yText || item.criteria || '';
-      else if (val === 'N') remarkEl.value = item.nText || '';
-    } else if (val === 'Y' && !remarkEl.value) {
-      remarkEl.value = (item.criteria || '').replace(/\n/g, ', ');
-    }
+  var S = key.slice(-1);
+  var kind = key.slice(0, -1);
+  if (checked) {
+    var pairKind = kind === 'pass' ? 'Fail' : 'Pass';
+    var pairEl = document.getElementById('bs' + pairKind + S + '_' + idx);
+    if (pairEl) pairEl.checked = false;
   }
-  bsSyncCheckVisual(idx, side);
+  var passA = !!document.getElementById('bsPassA_'+idx).checked;
+  var failA = !!document.getElementById('bsFailA_'+idx).checked;
+  var passB = !!document.getElementById('bsPassB_'+idx).checked;
+  var failB = !!document.getElementById('bsFailB_'+idx).checked;
+  var remarkEl = document.getElementById('bsRemark_'+idx);
+  if (remarkEl) remarkEl.value = bsComputeRemark(item, passA, failA, passB, failB, remarkEl.value);
 }
-function bsSetCheck(idx, side, val) {
-  var hidden = document.getElementById('bs'+side.toUpperCase()+'_'+idx);
-  var newVal = (hidden && hidden.value === val) ? '' : val;
-  bsApplyCheck(idx, side, newVal);
-  bsRefreshAllChecks();
-}
-function bsSyncCheckVisual(idx, side) {
-  var hidden = document.getElementById('bs'+side.toUpperCase()+'_'+idx);
-  var wrap = document.getElementById('bsYN_'+side+'_'+idx);
-  if (!hidden || !wrap) return;
-  var val = hidden.value || '';
-  wrap.querySelectorAll('button').forEach(function(b){
-    b.classList.toggle('active', b.getAttribute('data-val') === val);
-  });
-}
-
-function bsCheckAll(checked) {
+function bsCheckAllY() {
   BS_CHECKS.forEach(function(item, idx) {
-    if (item.type !== 'check' || item.raiseWO) return;
-    bsApplyCheck(idx, 'a', checked ? 'Y' : '');
-    bsApplyCheck(idx, 'b', checked ? 'Y' : '');
+    if (item.type !== 'check') return;
+    var passA = document.getElementById('bsPassA_'+idx), failA = document.getElementById('bsFailA_'+idx);
+    var passB = document.getElementById('bsPassB_'+idx), failB = document.getElementById('bsFailB_'+idx);
+    if (!passA) return;
+    if (item.raiseWO) {
+      passA.checked = false; failA.checked = true;
+      passB.checked = false; failB.checked = true;
+    } else {
+      passA.checked = true; failA.checked = false;
+      passB.checked = true; failB.checked = false;
+    }
+    var remarkEl = document.getElementById('bsRemark_'+idx);
+    if (remarkEl) remarkEl.value = bsComputeRemark(item, passA.checked, failA.checked, passB.checked, failB.checked, remarkEl.value);
   });
-  var a=document.getElementById('bsAllA'); if(a) a.checked=checked;
-  var b=document.getElementById('bsAllB'); if(b) b.checked=checked;
 }
-function bsCheckAllSide(side, checked) {
-  BS_CHECKS.forEach(function(item, idx) {
-    if (item.type !== 'check' || item.raiseWO) return;
-    bsApplyCheck(idx, side, checked ? 'Y' : '');
-  });
-  bsRefreshAllChecks();
-}
-function bsRefreshAllChecks() {
-  var allA = true, allB = true, hasCheck = false;
-  BS_CHECKS.forEach(function(item, idx) {
-    if (item.type !== 'check' || item.raiseWO) return; // raiseWO dikecualikan dari "Centang Semua Y"
-    hasCheck = true;
-    var a = document.getElementById('bsA_'+idx);
-    var b = document.getElementById('bsB_'+idx);
-    if (!(a && a.value === 'Y')) allA = false;
-    if (!(b && b.value === 'Y')) allB = false;
-  });
-  var aAll = document.getElementById('bsAllA');
-  var bAll = document.getElementById('bsAllB');
-  if (aAll) aAll.checked = hasCheck && allA;
-  if (bAll) bAll.checked = hasCheck && allB;
-}
-
 function bsReset() {
   if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
   bsImages = {'1':[], '2':[]};
   ['bsDate','bsPIC','bsWO','bsNote1','bsNote2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
-  ['bsU78','bsCCH','bsAllA','bsAllB'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=false;});
+  ['bsU78','bsCCH'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=false;});
   ['bsImgPreview1','bsImgPreview2'].forEach(function(id){var e=document.getElementById(id);if(e)e.innerHTML='';});
   ['bsImgInput1','bsImgInput2'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   updateSizeIndicator('bs',1); updateSizeIndicator('bs',2);
@@ -1811,7 +1781,25 @@ function bsDrawBg(doc, pw, ph) {
 }
 
 // ── Helper: gambar checkbox manual ──
-function drawCheckboxBs(doc, x, y, w, h, checked) {
+function drawCheckboxBs(doc, x, y, w, h, checked, tone) {
+  if (tone) {
+    var size = Math.min(w * 0.45, 4.5);
+    var bx = x + w/2 - size/2, by = y + h/2 - size/2;
+    doc.setLineWidth(0.4);
+    if (checked) {
+      var fill = tone === 'red' ? [204,60,60] : [46,204,113];
+      var strk = tone === 'red' ? [140,30,30] : [30,140,74];
+      doc.setDrawColor(strk[0],strk[1],strk[2]); doc.setFillColor(fill[0],fill[1],fill[2]);
+      doc.rect(bx, by, size, size, 'FD');
+      doc.setDrawColor(255,255,255); doc.setLineWidth(0.6);
+      doc.line(bx+size*0.18, by+size*0.52, bx+size*0.40, by+size*0.76);
+      doc.line(bx+size*0.40, by+size*0.76, bx+size*0.84, by+size*0.22);
+    } else {
+      doc.setDrawColor(150,160,155); doc.setFillColor(255,255,255);
+      doc.rect(bx, by, size, size, 'FD');
+    }
+    return;
+  }
   var size = 3.5;
   var cx = x + w/2;
   var cy = y + h/2;
@@ -1916,50 +1904,44 @@ function bsDownloadPdf() {
     var tableRows=[];
     BS_CHECKS.forEach(function(item,idx){
       if(item.type==='header'){
-        tableRows.push([{content:safe(item.label),colSpan:5,styles:{fontStyle:'bold',fillColor:[230,240,253],textColor:[30,64,175]}}]);
+        tableRows.push([{content:safe(item.label),colSpan:8,styles:{fontStyle:'bold',fillColor:[230,240,253],textColor:[30,64,175]}}]);
         return;
       }
-      var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
-      var aVal, bVal;
-      if (item.raiseWO) {
-        aVal = (aEl && aEl.value === 'Y') ? '__DEFECT_Y__' : '__DEFECT_N__';
-        bVal = (bEl && bEl.value === 'Y') ? '__DEFECT_Y__' : '__DEFECT_N__';
-      } else if (item.type === 'input') {
-        aVal = safe(aEl?aEl.value:'');
-        bVal = safe(bEl?bEl.value:'');
-      } else {
-        var aRemarkEl = document.getElementById('bsRemarkA_'+idx), bRemarkEl = document.getElementById('bsRemarkB_'+idx);
-        var aYN = aEl ? aEl.value : '', bYN = bEl ? bEl.value : '';
-        var aRemark = aRemarkEl ? aRemarkEl.value : '', bRemark = bRemarkEl ? bRemarkEl.value : '';
-        aVal = (aYN || '-') + (aRemark ? (' - ' + aRemark) : '');
-        bVal = (bYN || '-') + (bRemark ? (' - ' + bRemark) : '');
+      if (item.type === 'input') {
+        var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
+        tableRows.push([
+          String(item.no||''), safe(item.label), safe((item.criteria||'').replace(/\n/g,' / ')),
+          {content: safe(aEl?aEl.value:''), colSpan:2},
+          {content: safe(bEl?bEl.value:''), colSpan:2},
+          ''
+        ]);
+        return;
       }
-      tableRows.push([String(item.no||''),safe(item.label),safe((item.criteria||'').replace(/\n/g,' / ')),aVal,bVal]);
+      var remarkEl = document.getElementById('bsRemark_'+idx);
+      tableRows.push([String(item.no||''),safe(item.label),safe((item.criteria||'').replace(/\n/g,' / ')),'','','','',safe(remarkEl?remarkEl.value:'')]);
     });
 
     doc.autoTable({
       startY:y,
-      head:[['No','Step of Work','Criteria',safe(BS_CFG.a.name),safe(BS_CFG.b.name)]],
+      head:[['No','Step of Work','Criteria','Pass','Fail','Pass','Fail','Remarks']],
       body:tableRows, theme:'grid',
       margin:{left:marginX,right:marginX,top:20},
       headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},
-      bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-      columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:65},2:{cellWidth:25},3:{cellWidth:35,halign:'center'},4:{cellWidth:35,halign:'center'}},
+      bodyStyles:{fontSize:7,textColor:[20,30,25],font:'helvetica',cellPadding:1.6},
+      columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:52},2:{cellWidth:24},3:{cellWidth:11,halign:'center'},4:{cellWidth:11,halign:'center'},5:{cellWidth:11,halign:'center'},6:{cellWidth:11,halign:'center'},7:{cellWidth:42}},
       alternateRowStyles:{fillColor:[246,249,247]},
       willDrawPage: function(data) { if (data.pageNumber > 1) { bsDrawBg(doc, pw, ph); } },
       didDrawCell: function(data) {
         if (data.section !== 'body') return;
-        if (data.column.index !== 3 && data.column.index !== 4) return;
-        var val = data.cell.raw;
-        if (val !== '__DEFECT_Y__' && val !== '__DEFECT_N__') return;
-        var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,249,247];
-        doc.setFillColor(bg[0], bg[1], bg[2]);
-        doc.rect(data.cell.x+0.2, data.cell.y+0.2, data.cell.width-0.4, data.cell.height-0.4, 'F');
-        var isY = val === '__DEFECT_Y__';
-        doc.setFont('helvetica','bold'); doc.setFontSize(8);
-        doc.setTextColor(isY?192:22, isY?57:163, isY?43:74);
-        doc.text(isY ? 'Y' : 'N', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2 + 1, {align:'center'});
-        doc.setTextColor(20,30,25);
+        var idx = data.row.index;
+        var item = BS_CHECKS[idx];
+        if (!item || item.type === 'header' || item.type === 'input') return;
+        var col = data.column.index;
+        if (col < 3 || col > 6) return;
+        var g = function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
+        var checkedMap = {3: g('bsPassA_'+idx), 4: g('bsFailA_'+idx), 5: g('bsPassB_'+idx), 6: g('bsFailB_'+idx)};
+        var toneMap = {3:'green', 4:'red', 5:'green', 6:'red'};
+        drawCheckboxBs(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, checkedMap[col], toneMap[col]);
       }
     });
     y = doc.lastAutoTable.finalY + 8;
@@ -2062,14 +2044,18 @@ function dbCollectData(modul) {
   var checks = {};
   BS_CHECKS.forEach(function(item, idx){
     if (item.type==='header') return;
-    var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
-    var aVal = aEl ? (aEl.value || '') : '';
-    var bVal = bEl ? (bEl.value || '') : '';
     if (item.type === 'input') {
-      checks[idx] = {a:aVal, b:bVal};
+      var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
+      checks[idx] = {a:aEl?(aEl.value||''):'', b:bEl?(bEl.value||''):''};
     } else {
-      var aRemarkEl = document.getElementById('bsRemarkA_'+idx), bRemarkEl = document.getElementById('bsRemarkB_'+idx);
-      checks[idx] = {a:aVal, aRemark:aRemarkEl?aRemarkEl.value||'':'', b:bVal, bRemark:bRemarkEl?bRemarkEl.value||'':''};
+      var passAEl=document.getElementById('bsPassA_'+idx), failAEl=document.getElementById('bsFailA_'+idx);
+      var passBEl=document.getElementById('bsPassB_'+idx), failBEl=document.getElementById('bsFailB_'+idx);
+      var remarkEl=document.getElementById('bsRemark_'+idx);
+      checks[idx] = {
+        passA: !!(passAEl&&passAEl.checked), failA: !!(failAEl&&failAEl.checked),
+        passB: !!(passBEl&&passBEl.checked), failB: !!(failBEl&&failBEl.checked),
+        remarks: remarkEl ? (remarkEl.value||'') : ''
+      };
     }
   });
   var keepImage = function(img){
@@ -2100,21 +2086,33 @@ function applyRecordToForm(rec, editingId) {
   if (data.notes) { gv('bsNote1',data.notes.note1||''); gv('bsNote2',data.notes.note2||''); }
   if (data.checks) {
     Object.keys(data.checks).forEach(function(i){
-      var c=data.checks[i] || {};
-      var aEl=document.getElementById('bsA_'+i), bEl=document.getElementById('bsB_'+i);
-      // Migrasi data lama: dulu boolean checkbox polos (true/false) --
-      // dikonversi ke 'Y'/'' supaya kompatibel dgn widget Y/N sekarang.
-      var aConv = (typeof c.a === 'boolean') ? (c.a ? 'Y' : '') : (c.a || '');
-      var bConv = (typeof c.b === 'boolean') ? (c.b ? 'Y' : '') : (c.b || '');
-      if (aEl) aEl.value = aConv;
-      if (bEl) bEl.value = bConv;
-      var aRemarkEl = document.getElementById('bsRemarkA_'+i), bRemarkEl = document.getElementById('bsRemarkB_'+i);
-      if (aRemarkEl) aRemarkEl.value = c.aRemark || '';
-      if (bRemarkEl) bRemarkEl.value = c.bRemark || '';
-      // no-op utk baris "input" (elemen #bsYN_<side>_<i> tidak ada)
-      bsSyncCheckVisual(i, 'a'); bsSyncCheckVisual(i, 'b');
+      var c = data.checks[i] || {};
+      var item = BS_CHECKS[i];
+      if (item && item.type === 'input') {
+        var aEl = document.getElementById('bsA_'+i), bEl = document.getElementById('bsB_'+i);
+        if (aEl) aEl.value = c.a || '';
+        if (bEl) bEl.value = c.b || '';
+        return;
+      }
+      var passAEl=document.getElementById('bsPassA_'+i), failAEl=document.getElementById('bsFailA_'+i);
+      var passBEl=document.getElementById('bsPassB_'+i), failBEl=document.getElementById('bsFailB_'+i);
+      var remarkEl = document.getElementById('bsRemark_'+i);
+      if (!passAEl) return;
+      var passA, failA, passB, failB, remarks;
+      if (c.passA !== undefined || c.failA !== undefined) {
+        passA = !!c.passA; failA = !!c.failA; passB = !!c.passB; failB = !!c.failB;
+        remarks = c.remarks || '';
+      } else if (typeof c.a === 'string') {
+        passA = c.a === 'Y'; failA = c.a === 'N'; passB = c.b === 'Y'; failB = c.b === 'N';
+        remarks = c.aRemark || c.bRemark || '';
+      } else {
+        passA = !!c.a; failA = false; passB = !!c.b; failB = false;
+        remarks = '';
+      }
+      passAEl.checked = passA; failAEl.checked = failA;
+      passBEl.checked = passB; failBEl.checked = failB;
+      if (remarkEl) remarkEl.value = remarks || (item ? bsComputeRemark(item, passA, failA, passB, failB, '') : '');
     });
-    bsRefreshAllChecks();
   }
   if (data.images) {
     var restoreImg = function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.offsetX)o.offsetX=img.offsetX;if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;return o;};
