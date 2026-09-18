@@ -7,7 +7,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="shared.js?v=20260917d"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -31,7 +30,7 @@
 .img-thumb img{width:72px;height:72px;object-fit:cover;border-radius:6px;border:2px solid #2ecc71;display:block;cursor:pointer}
 .img-thumb .del{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:#e74c3c;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0;font-weight:700}
 .img-thumb .reedit{position:absolute;top:-7px;left:-7px;width:20px;height:20px;border-radius:50%;background:#2563eb;color:#fff;border:none;cursor:pointer;font-size:11px;line-height:20px;text-align:center;padding:0}
-.img-thumb .size-badge{position:absolute;bottom:6px;left:2px;background:rgba(0,0,0,0.65);color:#fff;font-size:9px;padding:1px 4px;border-radius:4px;font-weight:600}
+.img-thumb .size-badge{position:absolute;top:52px;left:2px;background:rgba(0,0,0,0.65);color:#fff;font-size:9px;padding:1px 4px;border-radius:4px;font-weight:600}
 .img-caption-input{width:100%;margin-top:6px;padding:6px 8px;font-size:12px;border:1px solid var(--border,#ccc);border-radius:6px;background:#fff;color:#111;box-sizing:border-box}
 /* ── CROP MODAL (3-mode) ── */
 #cropModal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;padding:12px}
@@ -222,7 +221,6 @@
   <div class="panel">
     <div class="btn-row">
       <button class="btn btn-pdf" id="btnPdf" onclick="runPdfPreview()">⬇ Print Preview & Download PDF</button>
-      <button class="btn btn-outline" onclick="downloadChecksheetExcel()">📊 Download Checksheet (Excel)</button>
       <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave('id_fan_inspect_blade')">💾 Simpan ke Database</button>
       <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=runPdfPreview; raSubmitReport()">🔒 Submit Laporan</button>
       <button class="btn btn-danger" onclick="resetAll()">✕ Reset</button>
@@ -1862,15 +1860,23 @@ function buildAndShowPdf() {
     if (y + h > ph - marginBottom) { doc.addPage(); drawBg(); y = marginTop; }
     return y;
   }
-  function secHeader(title) {
+  function secHeader(title, fill, textColor) {
     checkPage(16);
-    doc.setFillColor(44, 62, 48);
+    fill = fill || [44, 62, 48];
+    textColor = textColor || [210, 230, 215];
+    doc.setFillColor(fill[0], fill[1], fill[2]);
     doc.rect(marginX, y, contentW, 8, 'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(210, 230, 215);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(textColor[0], textColor[1], textColor[2]);
     doc.text(title, pw/2, y+5.5, {align:'center'});
     y += 11;
     doc.setTextColor(20,30,25);
   }
+  // Bar judul galeri "FOTO EVIDENCE" SENGAJA dibedakan warnanya dari bar
+  // section biasa (2026-09-18, permintaan eksplisit user) -- biru-abu gelap,
+  // supaya langsung kelihatan bedanya dari section checklist/pengukuran yang
+  // hijau tua, tanpa perlu baca teksnya dulu.
+  var EVIDENCE_HEADER_FILL = [33, 58, 82];
+  var EVIDENCE_HEADER_TEXT = [205, 224, 242];
   /* Table Label|Value grid full-width, gaya Work Activity Report (pola form_o2_report.html) */
   function drawInfoGrid(fields, labelColW) {
     labelColW = labelColW || 40;
@@ -1998,7 +2004,7 @@ function buildAndShowPdf() {
       firstBlockH += Math.max.apply(null, firstRow.map(function(it){ return it.dim.h; })) + capH0 + 6;
     }
     if (firstBlockH <= (ph - marginTop - marginBottom)) checkPage(firstBlockH); else checkPage(11);
-    secHeader(title);
+    secHeader(title, EVIDENCE_HEADER_FILL, EVIDENCE_HEADER_TEXT);
     rows.forEach(function(row) {
       var totalRowW = row.reduce(function(s,it,idx){ return s + it.dim.w + (idx>0?gap:0); }, 0);
       var capLinesArr = row.map(function(it){ return doc.splitTextToSize(it.img.caption || '-', it.dim.w); });
@@ -2144,56 +2150,6 @@ function restoreDraftData(rec, editingId) {
     applyRecordToForm(rec, editingId);
     if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
   }, 400);
-}
-
-/* ══════════════════ EXPORT CHECKSHEET KE EXCEL (permintaan eksplisit user) ══════════════════
-   Tombol tambahan TERPISAH dari alur PDF/Submit -- PDF tetap format yang
-   dikirim ke Review Approval Dashboard (sama seperti modul lain), Excel ini
-   MURNI unduhan tambahan berisi tabel checklist + pengukuran, meniru
-   struktur ID_FAN_BLADE.xlsx sumber (No | Step Of Work | Criteria | Check
-   500A | Check 500B | Result/Remark). Pakai SheetJS (xlsx.full.min.js),
-   generate 100% di browser, tidak ada server di baliknya. */
-function downloadChecksheetExcel() {
-  if (typeof XLSX === 'undefined') { alert('Library Excel belum termuat. Coba muat ulang halaman.'); return; }
-  function passFailText(row, side) {
-    var pass = side === 'A' ? row.passA : row.passB;
-    var fail = side === 'A' ? row.failA : row.failB;
-    return pass ? 'Y' : fail ? 'N' : '';
-  }
-  // Baris checklist -- utk langkah yang JUGA punya pengukuran (3,4,5,6),
-  // Result/Remark diisi "A: xx% | B: xx%" (gabungan) alih-alih remarks teks
-  // biasa, supaya nilai per-fan tetap kebaca di 1 file Excel yang sama.
-  var measureByStep = {3:0, 4:1, 5:2, 6:3}; // no langkah -> index MEASUREMENT_DATA
-  var rows = [['No','Step Of Work','Criteria','Check 7BG-FAN-500A','Check 7BG-FAN-500B','Result / Remark']];
-  CHECKLIST_DATA.forEach(function(r){
-    var remark = r.remarks;
-    if (measureByStep.hasOwnProperty(r.no)) {
-      var m = MEASUREMENT_DATA[measureByStep[r.no]];
-      remark = 'A: ' + (m.valueA || '-') + ' ' + m.unit + ' | B: ' + (m.valueB || '-') + ' ' + m.unit;
-    }
-    rows.push([r.no, r.activity, r.kriteria, passFailText(r,'A'), passFailText(r,'B'), remark]);
-  });
-  rows.push([]);
-  rows.push(['Finding / Defect']);
-  rows.push(['Keterangan Defect', document.getElementById('hDefectNote').value || '-']);
-
-  var wsInfo = [
-    ['Work Order', document.getElementById('hWorkOrder').value || ''],
-    ['PIC', document.getElementById('hPic').value || ''],
-    ['Tanggal', document.getElementById('hTanggal').value || ''],
-    ['Unit', document.getElementById('hUnit').value || ''],
-    ['Asset Tag', document.getElementById('hAssetTag').value || ''],
-    ['Asset Description', document.getElementById('hAssetDesc').value || ''],
-    ['Work To Be Done', document.getElementById('hWorkToBeDone').value || ''],
-    []
-  ];
-
-  var wb = XLSX.utils.book_new();
-  var ws = XLSX.utils.aoa_to_sheet(wsInfo.concat(rows));
-  ws['!cols'] = [{wch:22},{wch:55},{wch:24},{wch:16},{wch:16},{wch:30}];
-  XLSX.utils.book_append_sheet(wb, ws, 'Checksheet');
-  var fname = 'ID_Fan_Inspect_Blade_Actuator_' + (document.getElementById('hTanggal').value||'draft') + '.xlsx';
-  XLSX.writeFile(wb, fname);
 }
 
 /* ══════════════════ INIT ══════════════════ */

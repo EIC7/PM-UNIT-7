@@ -159,7 +159,7 @@ function modulToPrintUrl(modul, id) { return raModulToPrintUrl(modul, id); }
        sampai di Review Approval Dashboard, firebase_synced_at terisi).
        Ini juga default awal sebelum status Firestore yang lebih spesifik
        (reviewed/approved) berhasil diambil -- lihat historyUpgradeStatusBadges.
-     - Reviewed  (kuning) -- sudah direview TechOp2, menunggu approval SPV.
+     - Reviewed  (oranye) -- sudah direview TechOp2, menunggu approval SPV.
      - Approved  (hijau)  -- sudah disetujui SPV, tuntas.
    Status transisi "SUBMITTED tapi firebase_synced_at belum terisi" (proses
    pengiriman masih berjalan/dicoba ulang di background) bukan salah satu
@@ -536,7 +536,9 @@ function historyDeriveStatus(appr) {
 }
 
 /* 4 tahap: Draft (kuning, historyStatusBadge) -> Submitted (biru) ->
-   Reviewed (kuning) -> Approved (hijau). "returned_to_technician" bukan
+   Reviewed (oranye, SENGAJA dibedakan dari Draft yang kuning walau
+   sama-sama status "menunggu" -- 2026-09-18, laporan user keduanya kelihatan
+   sama warnanya di Riwayat) -> Approved (hijau). "returned_to_technician" bukan
    salah satu dari 4 tahap itu (laporan dikembalikan, bukan maju ke tahap
    berikutnya) -- tetap ditandai terpisah (merah) supaya tidak disangka
    masih di tahap Reviewed biasa. "revision_resubmitted" (lihat
@@ -551,7 +553,7 @@ function historyRaStatusBadge(appr) {
   var raStatus = historyDeriveStatus(appr);
   var map = {
     submitted: { label: 'Submitted', bg: '#dbeafe', fg: '#1e40af' },
-    reviewed: { label: 'Reviewed', bg: '#fef3c7', fg: '#92400e' },
+    reviewed: { label: 'Reviewed', bg: '#ffedd5', fg: '#9a3412' },
     approved: { label: 'Approved', bg: '#dcfce7', fg: '#166534' },
     returned_to_technician: { label: '↩ Dikembalikan ke Teknisi', bg: '#fee2e2', fg: '#991b1b' },
     revision_resubmitted: { label: '🔁 Revisi Submitted', bg: '#ede9fe', fg: '#6d28d9' }
