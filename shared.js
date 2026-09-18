@@ -1751,6 +1751,7 @@ function dbSave(modul, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
         // SAJA berhasil Simpan manual, karena flag-nya masih true dari
         // sebelumnya.
         window._raDirty = false;
+        _pmAutosaveNetworkWarningHide(); // sukses simpan manual -- kalau banner "cek jaringan" masih tampil dari autosave sebelumnya, jaringan sudah normal lagi
         // 2026-09-11: overlay konfirmasi SUKSES (bukan cuma toast kecil) --
         // permintaan eksplisit user, lihat komentar dbShowSavingOverlaySuccess().
         dbShowSavingOverlaySuccess(existingId ? '✓ Data berhasil diperbarui!' : '✓ Data berhasil disimpan!');
@@ -2930,6 +2931,64 @@ function _pmAutosaveFailedIndicator() {
   el.style.opacity = '1';
   el._t = setTimeout(function(){ el.style.opacity = '0'; }, 3000);
 }
+/* 🔴 Banner PERSISTEN khusus autosave server gagal karena JARINGAN
+   (2026-09-18, permintaan eksplisit user) -- BEDA dari
+   _pmAutosaveFailedIndicator() di atas (pill kecil pojok kanan-bawah,
+   auto-fade 3 detik, dipakai utk kegagalan LAIN yang bukan soal jaringan,
+   mis. record sudah dihapus). Kegagalan jaringan HARUS lebih mencolok
+   (banner penuh di atas, TIDAK auto-fade) karena user harus benar-benar
+   sadar supaya TIDAK refresh/tutup tab sebelum draft server sempat
+   tersimpan -- draft LOKAL (IndexedDB, autosaveTrigger()) tetap aman
+   walau ini terjadi, tapi banner ini sengaja tidak menjelaskan itu ke
+   user (permintaan eksplisit teksnya persis begini), supaya user tetap
+   waspada/tidak menutup tab sembarangan.
+   _pmIsLikelyNetworkError() membedakan kegagalan jaringan (fetch gagal
+   total/timeout/browser offline) dari kegagalan LAIN (server sempat
+   membalas tapi isinya error, mis. RLS/record dihapus) -- supaya banner
+   "cek jaringan" ini TIDAK muncul salah utk kasus yang jaringannya
+   sebenarnya baik-baik saja. */
+function _pmIsLikelyNetworkError(err) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+  if (!err) return false;
+  if (err instanceof TypeError) return true; // fetch() gagal total (offline/DNS/CORS) -- tidak pernah sampai dapat respons HTTP apa pun
+  var msg = String(err.message || err);
+  return msg.indexOf('timeout') !== -1 || msg.indexOf('Failed to fetch') !== -1 ||
+    msg.indexOf('NetworkError') !== -1 || msg.indexOf('Load failed') !== -1 ||
+    msg.indexOf('ERR_INTERNET_DISCONNECTED') !== -1;
+}
+function _pmAutosaveNetworkBannerEl() {
+  var el = document.getElementById('pmAutosaveNetworkBanner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'pmAutosaveNetworkBanner';
+    el.className = 'no-print';
+    el.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;z-index:999997;background:#b91c1c;color:#fff;padding:10px 16px 11px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.35)';
+    el.innerHTML =
+      '<div style="font-size:13px;font-weight:800;line-height:1.4">⚠️ Mohon Cek Koneksi Jaringan Anda, Auto save Gagal</div>' +
+      '<div style="font-size:11.5px;font-weight:500;line-height:1.4;margin-top:2px;opacity:0.95">Untuk mengamankan data Anda, harap jangan refresh / tinggalkan / tutup tab ini hingga jaringan Anda normal kembali.</div>';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function _pmAutosaveNetworkWarningShow() {
+  _pmAutosaveNetworkBannerEl().style.display = 'block';
+}
+function _pmAutosaveNetworkWarningHide() {
+  var el = document.getElementById('pmAutosaveNetworkBanner');
+  if (el) el.style.display = 'none';
+}
+// Begitu browser mendeteksi jaringan kembali normal, LANGSUNG coba autosave
+// lagi (bukan nunggu siklus 60 detik berikutnya) -- TAPI cuma kalau banner
+// di atas memang sedang tampil (artinya percobaan TERAKHIR memang gagal
+// karena jaringan), supaya tidak memicu simpan tambahan yang tidak perlu
+// kalau autosave sebelumnya baik-baik saja.
+window.addEventListener('online', function () {
+  var banner = document.getElementById('pmAutosaveNetworkBanner');
+  if (!banner || banner.style.display === 'none') return;
+  if (window._dbSaving) return; // lagi ada proses simpan lain berjalan, biarkan itu selesai dulu
+  if (!window.CURRENT_MODUL || typeof dbCollectData !== 'function') return;
+  dbSaveSilent(window.CURRENT_MODUL);
+});
 /* Dipanggil begitu 1 siklus dbSaveSilent() selesai (sukses/gagal/macet
    lewat watchdog) -- kalau ada panggilan Simpan/Edit-in-place MANUAL yang
    sempat diantre (lihat komentar revisi di atas), jalankan sekarang. */
@@ -2988,6 +3047,7 @@ function dbSaveSilent(modul) {
         window._editingId = savedId || null;
         window._raDirty = false;
         if (typeof autosaveClear === 'function') autosaveClear(); // draft lokal tidak perlu lagi, sudah kepakai di server
+        _pmAutosaveNetworkWarningHide(); // sukses -- kalau sebelumnya banner "cek jaringan" tampil, jaringan sudah normal lagi
         _raServerAutosaveIndicator();
         _pmRunQueuedManualSave(); // Simpan manual yang sempat diantre (lihat komentar revisi di atas) -- jalankan sekarang
       })
@@ -2995,7 +3055,8 @@ function dbSaveSilent(modul) {
         window._dbSaving = false;
         window._dbSavingKind = null;
         console.warn('[autosave-server] gagal simpan otomatis, akan dicoba lagi ~1 menit ke depan:', err);
-        _pmAutosaveFailedIndicator();
+        if (_pmIsLikelyNetworkError(err)) _pmAutosaveNetworkWarningShow();
+        else _pmAutosaveFailedIndicator();
         _pmRunQueuedManualSave();
       });
   });
