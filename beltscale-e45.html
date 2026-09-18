@@ -84,13 +84,17 @@
 .pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
 .pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
 .pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
-/* Widget Y/N khusus baris "Raise new WO & repair if any defect found" --
-   Y=merah (ada defect), N=hijau (aman), default N. Lihat bsRaiseWOCellHtml()
-   di JS. */
-.yn-pair-defect{display:inline-flex;gap:4px}
-.yn-btn-defect{width:28px;height:24px;border-radius:5px;border:1px solid var(--border);background:#fff;color:#333;font-weight:700;font-size:11px;cursor:pointer}
-.yn-btn-defect.y.active{background:#c0392b;color:#fff;border-color:#c0392b}
-.yn-btn-defect.n.active{background:#16a34a;color:#fff;border-color:#16a34a}
+/* Widget Y/N + Remark utk SEMUA baris "check" tabel Step of Work (kecuali
+   tabel isian) -- lihat bsCheckCellHtml() di JS. Baris biasa: Y=biru
+   (--ok, OK), N=merah (--fail, tidak OK). Baris "Raise new WO" (maknanya
+   kebalikan): Y=merah (ada defect), N=hijau (aman), default N. */
+.yn-toggle-bs{display:inline-flex;gap:4px;margin-bottom:4px}
+.yn-btn-bs{width:28px;height:24px;border-radius:5px;border:1px solid var(--border);background:#fff;color:#333;font-weight:700;font-size:11px;cursor:pointer}
+.yn-btn-bs.y.active{background:var(--ok,#2563eb);color:#fff;border-color:var(--ok,#2563eb)}
+.yn-btn-bs.n.active{background:var(--fail,#c0392b);color:#fff;border-color:var(--fail,#c0392b)}
+.yn-btn-bs.y-inv.active{background:#c0392b;color:#fff;border-color:#c0392b}
+.yn-btn-bs.n-inv.active{background:#16a34a;color:#fff;border-color:#16a34a}
+.bs-remark-input{width:100%;font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -1483,10 +1487,10 @@ var BS_CFG = {
 };
 
 var BS_CHECKS = [
-  {no:1,  label:'Make sure PTW already issue.',  criteria:'', type:'check'},
-  {no:2,  label:'Prepare tool & material required.', criteria:'', type:'check'},
+  {no:1,  label:'Make sure PTW already issue.',  criteria:'Ptw Issued', type:'check'},
+  {no:2,  label:'Prepare tool & material required.', criteria:'Tool Ready', type:'check'},
   {no:3,  label:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', criteria:'Cleanliness', type:'check'},
-  {no:4,  label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). * replace if required', criteria:'No dust or dirty\nNo Sign of water ingress\nNo broken condition', type:'check'},
+  {no:4,  label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress into inside of panel/conduit). * replace if required', criteria:'No dust or dirty\nNo Sign of water ingress\nNo broken condition', yText:'No dust/water ingress/broken condition', type:'check'},
   {no:5,  label:'Check connection was tightened and no looses.', criteria:'Tight Connection', type:'check'},
   {no:'6', label:'Belt Scale Calibration', criteria:'', type:'header'},
   {no:'6a', label:'Error Zero Calibration', criteria:'', type:'input', placeholder:'e.g. 0.01%'},
@@ -1494,8 +1498,8 @@ var BS_CHECKS = [
   {no:'6c', label:'Old Zero Change Value', criteria:'', type:'input', placeholder:'e.g. 966149'},
   {no:'6d', label:'Hasil Pengukuran Tegangan Load Cell 1 (mV)', criteria:'', type:'input', placeholder:'e.g. 2.45'},
   {no:'6e', label:'Hasil Pengukuran Tegangan Load Cell 2 (mV)', criteria:'', type:'input', placeholder:'e.g. 2.45'},
-  {no:9,  label:'Raise new WO & repair if any defect found.', criteria:'', type:'check', raiseWO:true},
-  {no:10, label:'Leave the location within safe condition.', criteria:'', type:'check'},
+  {no:9,  label:'Raise new WO & repair if any defect found.', criteria:'', type:'check', raiseWO:true, yText:'Ditemukan Defect, Perlu WO Baru', nText:'Tidak Ada Defect (Aman)'},
+  {no:10, label:'Leave the location within safe condition.', criteria:'Completed', type:'check'},
 ];
 
 var bsImages = {'1':[], '2':[]};
@@ -1528,7 +1532,7 @@ function bsBuildTable() {
   var trAll = document.createElement('tr');
   trAll.style.cssText = 'background:#e8f0fb;border-left:4px solid #2563eb;';
   trAll.innerHTML =
-    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#2563eb;font-weight:600">✓ Centang Semua</td>'+
+    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#2563eb;font-weight:600">✓ Centang Semua Y</td>'+
     '<td style="text-align:center"><input type="checkbox" id="bsAllA" title="'+BS_CFG.a.name+'" onchange="bsCheckAllSide(\'a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#2563eb"></td>'+
     '<td style="text-align:center"><input type="checkbox" id="bsAllB" title="'+BS_CFG.b.name+'" onchange="bsCheckAllSide(\'b\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#2563eb"></td>';
   tbody.appendChild(trAll);
@@ -1546,49 +1550,64 @@ function bsBuildTable() {
         '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
         '<td style="text-align:center"><input type="text" id="bsA_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>'+
         '<td style="text-align:center"><input type="text" id="bsB_'+idx+'" placeholder="'+item.placeholder+'" style="width:100%;min-width:80px;font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:#fff;color:#111;text-align:center"></td>';
-    } else if (item.raiseWO) {
-      // "Raise new WO & repair if any defect found" -- SENGAJA BUKAN checkbox
-      // konfirmasi-tugas biasa seperti baris lain (2026-09-18, permintaan
-      // eksplisit user): Y = DITEMUKAN defect (perlu WO baru), N = TIDAK ada
-      // defect (aman) -- makna Y/N di baris ini KEBALIKAN dari kesan umum
-      // "centang = OK", jadi dibuat widget Y/N terpisah (bukan checkbox
-      // polos) supaya jelas 2 pilihan eksplisit, bukan cuma tercentang/tidak.
-      // N (aman) HIJAU, Y (ada defect) MERAH, default N. Lihat
-      // bsRaiseWOCellHtml()/bsSetDefectYN() di bawah.
-      tr.innerHTML =
-        '<td style="text-align:center;font-size:12px;color:var(--text3)">'+(item.no||'')+'</td>'+
-        '<td style="font-size:12px;padding:6px 10px">'+item.label+'</td>'+
-        '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
-        '<td style="text-align:center">'+bsRaiseWOCellHtml('a', idx)+'</td>'+
-        '<td style="text-align:center">'+bsRaiseWOCellHtml('b', idx)+'</td>';
     } else {
+      // Semua baris "check" (kecuali tabel isian di atas) SEKARANG pakai
+      // widget Y/N + Remark (2026-09-18, permintaan eksplisit user) --
+      // BUKAN lagi checkbox konfirmasi-tugas polos. Baris normal: Y=OK
+      // (biru/--ok), N=Tidak OK (merah/--fail). Baris "Raise new WO"
+      // (item.raiseWO) maknanya KEBALIKAN: Y=ada defect (MERAH), N=aman
+      // (HIJAU), default N -- lihat bsCheckCellHtml()/bsApplyCheck().
       tr.innerHTML =
         '<td style="text-align:center;font-size:12px;color:var(--text3)">'+(item.no||'')+'</td>'+
         '<td style="font-size:12px;padding:6px 10px">'+item.label+'</td>'+
         '<td style="font-size:11px;color:var(--text3);font-style:italic">'+cHtml+'</td>'+
-        '<td style="text-align:center"><input type="checkbox" id="bsA_'+idx+'" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>'+
-        '<td style="text-align:center"><input type="checkbox" id="bsB_'+idx+'" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></td>';
+        '<td style="text-align:center">'+bsCheckCellHtml('a', idx, item)+'</td>'+
+        '<td style="text-align:center">'+bsCheckCellHtml('b', idx, item)+'</td>';
     }
     tbody.appendChild(tr);
   });
 }
-function bsRaiseWOCellHtml(side, idx) {
-  return '<input type="hidden" id="bs'+side.toUpperCase()+'_'+idx+'" value="N">'+
-    '<div class="yn-pair-defect" id="bsYN_'+side+'_'+idx+'">'+
-      '<button type="button" data-val="Y" class="yn-btn-defect y" onclick="bsSetDefectYN('+idx+',\''+side+'\',\'Y\')">Y</button>'+
-      '<button type="button" data-val="N" class="yn-btn-defect n active" onclick="bsSetDefectYN('+idx+',\''+side+'\',\'N\')">N</button>'+
-    '</div>';
+function bsCheckCellHtml(side, idx, item) {
+  var isInv = !!item.raiseWO;
+  var yClass = isInv ? 'y-inv' : 'y';
+  var nClass = isInv ? 'n-inv' : 'n';
+  var defaultVal = isInv ? 'N' : '';
+  var S = side.toUpperCase();
+  return '<input type="hidden" id="bs'+S+'_'+idx+'" value="'+defaultVal+'">'+
+    '<div class="yn-toggle-bs" id="bsYN_'+side+'_'+idx+'">'+
+      '<button type="button" data-val="Y" class="yn-btn-bs '+yClass+(defaultVal==='Y'?' active':'')+'" onclick="bsSetCheck('+idx+',\''+side+'\',\'Y\')">Y</button>'+
+      '<button type="button" data-val="N" class="yn-btn-bs '+nClass+(defaultVal==='N'?' active':'')+'" onclick="bsSetCheck('+idx+',\''+side+'\',\'N\')">N</button>'+
+    '</div>'+
+    '<input type="text" id="bsRemark'+S+'_'+idx+'" value="" placeholder="Remark..." class="bs-remark-input">';
 }
-function bsSetDefectYN(idx, side, val) {
+function bsApplyCheck(idx, side, val) {
+  var S = side.toUpperCase();
+  var hidden = document.getElementById('bs'+S+'_'+idx);
+  if (!hidden) return;
+  hidden.value = val;
+  var item = BS_CHECKS[idx];
+  var remarkEl = document.getElementById('bsRemark'+S+'_'+idx);
+  if (remarkEl && item) {
+    if (item.yText || item.nText) {
+      if (val === 'Y') remarkEl.value = item.yText || item.criteria || '';
+      else if (val === 'N') remarkEl.value = item.nText || '';
+    } else if (val === 'Y' && !remarkEl.value) {
+      remarkEl.value = (item.criteria || '').replace(/\n/g, ', ');
+    }
+  }
+  bsSyncCheckVisual(idx, side);
+}
+function bsSetCheck(idx, side, val) {
   var hidden = document.getElementById('bs'+side.toUpperCase()+'_'+idx);
-  if (hidden) hidden.value = val;
-  bsSyncDefectYNVisual(idx, side);
+  var newVal = (hidden && hidden.value === val) ? '' : val;
+  bsApplyCheck(idx, side, newVal);
+  bsRefreshAllChecks();
 }
-function bsSyncDefectYNVisual(idx, side) {
+function bsSyncCheckVisual(idx, side) {
   var hidden = document.getElementById('bs'+side.toUpperCase()+'_'+idx);
   var wrap = document.getElementById('bsYN_'+side+'_'+idx);
   if (!hidden || !wrap) return;
-  var val = hidden.value || 'N';
+  var val = hidden.value || '';
   wrap.querySelectorAll('button').forEach(function(b){
     b.classList.toggle('active', b.getAttribute('data-val') === val);
   });
@@ -1596,30 +1615,29 @@ function bsSyncDefectYNVisual(idx, side) {
 
 function bsCheckAll(checked) {
   BS_CHECKS.forEach(function(item, idx) {
-    if (item.type === 'header') return;
-    if (item.type === 'check') {
-      ['bsA_','bsB_'].forEach(function(p){var e=document.getElementById(p+idx);if(e&&e.type==='checkbox')e.checked=checked;});
-    }
+    if (item.type !== 'check' || item.raiseWO) return;
+    bsApplyCheck(idx, 'a', checked ? 'Y' : '');
+    bsApplyCheck(idx, 'b', checked ? 'Y' : '');
   });
   var a=document.getElementById('bsAllA'); if(a) a.checked=checked;
   var b=document.getElementById('bsAllB'); if(b) b.checked=checked;
 }
 function bsCheckAllSide(side, checked) {
-  var prefix = side==='a' ? 'bsA_' : 'bsB_';
   BS_CHECKS.forEach(function(item, idx) {
-    if (item.type !== 'check') return;
-    var e = document.getElementById(prefix+idx); if(e&&e.type==='checkbox') e.checked=checked;
+    if (item.type !== 'check' || item.raiseWO) return;
+    bsApplyCheck(idx, side, checked ? 'Y' : '');
   });
+  bsRefreshAllChecks();
 }
 function bsRefreshAllChecks() {
   var allA = true, allB = true, hasCheck = false;
   BS_CHECKS.forEach(function(item, idx) {
-    if (item.type !== 'check' || item.raiseWO) return; // raiseWO bukan checkbox konfirmasi biasa, dikecualikan dari "Centang Semua"
+    if (item.type !== 'check' || item.raiseWO) return; // raiseWO dikecualikan dari "Centang Semua Y"
     hasCheck = true;
     var a = document.getElementById('bsA_'+idx);
     var b = document.getElementById('bsB_'+idx);
-    if (!(a && a.checked)) allA = false;
-    if (!(b && b.checked)) allB = false;
+    if (!(a && a.value === 'Y')) allA = false;
+    if (!(b && b.value === 'Y')) allB = false;
   });
   var aAll = document.getElementById('bsAllA');
   var bAll = document.getElementById('bsAllB');
@@ -1906,9 +1924,15 @@ function bsDownloadPdf() {
       if (item.raiseWO) {
         aVal = (aEl && aEl.value === 'Y') ? '__DEFECT_Y__' : '__DEFECT_N__';
         bVal = (bEl && bEl.value === 'Y') ? '__DEFECT_Y__' : '__DEFECT_N__';
+      } else if (item.type === 'input') {
+        aVal = safe(aEl?aEl.value:'');
+        bVal = safe(bEl?bEl.value:'');
       } else {
-        aVal=item.type==='input'?safe(aEl?aEl.value:''):(aEl&&aEl.checked?'__CHK__':'__BOX__');
-        bVal=item.type==='input'?safe(bEl?bEl.value:''):(bEl&&bEl.checked?'__CHK__':'__BOX__');
+        var aRemarkEl = document.getElementById('bsRemarkA_'+idx), bRemarkEl = document.getElementById('bsRemarkB_'+idx);
+        var aYN = aEl ? aEl.value : '', bYN = bEl ? bEl.value : '';
+        var aRemark = aRemarkEl ? aRemarkEl.value : '', bRemark = bRemarkEl ? bRemarkEl.value : '';
+        aVal = (aYN || '-') + (aRemark ? (' - ' + aRemark) : '');
+        bVal = (bYN || '-') + (bRemark ? (' - ' + bRemark) : '');
       }
       tableRows.push([String(item.no||''),safe(item.label),safe((item.criteria||'').replace(/\n/g,' / ')),aVal,bVal]);
     });
@@ -1920,28 +1944,22 @@ function bsDownloadPdf() {
       margin:{left:marginX,right:marginX,top:20},
       headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},
       bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-      columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:77},2:{cellWidth:43},3:{cellWidth:20,halign:'center'},4:{cellWidth:20,halign:'center'}},
+      columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:65},2:{cellWidth:25},3:{cellWidth:35,halign:'center'},4:{cellWidth:35,halign:'center'}},
       alternateRowStyles:{fillColor:[246,249,247]},
       willDrawPage: function(data) { if (data.pageNumber > 1) { bsDrawBg(doc, pw, ph); } },
       didDrawCell: function(data) {
         if (data.section !== 'body') return;
         if (data.column.index !== 3 && data.column.index !== 4) return;
         var val = data.cell.raw;
+        if (val !== '__DEFECT_Y__' && val !== '__DEFECT_N__') return;
         var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,249,247];
-        if (val === '__DEFECT_Y__' || val === '__DEFECT_N__') {
-          doc.setFillColor(bg[0], bg[1], bg[2]);
-          doc.rect(data.cell.x+0.2, data.cell.y+0.2, data.cell.width-0.4, data.cell.height-0.4, 'F');
-          var isY = val === '__DEFECT_Y__';
-          doc.setFont('helvetica','bold'); doc.setFontSize(8);
-          doc.setTextColor(isY?192:22, isY?57:163, isY?43:74);
-          doc.text(isY ? 'Y' : 'N', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2 + 1, {align:'center'});
-          doc.setTextColor(20,30,25);
-          return;
-        }
-        if (val !== '__CHK__' && val !== '__BOX__') return;
         doc.setFillColor(bg[0], bg[1], bg[2]);
         doc.rect(data.cell.x+0.2, data.cell.y+0.2, data.cell.width-0.4, data.cell.height-0.4, 'F');
-        drawCheckboxBs(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val === '__CHK__');
+        var isY = val === '__DEFECT_Y__';
+        doc.setFont('helvetica','bold'); doc.setFontSize(8);
+        doc.setTextColor(isY?192:22, isY?57:163, isY?43:74);
+        doc.text(isY ? 'Y' : 'N', data.cell.x + data.cell.width/2, data.cell.y + data.cell.height/2 + 1, {align:'center'});
+        doc.setTextColor(20,30,25);
       }
     });
     y = doc.lastAutoTable.finalY + 8;
@@ -2045,7 +2063,14 @@ function dbCollectData(modul) {
   BS_CHECKS.forEach(function(item, idx){
     if (item.type==='header') return;
     var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
-    checks[idx] = {a:aEl?(aEl.type==='checkbox'?aEl.checked:aEl.value):'', b:bEl?(bEl.type==='checkbox'?bEl.checked:bEl.value):''};
+    var aVal = aEl ? (aEl.value || '') : '';
+    var bVal = bEl ? (bEl.value || '') : '';
+    if (item.type === 'input') {
+      checks[idx] = {a:aVal, b:bVal};
+    } else {
+      var aRemarkEl = document.getElementById('bsRemarkA_'+idx), bRemarkEl = document.getElementById('bsRemarkB_'+idx);
+      checks[idx] = {a:aVal, aRemark:aRemarkEl?aRemarkEl.value||'':'', b:bVal, bRemark:bRemarkEl?bRemarkEl.value||'':''};
+    }
   });
   var keepImage = function(img){
     var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};
@@ -2075,12 +2100,19 @@ function applyRecordToForm(rec, editingId) {
   if (data.notes) { gv('bsNote1',data.notes.note1||''); gv('bsNote2',data.notes.note2||''); }
   if (data.checks) {
     Object.keys(data.checks).forEach(function(i){
-      var c=data.checks[i];
+      var c=data.checks[i] || {};
       var aEl=document.getElementById('bsA_'+i), bEl=document.getElementById('bsB_'+i);
-      if(aEl){if(aEl.type==='checkbox')aEl.checked=!!c.a;else aEl.value=(typeof c.a==='boolean'?'':c.a)||'';}
-      if(bEl){if(bEl.type==='checkbox')bEl.checked=!!c.b;else bEl.value=(typeof c.b==='boolean'?'':c.b)||'';}
-      // no-op utk baris selain "Raise new WO" (elemen #bsYN_<side>_<i> tidak ada)
-      bsSyncDefectYNVisual(i, 'a'); bsSyncDefectYNVisual(i, 'b');
+      // Migrasi data lama: dulu boolean checkbox polos (true/false) --
+      // dikonversi ke 'Y'/'' supaya kompatibel dgn widget Y/N sekarang.
+      var aConv = (typeof c.a === 'boolean') ? (c.a ? 'Y' : '') : (c.a || '');
+      var bConv = (typeof c.b === 'boolean') ? (c.b ? 'Y' : '') : (c.b || '');
+      if (aEl) aEl.value = aConv;
+      if (bEl) bEl.value = bConv;
+      var aRemarkEl = document.getElementById('bsRemarkA_'+i), bRemarkEl = document.getElementById('bsRemarkB_'+i);
+      if (aRemarkEl) aRemarkEl.value = c.aRemark || '';
+      if (bRemarkEl) bRemarkEl.value = c.bRemark || '';
+      // no-op utk baris "input" (elemen #bsYN_<side>_<i> tidak ada)
+      bsSyncCheckVisual(i, 'a'); bsSyncCheckVisual(i, 'b');
     });
     bsRefreshAllChecks();
   }
