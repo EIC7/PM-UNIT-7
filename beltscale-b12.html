@@ -139,6 +139,7 @@
   <!-- CHECKLIST TABLE -->
   <div class="panel">
     <div class="section-label" id="bsCheckLabel">Monthly — BELT CONVEYOR B1-B2</div>
+    <button type="button" class="btn btn-outline" onclick="bsCheckAllY()" style="margin-bottom:10px">&#9989; Centang Semua Y</button>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table class="manual-table" id="bsCheckTable">
         <thead>
@@ -346,7 +347,6 @@
 
   <!-- BUTTONS -->
   <div class="btn-row" style="margin-top:16px">
-    <button class="btn btn-primary" onclick="bsCheckAllY()">&#9989; Centang Semua Y (B1 &amp; B2)</button>
     <button class="btn btn-pdf" onclick="bsDownloadPdf()">&#8595; Print Preview & Download PDF</button>
     <button class="btn" style="background:#0891b2;color:#fff;border-color:#0891b2;padding:14px 22px;font-size:15px;min-height:48px;min-width:180px" onclick="dbSave('beltscale')">&#128190; Simpan ke Database</button>
     <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=bsDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
