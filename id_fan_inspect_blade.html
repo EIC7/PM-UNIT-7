@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260918a"></script>
+<script src="shared.js?v=20260921a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -1472,7 +1472,9 @@ function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, functi
 
 /* ═══ DATA MODUL — ID FAN INSPECT MOVING BLADE ACTUATOR ═══ */
 
-/* Checklist (9 langkah, persis sesuai checksheet Excel ID_FAN_BLADE.xlsx).
+/* Checklist (10 langkah -- 9 langkah asli checksheet Excel ID_FAN_BLADE.xlsx
+   + 1 langkah tambahan no.8 "enclosure/body compartment BPC" yang disisipkan
+   2026-09-21 sesuai permintaan eksplisit user, ditaruh setelah langkah 7).
    Setiap baris punya 2 pasang checkbox Pass/Fail independen: satu untuk
    7BG-FAN-500A, satu untuk 7BG-FAN-500B -- pola SAMA PERSIS dengan
    id_fan_line_purging.html (lihat toggleChecklistFlag()/computeChecklistRemark()
@@ -1496,9 +1498,11 @@ var CHECKLIST_DATA = [
     yText:'Instrument Air Regulator Sudah Diset 5.5 Bar', nText:'Instrument Air Regulator Belum Sesuai Setting 5.5 Bar'},
   {no:7, activity:'Check Condition Pressure Indicator Inlet and Outlet Positioner Valve', kriteria:'bright or blurry',
     yText:'Pressure Indicator Inlet & Outlet Positioner Valve Kondisi Jelas (Bright)', nText:'Pressure Indicator Inlet/Outlet Positioner Valve Buram (Blurry)'},
-  {no:8, activity:'Raise new WO & repair if any defect found.', kriteria:'No Finding',
+  {no:8, activity:'Make sure the enclosure/body compartment for the BPC is safe. No corrosive parts and no peeling paint.', kriteria:'No corrosion / No peeling paint',
+    yText:'Enclosure/Body Compartment BPC Dalam Kondisi Aman, Tidak Ada Korosi/Cat Mengelupas', nText:'Ditemukan Korosi atau Cat Mengelupas pada Enclosure/Body Compartment BPC'},
+  {no:9, activity:'Raise new WO & repair if any defect found.', kriteria:'No Finding',
     yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
-  {no:9, activity:'Leave the location within safe condition', kriteria:'Safe',
+  {no:10, activity:'Leave the location within safe condition', kriteria:'Safe',
     yText:'Lokasi Kerja Sudah Ditinggalkan dalam Kondisi Aman dan Rapi', nText:'Lokasi Kerja Belum dalam Kondisi Aman / Masih Perlu Dirapikan'}
 ].map(function(r){
   return {no:r.no, activity:r.activity, kriteria:r.kriteria, yText:r.yText, nText:r.nText, passA:false, failA:false, passB:false, failB:false, remarks:''};
@@ -1594,19 +1598,14 @@ function toggleChecklistFlag(idx, key, checked) {
   row.remarks = computeChecklistRemark(row);
   buildChecklistTable();
 }
-/* Centang Semua Y -- shortcut isi Pass utk semua baris SEKALIGUS, KECUALI
-   poin 8 "Raise new WO & repair if any defect found." yang SENGAJA
-   dikecualikan & di-default-kan ke Fail ("No") -- baris ini menentukan
-   ADA/TIDAKNYA defect, jadi tombol shortcut TIDAK BOLEH diam-diam
-   mengasumsikan "tidak ada defect" (Pass); teknisi wajib meninjau &
-   mengubahnya manual jadi Pass kalau memang benar tidak ada defect. */
+/* Centang Semua Y -- isi Pass utk SEMUA baris SEKALIGUS, TERMASUK
+   poin 8 "Raise new WO & repair if any defect found." (revisi 2026-09-21,
+   permintaan eksplisit user -- SEBELUMNYA baris ini sengaja dikecualikan &
+   di-default-kan ke Fail, tapi keputusan itu dibalik: sekarang Centang
+   Semua Y berarti Y utk SEMUA baris tanpa kecuali). */
 function checkAllChecklistY() {
   CHECKLIST_DATA.forEach(function(row) {
-    if (row.no === 8) {
-      row.passA = false; row.failA = true; row.passB = false; row.failB = true;
-    } else {
-      row.passA = true; row.failA = false; row.passB = true; row.failB = false;
-    }
+    row.passA = true; row.failA = false; row.passB = true; row.failB = false;
     row.remarks = computeChecklistRemark(row);
   });
   buildChecklistTable();

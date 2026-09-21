@@ -2299,19 +2299,21 @@ function cropReset() {
   document.getElementById('cropOutH').value = ih;
 }
 
-function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx) {
+function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx, defaultCaption) {
   var modal = document.getElementById('cropModal');
   var cropImg = document.getElementById('cropImg');
   var ridx = (replaceIdx!==undefined?replaceIdx:-1);
   modal._pending = {dataUrl:dataUrl, name:name, type:type, imgArr:imgArr, side:side, modulePrefix:modulePrefix, replaceIdx:ridx};
 
   // Keterangan (caption) -- pre-isi dari foto lama kalau ini crop-ulang,
-  // kosong kalau foto baru. Diedit di sini (SELAMA crop berlangsung, bukan
-  // cuma sesudahnya di galeri) -- lihat cropAndSave()/skipCrop() yang
-  // membaca nilai input ini saat menyimpan.
+  // atau dari `defaultCaption` (opsional, mis. nama step of work -- lihat
+  // mark_vie_inspection.html) kalau ini foto baru, kosong kalau tidak ada
+  // keduanya. Diedit di sini (SELAMA crop berlangsung, bukan cuma sesudahnya
+  // di galeri) -- lihat cropAndSave()/skipCrop() yang membaca nilai input
+  // ini saat menyimpan.
   var capInput = document.getElementById('cropCaptionInput');
   if (capInput) {
-    var existingCap = (ridx >= 0 && imgArr[ridx]) ? (imgArr[ridx].caption || '') : '';
+    var existingCap = (ridx >= 0 && imgArr[ridx]) ? (imgArr[ridx].caption || '') : (defaultCaption || '');
     capInput.value = existingCap;
   }
 
@@ -2461,10 +2463,10 @@ function cropRedo() {
    foto dalam antrean ini (replaceIdx selalu -1, semua foto BARU/ditambahkan,
    bukan crop-ulang). */
 var cropQueue = null;
-function imgOpenCropperQueue(files, imgArr, side, modulePrefix) {
+function imgOpenCropperQueue(files, imgArr, side, modulePrefix, defaultCaption) {
   var fileArr = Array.prototype.slice.call(files || []);
   if (!fileArr.length) return;
-  cropQueue = { files: fileArr, idx: 0, imgArr: imgArr, side: side, modulePrefix: modulePrefix, total: fileArr.length };
+  cropQueue = { files: fileArr, idx: 0, imgArr: imgArr, side: side, modulePrefix: modulePrefix, total: fileArr.length, defaultCaption: defaultCaption };
   cropQueueOpenCurrent();
 }
 function cropQueueOpenCurrent() {
@@ -2474,7 +2476,7 @@ function cropQueueOpenCurrent() {
   var afterDataUrl = function(dataUrl) {
     if (!cropQueue) return; // sempat dibatalkan (cropQueueCancelRest) selagi menunggu konversi file
     if (!dataUrl) { cropQueueAdvance(); return; } // gagal baca file ini -- lanjut ke berikutnya, jangan macet
-    imgOpenCropper(dataUrl, file.name, file.type || 'image/jpeg', cropQueue.imgArr, cropQueue.side, cropQueue.modulePrefix, -1);
+    imgOpenCropper(dataUrl, file.name, file.type || 'image/jpeg', cropQueue.imgArr, cropQueue.side, cropQueue.modulePrefix, -1, cropQueue.defaultCaption);
   };
   if (typeof fileToJpegDataUrl === 'function') fileToJpegDataUrl(file, afterDataUrl);
   else { var r = new FileReader(); r.onload = function(e){ afterDataUrl(e.target.result); }; r.readAsDataURL(file); }
@@ -2699,6 +2701,14 @@ function imgCompressAndStore(canvas, name, imgArr, side, modulePrefix, rawDataUr
   else if (modulePrefix === 'cs') {
     if (typeof csRenderPreviews === 'function') csRenderPreviews(side);
     if (typeof csUpdateSizeInfo === 'function') csUpdateSizeInfo(side);
+  }
+  else if (modulePrefix === 'mv') {
+    // 🔴 Case ini SEMPAT TIDAK ADA (bug ditemukan 2026-09-21) -- mark_vie_
+    // inspection.html sudah lama punya fungsi mvRenderPreviews(side) yang
+    // didesain utk dipanggil dari sini, tapi dispatch-nya kelewat waktu
+    // modul itu dibuat, jadi thumbnail evidence per-baris tidak pernah
+    // ter-refresh otomatis setelah crop selesai.
+    if (typeof mvRenderPreviews === 'function') mvRenderPreviews(side);
   }
 }
 

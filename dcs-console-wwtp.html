@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260918a"></script>
+<script src="shared.js?v=20260921a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -394,7 +394,7 @@ body{
       </div>
       <div class="meta-field">
         <label>Asset</label>
-        <input type="text" id="dcsAsset" value="CEC-DROP-WWT1 / WWT2">
+        <input type="text" id="dcsAsset" value="CEC-DROP-214 / WWT">
       </div>
       <div class="meta-field">
         <label>Asset Description</label>
@@ -1796,8 +1796,13 @@ var DCS_CHECKS = [
 // modul sendiri (area Common WWTP, beda reviewer dari Unit 7 MCR) dengan
 // 2 tag asli (bukan placeholder generik lagi) -- lihat CLAUDE.md.
 var DCS_DROPS = [
-  {id:'dropwwt1', label:'CEC-DROP-WWT1', desc:'WWT Area - DCS Operator Console No 1'},
-  {id:'dropwwt2', label:'CEC-DROP-WWT2', desc:'WWT Area - Operator Interface Station Console No 2'},
+  // Label/deskripsi direvisi 2026-09-21 (permintaan eksplisit user) --
+  // id INTERNAL (dropwwt1/dropwwt2) SENGAJA TIDAK diubah supaya data
+  // historis yang sudah tersimpan (key dcsActiveDrops/data.checks[idx].drops
+  // pakai id lama) tetap kebaca normal, sama seperti pola drop210-214 di
+  // dcs-hmi-inspection.html.
+  {id:'dropwwt1', label:'CEC-DROP-214', desc:'WWT Area - DCS Operator Console'},
+  {id:'dropwwt2', label:'CEC-DROP-WWT', desc:'WWT Area - Operator Interface Station Console'},
 ];
 
 var dcsImages = {}; // key: '<dropId>_evidence'/'<dropId>_defect' -> array foto

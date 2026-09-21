@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260918a"></script>
+<script src="shared.js?v=20260921a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -1482,9 +1482,9 @@ function escapeHtmlG(s) { return String(s==null?'':s).replace(/[&<>"']/g, functi
    di bawah) -- kalimat lengkap yang menjelaskan hasil pemeriksaan baris itu,
    BUKAN cuma "Not"/"No" polos (contoh logika dari user, bukan teks final).
    Poin 10 (Raise new WO) SENGAJA kebalikan makna: Pass = "tidak ada defect"
-   (bagus), Fail = "ada defect, WO baru diajukan") -- lihat catatan di
-   checkAllChecklistY() kenapa baris ini DIKECUALIKAN dari tombol Centang
-   Semua Y.
+   (bagus), Fail = "ada defect, WO baru diajukan") -- baris ini TETAP ikut
+   di-set Pass oleh tombol Centang Semua Y (lihat checkAllChecklistY(),
+   revisi 2026-09-21 -- sebelumnya dikecualikan, sekarang tidak lagi).
    Nomor "8" SENGAJA dilewati (langkah 8 = tabel pengukuran + evidence
    Purging Line Flow Transmitter, lihat MEASUREMENT_DATA/PURGING_EVIDENCE_GROUPS
    di bawah) -- direvisi 2026-09-15, menambah 1 langkah baru (no.4) yang
@@ -1624,19 +1624,14 @@ function toggleChecklistFlag(idx, key, checked) {
   row.remarks = computeChecklistRemark(row);
   buildChecklistTable();
 }
-/* Centang Semua Y -- shortcut isi Pass utk semua baris SEKALIGUS, KECUALI
-   poin 10 "Raise new WO & repair if any defect found." yang SENGAJA
-   dikecualikan & di-default-kan ke Fail ("No") -- baris ini menentukan
-   ADA/TIDAKNYA defect, jadi tombol shortcut TIDAK BOLEH diam-diam
-   mengasumsikan "tidak ada defect" (Pass); teknisi wajib meninjau &
-   mengubahnya manual jadi Pass kalau memang benar tidak ada defect. */
+/* Centang Semua Y -- isi Pass utk SEMUA baris SEKALIGUS, TERMASUK poin 10
+   "Raise new WO & repair if any defect found." (revisi 2026-09-21,
+   permintaan eksplisit user -- SEBELUMNYA baris ini sengaja dikecualikan &
+   di-default-kan ke Fail, tapi keputusan itu dibalik: sekarang Centang
+   Semua Y berarti Y utk SEMUA baris tanpa kecuali). */
 function checkAllChecklistY() {
   CHECKLIST_DATA.forEach(function(row) {
-    if (row.no === 10) {
-      row.passA = false; row.failA = true; row.passB = false; row.failB = true;
-    } else {
-      row.passA = true; row.failA = false; row.passB = true; row.failB = false;
-    }
+    row.passA = true; row.failA = false; row.passB = true; row.failB = false;
     row.remarks = computeChecklistRemark(row);
   });
   buildChecklistTable();

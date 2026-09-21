@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260918a"></script>
+<script src="shared.js?v=20260921a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -142,7 +142,15 @@
       </table>
     </div>
   </div>
-  <input type="file" id="mvRowFileInput" accept="image/*,.heic,.heif" style="display:none" onchange="mvRowFileSelected(this)">
+  <input type="file" id="mvRowFileInput" accept="image/*,.heic,.heif" multiple style="display:none" onchange="mvRowFileSelected(this)">
+
+  <!-- EVIDENCE PHOTO — galeri gabungan SEMUA foto dari SEMUA baris checklist,
+       dikumpulkan di bawah tabel (bukan inline di dalam sel), disembunyikan
+       kalau belum ada foto sama sekali. Diisi oleh JS lewat mvBuildGallery(). -->
+  <div class="panel" id="mvGalleryPanel" style="display:none">
+    <div class="section-label">Evidence Photo</div>
+    <div id="mvGalleryContainer" style="display:flex;flex-wrap:wrap;gap:12px"></div>
+  </div>
 
   <div class="panel">
     <div class="btn-row">
@@ -1415,52 +1423,93 @@ function closePdfPreview() {
    ══════════════════════════════════════════════════════════════════════════ */
 var MV_MODUL_NAME = 'Mark VIe Alarm & Module Inspection';
 
+/* yText/nText = keterangan otomatis yang diisi ke kolom Remark begitu
+   Yes/No dipilih (lihat mvSetYN()/mvComputeRemark() di bawah) -- pola SAMA
+   dgn checklist Y/N di id_fan_line_purging.html/beltscale-*.html (revisi
+   2026-09-21, permintaan eksplisit user: "samakan gayanya"). `remark` (kalau
+   ada) tetap jadi teks default AWAL sebelum Yes/No dipilih (TIDAK dihapus --
+   beberapa item punya catatan baku spt "Drive D is not available." yang
+   tetap relevan tampil di awal); begitu Yes/No dipilih, remark timpa jadi
+   yText/nText seperti item lain. */
 var MV_SECTIONS = [
   { no:'1', title:'Alarm Viewer (Alarm Monitoring)', items:[
-    {label:'Open the Alarm Viewer application from the HMI desktop shortcut.'},
-    {label:'Classify alarms into Operation or Diagnostic.'},
-    {label:'Check the timestamp, description, and priority of each alarm.'},
-    {label:'Identify the alarm by Right-click on the alarm to view additional details if available (Go to Definition in Logic).'},
-    {label:'Compare alarms with the event log for further troubleshooting if required.'},
-    {label:'Record all critical alarms and raise a Service Request (SR) if necessary.'},
-    {label:'Take alarm screenshots and archive them on D:\\PM Data\\..year..\\Alarm for review. Save the file by name following format: "Alarm XX-YY-ZZZZ.png" (XX = Date, YY = Month, ZZZZ = Year)', remark:'Drive D is not available.'}
+    {label:'Open the Alarm Viewer application from the HMI desktop shortcut.',
+      yText:'Alarm Viewer Sudah Dibuka dari HMI Desktop Shortcut', nText:'Alarm Viewer Belum/Tidak Bisa Dibuka dari HMI Desktop Shortcut'},
+    {label:'Classify alarms into Operation or Diagnostic.',
+      yText:'Alarm Sudah Diklasifikasikan ke Operation atau Diagnostic', nText:'Alarm Belum Diklasifikasikan ke Operation atau Diagnostic'},
+    {label:'Check the timestamp, description, and priority of each alarm.',
+      yText:'Timestamp, Deskripsi, dan Priority Tiap Alarm Sudah Diperiksa', nText:'Timestamp, Deskripsi, dan/atau Priority Alarm Belum Diperiksa'},
+    {label:'Identify the alarm by Right-click on the alarm to view additional details if available (Go to Definition in Logic).',
+      yText:'Alarm Sudah Diidentifikasi Lewat Right-click (Go to Definition)', nText:'Alarm Belum Diidentifikasi / Detail Definition Tidak Tersedia'},
+    {label:'Compare alarms with the event log for further troubleshooting if required.',
+      yText:'Alarm Sudah Dibandingkan dengan Event Log, Tidak Ada Kejanggalan', nText:'Ditemukan Kejanggalan Saat Membandingkan Alarm dengan Event Log'},
+    {label:'Record all critical alarms and raise a Service Request (SR) if necessary.',
+      yText:'Semua Alarm Kritikal Sudah Dicatat, SR Diajukan Bila Perlu', nText:'Ditemukan Alarm Kritikal yang Belum Dicatat / SR Belum Diajukan'},
+    {label:'Take alarm screenshots and archive them on D:\\PM Data\\..year..\\Alarm for review. Save the file by name following format: "Alarm XX-YY-ZZZZ.png" (XX = Date, YY = Month, ZZZZ = Year)', remark:'Drive D is not available.',
+      yText:'Screenshot Alarm Sudah Diambil dan Diarsipkan ke D:\\PM Data', nText:'Screenshot Alarm Belum Diarsipkan (Drive D is not available.)'}
   ]},
   { no:'2', title:'ToolboxST (Module Diagnostics)', items:[
-    {label:'Open the ToolboxST application from the HMI desktop shortcut.'},
-    {label:'Navigate to folder S7 (Unit 7) or S8 (Unit 8).'},
-    {label:'Click the Hardware tab to display the module list.'},
-    {label:'Check for any exclamation marks (!) in the System Tree as an indication of module warnings.', remark:'See details picture'},
-    {label:'Click the module with an (!) to view detailed diagnostics and fault location.', remark:'See details picture'},
-    {label:"Verify module status: 'OK', 'Fault', 'Missing', or 'Degraded'.", remark:'See details picture'},
-    {label:'Check module health indicators: power supply voltage and internal temperature.', remark:'PS4,5,6 OK Led Normal'},
-    {label:'Record any modules with warning/fault status, including name and slot.'},
-    {label:'Take screenshots of warning indicators and diagnostic status as evidence and save to D:\\PM Data\\..year..\\Alarm for review. Save the file by name following format: "Alarm XX-YY-ZZZZ.png" (XX = Date, YY = Month, ZZZZ = Year)', remark:'Drive D not available'},
-    {label:'Go to the Event Viewer menu to check the module status change log.'}
+    {label:'Open the ToolboxST application from the HMI desktop shortcut.',
+      yText:'ToolboxST Sudah Dibuka dari HMI Desktop Shortcut', nText:'ToolboxST Belum/Tidak Bisa Dibuka dari HMI Desktop Shortcut'},
+    {label:'Navigate to folder S7 (Unit 7) or S8 (Unit 8).',
+      yText:'Sudah Masuk ke Folder S7/S8 yang Sesuai', nText:'Belum/Gagal Masuk ke Folder S7/S8 yang Sesuai'},
+    {label:'Click the Hardware tab to display the module list.',
+      yText:'Tab Hardware Sudah Dibuka, Daftar Module Tampil', nText:'Tab Hardware Belum Dibuka / Daftar Module Tidak Tampil'},
+    {label:'Check for any exclamation marks (!) in the System Tree as an indication of module warnings.', remark:'See details picture',
+      yText:'Tidak Ada Tanda Seru (!) di System Tree, Semua Module Normal', nText:'Ditemukan Tanda Seru (!) di System Tree (Lihat Detail Foto)'},
+    {label:'Click the module with an (!) to view detailed diagnostics and fault location.', remark:'See details picture',
+      yText:'Detail Diagnostik & Lokasi Fault Module Sudah Diperiksa', nText:'Detail Diagnostik & Lokasi Fault Module Ditemukan Bermasalah (Lihat Detail Foto)'},
+    {label:"Verify module status: 'OK', 'Fault', 'Missing', or 'Degraded'.", remark:'See details picture',
+      yText:'Status Semua Module Sudah Diverifikasi, Kondisi OK', nText:'Ditemukan Module dengan Status Fault/Missing/Degraded (Lihat Detail Foto)'},
+    {label:'Check module health indicators: power supply voltage and internal temperature.', remark:'PS4,5,6 OK Led Normal',
+      yText:'Indikator Kesehatan Module (Voltage & Temperature) Normal (PS4,5,6 OK Led Normal)', nText:'Ditemukan Indikator Kesehatan Module Tidak Normal (Voltage/Temperature)'},
+    {label:'Record any modules with warning/fault status, including name and slot.',
+      yText:'Tidak Ada Module dengan Status Warning/Fault yang Perlu Dicatat', nText:'Ditemukan Module dengan Status Warning/Fault, Nama & Slot Sudah Dicatat'},
+    {label:'Take screenshots of warning indicators and diagnostic status as evidence and save to D:\\PM Data\\..year..\\Alarm for review. Save the file by name following format: "Alarm XX-YY-ZZZZ.png" (XX = Date, YY = Month, ZZZZ = Year)', remark:'Drive D not available',
+      yText:'Screenshot Indikator Warning & Status Diagnostik Sudah Diarsipkan', nText:'Screenshot Belum Diarsipkan (Drive D not available)'},
+    {label:'Go to the Event Viewer menu to check the module status change log.',
+      yText:'Log Perubahan Status Module di Event Viewer Sudah Diperiksa', nText:'Log Perubahan Status Module di Event Viewer Belum Diperiksa'}
   ]},
   { no:'3', title:'Cabinet Mark VIe Physical Inspection', items:[
-    {label:'Ensure there are no blinking red LEDs or FAULT status active at the Mark VIe module (IO, PSU, CPU, Switch).'},
-    {label:'Inspect connectors and cables (not loose, damaged, or disconnected).'},
-    {label:'Verify proper grounding of I/O and power supply connections.'},
-    {label:'Record the module name, location and serial number of any abnormal or faulty module.'},
-    {label:'Take photos of the module if physical damage is observed.'},
-    {label:'Ensure all modules are firmly seated in the rack (not tilted or loose).'},
-    {label:'Check the condition of Mark Vie HMI in Electronic Room U7/8 and on the MCR HMI.'},
-    {label:'Check the exhaust fan condition in all Mark VIe cabinets.'}
+    {label:'Ensure there are no blinking red LEDs or FAULT status active at the Mark VIe module (IO, PSU, CPU, Switch).',
+      yText:'Tidak Ada LED Merah Berkedip atau Status FAULT Aktif pada Module Mark VIe', nText:'Ditemukan LED Merah Berkedip atau Status FAULT Aktif pada Module Mark VIe'},
+    {label:'Inspect connectors and cables (not loose, damaged, or disconnected).',
+      yText:'Konektor & Kabel Dalam Kondisi Baik, Tidak Kendor/Rusak/Lepas', nText:'Ditemukan Konektor/Kabel yang Kendor, Rusak, atau Lepas'},
+    {label:'Verify proper grounding of I/O and power supply connections.',
+      yText:'Grounding Koneksi I/O & Power Supply Sudah Sesuai', nText:'Ditemukan Grounding Koneksi I/O/Power Supply yang Tidak Sesuai'},
+    {label:'Record the module name, location and serial number of any abnormal or faulty module.',
+      yText:'Tidak Ada Module Abnormal/Fault yang Perlu Dicatat', nText:'Ditemukan Module Abnormal/Fault, Nama/Lokasi/Serial Number Sudah Dicatat'},
+    {label:'Take photos of the module if physical damage is observed.',
+      yText:'Tidak Ditemukan Kerusakan Fisik pada Module', nText:'Ditemukan Kerusakan Fisik pada Module, Foto Sudah Diambil'},
+    {label:'Ensure all modules are firmly seated in the rack (not tilted or loose).',
+      yText:'Semua Module Sudah Terpasang Kokoh di Rack, Tidak Miring/Kendor', nText:'Ditemukan Module yang Miring/Kendor di Rack'},
+    {label:'Check the condition of Mark Vie HMI in Electronic Room U7/8 and on the MCR HMI.',
+      yText:'Kondisi Mark VIe HMI di Electronic Room U7/8 dan MCR HMI Baik', nText:'Ditemukan Kondisi Mark VIe HMI di Electronic Room U7/8/MCR HMI Bermasalah'},
+    {label:'Check the exhaust fan condition in all Mark VIe cabinets.',
+      yText:'Exhaust Fan di Semua Cabinet Mark VIe Kondisi Normal', nText:'Ditemukan Exhaust Fan Cabinet Mark VIe yang Bermasalah'}
   ]},
   { no:'4', title:'Reporting', items:[
-    {label:'Report all findings to the Supervisor.'},
-    {label:'Raise a Service Request (SR) if required.'}
+    {label:'Report all findings to the Supervisor.',
+      yText:'Semua Temuan Sudah Dilaporkan ke Supervisor', nText:'Temuan Belum Dilaporkan ke Supervisor'},
+    {label:'Raise a Service Request (SR) if required.',
+      yText:'SR Sudah Diajukan (Bila Diperlukan) / Tidak Ada SR yang Diperlukan', nText:'SR Belum Diajukan Padahal Diperlukan'}
   ]}
 ];
 
 /* Flatten semua item jadi 1 array dengan index global (dipakai untuk state & tabel) */
 var MV_ITEMS = [];
 MV_SECTIONS.forEach(function(sec){
-  sec.items.forEach(function(it){ MV_ITEMS.push({sectionNo:sec.no, sectionTitle:sec.title, label:it.label, defaultRemark:it.remark||''}); });
+  sec.items.forEach(function(it){
+    MV_ITEMS.push({sectionNo:sec.no, sectionTitle:sec.title, label:it.label, defaultRemark:it.remark||'', yText:it.yText||'', nText:it.nText||''});
+  });
 });
 
 var mvState = MV_ITEMS.map(function(it){ return {yes:false, no:false, remark: it.defaultRemark}; });
-var mvRowEvidence = MV_ITEMS.map(function(){ return []; }); // 1 array per baris, isi 0 atau 1 foto
+// mvRowEvidence[i] = array foto evidence utk baris ke-i -- BISA LEBIH DARI 1
+// foto per baris (revisi 2026-09-21, sebelumnya cuma 1 foto/baris). Ditampilkan
+// terkumpul di galeri "EVIDENCE PHOTO" di bawah tabel (mvBuildGallery()),
+// BUKAN inline di dalam sel tabel lagi.
+var mvRowEvidence = MV_ITEMS.map(function(){ return []; });
 var mvRowPickTarget = -1; // index baris yang sedang menunggu hasil <input type=file>
 
 function safe(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -1491,6 +1540,16 @@ function buildMvTable() {
     if (yEl) yEl.checked = !!st.yes;
     if (nEl) nEl.checked = !!st.no;
   });
+  mvBuildGallery();
+}
+
+/* Remark otomatis begitu Yes/No dipilih -- pola SAMA dgn
+   computeChecklistRemark() di id_fan_line_purging.html/beltscale-*.html:
+   kalau belum dipilih sama sekali, JANGAN ubah remark yang sudah ada
+   (termasuk defaultRemark bawaan item, mis. "Drive D is not available."). */
+function mvComputeRemark(item, yes, no, currentRemark) {
+  if (!yes && !no) return currentRemark;
+  return yes ? (item.yText || currentRemark) : (item.nText || currentRemark);
 }
 
 function mvSetYN(i, which) {
@@ -1502,26 +1561,79 @@ function mvSetYN(i, which) {
     mvState[i].no = nEl.checked;
     if (nEl.checked) { mvState[i].yes = false; yEl.checked = false; }
   }
+  mvState[i].remark = mvComputeRemark(MV_ITEMS[i], mvState[i].yes, mvState[i].no, mvState[i].remark);
+  var remarkEl = document.getElementById('mvRemark_'+i);
+  if (remarkEl) remarkEl.value = mvState[i].remark;
 }
 
-/* ── EVIDENCE PHOTO PER-BARIS (1 foto per item checklist, kolom paling kanan) ── */
+/* ── EVIDENCE PHOTO PER-BARIS (BISA LEBIH DARI 1 foto per item checklist,
+   revisi 2026-09-21) -- tombol di kolom paling kanan tabel HANYA jadi
+   pemicu upload (bisa diklik berulang utk menambah lagi, foto TIDAK PERNAH
+   ditimpa/diganti dari sini), thumbnail-nya sendiri TIDAK ditampilkan
+   inline di sel lagi -- semua foto (dari SEMUA baris) dikumpulkan jadi 1
+   galeri "EVIDENCE PHOTO" di bawah tabel (mvBuildGallery()), baik di
+   tampilan HTML maupun di PDF. */
 function mvRowEvidenceCellHtml(i) {
-  var img = mvRowEvidence[i] && mvRowEvidence[i][0];
-  if (!img) {
-    return '<button type="button" onclick="mvRowPhotoPick('+i+',event)" title="Upload foto evidence" '+
-      'style="width:34px;height:34px;border-radius:6px;border:1.5px dashed var(--border);background:#fff;color:var(--text3);font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">&#128247;</button>';
-  }
-  return '<div style="position:relative;display:inline-block">' +
-    '<img src="'+safe(img.dataUrl)+'" alt="" style="width:50px;height:38px;object-fit:cover;border-radius:5px;border:2px solid var(--ok);cursor:pointer;display:block" ' +
-      'onclick="mvRowReEdit('+i+')" title="Klik untuk crop ulang" onerror="this.style.display=\'none\'">' +
-    '<button type="button" onclick="event.stopPropagation();mvRowPhotoRemove('+i+')" title="Hapus foto" ' +
-      'style="position:absolute;top:-7px;right:-7px;width:17px;height:17px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:10px;line-height:17px;text-align:center;padding:0">&#215;</button>' +
-    '</div>';
+  var n = (mvRowEvidence[i]||[]).length;
+  return '<button type="button" onclick="mvRowPhotoPick('+i+',event)" title="Upload foto evidence (bisa lebih dari 1, klik lagi utk menambah)" '+
+    'style="position:relative;width:34px;height:34px;border-radius:6px;border:1.5px dashed '+(n>0?'var(--ok,#16a34a)':'var(--border)')+';background:#fff;color:'+(n>0?'var(--ok,#16a34a)':'var(--text3)')+';font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">'+
+    '&#128247;'+
+    (n>0 ? '<span style="position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;border-radius:8px;background:var(--ok,#16a34a);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px">'+n+'</span>' : '')+
+    '</button>';
 }
 
 function mvRenderRowEvidence(i) {
   var cell = document.getElementById('mvRowEvCell_'+i);
   if (cell) cell.innerHTML = mvRowEvidenceCellHtml(i);
+  mvBuildGallery();
+}
+
+/* Galeri gabungan SEMUA foto evidence, dari SEMUA baris, ditampilkan
+   berurutan mengikuti urutan step of work -- ditaruh di bawah tabel
+   checklist (bukan di dalam tabel). Tiap kartu foto punya caption yang
+   OTOMATIS terisi nama step of work saat upload (lihat mvRowFileSelected(),
+   defaultCaption diteruskan ke imgOpenCropperQueue()), tapi tetap bisa
+   diedit manual di sini kalau perlu. */
+function mvBuildGallery() {
+  var panel = document.getElementById('mvGalleryPanel');
+  var container = document.getElementById('mvGalleryContainer');
+  if (!panel || !container) return;
+  var html = '';
+  var any = false;
+  MV_ITEMS.forEach(function(it, i){
+    (mvRowEvidence[i]||[]).forEach(function(img, pi){
+      any = true;
+      var shortLabel = it.label.length > 70 ? it.label.slice(0,70)+'…' : it.label;
+      html += '<div class="mv-gallery-item" style="width:170px;border:1px solid var(--border);border-radius:8px;padding:8px;background:#fff">'+
+        '<div style="position:relative">'+
+          '<img src="'+safe(img.dataUrl)+'" alt="" style="width:100%;height:105px;object-fit:cover;border-radius:6px;cursor:pointer;display:block" onclick="mvGalleryPhotoReEdit('+i+','+pi+')" title="Klik untuk crop ulang" onerror="this.style.display=\'none\'">'+
+          '<button type="button" onclick="event.stopPropagation();mvGalleryPhotoRemove('+i+','+pi+')" title="Hapus foto" style="position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0">&#215;</button>'+
+        '</div>'+
+        '<div style="font-size:10px;color:var(--text3);margin-top:6px" title="'+safe(it.label)+'">'+safe(it.sectionNo)+'. '+safe(shortLabel)+'</div>'+
+        '<input type="text" class="mv-gallery-caption" value="'+safe(img.caption||'')+'" oninput="mvGalleryCaptionChange('+i+','+pi+',this.value)" placeholder="Keterangan foto..." style="width:100%;margin-top:4px;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;box-sizing:border-box">'+
+      '</div>';
+    });
+  });
+  container.innerHTML = html;
+  panel.style.display = any ? 'block' : 'none';
+}
+
+function mvGalleryPhotoRemove(rowIdx, photoIdx) {
+  var img = mvRowEvidence[rowIdx] && mvRowEvidence[rowIdx][photoIdx];
+  if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+  if (mvRowEvidence[rowIdx]) mvRowEvidence[rowIdx].splice(photoIdx, 1);
+  mvRenderRowEvidence(rowIdx);
+}
+
+function mvGalleryPhotoReEdit(rowIdx, photoIdx) {
+  var img = mvRowEvidence[rowIdx] && mvRowEvidence[rowIdx][photoIdx];
+  if (!img) return;
+  imgOpenCropper(img.dataUrl, img.name, img.type, mvRowEvidence[rowIdx], 'row:'+rowIdx, 'mv', photoIdx);
+}
+
+function mvGalleryCaptionChange(rowIdx, photoIdx, value) {
+  var img = mvRowEvidence[rowIdx] && mvRowEvidence[rowIdx][photoIdx];
+  if (img) img.caption = value;
 }
 
 function mvRowPhotoPick(i, ev) {
@@ -1563,31 +1675,21 @@ function mvRowPickSource(source) {
   openFileInputSource('mvRowFileInput', source);
 }
 
+// Multi-file: SEMUA foto yang dipilih masuk antrean crop satu-per-satu
+// (imgOpenCropperQueue, sudah ada dari fitur multi-upload modul lain),
+// MENAMBAH ke mvRowEvidence[i] (bukan mengganti) -- lihat <input
+// id="mvRowFileInput" multiple> di HTML. defaultCaption = label step of
+// work baris ini, otomatis pre-isi kolom Keterangan di crop modal (masih
+// bisa diedit user, baik saat crop maupun sesudahnya di galeri).
 function mvRowFileSelected(input) {
-  var file = input.files && input.files[0];
+  var files = input.files;
   var i = mvRowPickTarget;
+  var fileArr = files ? Array.prototype.slice.call(files) : [];
   input.value = '';
-  if (!file || i < 0) return;
-  if (!isImageFile(file)) { alert('File harus berupa gambar.'); return; }
-  fileToJpegDataUrl(file, function(dataUrl){
-    if (!dataUrl) return;
-    var name = file.name.replace(/\.[^.]+$/,'.jpg');
-    imgOpenCropper(dataUrl, name, 'image/jpeg', mvRowEvidence[i], 'row:'+i, 'mv', -1);
-  });
-}
-
-function mvRowReEdit(i) {
-  var img = mvRowEvidence[i] && mvRowEvidence[i][0];
-  if (!img) return;
-  imgOpenCropper(img.dataUrl, img.name, img.type, mvRowEvidence[i], 'row:'+i, 'mv', 0);
-}
-
-function mvRowPhotoRemove(i) {
-  (mvRowEvidence[i]||[]).forEach(function(img){
-    if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
-  });
-  mvRowEvidence[i] = [];
-  mvRenderRowEvidence(i);
+  if (!fileArr.length || i < 0) return;
+  var imgFiles = fileArr.filter(isImageFile);
+  if (!imgFiles.length) { alert('File harus berupa gambar.'); return; }
+  imgOpenCropperQueue(imgFiles, mvRowEvidence[i], 'row:'+i, 'mv', MV_ITEMS[i].label);
 }
 
 /* Dipanggil oleh cropAndSave() lewat p.modulePrefix==='mv' setelah crop selesai.
@@ -1769,11 +1871,15 @@ function downloadPdf(){
       });
       y = doc.lastAutoTable.finalY + 8;
 
-      // ═══ EVIDENCE PHOTO — ukuran penuh sesuai crop, judul mengikuti label baris ═══
+      // ═══ EVIDENCE PHOTO — ukuran penuh sesuai crop, judul mengikuti caption
+      //     foto (default = label step of work, bisa diedit user) — BISA
+      //     LEBIH DARI 1 foto per baris (revisi 2026-09-21), semua foto dari
+      //     semua baris digambar berurutan di sini. ═══
       var evList = [];
       MV_ITEMS.forEach(function(it, gi){
-        var img = mvRowEvidence[gi] && mvRowEvidence[gi][0];
-        if (img && img.dataUrl) evList.push({img:img, caption: pdfSafe(it.label)});
+        (mvRowEvidence[gi]||[]).forEach(function(img){
+          if (img && img.dataUrl) evList.push({img:img, caption: pdfSafe(img.caption || it.label)});
+        });
       });
       if (evList.length) {
         var maxPhotoW = contentW - 6, maxPhotoH = 75;
@@ -1844,15 +1950,19 @@ function dbCollectData(modul) {
     assetDesc: document.getElementById('mvAssetDesc').value || '—'
   };
   var ki = function(img){
-    var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg'};
+    var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};
     if (img.widthCm) o.widthCm = img.widthCm;
     if (img.heightCm) o.heightCm = img.heightCm;
     return o;
   };
+  // "evidences" (array, revisi 2026-09-21 -- bisa lebih dari 1 foto/baris).
+  // Field lama "evidence" (objek tunggal) SUDAH TIDAK ditulis lagi ke record
+  // BARU, tapi applyRecordToForm() di bawah tetap bisa membaca record LAMA
+  // yang masih pakai bentuk itu (lihat komentar di sana).
   var items = mvState.map(function(st, i){
     var it = {yes:!!st.yes, no:!!st.no, remark:st.remark||''};
-    var img = mvRowEvidence[i] && mvRowEvidence[i][0];
-    if (img) it.evidence = ki(img);
+    var imgs = (mvRowEvidence[i]||[]).map(ki);
+    if (imgs.length) it.evidences = imgs;
     return it;
   });
   return {
@@ -1895,9 +2005,17 @@ function applyRecordToForm(rec, editingId) {
   if (data.items && data.items.length === mvState.length) {
     data.items.forEach(function(it, i){
       mvState[i] = {yes:!!it.yes, no:!!it.no, remark:it.remark||''};
-      if (it.evidence && it.evidence.dataUrl) {
+      // "evidences" (array, format BARU) diutamakan; fallback ke "evidence"
+      // (objek tunggal, format LAMA sebelum revisi 2026-09-21 -- caption-nya
+      // kosongkan default ke label step-nya sendiri) supaya record lama
+      // tetap kebaca normal.
+      if (Array.isArray(it.evidences) && it.evidences.length) {
+        mvRowEvidence[i] = it.evidences.map(function(img){
+          return {name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', widthCm:img.widthCm, heightCm:img.heightCm, caption:img.caption||''};
+        });
+      } else if (it.evidence && it.evidence.dataUrl) {
         var img = it.evidence;
-        mvRowEvidence[i] = [{name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', widthCm:img.widthCm, heightCm:img.heightCm}];
+        mvRowEvidence[i] = [{name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', widthCm:img.widthCm, heightCm:img.heightCm, caption: img.caption || MV_ITEMS[i].label}];
       } else {
         mvRowEvidence[i] = [];
       }

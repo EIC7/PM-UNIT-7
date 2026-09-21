@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260918a"></script>
+<script src="shared.js?v=20260921a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -1598,19 +1598,19 @@ function bsToggleCheckFlag(idx, key, checked) {
   var remarkEl = document.getElementById('bsRemark_'+idx);
   if (remarkEl) remarkEl.value = bsComputeRemark(item, passA, failA, passB, failB, remarkEl.value);
 }
+// "Centang Semua Y" -- set SEMUA baris check jadi Pass, TERMASUK baris
+// "Raise new WO" (revisi 2026-09-21, permintaan eksplisit user -- SEBELUMNYA
+// baris ini sengaja dikecualikan/di-default-kan ke Fail, tapi keputusan itu
+// dibalik: sekarang Centang Semua Y berarti Y utk SEMUA baris tanpa
+// kecuali).
 function bsCheckAllY() {
   BS_CHECKS.forEach(function(item, idx) {
     if (item.type !== 'check') return;
     var passA = document.getElementById('bsPassA_'+idx), failA = document.getElementById('bsFailA_'+idx);
     var passB = document.getElementById('bsPassB_'+idx), failB = document.getElementById('bsFailB_'+idx);
     if (!passA) return;
-    if (item.raiseWO) {
-      passA.checked = false; failA.checked = true;
-      passB.checked = false; failB.checked = true;
-    } else {
-      passA.checked = true; failA.checked = false;
-      passB.checked = true; failB.checked = false;
-    }
+    passA.checked = true; failA.checked = false;
+    passB.checked = true; failB.checked = false;
     var remarkEl = document.getElementById('bsRemark_'+idx);
     if (remarkEl) remarkEl.value = bsComputeRemark(item, passA.checked, failA.checked, passB.checked, failB.checked, remarkEl.value);
   });
