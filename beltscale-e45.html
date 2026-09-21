@@ -1501,11 +1501,11 @@ var BS_CHECKS = [
   {no:5,  label:'Check connection was tightened and no looses.', criteria:'Tight Connection', type:'check',
     yText:'Koneksi Sudah Kencang, Tidak Ada yang Kendor', nText:'Ditemukan Koneksi yang Kendor, Perlu Dikencangkan'},
   {no:'6', label:'Belt Scale Calibration', criteria:'', type:'header'},
-  {no:'6a', label:'Error Zero Calibration', criteria:'', type:'input', placeholder:'e.g. 0.01%'},
-  {no:'6b', label:'New Zero Change Value', criteria:'', type:'input', placeholder:'e.g. 966048'},
-  {no:'6c', label:'Old Zero Change Value', criteria:'', type:'input', placeholder:'e.g. 966149'},
-  {no:'6d', label:'Hasil Pengukuran Tegangan Load Cell 1 (mV)', criteria:'', type:'input', placeholder:'e.g. 2.45'},
-  {no:'6e', label:'Hasil Pengukuran Tegangan Load Cell 2 (mV)', criteria:'', type:'input', placeholder:'e.g. 2.45'},
+  {no:'6a', label:'Error Zero Calibration', criteria:'Percent', type:'input', placeholder:'e.g. 0.01%'},
+  {no:'6b', label:'New Zero Change Value', criteria:'Percent', type:'input', placeholder:'e.g. 966048'},
+  {no:'6c', label:'Old Zero Change Value', criteria:'Percent', type:'input', placeholder:'e.g. 966149'},
+  {no:'6d', label:'Hasil Pengukuran Tegangan Load Cell 1 (mV)', criteria:'milivolt (mV)', type:'input', placeholder:'e.g. 2.45'},
+  {no:'6e', label:'Hasil Pengukuran Tegangan Load Cell 2 (mV)', criteria:'milivolt (mV)', type:'input', placeholder:'e.g. 2.45'},
   {no:9,  label:'Raise new WO & repair if any defect found.', criteria:'OK', type:'check', raiseWO:true,
     yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
   {no:10, label:'Leave the location within safe condition.', criteria:'Completed', type:'check',
@@ -1909,10 +1909,18 @@ function bsDownloadPdf() {
       }
       if (item.type === 'input') {
         var aEl=document.getElementById('bsA_'+idx), bEl=document.getElementById('bsB_'+idx);
+        // 🔴 Bug jsPDF-autoTable: 2 sel colSpan bersebelahan, kalau salah
+        // satu isinya STRING KOSONG murni, teks sel TETANGGANYA (yang
+        // sebenarnya terisi) ikut GAGAL tercetak sama sekali -- dikonfirmasi
+        // lewat testing (2026-09-18). Fix: kalau kosong, pakai non-breaking
+        // space (' ', tetap tampak kosong secara visual) BUKAN string
+        // kosong ''.
+        var aTxt = safe(aEl?aEl.value:'') || ' ';
+        var bTxt = safe(bEl?bEl.value:'') || ' ';
         tableRows.push([
           String(item.no||''), safe(item.label), safe((item.criteria||'').replace(/\n/g,' / ')),
-          {content: safe(aEl?aEl.value:''), colSpan:2},
-          {content: safe(bEl?bEl.value:''), colSpan:2},
+          {content: aTxt, colSpan:2},
+          {content: bTxt, colSpan:2},
           ''
         ]);
         return;
@@ -1923,7 +1931,17 @@ function bsDownloadPdf() {
 
     doc.autoTable({
       startY:y,
-      head:[['No','Step of Work','Criteria','Pass','Fail','Pass','Fail','Remarks']],
+      head: [
+        [
+          {content:'No', rowSpan:2},
+          {content:'Step of Work', rowSpan:2},
+          {content:'Criteria', rowSpan:2},
+          {content: safe(BS_CFG.a.name), colSpan:2},
+          {content: safe(BS_CFG.b.name), colSpan:2},
+          {content:'Remarks', rowSpan:2}
+        ],
+        ['Pass','Fail','Pass','Fail']
+      ],
       body:tableRows, theme:'grid',
       margin:{left:marginX,right:marginX,top:20},
       headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:8,halign:'center',font:'helvetica'},

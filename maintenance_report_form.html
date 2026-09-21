@@ -2623,7 +2623,15 @@ function applyImageEdits(){
             var status = ((raCurrentRecord && raCurrentRecord.status) || 'DRAFT').toUpperCase();
             var badge = document.getElementById('raStatusBadge');
             if (badge) badge.textContent = RA_STATUS_LABEL[status] || status;
-            document.getElementById('raSubmitBox').style.display = (status === 'DRAFT') ? 'block' : 'none';
+            // 🔴 JANGAN sembunyikan raSubmitBox utk status SUBMITTED -- itu bikin
+            // tombol Submit hilang total utk laporan yang sudah pernah disubmit,
+            // padahal shared.js (pmMaybeEnterUpdateSubmitMode/pmMaybeEnterRevisionMode)
+            // JUSTRU meng-label-ulang tombol yang SAMA jadi "🔄 Update Data Submit"/
+            // "✅ Revisi Selesai dan Resubmit" utk kasus itu -- kedua fungsi itu cuma
+            // mengubah tombolnya, TIDAK PERNAH menyentuh display parent box ini, jadi
+            // kalau di-hide di sini, tombol yang sudah di-relabel itu tetap tidak
+            // kelihatan sama sekali (dilaporkan user: "tombol submit hilang").
+            document.getElementById('raSubmitBox').style.display = 'block';
         }
     </script>
 </body>
