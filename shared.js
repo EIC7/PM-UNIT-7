@@ -2987,18 +2987,22 @@ function _pmAutosaveNetworkWarningHide() {
   var el = document.getElementById('pmAutosaveNetworkBanner');
   if (el) el.style.display = 'none';
 }
-// Begitu browser mendeteksi jaringan kembali normal, LANGSUNG coba autosave
-// lagi (bukan nunggu siklus 60 detik berikutnya) -- TAPI cuma kalau banner
-// di atas memang sedang tampil (artinya percobaan TERAKHIR memang gagal
-// karena jaringan), supaya tidak memicu simpan tambahan yang tidak perlu
-// kalau autosave sebelumnya baik-baik saja.
-window.addEventListener('online', function () {
+// Begitu browser mendeteksi jaringan kembali normal, ATAU begitu tab ini
+// kembali terlihat (user balik dari app lain/tab lain -- 2026-09-22, retry
+// segera setelah tab background sempat memutus upload autosave, lihat
+// komentar visibilitychange di bawah), LANGSUNG coba autosave lagi (bukan
+// nunggu siklus 60 detik berikutnya) -- TAPI cuma kalau banner di atas
+// memang sedang tampil (artinya percobaan TERAKHIR memang gagal karena
+// jaringan), supaya tidak memicu simpan tambahan yang tidak perlu kalau
+// autosave sebelumnya baik-baik saja.
+function _pmRetryAutosaveIfNetworkBannerShowing() {
   var banner = document.getElementById('pmAutosaveNetworkBanner');
   if (!banner || banner.style.display === 'none') return;
   if (window._dbSaving) return; // lagi ada proses simpan lain berjalan, biarkan itu selesai dulu
   if (!window.CURRENT_MODUL || typeof dbCollectData !== 'function') return;
   dbSaveSilent(window.CURRENT_MODUL);
-});
+}
+window.addEventListener('online', _pmRetryAutosaveIfNetworkBannerShowing);
 /* Dipanggil begitu 1 siklus dbSaveSilent() selesai (sukses/gagal/macet
    lewat watchdog) -- kalau ada panggilan Simpan/Edit-in-place MANUAL yang
    sempat diantre (lihat komentar revisi di atas), jalankan sekarang. */
@@ -3118,7 +3122,14 @@ function autosaveCheckAndPrompt() {
 // Trigger autosave saat ada perubahan input apa pun di halaman (event delegation)
 document.addEventListener('input', autosaveTrigger, true);
 document.addEventListener('change', autosaveTrigger, true);
-// Simpan segera saat halaman mau ditutup/di-minimize (jaga-jaga sebelum sempat debounce)
+// Simpan segera saat halaman mau ditutup/di-minimize (jaga-jaga sebelum sempat debounce).
+// Sebaliknya, begitu tab ini KEMBALI terlihat (user balik dari app lain/tab
+// lain) -- retry autosave server segera (lihat _pmRetryAutosaveIfNetworkBannerShowing
+// di atas) kalau banner "cek jaringan" masih tampil, karena upload yang
+// sempat berjalan SANGAT MUNGKIN terpotong Android/Chrome saat tab
+// di-background (throttling/tab-discard OS, di luar kendali kode web --
+// lihat penjelasan lengkap ke user 2026-09-22). Tanpa ini, user harus
+// menunggu sampai siklus 60 detik berikutnya baru autosave dicoba ulang.
 document.addEventListener('visibilitychange', function(){
   if (document.visibilityState === 'hidden') {
     clearTimeout(_autosaveTimer);
@@ -3128,6 +3139,8 @@ document.addEventListener('visibilitychange', function(){
       var rec = modul ? dbCollectData(modul) : dbCollectData();
       if (rec) autosaveSet(_autosaveKey(), {rec: rec, editingId: window._editingId || null});
     } catch(e) {}
+  } else if (document.visibilityState === 'visible') {
+    _pmRetryAutosaveIfNetworkBannerShowing();
   }
 });
 // Cek draft begitu halaman selesai load
