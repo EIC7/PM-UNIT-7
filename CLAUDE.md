@@ -3749,3 +3749,133 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   mock) -- buka popup `7BF-LSH-500B`: title/desc/badge status benar, grid
   PERSIS 3 baris (Location Code/Location Description/P per ID Number),
   tidak ada Custodian/MPI/Serial/Level/Workgroup lagi.
+
+## Modul baru: PM O2 Outlet Monthly Calibration (`O2_Outlet_monthly_cal.html`, 2026-09-22)
+
+- Popup O2 di `index.html` sekarang punya **4 opsi** (bukan 3): PM O2 Inlet
+  Weekly, PM O2 Outlet Weekly, **PM O2 Outlet Monthly Calibration** (baru,
+  ikon dartboard) -> `O2_Outlet_monthly_cal.html`, dan opsi paling bawah
+  di-rename dari "Report PM Monthly O2 Inlet & Outlet" jadi **"PM Monthly
+  Cleaning O2 Inlet & Outlet"** (filename `form_o2_report.html` TIDAK
+  berubah).
+- File baru dibangun dari `weekly_calibration_o2_outlet.html` (6 channel
+  Outlet) -- section "Dokumentasi Per Channel" dipecah jadi **Before ->
+  Calibration -> After**: Section 2 = O2 Reading & Cell Measurements Before
+  Calibration (field TIDAK diubah dari versi Weekly aslinya -- `o2Reading`/
+  `voltage`/`temperature`/`lifetime`/`resistance` polos, tanpa akhiran),
+  Section 3 = **Calibration Readings** (BARU, `buildO2CalibGrid()`, format
+  SAMA PERSIS dengan `buildO2CalibGrid()` milik
+  `weekly_calibration_o2_inlet.html` -- Calibration O2 Span/Zero % per
+  channel + Keterangan + 1 Evidence), Section 4 = O2 Reading & Cell
+  Measurements **After** Calibration (BARU, `buildO2ChannelCardsAfter()`,
+  kembaran Section 2 dengan akhiran "After" di semua field/id/evidence:
+  `o2ReadingAfter`/`voltageAfter`/dst, catatan `o2cat_readingAfter_och{id}`,
+  evidence key `readingAfter_och{id}`). Ketiga grid berbagi 1 objek data per
+  channel (`o2ChannelData['och'+id]`, field flat gabungan semua fase --
+  pola SAMA PERSIS dengan `o2ChannelData['ch'+id]` di
+  `weekly_calibration_o2_inlet.html`, BUKAN objek terpisah per fase).
+- **Remarks dihapus** dari "Informasi Pekerjaan" -- baik di file baru ini
+  (memang tidak pernah ditambahkan) MAUPUN di `weekly_calibration_o2_inlet.html`
+  dan `weekly_calibration_o2_outlet.html` (field `#o2Remarks` beserta SEMUA
+  referensi JS-nya -- PDF row, `dbCollectData()`, `applyRecordToForm()`,
+  `resetAll()` -- dihapus dari kedua file itu).
+- `window.CURRENT_MODUL = 'PM O2 Outlet Monthly Calibration'` (literal,
+  label-style, BUKAN kode UPPER_SNAKE seperti `PM_O2_WEEKLY_OUTLET`) --
+  nilai INI yang tersimpan ke `pm_records.modul` DAN yang tampil apa adanya
+  di Riwayat (poin 3 permintaan user: nama ke history = nama modul ini
+  persis, TANPA awalan apa pun -- lihat poin "Awalan Work Order" di bawah
+  yang SENGAJA tidak menyentuh history).
+- `normalizeModul()` (`shared.js`): guard baru **SEBELUM** cek `O2` generik
+  -- `n.indexOf('O2')>=0 && n.indexOf('OUTLET')>=0 && n.indexOf('CALIBRATION')>=0`
+  -> `'O2_OUTLET_MONTHLY_CAL'`. Substring `'CALIBRATION'` adalah pembeda dari
+  `PM_O2_MONTHLY_CLEANING_OUTLET` (form_o2_report.html, juga mengandung O2+
+  OUTLET+MONTHLY tapi TIDAK mengandung CALIBRATION, cuma CLEANING) -- pola
+  proteksi collision yang sama seperti GENERATOR_STATOR_LEAK vs FEGT.
+  `raModulToUrl()` diarahkan ke `O2_Outlet_monthly_cal.html?id=`.
+  `RA_MODUL_AREA['O2_OUTLET_MONTHLY_CAL'] = 'boiler'`. Tombol filter "O2
+  Outlet Monthly Cal" ditambahkan di `history.html`.
+- **Awalan Work Order -- default GLOBAL baru untuk SEMUA modul**
+  (`raSendFinalPdfToFirebaseDashboard()`, `shared.js`, SETELAH blok label
+  FLOW_SWITCH): kalau `record.work_order` terisi dan label yang akan
+  dikirim ke Review Approval Dashboard belum diawali nomor WO itu, nomor WO
+  ditaruh di depan (`label = record.work_order + ' ' + label`). Contoh:
+  laporan "PM O2 Weekly Outlet" dengan WO "WO-2026-0913" terkirim ke review
+  sebagai **"WO-2026-0913 PM O2 Weekly Outlet"**. Modul yang label-nya
+  SUDAH dimulai nomor WO (mis. `MAINTENANCE_REPORT`: "WO_Asset_AssetDesc")
+  otomatis dilewati lewat cek `label.indexOf(record.work_order) !== 0`,
+  TIDAK dobel-prefix. **SENGAJA HANYA berlaku ke pengiriman Review Approval
+  Dashboard -- `history.html` TIDAK ikut berubah** (instruksi eksplisit
+  user: "di history tidak perlu, karena di history sendiri sudah ada tabel
+  WO sendiri" -- Riwayat sudah punya kolom Work Order terpisah, tidak perlu
+  awalan ini di nama tampilan).
+- `shared.js?v=` dinaikkan ke `20260922b` di semua 40 file yang memuatnya.
+- Diverifikasi lewat headless Chrome (bukan cuma baca kode): `dbCollectData()`
+  mengembalikan bentuk data Before/Calibration/After yang benar per channel;
+  `normalizeModul()`/`raModulToUrl()`/`RA_MODUL_AREA` tidak collision dengan
+  `PM_O2_MONTHLY_CLEANING_OUTLET` maupun `PM_O2_WEEKLY_OUTLET`; simulasi
+  awalan WO menghasilkan `"WO-2026-0913 PM O2 Outlet Monthly Calibration"`
+  persis; PDF ter-generate tanpa error (3 section Before/Calibration/After
+  semua tercetak).
+
+## Keterangan foto di PDF: bold + center-aligned terhadap foto + font lebih besar (2026-09-22)
+
+- Permintaan user (lihat screenshot 2 gauge tekanan kalibrasi dengan
+  caption "Cal gas Remaining"): teks keterangan foto di bawah tiap foto
+  evidence PDF sebelumnya rata KIRI sejajar tepi foto, TIDAK bold, font
+  kecil (6/6.5/7/7.5pt tergantung file). Diubah SERAGAM jadi: **rata
+  TENGAH mengikuti lebar foto** (`x + imgW/2` + opsi jsPDF `{align:'center'}`,
+  BUKAN rata tengah terhadap kolom/kontainer galeri -- kalau foto lebih
+  sempit dari kolomnya, keterangan tetap center persis di bawah fotonya
+  sendiri), **bold** (`doc.setFont('helvetica','bold')`, sebelumnya
+  `'normal'` atau `'italic'`), dan **font size 8pt** (naik dari beragam
+  6/6.5/7/7.5pt). Warna dipertahankan apa adanya per file (kebanyakan
+  `rgb(60,80,140)` biru-keunguan, beberapa file punya variasi
+  `(50,70,130)`/`(60,80,65)` -- TIDAK diseragamkan, cuma alignment/bold/
+  size yang diubah).
+- **Preview DULU sebelum rollout luas** (permintaan eksplisit user, "jawab
+  dulu dan pratinjau... bukan langsung kerjakan") -- diterapkan pertama ke
+  `O2_Outlet_monthly_cal.html` saja, di-generate PDF sungguhan (headless
+  Chrome + `pdfPreviewState.doc.output('datauristring')` -> simpan .pdf ->
+  render ke PNG via PyMuPDF/`fitz`) dan hasil crop screenshot-nya dikirim
+  ke user (`SendUserFile`) SEBELUM diperluas ke file lain. User konfirmasi
+  gaya barunya, lalu minta diperluas ke SEMUA modul yang punya pola serupa.
+- **Cakupan akhir: 26 file** (bukan cuma keluarga O2) -- pola kode
+  caption-drawing di PDF TERNYATA ada beberapa varian berbeda per file
+  (bukan 1 fungsi shared), jadi tiap file diedit manual satu-satu setelah
+  dipetakan lewat scan Python (`doc.text(...)` yang dalam window beberapa
+  baris sekitarnya mengandung kata `caption`):
+  - **Varian "e1/e2" (2 foto per baris, tabel + evidence gallery generik)**:
+    `O2_Outlet_monthly_cal.html`, `weekly_calibration_o2_outlet.html`,
+    `weekly_calibration_o2_inlet.html`, `form_o2_report.html` (4 titik di
+    file ini: `bImg`/`aImg` before/after DAN `e1`/`e2` evidence biasa).
+  - **Varian "capLinesArr[idx]" (grid foto rata-tengah per baris, dipakai
+    keluarga modul `EV_GALLERIES` generik)**: `generator_stator_leak_monitoring.html`,
+    `id_fan_inspect_blade.html`, `id_fan_line_purging.html`,
+    `flow-switch.html`, `pm_stacker.html`.
+  - **Varian "cap" tunggal per foto (grid rata-tengah sederhana)**:
+    `so2.html`, `pm-hg-analyzer.html` (3 titik: single + before/after),
+    `maintenance_report_form.html`, `checksheet-temperature.html`,
+    `cems_calibration.html`, `beltscale-b12.html`, `beltscale-e23.html`,
+    `beltscale-e45.html`, `coal-silo-level.html`, `coal_feeder_calibration.html`,
+    `dcs-console-chcb.html`, `dcs-console-wwtp.html`, `dcs-hmi-inspection.html`,
+    `flow-meter-fgd.html`, `opacity.html`, `ph-analyzer.html`.
+  - `fegt.html` (5 titik total: before/after 2 kolom, before/after 4 kolom
+    "4000 Hr" variant, dan galeri evidence per-step 3-kolom).
+- **File yang DICEK tapi TIDAK punya caption-di-PDF sama sekali** (jadi
+  tidak disentuh, bukan kelupaan): sebagian besar modul workflow/admin
+  (`outage-*.html`, `device-admin.html`, `checksheet-level-switch.html`,
+  `history.html`, `index.html`, JSA -- JSA tidak generate PDF sama sekali,
+  lihat bagian JSA di atas) serta `mark_vie_inspection.html` (checklist
+  murni tanpa galeri foto captioned).
+- Diverifikasi 2 lapis: (1) visual -- PDF sungguhan `O2_Outlet_monthly_cal.html`
+  di-render ke PNG, caption "Cal gas Remaining" tampil bold+center+besar
+  persis seperti diminta; (2) smoke-test headless Chrome ke SEMUA 26 file
+  yang diedit -- 0 JS exception di tiap file setelah load (memverifikasi
+  tidak ada typo sintaks dari penambahan `+dim.w/2, {align:'center'}` yang
+  dilakukan manual satu-satu).
+- **Kalau nambah galeri foto captioned baru di modul manapun ke depan**,
+  pakai pola yang SAMA (`x + lebarFoto/2` sebagai posisi X, opsi jsPDF
+  `{align:'center'}`, font bold 8pt) -- JANGAN balik ke pola lama rata kiri/
+  normal/kecil. Karena pola ini TERDUPLIKASI per file (bukan fungsi shared),
+  tidak ada 1 titik pusat yang otomatis berlaku ke modul baru -- harus
+  ditulis eksplisit tiap kali.

@@ -6,7 +6,7 @@
     <title>Maintenance Report</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="shared.js?v=20260922a"></script>
+    <script src="shared.js?v=20260922b"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
@@ -2482,8 +2482,8 @@ function applyImageEdits(){
 
                                         try { doc.addImage(im.dataUrl, 'JPEG', drawX, y, imgW, imgH); } catch(e) {}
                                         if (im.caption) {
-                                            doc.setFont('helvetica','italic'); doc.setFontSize(6); doc.setTextColor(80,80,80);
-                                            doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, drawX, y+imgH+3+ci*3.5); });
+                                            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140);
+                                            doc.splitTextToSize(im.caption, imgW).forEach(function(cl,ci){ doc.text(cl, drawX+imgW/2, y+imgH+3+ci*4, {align:'center'}); });
                                         }
                                         curX += imgW + gap;
                                     });

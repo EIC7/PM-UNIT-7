@@ -6,7 +6,7 @@
 <title>Temperature Switch Checksheet — Outage</title>
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
-<script src="shared.js?v=20260922a"></script>
+<script src="shared.js?v=20260922b"></script>
 <link rel="stylesheet" href="shared.css?v=20260916a">
 <style>
 :root {
@@ -1003,8 +1003,8 @@ function tsDownloadPdf() {
           if(i===0 || i%maxPerRow===0) checkPage(imgH+14);
           try{ doc.addImage(img.dataUrl,'JPEG',ix,y,imgW,imgH); }catch(e){}
           if(img.caption){
-            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(80,80,80);
-            doc.text(safe(img.caption).substring(0,28), ix, y+imgH+4);
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140);
+            doc.text(safe(img.caption).substring(0,28), ix+imgW/2, y+imgH+4, {align:'center'});
           }
           ix+=imgW+gap;
         });

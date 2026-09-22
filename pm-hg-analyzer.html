@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PM HG Analyzer — Unit 7</title>
-<script src="shared.js?v=20260922a"></script>
+<script src="shared.js?v=20260922b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -2034,7 +2034,7 @@ function hgDownloadPdf() {
                 if (y+rowH > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
                 var ix = Math.max(marginX, Math.min(marginX+3 + (im.offsetX||0)*10, pw-marginX-dim.w));
                 try{ doc.addImage(im.dataUrl,'JPEG',ix,y,dim.w,dim.h); }catch(e){}
-                if (im.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(im.caption), dim.w), ix, y+dim.h+2.5); }
+                if (im.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(im.caption), dim.w), ix + dim.w/2, y+dim.h+3, {align:'center'}); }
                 y += rowH;
               });
               y += 3;
@@ -2070,12 +2070,12 @@ function hgDownloadPdf() {
               if (bImg) {
                 var drawXBef = Math.max(marginX, Math.min(xBef + (colW - bDim.w)/2 + ((bImg.offsetX||0)*10), pw - marginX - bDim.w));
                 try{ doc.addImage(bImg.dataUrl,'JPEG',drawXBef,y,bDim.w,bDim.h); }catch(e){}
-                if (bImg.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(bImg.caption), bDim.w), drawXBef, y+bDim.h+2.5); }
+                if (bImg.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(bImg.caption), bDim.w), drawXBef + bDim.w/2, y+bDim.h+3, {align:'center'}); }
               }
               if (aImg) {
                 var drawXAft = Math.max(marginX, Math.min(xAft + (colW - aDim.w)/2 + ((aImg.offsetX||0)*10), pw - marginX - aDim.w));
                 try{ doc.addImage(aImg.dataUrl,'JPEG',drawXAft,y,aDim.w,aDim.h); }catch(e){}
-                if (aImg.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(aImg.caption), aDim.w), drawXAft, y+aDim.h+2.5); }
+                if (aImg.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(aImg.caption), aDim.w), drawXAft + aDim.w/2, y+aDim.h+3, {align:'center'}); }
               }
               y += rowH + 9;
             }

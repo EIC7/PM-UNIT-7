@@ -8,7 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260922a"></script>
+<script src="shared.js?v=20260922b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -2384,8 +2384,8 @@ function downloadPdf(){
               }
               var bcap = safe(bImg.caption || '');
               if (bcap) {
-                doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
-                doc.text(doc.splitTextToSize(bcap, bDim.w), drawXBef, y + bDim.h + 2.5);
+                doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140);
+                doc.text(doc.splitTextToSize(bcap, bDim.w), drawXBef + bDim.w/2, y + bDim.h + 3, {align:'center'});
               }
             }
             // Gambar foto After (jika ada)
@@ -2396,8 +2396,8 @@ function downloadPdf(){
               }
               var acap = safe(aImg.caption || '');
               if (acap) {
-                doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140);
-                doc.text(doc.splitTextToSize(acap, aDim.w), drawXAft, y + aDim.h + 2.5);
+                doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140);
+                doc.text(doc.splitTextToSize(acap, aDim.w), drawXAft + aDim.w/2, y + aDim.h + 3, {align:'center'});
               }
             }
             y += rowH + 9;
@@ -2475,7 +2475,7 @@ function downloadPdf(){
                 doc.setDrawColor(200,200,200); doc.rect(drawXBef4, y, bDim4.w, bDim4.h, 'S');
               }
               var bcap4 = safe(bImg4.caption || '');
-              if (bcap4) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(bcap4, bDim4.w), drawXBef4, y+bDim4.h+2.5); }
+              if (bcap4) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(bcap4, bDim4.w), drawXBef4 + bDim4.w/2, y+bDim4.h+3, {align:'center'}); }
             }
             if (aImg4) {
               var drawXAft4 = Math.max(marginX, Math.min(xAft4 + (colW4 - aDim4.w)/2 + ((aImg4.offsetX||0)*10), pw - marginX - aDim4.w));
@@ -2483,7 +2483,7 @@ function downloadPdf(){
                 doc.setDrawColor(200,200,200); doc.rect(drawXAft4, y, aDim4.w, aDim4.h, 'S');
               }
               var acap4 = safe(aImg4.caption || '');
-              if (acap4) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(acap4, aDim4.w), drawXAft4, y+aDim4.h+2.5); }
+              if (acap4) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(acap4, aDim4.w), drawXAft4 + aDim4.w/2, y+aDim4.h+3, {align:'center'}); }
             }
             y += rowH4 + 9;
           }
@@ -2918,7 +2918,7 @@ function sixmDownloadPdf() {
               doc.setDrawColor(200,200,200); doc.rect(colX[col], y, dim.w, dim.h, 'S');
             }
             var cap = safe(img.caption||'');
-            if (cap) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(cap, colW), colX[col], y+dim.h+2.5); }
+            if (cap) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(cap, colW), colX[col]+dim.w/2, y+dim.h+3, {align:'center'}); }
             rowMaxH = Math.max(rowMaxH, dim.h + (cap?6:2));
             col++;
             if (col>=3 || pi===photos.length-1) { y += rowMaxH + 6; col = 0; }

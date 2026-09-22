@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260922a"></script>
+<script src="shared.js?v=20260922b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -2265,7 +2265,7 @@ function phDownloadPdf(){
               ix = Math.max(marginX, Math.min(ix, pw-marginX-dim.w));
               try{ doc.addImage(img.dataUrl,'JPEG',ix,y,dim.w,dim.h); } catch(e){}
               var cap=safe(img.caption||'');
-              if(cap){ doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,dim.w),ix,y+dim.h+3); }
+              if(cap){ doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(50,70,130); doc.text(doc.splitTextToSize(cap,dim.w),ix+dim.w/2,y+dim.h+3,{align:'center'}); }
               y += rowH;
             });
             y+=3;

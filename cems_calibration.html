@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260922a"></script>
+<script src="shared.js?v=20260922b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -2627,8 +2627,8 @@ function exportPdf(){
           try { doc.addImage(img.dataUrl, 'JPEG', dx, y, dim.w, dim.h); } catch(e){}
           doc.setDrawColor(200,200,200); doc.rect(dx, y, dim.w, dim.h);
           if (img.caption) {
-            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(90,90,90);
-            doc.text(doc.splitTextToSize(img.caption, dim.w), dx, y+dim.h+3.5);
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140);
+            doc.text(doc.splitTextToSize(img.caption, dim.w), dx + dim.w/2, y+dim.h+3.5, {align:'center'});
           }
           x += dim.w + gap;
         });

@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260922a"></script>
+<script src="shared.js?v=20260922b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -183,7 +183,6 @@
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
       <div class="meta-field"><label>Asset Description</label><textarea id="o2AssetDesc" rows="2" placeholder="Deskripsi asset..." readonly></textarea></div>
-      <div class="meta-field"><label>Remarks</label><textarea id="o2Remarks" rows="2" placeholder="Catatan umum kalibrasi..."></textarea></div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
       <div class="meta-field"><label>Work To Be Done</label><textarea id="o2WorkToBeDone" rows="2" readonly></textarea></div>
@@ -2118,7 +2117,6 @@ function downloadPdf(){
       var assetDesc = document.getElementById('o2AssetDesc').value || '—';
       var workToBeDone = document.getElementById('o2WorkToBeDone').value || '—';
       var pic = document.getElementById('o2Pic').value || '—';
-      var remarks = document.getElementById('o2Remarks').value || '—';
 
       // ─────── HALAMAN 1 ───────
       drawBg(doc, pw, ph);
@@ -2141,8 +2139,7 @@ function downloadPdf(){
         ['Asset', safe(asset)],
         ['Dicetak', safe(nowStr)],
         ['Asset Description', safe(assetDesc)],
-        ['Work To Be Done', safe(workToBeDone)],
-        ['Remarks', safe(remarks)]
+        ['Work To Be Done', safe(workToBeDone)]
       ];
 
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
@@ -2197,11 +2194,11 @@ function downloadPdf(){
           if (y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
           var x1 = Math.max(marginX, Math.min(marginX+2 + (evColW - d1.w)/2 + ((e1.offsetX||0)*10), pw - marginX - d1.w));
           try { doc.addImage(e1.dataUrl, 'JPEG', x1, y, d1.w, d1.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x1,y,d1.w,d1.h,'S'); }
-          if (e1.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e1.caption), d1.w), x1, y+d1.h+2.5); }
+          if (e1.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e1.caption), d1.w), x1 + d1.w/2, y+d1.h+3, {align:'center'}); }
           if (e2) {
             var x2 = Math.max(marginX, Math.min(marginX + evColW + evGap + (evColW - d2.w)/2 + ((e2.offsetX||0)*10), pw - marginX - d2.w));
             try { doc.addImage(e2.dataUrl, 'JPEG', x2, y, d2.w, d2.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(x2,y,d2.w,d2.h,'S'); }
-            if (e2.caption) { doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e2.caption), d2.w), x2, y+d2.h+2.5); }
+            if (e2.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e2.caption), d2.w), x2 + d2.w/2, y+d2.h+3, {align:'center'}); }
           }
           y += rowH + 9;
         }
@@ -2410,7 +2407,6 @@ function dbCollectData(modul) {
     assetDesc: document.getElementById('o2AssetDesc').value || '—',
     workToBeDone: document.getElementById('o2WorkToBeDone').value || '—',
     pic: document.getElementById('o2Pic').value || '—',
-    remarks: document.getElementById('o2Remarks').value || '',
     bottlePressureSpan: document.getElementById('o2PressBottleSpan').value || '',
     bottlePressureZero: document.getElementById('o2PressBottleZero').value || '',
     regulatorOutletPressureSpan: document.getElementById('o2PressRegSpan').value || '',
@@ -2493,7 +2489,6 @@ function applyRecordToForm(rec, editingId) {
   var adEl = document.getElementById('o2AssetDesc'); if (adEl && header.assetDesc && header.assetDesc !== '—') adEl.value = header.assetDesc;
   var pcEl = document.getElementById('o2Pic'); var picVal = rec.pic || header.pic || '';
   if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
-  var rmEl = document.getElementById('o2Remarks'); if (rmEl && header.remarks) rmEl.value = header.remarks;
   var bsEl = document.getElementById('o2PressBottleSpan'); if (bsEl && header.bottlePressureSpan) bsEl.value = header.bottlePressureSpan;
   var bzEl = document.getElementById('o2PressBottleZero'); if (bzEl && header.bottlePressureZero) bzEl.value = header.bottlePressureZero;
   var rsEl = document.getElementById('o2PressRegSpan'); if (rsEl && header.regulatorOutletPressureSpan) rsEl.value = header.regulatorOutletPressureSpan;
@@ -2549,7 +2544,6 @@ function resetAll() {
   document.getElementById('o2Workorder').value = '';
   document.getElementById('o2Tanggal').value = '';
   document.getElementById('o2Pic').value = '';
-  document.getElementById('o2Remarks').value = '';
   document.getElementById('o2PressBottleSpan').value = '';
   document.getElementById('o2PressBottleZero').value = '';
   document.getElementById('o2PressRegSpan').value = '';

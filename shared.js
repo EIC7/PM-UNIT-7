@@ -2060,6 +2060,12 @@ function normalizeModul(name) {
   // (file Monthly, struktur data beda) alih-alih file weekly aslinya.
   if (n.indexOf('WEEKLY_INLET')>=0 || n.indexOf('WEEKLY INLET')>=0) return 'O2_WEEKLY_INLET';
   if (n.indexOf('WEEKLY_OUTLET')>=0 || n.indexOf('WEEKLY OUTLET')>=0) return 'O2_WEEKLY_OUTLET';
+  // HARUS sebelum cek O2 generik di bawah -- modul baru O2_Outlet_monthly_cal.html
+  // ('PM O2 Outlet Monthly Calibration') JUGA mengandung substring 'O2'/'OUTLET'/
+  // 'MONTHLY', persis sama dengan PM_O2_MONTHLY_CLEANING_OUTLET (form_o2_report.html,
+  // ke-normalize 'O2' lewat cek generik di bawah) -- pembedanya substring
+  // 'CALIBRATION', yang HANYA ada di modul baru ini (Monthly Cleaning tidak punya).
+  if (n.indexOf('O2')>=0 && n.indexOf('OUTLET')>=0 && n.indexOf('CALIBRATION')>=0) return 'O2_OUTLET_MONTHLY_CAL';
   if (n.indexOf('O2')>=0) return 'O2';
   if (n.indexOf('OPACITY')>=0) return 'OPACITY';
   if (n.indexOf('CEMS')>=0) return 'CEMS_CALIBRATION';
@@ -2134,6 +2140,7 @@ function raModulToUrl(modul, id) {
   if (norm === 'O2')                 return 'form_o2_report.html?id=' + id;
   if (norm === 'O2_WEEKLY_INLET')    return 'weekly_calibration_o2_inlet.html?id=' + id;
   if (norm === 'O2_WEEKLY_OUTLET')   return 'weekly_calibration_o2_outlet.html?id=' + id;
+  if (norm === 'O2_OUTLET_MONTHLY_CAL') return 'O2_Outlet_monthly_cal.html?id=' + id;
   if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
   if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
   if (norm === 'ID_FAN_LINE_PURGING')   return 'id_fan_line_purging.html?id=' + id;
@@ -3473,7 +3480,7 @@ var RA_ASSET_LABEL = {
    supaya cuma ada SATU kosakata area di seluruh repo, tidak nyimpang kalau
    salah satu diubah nanti. */
 var RA_MODUL_AREA = {
-  FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
+  FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', O2_OUTLET_MONTHLY_CAL: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
   COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler', ID_FAN_LINE_PURGING: 'boiler', ID_FAN_INSPECT_BLADE: 'boiler',
   BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common', CEC_CONSOLE_CHCB: 'common', PM_STACKER: 'common',
   'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp', CEC_CONSOLE_WWTP: 'wwtp',
@@ -3651,6 +3658,18 @@ function raSendFinalPdfToFirebaseDashboard(record, submittedByName, onDone) {
   // user belum sempat mengisi Asset Description.
   if (modKey === 'FLOW_SWITCH' && record.asset) {
     label = 'PM Flow Switch ' + record.asset + (record.asset_desc ? ' - ' + record.asset_desc : '');
+  }
+  // 🆕 Awalan Work Order (2026-09-22, default GENERIK utk SEMUA modul) --
+  // nomor WO yang diisi teknisi di "Informasi Pekerjaan" ditaruh di DEPAN
+  // label yang dikirim ke Review Approval Dashboard, supaya laporan dari
+  // modul yang sama (mis. beberapa "PM O2 Weekly Outlet") tetap bisa
+  // dibedakan satu sama lain di sana. SENGAJA TIDAK diterapkan di
+  // history.html -- Riwayat sudah punya kolom WO sendiri terpisah, tidak
+  // butuh awalan ini (request eksplisit user). Modul yang label-nya SUDAH
+  // dimulai dengan work_order (mis. MAINTENANCE_REPORT: "WO_Asset_Desc")
+  // dilewati lewat cek indexOf ini supaya tidak dobel.
+  if (record.work_order && label.indexOf(record.work_order) !== 0) {
+    label = record.work_order + ' ' + label;
   }
   // Nama PIC/Checked By ASLI -- lihat catatan RA_MODUL_AREA di atas,
   // routing reviewer sekarang lewat parameter team/area eksplisit di

@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260922a"></script>
+<script src="shared.js?v=20260922b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -2729,8 +2729,8 @@ function cfDownloadPdf() {
             doc.setDrawColor(200,200,200); doc.setLineWidth(0.25); doc.rect(x, y, wMm, hMm);
             var cap = safe(img.caption||'');
             if (cap) {
-              doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(50,70,130);
-              doc.text(doc.splitTextToSize(cap, wMm), x, y+hMm+3);
+              doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(50,70,130);
+              doc.text(doc.splitTextToSize(cap, wMm), x+wMm/2, y+hMm+3, {align:'center'});
             }
             curX += wMm + gap;
           });
