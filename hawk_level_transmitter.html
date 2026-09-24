@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260924a"></script>
+<script src="shared.js?v=20260924b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -167,13 +167,13 @@
           <tr>
             <th rowspan="2" style="width:34px">No</th>
             <th rowspan="2" style="min-width:120px">Simulation Level Ultrasonic</th>
-            <th rowspan="2" style="width:60px">Unit</th>
+            <th rowspan="2" style="width:90px">Reference (mA)</th>
             <th colspan="2">CWT-LT-950</th>
             <th colspan="2">CWT-LT-960</th>
           </tr>
           <tr>
-            <th style="min-width:90px">Simulation</th><th style="min-width:100px">Feedback</th>
-            <th style="min-width:90px">Simulation</th><th style="min-width:100px">Feedback</th>
+            <th style="min-width:100px">Feedback DCS (%)</th><th style="min-width:100px">Feedback DCS (mA)</th>
+            <th style="min-width:100px">Feedback DCS (%)</th><th style="min-width:100px">Feedback DCS (mA)</th>
           </tr>
         </thead>
         <tbody id="hkSimBody"></tbody>
@@ -1503,8 +1503,10 @@ var HK_ITEMS = [
 // membaca MV_ITEMS[i].label utk caption default foto.
 var MV_ITEMS = HK_ITEMS;
 
-/* Tabel Simulation & Feedback: level 0/25/50/75/100 % = simulasi 4/8/12/16/20
-   mA (tetap), teknisi isi Feedback DCS dalam mA per transmitter. */
+/* Tabel Simulation & Feedback (revisi Excel 2026-09-24): level 0/25/50/75/100 %
+   = Reference 4/8/12/16/20 mA (tetap), teknisi isi Feedback DCS dalam % DAN mA
+   per transmitter. fbA/fbB = mA (key lama, data lama tetap kebaca),
+   fbAPct/fbBPct = % (baru). */
 var HK_SIM_ROWS = [
   {pct:'0',   ma:'4'},
   {pct:'25',  ma:'8'},
@@ -1514,7 +1516,7 @@ var HK_SIM_ROWS = [
 ];
 
 function hkEmptyState(){ return HK_ITEMS.map(function(){ return {passA:false, failA:false, passB:false, failB:false, remark:''}; }); }
-function hkEmptySim(){ return HK_SIM_ROWS.map(function(){ return {fbA:'', fbB:''}; }); }
+function hkEmptySim(){ return HK_SIM_ROWS.map(function(){ return {fbAPct:'', fbA:'', fbBPct:'', fbB:''}; }); }
 var hkState = hkEmptyState();
 var hkSim = hkEmptySim();
 var mvRowEvidence = HK_ITEMS.map(function(){ return []; });
@@ -1589,9 +1591,8 @@ function buildHkSimTable() {
     html += '<tr>'+
       '<td style="text-align:center">'+(i+1)+'</td>'+
       '<td style="text-align:center;font-weight:700">'+r.pct+' %</td>'+
-      '<td style="text-align:center">mA</td>'+
-      '<td style="text-align:center;background:#f4f7f6">'+r.ma+'</td>'+fb('fbA')+
-      '<td style="text-align:center;background:#f4f7f6">'+r.ma+'</td>'+fb('fbB')+
+      '<td style="text-align:center;background:#f4f7f6;font-weight:700">'+r.ma+'</td>'+
+      fb('fbAPct')+fb('fbA')+fb('fbBPct')+fb('fbB')+
     '</tr>';
   });
   body.innerHTML = html;
@@ -1874,12 +1875,12 @@ function downloadPdf(){
       doc.autoTable({
         startY: y,
         head: [
-          [{content:'No',rowSpan:2},{content:'Simulation Level Ultrasonic',rowSpan:2},{content:'Unit',rowSpan:2},{content:'CWT-LT-950',colSpan:2},{content:'CWT-LT-960',colSpan:2}],
-          ['Simulation','Feedback','Simulation','Feedback']
+          [{content:'No',rowSpan:2},{content:'Simulation Level Ultrasonic',rowSpan:2},{content:'Reference (mA)',rowSpan:2},{content:'CWT-LT-950',colSpan:2},{content:'CWT-LT-960',colSpan:2}],
+          ['Feedback DCS (%)','Feedback DCS (mA)','Feedback DCS (%)','Feedback DCS (mA)']
         ],
         body: HK_SIM_ROWS.map(function(r, i){
           var d = function(v){ return v ? pdfSafe(v) : '—'; };
-          return [String(i+1), r.pct+' %', 'mA', r.ma, d(hkSim[i].fbA), r.ma, d(hkSim[i].fbB)];
+          return [String(i+1), r.pct+' %', r.ma, d(hkSim[i].fbAPct), d(hkSim[i].fbA), d(hkSim[i].fbBPct), d(hkSim[i].fbB)];
         }),
         theme: 'grid',
         margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
@@ -1985,7 +1986,7 @@ function dbCollectData(modul) {
     pic: header.pic,
     work_order: (header.workorder && header.workorder !== '—') ? header.workorder : '',
     unit: 'Unit 7',
-    data: { header: header, items: items, simulation: hkSim.map(function(s){ return {fbA:s.fbA||'', fbB:s.fbB||''}; }) }
+    data: { header: header, items: items, simulation: hkSim.map(function(s){ return {fbAPct:s.fbAPct||'', fbA:s.fbA||'', fbBPct:s.fbBPct||'', fbB:s.fbB||''}; }) }
   };
 }
 
@@ -2041,7 +2042,7 @@ function applyRecordToForm(rec, editingId) {
   }
   if (Array.isArray(data.simulation)) {
     hkSim = hkEmptySim();
-    data.simulation.forEach(function(s, i){ if (i < hkSim.length && s) hkSim[i] = {fbA:s.fbA||'', fbB:s.fbB||''}; });
+    data.simulation.forEach(function(s, i){ if (i < hkSim.length && s) hkSim[i] = {fbAPct:s.fbAPct||'', fbA:s.fbA||'', fbBPct:s.fbBPct||'', fbB:s.fbB||''}; });
   }
   buildHkTable();
   buildHkSimTable();

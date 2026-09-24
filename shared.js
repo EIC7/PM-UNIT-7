@@ -3460,6 +3460,7 @@ var RA_ASSET_LABEL = {
   PM_HG_ANALYZER: 'PM HG Analyzer', GENERATOR_STATOR_LEAK: 'Generator Stator Leak Monitoring',
   MARK_VIE: 'Mark VIe Alarm & Module Inspection',
   HAWK_LEVEL_TX: '2 Yearly- Calibration of Hawk Liquid Level Transmitter',
+  CONDUCTIVITY: '1 Yearly Calibration Conductivity Analyzer',
   ID_FAN_LINE_PURGING: 'ID Fan Flow Transmitter Line Purging',
   CEC_CONSOLE_CHCB: 'Inspection & Cleaning DCS Console - Common CHCB',
   CEC_CONSOLE_WWTP: 'Inspection & Cleaning DCS Console - Common WWTP',
@@ -3490,8 +3491,12 @@ var RA_MODUL_AREA = {
   FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', O2_OUTLET_MONTHLY_CAL: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
   COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler', ID_FAN_LINE_PURGING: 'boiler', ID_FAN_INSPECT_BLADE: 'boiler',
   BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common', CEC_CONSOLE_CHCB: 'common', PM_STACKER: 'common',
-  'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp', CEC_CONSOLE_WWTP: 'wwtp', HAWK_LEVEL_TX: 'wwtp',
-  GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
+  'PH-ANALYZER': 'wwtp', CEC_CONSOLE_WWTP: 'wwtp', HAWK_LEVEL_TX: 'wwtp',
+  GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine',
+  // CONDUCTIVITY: default turbine; kartu juga muncul di tab WWTP -- area
+  // sebenarnya ikut ?area= dari tab yang dibuka (record.area, lihat
+  // conductivity.html), peta ini cuma fallback.
+  CONDUCTIVITY: 'turbine'
   // MAINTENANCE_REPORT dan FLOW_SWITCH SENGAJA TIDAK ada di sini -- keduanya
   // dipakai/dipasang di banyak lokasi berbeda, jadi areanya TIDAK tetap
   // per-modul seperti yang lain. Masing-masing punya dropdown Area sendiri

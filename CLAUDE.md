@@ -3936,8 +3936,59 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   `mark_vie_inspection.html`, prefix crop **`'mv'`** SENGAJA dipertahankan
   (dispatch `imgCompressAndStore()`/`cropAndSave()` memanggil
   `mvRenderPreviews()` lewat prefix itu); `MV_ITEMS` = alias `HK_ITEMS`.
-- Tabel Simulation & Feedback: level 0/25/50/75/100 % = simulasi 4/8/12/16/20
-  mA (TETAP, tidak bisa diedit), teknisi isi Feedback DCS dalam **mA** per
-  transmitter (numpad custom). TIDAK ada kolom error/deviasi (keputusan user).
+- Tabel Simulation & Feedback (revisi Excel 2026-09-24): No | Simulation Level
+  0/25/50/75/100 % | **Reference (mA)** 4/8/12/16/20 (TETAP) | per transmitter
+  **Feedback DCS (%)** + **Feedback DCS (mA)** (diisi teknisi, numpad custom).
+  Kolom "Unit" & "Simulation" per transmitter versi awal DIHAPUS. TIDAK ada kolom
+  error/deviasi (keputusan user).
 - Data: `data.items[i] = {passA,failA,passB,failB,remark,evidences[]}`,
-  `data.simulation[i] = {fbA,fbB}`.
+  `data.simulation[i] = {fbAPct,fbA,fbBPct,fbB}` -- `fbA`/`fbB` = mA (key lama
+  dipertahankan supaya record lama tetap kebaca), `*Pct` = % (baru).
+
+## Modul Conductivity diisi: 1 Yearly Calibration Conductivity Analyzer (MOD-13, 2026-09-24)
+
+- `conductivity.html` (dulu kartu kosong). `pm_records.modul` =
+  **`'1 Yearly Calibration Conductivity Analyzer'`** (nama di Riwayat); ke Review
+  otomatis `"<WO> 1 Yearly ..."` lewat awalan WO generik. Work To Be Done
+  (readonly) = `'Calibration of Rosemount Type SCL-C-002&003 Conductivity
+  Analyzer'`. `normalizeModul()` tetap `'CONDUCTIVITY'` (tidak diubah).
+- **Area**: kartu di `index.html` pindah dari `boiler wwtp` ke **`turbine wwtp`**.
+  Area review ikut tab kartu yang dibuka (`?area=`, pola sama
+  `dcs-hmi-inspection.html`) -> disimpan ke kolom top-level `area` (record.area)
+  -> dipakai `raSendFinalPdfToFirebaseDashboard()`. `RA_MODUL_AREA.CONDUCTIVITY`
+  = `'turbine'` (fallback). SENGAJA tidak mengisi kolom `asset`/`asset_desc`
+  (kalau diisi, nama laporan di Riwayat/Review berubah jadi "WO_Asset_Desc").
+- **Asset**: 26 asset bawaan dari `CONDUCTIVITY.xlsx` (`CD_BUILTIN_ASSETS`,
+  lokasi CONDENSER/CPP/LAB. CHM 7) = wilayah Turbine -> TIDAK tampil kalau
+  dibuka dari tab WWTP. Teknisi centang beberapa asset per laporan. Asset
+  manual (Tag/Description/Lokasi) disimpan ke tabel Supabase BARU
+  **`conductivity_asset_library`** (`tag`, `description`, `location`,
+  `review_area` = tab yang sedang dibuka) -- library bersama, muncul utk semua
+  user. **WAJIB migrasi SQL + pastikan RLS disabled** (lihat pelajaran RLS
+  `jsa_hazard_library` di atas):
+  ```sql
+  create table if not exists conductivity_asset_library (
+    id uuid primary key default gen_random_uuid(),
+    tag text unique not null,
+    description text,
+    location text,
+    review_area text default 'turbine',
+    created_at timestamptz default now()
+  );
+  alter table conductivity_asset_library disable row level security;
+  notify pgrst, 'reload schema';
+  ```
+  Tanpa tabel ini, asset bawaan tetap jalan normal; cuma tombol "Tambah & Simpan
+  ke Library" yang gagal (alert menjelaskan).
+- **Checklist** 7 step: 1 tabel, tiap asset terpilih punya kolom **Y / N / 📷**,
+  Remark 1 per step (otomatis; kalau hasil antar asset beda, digabung per daftar
+  tag Y lalu tag N). Centang Semua Y termasuk "Raise new WO". PDF: checklist
+  dipecah per 4 asset per tabel, Remark jadi tabel terpisah di bawahnya.
+- **Pengukuran**: 1 baris per asset -- Transmitter Before/After (Conductivity
+  µS/cm + Temperature °C) + Polymetron (Conductivity + Temperature) + 📷.
+- **Evidence**: key `c|<stepIdx>|<tag>` (checklist) dan `m|<tag>` (pengukuran),
+  galeri terpisah di bawah tabel masing-masing, caption default "TAG - step".
+  Prefix crop `'mv'` + side `'ev:<key>'` (dispatch `mvRenderPreviews()`).
+- Data: `data.assets[{tag,desc,loc}]`, `data.checks[i]={remark,res:{tag:'Y'|'N'}}`,
+  `data.measurement[tag]={bc,bt,ac,at,pc,pt}`, `data.evidence[key]=[foto]`,
+  `data.area`. `shared.js?v=20260924b`.
