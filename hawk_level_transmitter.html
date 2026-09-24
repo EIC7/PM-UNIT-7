@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PM HG Analyzer — Unit 7</title>
+<title>2 Yearly Calibration Hawk Liquid Level Transmitter — Unit 7</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="shared.js?v=20260924a"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -13,39 +16,6 @@
 <script src="approval-helper.js"></script>
 <link rel="stylesheet" href="shared.css?v=20260916a">
 <style>
-/* Checkbox kustom: tampilan konsisten di semua browser/HP (Android/iOS/MIUI dll),
-   supaya status "belum dikerjakan" tidak pernah terlihat seperti tanda X.
-   Kosong = kotak putih. Sudah dikerjakan = kotak dengan centang hijau,
-   senada dengan gambar centang pada hasil PDF. */
-input[type="checkbox"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  border: 1.5px solid #7d8f88;
-  border-radius: 3px;
-  background: #fff;
-  position: relative;
-  cursor: pointer;
-  margin: 0;
-  vertical-align: middle;
-}
-input[type="checkbox"]:checked {
-  border-color: #1a6b3a;
-  background: #eafaf0;
-}
-input[type="checkbox"]:checked::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 1px;
-  width: 6px;
-  height: 11px;
-  border: solid #1a6b3a;
-  border-width: 0 2.5px 2.5px 0;
-  transform: rotate(40deg);
-}
 /* ── Fitur reusable: geser posisi foto ── */
 .img-nudge{display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:4px}
 .img-nudge-label{font-size:8px;color:#8a8a8a;text-align:center;line-height:1.2;max-width:100px}
@@ -117,11 +87,11 @@ input[type="checkbox"]:checked::after {
 .pdf-canvas-loading{color:#8aab96;font-size:13px;padding:40px 0;text-align:center}
 .pdf-preview-footer{padding:12px 14px;background:#1a221e;border-top:1px solid #2a3a30;display:flex;gap:8px;justify-content:flex-end;flex:0 0 auto}
 .pdf-preview-footer .crop-btn{padding:12px 18px;font-size:14px;min-height:44px}
-
+/* ── Mark VIe khusus: tabel checklist YES/NO ── */
+.mv-section-title{background:var(--bg2,#dde3de);font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;font-size:16px;letter-spacing:1.5px;color:var(--steel);padding:9px 14px}
+.mv-yn{width:20px;height:20px;cursor:pointer}
+.mv-remark{width:100%;padding:5px 7px;font-size:11.5px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -129,93 +99,111 @@ input[type="checkbox"]:checked::after {
   <button class="topbar-back" onclick="window.location.href='index.html'">&#8592; Dashboard</button>
   <button class="topbar-back" style="margin-left:8px" onclick="window.location.href='history.html'">RIWAYAT</button>
   <div class="topbar-sep"></div>
-  <div class="topbar-logo">PM HG ANALYZER</div>
+  <div class="topbar-logo">HAWK LEVEL TX</div>
   <div class="topbar-sep"></div>
-  <div class="topbar-sub">HM-1400 TRX 2 — Total Mercury Analyzer — Unit 7</div>
-  <div class="topbar-right"><div class="live-dot"></div></div>
+  <div class="topbar-sub">PLTU Paiton Unit 7 &nbsp;·&nbsp; 2 Yearly Calibration of Hawk Liquid Level Transmitter</div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <div class="topbar-time" id="clock">--:--:--</div>
+  </div>
 </div>
 
 <div class="wrapper">
 
   <div class="page-header">
     <div>
-      <div class="page-header-sub">Preventive Maintenance</div>
-      <div class="page-header-title">PM <span>HG Analyzer</span></div>
+      <div class="page-header-sub">2 Yearly PM — Common WWTP</div>
+      <div class="page-header-title">Hawk Liquid <span>Level Transmitter</span> Calibration</div>
+    </div>
+    <div style="margin-bottom:8px">
+      <span class="badge">CWT-LT-950</span>
+      &nbsp;
+      <span class="badge">CWT-LT-960</span>
     </div>
   </div>
 
   <div class="panel">
-    <div class="section-label">Data Umum</div>
-    <div class="manual-meta">
-      <div class="meta-field"><label>Tanggal</label><input type="date" id="hgTanggal"></div>
-      <div class="meta-field"><label>Work Order</label><input type="text" id="hgWorkOrder" placeholder="Nomor Work Order..."></div>
-      <div class="meta-field"><label>Nama Operator / PIC</label><input type="text" id="hgPIC" placeholder="Nama PIC..."></div>
-      <div class="meta-field"><label>Asset</label><input type="text" id="hgAsset" value="HM-1400 TRX 2"></div>
-      <div class="meta-field"><label>Asset Description</label><input type="text" id="hgAssetDesc" value="Total Mercury Analyzer — Unit 7"></div>
-    </div>
-
-    <div style="margin-top:18px;border:1px solid var(--panel-border);border-radius:8px;padding:10px 14px;background:#f8faf9">
-      <div style="font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;color:var(--steel);letter-spacing:0.5px">
-        &#128214; Referensi Komponen HM-1400 TRX 2
-      </div>
-      <div style="margin-top:14px">
-        <img src="assets/hg-fig3-1-panel-overview.png" alt="Fig 3.1 Overview Komponen Panel" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px;margin-bottom:16px" onerror="this.onerror=null;this.outerHTML='<div style=&quot;padding:12px;background:#fef2f2;border:1px dashed #c33;border-radius:6px;color:#900;font-size:12px;margin-bottom:16px&quot;>&#9888; Gambar tidak ditemukan: <b>assets/hg-fig3-1-panel-overview.png</b><br>Cek: (1) file sudah di-push ke folder <b>assets/</b> di GitHub, (2) nama file persis sama termasuk huruf besar/kecil (GitHub Pages case-sensitive), (3) ekstensi benar .png.</div>'">
-        <img src="assets/hg-table3-1-fig3-2-probe.png" alt="Table 3.1 dan Fig 3.2 Sampling Probe" style="max-width:100%;border:1px solid var(--panel-border);border-radius:6px" onerror="this.onerror=null;this.outerHTML='<div style=&quot;padding:12px;background:#fef2f2;border:1px dashed #c33;border-radius:6px;color:#900;font-size:12px&quot;>&#9888; Gambar tidak ditemukan: <b>assets/hg-table3-1-fig3-2-probe.png</b><br>Cek: (1) file sudah di-push ke folder <b>assets/</b> di GitHub, (2) nama file persis sama termasuk huruf besar/kecil (GitHub Pages case-sensitive), (3) ekstensi benar .png.</div>'">
-      </div>
+    <div class="section-label">Informasi Pekerjaan</div>
+    <div class="manual-meta" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <div class="meta-field"><label>Work Order</label><input type="text" id="hkWorkorder" placeholder="No. Work Order..."></div>
+      <div class="meta-field"><label>PIC</label><input type="text" id="hkPIC" placeholder="Nama PIC..."></div>
+      <div class="meta-field"><label>Tanggal</label><input type="date" id="hkTanggal"></div>
+      <div class="meta-field"><label>Asset</label><input type="text" id="hkAsset" readonly></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Asset Description</label><input type="text" id="hkAssetDesc" readonly></div>
+      <div class="meta-field" style="grid-column:1/-1"><label>Work To Be Done</label><input type="text" id="hkWorkToBeDone" readonly></div>
     </div>
   </div>
 
   <div class="panel">
-    <div class="tab-bar" id="hgTabBar" style="align-items:center;gap:14px;flex-wrap:wrap">
-      <div class="meta-field" style="max-width:230px;margin:0">
-        <label style="font-size:11px;color:var(--text3)">Frequency</label>
-        <select id="hgFreqSelect" onchange="hgSwitchTab(this.value)">
-          <option value="2M">2 Monthly</option>
-          <option value="3M">3 Monthly</option>
-          <option value="6M">6 Monthly</option>
-          <option value="9M">9 Monthly</option>
-          <option value="1Y">1 Yearly</option>
-          <option value="2Y">2 Yearly</option>
-          <option value="5Y">5 Yearly</option>
-        </select>
-      </div>
-      <button class="tab-btn" data-freq="manual" onclick="hgSwitchTab('manual')" style="align-self:flex-end">Manual Book PM HG All Page</button>
+    <div class="section-label">Checklist — Inspect Ultra Sonic Transmitter</div>
+    <button type="button" class="btn btn-outline" onclick="hkCheckAllY()" style="margin-bottom:10px">&#9989; Centang Semua Y</button>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="hkTable" style="min-width:920px">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:34px">No</th>
+            <th rowspan="2" style="min-width:260px">Step Of Work</th>
+            <th colspan="2">CWT-LT-950</th>
+            <th colspan="2">CWT-LT-960</th>
+            <th rowspan="2" style="min-width:170px">Remark / Note</th>
+            <th rowspan="2" style="width:80px">Evidence</th>
+          </tr>
+          <tr>
+            <th style="width:54px">Pass</th><th style="width:54px">Fail</th>
+            <th style="width:54px">Pass</th><th style="width:54px">Fail</th>
+          </tr>
+        </thead>
+        <tbody id="hkTableBody"></tbody>
+      </table>
     </div>
+  </div>
+  <input type="file" id="mvRowFileInput" accept="image/*,.heic,.heif" multiple style="display:none" onchange="mvRowFileSelected(this)">
 
-    <!-- Tab isi frequency utama (3M/6M/9M/1Y/2Y/5Y) dirender dinamis ke sini -->
-    <div id="hgFreqContent"></div>
-
-    <!-- Tab Manual Book -->
-    <div id="hgTabManual" style="display:none">
-      <div class="section-label">Manual Book PM HG Analyzer (HM-1400 TRX 2) — Semua Halaman</div>
-      <div style="margin-bottom:12px">
-        <a href="assets/HM1400-TRX2OperatingMaintenanceHG.pdf" download class="btn btn-outline" style="display:inline-flex;text-decoration:none;width:auto">&#11015; Download PDF</a>
-      </div>
-      <div id="hgManualBookArea">
-        <iframe id="hgManualIframe" src="assets/HM1400-TRX2OperatingMaintenanceHG.pdf" style="width:100%;height:80vh;border:1px solid var(--panel-border);border-radius:8px"></iframe>
-      </div>
+  <div class="panel">
+    <div class="section-label">Pengukuran — Simulation &amp; Feedback</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="manual-table" id="hkSimTable" style="min-width:640px">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:34px">No</th>
+            <th rowspan="2" style="min-width:120px">Simulation Level Ultrasonic</th>
+            <th rowspan="2" style="width:60px">Unit</th>
+            <th colspan="2">CWT-LT-950</th>
+            <th colspan="2">CWT-LT-960</th>
+          </tr>
+          <tr>
+            <th style="min-width:90px">Simulation</th><th style="min-width:100px">Feedback</th>
+            <th style="min-width:90px">Simulation</th><th style="min-width:100px">Feedback</th>
+          </tr>
+        </thead>
+        <tbody id="hkSimBody"></tbody>
+      </table>
     </div>
+  </div>
 
-    <div class="btn-row" id="hgActionRow">
-      <button class="btn btn-primary" id="hgBtnPdf" onclick="hgDownloadPdf()">&#128438; Print Preview & Download PDF</button>
-      <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="dbSave('PM HG Analyzer')">&#128190; Simpan ke Database</button>
-      <button class="btn" style="background:#16a085;color:#fff;border-color:#16a085" onclick="window._raBuildPdf=hgDownloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
-      <button class="btn btn-danger" onclick="hgResetAll()">&#10005; Reset</button>
+  <div class="panel" id="mvGalleryPanel" style="display:none">
+    <div class="section-label">Evidence Photo</div>
+    <div id="mvGalleryContainer" style="display:flex;flex-wrap:wrap;gap:12px"></div>
+  </div>
+
+  <div class="panel">
+    <div class="notice info" style="display:block">
+      <b>Catatan:</b> Entry PM Result ke Maximo work order. Inform ke atasan langsung jika ada defect yang ditemukan.
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="btn-row">
+      <button class="btn btn-pdf" id="btnPdf" onclick="downloadPdf()">&#11015; Print Preview &amp; Download PDF</button>
+      <button class="btn" id="btnSave" style="background:#0891b2;color:#fff;border-color:#0891b2" onclick="dbSave(HK_MODUL_NAME)">&#128190; Simpan ke Database</button>
+      <button class="btn" style="background:#2563eb;color:#fff;border-color:#2563eb" onclick="window._raBuildPdf=downloadPdf; raSubmitReport()">🔒 Submit Laporan</button>
+      <button class="btn btn-danger" onclick="resetAll()">&#10005; Reset</button>
     </div>
   </div>
 
 </div>
 
-<!-- Modal Pop-up Pengingat Prosedur -->
-<div id="hgProcModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:12px;padding:24px 28px;max-width:420px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3)">
-    <div style="font-family:'Arial Narrow','Rajdhani',sans-serif;font-weight:700;font-size:16px;color:#c0392b;margin-bottom:10px">&#9888; Perhatian</div>
-    <div id="hgProcModalBody" style="font-size:13px;color:#333;line-height:1.6;margin-bottom:18px"></div>
-    <button class="btn btn-primary" style="width:100%" onclick="document.getElementById('hgProcModal').style.display='none'">Mengerti</button>
-  </div>
-</div>
-
-<!-- CROP MODAL (disamakan dengan flow-meter-fgd.html) -->
+<!-- CROP MODAL (3-mode: Default/Preset/Manual) -->
 <div id="cropModal">
     <div class="crop-dialog">
         <div class="crop-header">
@@ -256,8 +244,8 @@ input[type="checkbox"]:checked::after {
                     </div>
                 </div>
                 <div class="crop-size-row" id="cropCmRow" style="margin-top:8px;display:none">
-                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="15.4" step="0.1" value="5" oninput="onCustomCmChange('w')" onblur="onCustomCmCommit('w')"></div>
-                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="24" step="0.1" value="5" oninput="onCustomCmChange('h')" onblur="onCustomCmCommit('h')"></div>
+                    <div class="crop-cm-field"><label>Panjang (cm)</label><input type="number" id="cropWcm" min="0.5" max="16.4" step="0.1" value="5" oninput="onCustomCmChange('w')" onblur="onCustomCmCommit('w')"></div>
+                    <div class="crop-cm-field"><label>Lebar (cm)</label><input type="number" id="cropHcm" min="0.5" max="25" step="0.1" value="5" oninput="onCustomCmChange('h')" onblur="onCustomCmCommit('h')"></div>
                     <div class="crop-size-label" id="cropSizeLabel">Bebas (ukuran default saat cetak)</div>
                 </div>
             </div>
@@ -274,7 +262,6 @@ input[type="checkbox"]:checked::after {
         </div>
     </div>
 </div>
-
 
 <!-- ═══ EDIT GAMBAR (Insert Shape: Teks/Panah/Garis/Kotak/Oval) ═══ -->
 <div id="editImgModal" class="pdf-preview-modal">
@@ -326,9 +313,11 @@ input[type="checkbox"]:checked::after {
 </div>
 
 <script>
-window.CURRENT_MODUL = 'PM HG Analyzer'; // harus sama persis dengan HG_MODUL_NAME & argumen dbSave()
-var HG_MODUL_NAME = 'PM HG Analyzer';
-
+/* ══════════════════════════════════════════════════════════════════════════
+   FITUR REUSABLE: Crop 3-mode (Default/Preset/Manual) / Geser posisi foto /
+   Preview PDF sebelum download / Loading overlay / Autosave draft.
+   Disalin dari fegt.html supaya identik perilakunya di semua modul.
+   ══════════════════════════════════════════════════════════════════════════ */
 var cropModalState = document.getElementById('cropModal');
 cropModalState._pending = null;
 cropModalState._ratioLocked = false;
@@ -344,18 +333,13 @@ var DEFAULT_CROP_W_CM = 7.2, DEFAULT_CROP_H_CM = 5.18;
 var PRESET_DEFAULT_LONG_CM = 7;
 // Panjang (cropWcm) = dimensi HORIZONTAL saat dicetak di PDF -> dibatasi ketat
 // oleh lebar kertas A4. Dihitung dari margin PDF file ini.
-var MANUAL_MAX_W_CM = 15.4;
+var MANUAL_MAX_W_CM = 16.4;
 // Lebar (cropHcm) = dimensi VERTIKAL saat dicetak -> lebih longgar karena kalau
 // kelebihan cuma pindah halaman.
-var MANUAL_MAX_H_CM = 24;
+var MANUAL_MAX_H_CM = 25;
 
 /* ══════════════════════════════════════════════════════════════════════════
    EDIT GAMBAR — Insert Shape (Teks / Panah / Garis / Kotak / Oval)
-   Dipanggil dari dalam Crop Modal ("🖍️ Edit Gambar"). Bekerja di atas
-   gambar ASLI (sebelum crop), lalu hasil flatten (gambar + anotasi jadi
-   satu) dikembalikan ke #cropImg supaya alur crop selanjutnya normal.
-   Koordinat shape disimpan dalam ruang piksel ASLI gambar (naturalW/H)
-   supaya scaling ke layar & flatten ke canvas konsisten.
    ══════════════════════════════════════════════════════════════════════════ */
 var NS_SVG = 'http://www.w3.org/2000/svg';
 var imgEditState = {
@@ -457,9 +441,6 @@ function setEditTool(tool){
     var svg = document.getElementById('editSvgOverlay');
     svg.style.cursor = (tool === 'select') ? 'default' : (tool === 'pan' ? 'grab' : 'crosshair');
 }
-
-/* Kembali ke tool 'select' setelah shape baru dibuat, TANPA menghapus seleksi
-   shape yang baru saja dibuat (supaya langsung bisa digeser/resize). */
 function ieBackToSelectKeepSelection(){
     imgEditState.tool = 'select';
     document.querySelectorAll('.edit-tool-btn[data-tool]').forEach(function(b){
@@ -526,14 +507,8 @@ function editSelectedText(){
     if (!s || s.type !== 'text') return;
     var val = prompt('Edit teks:', s.text);
     ieForceHideKeyboard();
-    if (val === null) return;
-    s.text = val || ' ';
-    renderAllShapes();
+    if (val !== null && val.trim()) { s.text = val.trim(); renderAllShapes(); }
 }
-/* Fix: setelah window.prompt() ditutup di Android Chrome, soft keyboard kadang
-   "menempel" (tidak ikut turun) karena tidak ada <input> asli di halaman yang
-   kehilangan fokus. Trik: fokuskan sebentar lalu blur input tersembunyi supaya
-   Android benar-benar mendeteksi ada elemen form yang di-blur dan menutup IME. */
 function ieForceHideKeyboard(){
     if (document.activeElement && document.activeElement !== document.body && document.activeElement.blur) {
         document.activeElement.blur();
@@ -551,8 +526,6 @@ function ieForceHideKeyboard(){
         dummy.style.opacity = '0';
         document.body.appendChild(dummy);
     }
-    // readonly saat focus supaya Android TIDAK memunculkan keyboard baru di
-    // input dummy ini — cuma dipakai untuk memicu event blur yang sungguhan.
     dummy.setAttribute('readonly', 'readonly');
     dummy.focus();
     setTimeout(function(){ dummy.blur(); dummy.removeAttribute('readonly'); }, 0);
@@ -574,9 +547,6 @@ function getSvgPoint(evt){
     return { x: x, y: y };
 }
 
-/* Pakai Pointer Events (bukan touchstart/mousedown terpisah) supaya drag di HP
-   (Chrome/Safari Android & iOS) lebih andal — menghindari konflik event
-   sentuh vs mouse sintetis yang kadang bikin drag "putus" di tengah jalan. */
 function ieAddDocListeners(onMove, onUp){
     document.addEventListener('pointermove', onMove, {passive:false});
     document.addEventListener('pointerup', onUp);
@@ -588,7 +558,6 @@ function ieRemoveDocListeners(onMove, onUp){
     document.removeEventListener('pointercancel', onUp);
 }
 
-/* ── Mulai gambar shape baru (drag dari kosong) ── */
 function onEditSvgPointerDown(e){
     var tool = imgEditState.tool;
     if (tool === 'pan') {
@@ -632,7 +601,8 @@ function onEditSvgPointerDown(e){
     function onUp(){
         ieRemoveDocListeners(onMove, onUp);
         var d = imgEditState.drawing; imgEditState.drawing = null;
-        if (d && (Math.abs(d.x2-d.x1) > 4 || Math.abs(d.y2-d.y1) > 4)) {
+        var dist = Math.hypot(d.x2-d.x1, d.y2-d.y1);
+        if (dist > Math.max(8, imgEditState.naturalW*0.008)) {
             var shape;
             if (d.type === 'rect' || d.type === 'oval') {
                 shape = addShape({type:d.type, x:Math.min(d.x1,d.x2), y:Math.min(d.y1,d.y2), w:Math.abs(d.x2-d.x1), h:Math.abs(d.y2-d.y1), color:d.color, strokeSize:d.strokeSize, rotation:0});
@@ -646,7 +616,6 @@ function onEditSvgPointerDown(e){
     ieAddDocListeners(onMove, onUp);
 }
 
-/* ── Pindahkan shape yang ada (drag body) ── */
 function startDragShape(id, ev){
     setSelectedShape(id);
     var shape = getShapeById(id);
@@ -668,7 +637,6 @@ function startDragShape(id, ev){
     ieAddDocListeners(onMove, onUp);
 }
 
-/* ── Handle resize/endpoint drag ── */
 function startHandleDrag(onDragMove){
     function onMove(mv){ if (mv.cancelable) mv.preventDefault(); onDragMove(getSvgPoint(mv)); renderAllShapes(); }
     function onUp(){ ieRemoveDocListeners(onMove, onUp); }
@@ -691,7 +659,6 @@ function ieMakeHandle(svg, cx, cy, cursor, onDragMove){
     svg.appendChild(hit);
 }
 
-/* ── Bangun 1 elemen visual shape (dipakai utk overlay interaktif & flatten) ── */
 function ieBuildShapeVisual(shape){
     var el;
     if (shape.type === 'rect') {
@@ -741,7 +708,6 @@ function ieRotatePoint(px, py, cx, cy, deg){
     return { x: cx + dx*cos - dy*sin, y: cy + dx*sin + dy*cos };
 }
 
-/* ── Render ulang seluruh overlay interaktif (shapes + preview + handle seleksi) ── */
 function renderAllShapes(){
     var svg = document.getElementById('editSvgOverlay');
     if (!svg) return;
@@ -752,8 +718,6 @@ function renderAllShapes(){
         var visual = ieBuildShapeVisual(shape);
         if (!visual) return;
         g.appendChild(visual);
-        // Hit-area lebih lebar supaya mudah disentuh (untuk garis/panah tipis,
-        // dan bagian dalam kotak/oval yang defaultnya fill:none tidak bisa disentuh)
         if (shape.type === 'line' || shape.type === 'arrow') {
             var hit = document.createElementNS(NS_SVG, 'line');
             hit.setAttribute('x1', shape.x1); hit.setAttribute('y1', shape.y1);
@@ -772,8 +736,6 @@ function renderAllShapes(){
             fhit.setAttribute('fill', 'transparent');
             g.insertBefore(fhit, visual);
         } else if (shape.type === 'text') {
-            // <text> secara default cuma bisa "diklik" tepat di garis huruf. Tambahkan
-            // hit-area kotak penuh (transparan) supaya teks mudah digeser/dipilih di HP.
             var tb = ieTextBoxSize(shape);
             var padX = tb.w*0.08, padY = tb.h*0.15;
             var thit = document.createElementNS(NS_SVG, 'rect');
@@ -807,16 +769,12 @@ function renderAllShapes(){
                 box.setAttribute('stroke-dasharray', '6,4'); box.setAttribute('pointer-events', 'none');
                 if (rot) box.setAttribute('transform', 'rotate(' + rot + ' ' + cx + ' ' + cy + ')');
                 svg.appendChild(box);
-                // Handle resize di pojok kanan-bawah — posisinya dihitung ulang sesuai
-                // rotasi saat ini, dan resize dihitung di ruang LOKAL (belum dirotasi)
-                // supaya tetap membesar/mengecil mengikuti arah kotaknya sendiri.
                 var cornerLocal = {x: shape.x+shape.w, y: shape.y+shape.h};
                 var cornerWorld = rot ? ieRotatePoint(cornerLocal.x, cornerLocal.y, cx, cy, rot) : cornerLocal;
                 ieMakeHandle(svg, cornerWorld.x, cornerWorld.y, 'nwse-resize', function(p){
                     var local = rot ? ieRotatePoint(p.x, p.y, cx, cy, -rot) : p;
                     shape.w = Math.max(ieMinSize(), local.x-shape.x); shape.h = Math.max(ieMinSize(), local.y-shape.y);
                 });
-                // Handle rotasi — bulatan di atas tengah kotak, tarik memutar sekeliling pusat.
                 var rotDist = Math.max(24, imgEditState.naturalW*0.03);
                 var rotHandleLocal = {x: cx, y: shape.y - rotDist};
                 var rotHandleWorld = rot ? ieRotatePoint(rotHandleLocal.x, rotHandleLocal.y, cx, cy, rot) : rotHandleLocal;
@@ -866,7 +824,6 @@ function renderAllShapes(){
     svg.addEventListener('pointerdown', onEditSvgPointerDown);
 })();
 
-/* ── Terapkan semua anotasi: gabung ke gambar asli, kembalikan ke #cropImg ── */
 function applyImageEdits(){
     if (!imgEditState.shapes.length) { closeImageEditor(false); return; }
     var nw = imgEditState.naturalW, nh = imgEditState.naturalH;
@@ -918,6 +875,9 @@ function applyImageEdits(){
     svgImg.src = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   CROP ENGINE 3-MODE (Default / Preset / Manual)
+   ══════════════════════════════════════════════════════════════════════════ */
 var CROP_PRESETS = [
     {label:'3:2', w:3, h:2}, {label:'4:3', w:4, h:3},
     {label:'5:4', w:5, h:4}, {label:'16:9', w:16, h:9}, {label:'A4', w:210, h:297}, {label:'Letter', w:216, h:279}
@@ -1014,9 +974,6 @@ function setCropMode(mode) {
     }
 }
 function applyDefaultSize() {
-    // Default: box crop menutupi SELURUH gambar (tidak memotong apapun).
-    // Ukuran cetak PDF tetap mengikuti DEFAULT_CROP_W_CM x DEFAULT_CROP_H_CM,
-    // terlepas dari rasio asli gambarnya.
     cropModalState._ratioLocked = false;
     cropModalState._cropWcm = DEFAULT_CROP_W_CM; cropModalState._cropHcm = DEFAULT_CROP_H_CM;
     updateSizeLabel(); fitCropBoxToFullImage();
@@ -1162,8 +1119,8 @@ function reshapeCropBoxToRatio() {
 }
 
 /* imgOpenCropper: SAMA SIGNATURE dengan versi lama shared.js supaya semua
-   pemanggil existing (ldHandleFiles/clHandleFiles/ldReEdit/clReEdit/inline
-   onclick) tetap jalan tanpa diubah. */
+   pemanggil existing (mvRowFileSelected/mvRowReEdit/inline onclick) tetap
+   jalan tanpa diubah. */
 function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replaceIdx, origDataUrl) {
     var ridx = (replaceIdx!==undefined?replaceIdx:-1);
     var existing = (ridx>=0 && imgArr[ridx]) ? imgArr[ridx] : null;
@@ -1242,6 +1199,32 @@ function closeCropModal() {
     cropStopHistoryTracking();
     cropModalState._pending = null;
 }
+
+/* ── Fitur R: Rotasi gambar 90° kiri/kanan di dalam modal crop ──
+   dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise).
+   Gambar SUMBER (bukan cuma crop box) diputar lewat canvas, lalu hasilnya
+   dipasang balik ke #cropImg -- otomatis memicu ulang event onload yang sudah
+   ada, yang menyesuaikan ukuran/posisi gambar & crop box (termasuk mode
+   Preset/Manual dengan rasio terkunci). cropAndSave() menggambar dari elemen
+   #cropImg langsung, jadi hasil akhir crop otomatis ikut gambar yang sudah
+   diputar.
+   (Fitur O/Urutkan Foto TIDAK relevan di file ini -- mvRowEvidence[i] didesain
+   khusus maksimal 1 foto per baris, jadi tidak ada apa pun yang bisa ditukar
+   posisi.) */
+function rotateCropImage(dir) {
+    var img = document.getElementById('cropImg');
+    if (!img || !img.naturalWidth || !img.naturalHeight) return;
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(dir * 90 * Math.PI/180);
+    ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
+    var rotatedUrl = canvas.toDataURL('image/jpeg', 0.95);
+    img.src = rotatedUrl; // memicu ulang img.onload -> refit gambar & crop box
+    if (cropModalState._pending) cropModalState._pending.dataUrl = rotatedUrl;
+}
 function cropReset() {
     var img = document.getElementById('cropImg');
     var p = cropModalState._pending;
@@ -1269,30 +1252,6 @@ function cropUpdateRestoreOriginalButton() {
     btn.disabled = false;
 }
 function skipCrop() { closeCropModal(); if (cropQueue) cropQueueAdvance(); }
-
-/* ── Rotasi gambar 90° kiri/kanan di dalam modal crop ──
-   dir: -1 = putar ke kiri (counter-clockwise), 1 = putar ke kanan (clockwise).
-   Gambar SUMBER (bukan cuma crop box) diputar lewat canvas, lalu hasilnya
-   dipasang balik ke #cropImg -- ini otomatis memicu event onload yang sudah
-   ada (lihat imgOpenCropper), yang menyesuaikan ulang ukuran/posisi gambar
-   dan crop box (termasuk kalau lagi mode Preset/Manual dengan rasio terkunci),
-   jadi tidak perlu logika reposisi terpisah. cropAndSave() menggambar dari
-   elemen #cropImg langsung, jadi hasil akhirnya otomatis ikut gambar yang
-   sudah diputar. */
-function rotateCropImage(dir) {
-    var img = document.getElementById('cropImg');
-    if (!img || !img.naturalWidth || !img.naturalHeight) return;
-    var canvas = document.createElement('canvas');
-    canvas.width = img.naturalHeight;
-    canvas.height = img.naturalWidth;
-    var ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width/2, canvas.height/2);
-    ctx.rotate(dir * 90 * Math.PI/180);
-    ctx.drawImage(img, -img.naturalWidth/2, -img.naturalHeight/2);
-    var rotatedUrl = canvas.toDataURL('image/jpeg', 0.95);
-    img.src = rotatedUrl; // memicu ulang img.onload -> refit gambar & crop box
-    if (cropModalState._pending) cropModalState._pending.dataUrl = rotatedUrl;
-}
 
 function cropAndSave() {
     var img = document.getElementById('cropImg');
@@ -1355,15 +1314,10 @@ function cropAndSave() {
     // "existing", jadi foto yang di-crop-ulang tapi belum punya driveFileId
     // ke-splice DAN ke-push sekaligus -> dobel di galeri.)
     if (existing && existing.driveFileId) deleteFotoDariGDrive(existing.driveFileId);
-
-    // Upload otomatis ke Google Drive (non-blocking, tidak mengganggu alur PDF)
-    uploadFotoKeGDrive(entry.dataUrl, entry.name, p.modulePrefix, p.side || '', entry);
+    uploadFotoKeGDrive(entry.dataUrl, entry.name, window.CURRENT_MODUL, p.side || '', entry);
 
     closeCropModal();
-    // panggil render callback modul terkait (sama seperti imgCompressAndStore lama di shared.js)
-    // Panggil render callback modul terkait secara dinamis: {prefix}RenderPreviews(side)
-    var renderFnName = p.modulePrefix + 'RenderPreviews';
-    if (typeof window[renderFnName] === 'function') window[renderFnName](p.side);
+    if (p.modulePrefix === 'mv' && typeof mvRenderPreviews === 'function') mvRenderPreviews(p.side);
 
     if (cropQueue) cropQueueAdvance(); // Fitur U: lanjut ke foto berikutnya kalau lagi dalam antrean multi-crop
 }
@@ -1378,7 +1332,6 @@ function nudgeImageInArray(imgArr, imgIdx, delta, rerenderFn) {
     img.offsetX = next;
     if (typeof rerenderFn === 'function') rerenderFn();
 }
-
 
 /* ── Drag & resize kotak crop (mousedown+touchstart) ── */
 function initCropDrag() {
@@ -1502,692 +1455,619 @@ function closePdfPreview() {
     pdfPreviewState.doc = null;
 }
 
-
-/* ── DATA: Table 5.3 — Regularly Recurring Maintenance Work for 1 Year ── */
-/* freq: bulan-bulan di mana step ini muncul (3/6/9/12). replace: true => kolom
-   "Sparepart Replacement" berupa dropdown Ready/Kosong. false => dropdown
-   Belum/Selesai (2026-09-11: diubah dari checkbox polos -- permintaan
-   eksplisit user, PDF-nya juga cetak teks "Selesai"/"Belum", bukan lagi
-   checkbox vektor, konsisten dgn kolom Ready/Kosong yang sudah teks).
-   2026-09-10: step 1/7/8/9 ditambah freq 3 supaya daftar step 3 Monthly SAMA
-   PERSIS dengan 6 Monthly (permintaan eksplisit user) -- sebelumnya 3
-   Monthly cuma step 2,3,4,5,6,6.5,17 (kelewat 4 step yang 6 Monthly punya).
-   2026-09-11: freq 3 di step 1 KHUSUS DICABUT LAGI (balik ke [2,6,12]) --
-   step 1 memang SENGAJA dikecualikan dari 3 Monthly & 9 Monthly sejak
-   sesi lebih lama (lihat CLAUDE.md/riwayat commit 6dc2395), keputusan itu
-   TIDAK dimaksudkan ikut berubah oleh penyamaan 3M=6M di atas. Step
-   7/8/9 TIDAK ikut dicabut (freq 3 tetap ada di situ) -- user cuma minta
-   step 1 yang dikecualikan lagi. Kalau nanti ada permintaan serupa lagi
-   utk step lain, JANGAN asumsikan "samakan 3M=6M" itu final/menang atas
-   pengecualian step 1 -- itu memang harus tetap beda. */
-var STEP_DATA = [
-  {no:1,  label:"Replace particle protection filter in the sampling probe", ref:"", refImg:"assets/hg-step1-ref.png", replace:true,  freq:[2,6,12]},
-  {no:2,  label:"Replace the particle protection filter (13) upstream from the photometer", ref:"", refImg:"assets/hg-step2-ref.png", replace:true,  freq:[3,6,9,12]},
-  {no:3,  label:"Replace the iodine-active carbon in the Hg\u2070 adsorber (14) on the photometer", ref:"", refImg:"assets/hg-step3-ref.png", replace:true,  freq:[3,6,9,12], proc:'iodine'},
-  {no:4,  label:"Clean the cooling body of the gas cooler (M1)", ref:"", refImg:"assets/hg-step4-ref.png", replace:false, freq:[2,3,6,9,12]},
-  {no:5,  label:"Adjust the flow at the needle valve (15)", ref:"", refImg:"assets/hg-step5-ref.png", replace:false, freq:[3,6,9,12]},
-  {no:6,  label:"Carry out a photometer zero adjustment (A5)", ref:"Menu 32111", refImg:"", replace:false, freq:[2,3,6,9,12], evidenceMode:'single'},
-  {no:6.5, label:"Validation", ref:"", refImg:"", replace:false, freq:[2,3,6,9,12], evidenceMode:'single'},
-  {no:7,  label:"Rinse the wash bottles of the gas cooler (M1) with water", ref:"", refImg:"assets/hg-step7-ref.png", replace:false, freq:[3,6,12]},
-  {no:8,  label:"Replace the reactor filling (A6.1 and A6.2)*", ref:"", refImg:"assets/hg-step8-ref.png", replace:true,  freq:[3,6,12], proc:'reactor'},
-  {no:9,  label:"Replace the condensate blocking membrane (16)", ref:"", refImg:"assets/hg-step9-ref.png", replace:true,  freq:[3,6,12]},
-  {no:10, label:"Replace the membrane of the gas pump (M3)", ref:"", refImg:"assets/hg-step10-ref.png", replace:true,  freq:[12]},
-  {no:11, label:"Maintain the condensate pump (M4.#), replace the hoses and pressure rollers", ref:"", refImg:"assets/hg-step11-ref.png", replace:true,  freq:[12]},
-  {no:12, label:"Replace the iodine-active carbon (12) in the zero gas filter", ref:"", refImg:"assets/hg-step12-ref.png", replace:true,  freq:[12]},
-  {no:13, label:"Replace all hoses in the gas path from the reactor to the photometer", ref:"", refImg:"assets/hg-step13-ref.png", replace:true,  freq:[12]},
-  {no:14, label:"Adjust the flow", ref:"", refImg:"assets/hg-step14-ref.png", replace:false, freq:[12]},
-  {no:15, label:"Test the AC unit in accordance with the manufacturer's specifications", ref:"", refImg:"", replace:false, freq:[12]},
-  {no:16, label:"Replace the hoses in the pumps (M31) for the HgCl\u2082", ref:"", refImg:"assets/hg-step16-ref.png", replace:true,  freq:[12]},
-  {no:17, label:"Reading HG After Calibration", ref:"", refImg:"", replace:false, freq:[2,3,6,9,12], evidenceMode:'single'}
+/* ══════════════════════════════════════════════════════════════════════════
+   MODUL: 2 Yearly- Calibration of Hawk Liquid Level Transmitter (Common WWTP)
+   Asset: CWT-LT-950 & CWT-LT-960 (Waste Water Equalization Basin A/B).
+   Sumber tabel: Ultrasonic_level.xlsx dari user (2026-09-24).
+   Dibangun dari mark_vie_inspection.html (evidence per baris, BISA banyak
+   foto/baris, dikumpulkan di galeri "Evidence Photo" -- prefix crop 'mv'
+   SENGAJA dipertahankan karena dispatch cropAndSave()/imgCompressAndStore()
+   di shared.js memanggil mvRenderPreviews() lewat prefix itu) + pola
+   Pass/Fail 2 transmitter & remark Y/N otomatis dari id_fan_line_purging.html.
+   ══════════════════════════════════════════════════════════════════════════ */
+var HK_MODUL_NAME = '2 Yearly- Calibration of Hawk Liquid Level Transmitter';
+var HK_TAGS = [
+  {tag:'CWT-LT-950', desc:'WASTE WATER EQUALIZATION BASIN A LEVEL TRANSMITTER'},
+  {tag:'CWT-LT-960', desc:'WASTE WATER EQUALIZATION BASIN B LEVEL TRANSMITTER'}
 ];
-var FREQ_MONTH = {'2M':2, '3M':3, '6M':6, '9M':9, '1Y':12};
-var FREQ_LABEL = {'2M':'2 Monthly', '3M':'3 Monthly', '6M':'6 Monthly', '9M':'9 Monthly', '1Y':'1 Yearly', '2Y':'2 Yearly', '5Y':'5 Yearly'};
+var HK_ASSET = HK_TAGS.map(function(t){ return t.tag; }).join(', ');
+var HK_ASSET_DESC = HK_TAGS.map(function(t){ return t.tag + ' (' + t.desc + ')'; }).join(', ');
 
-/* ── DATA: Table 5.1 — Daily Routine Check (selalu tampil, statis) ── */
-var TABLE51 = [
-  {no:1, unit:"Cabinet and component exterior", work:"Clean all surfaces"},
-  {no:2, unit:"All components", work:"Inspect visually for deposits, damages, corrosion etc."},
-  {no:3, unit:"All instruments", work:"Check status in menu 41\u202646. Check for alarms and fault messages. Inspect information messages and logs."},
-  {no:4, unit:"Heated sample line", work:"Check status in menu 41\u202646. Check status temperature by hand. Sample tubes should be noticeably warm."},
-  {no:5, unit:"Calibration gas (standard solution)", work:"Check that there is sufficient HgCl\u2082 in the bottle."},
-  {no:6, unit:"Air conditioning unit", work:"Clean unit exterior. Check that air inlet and outlet vents are free from sand, dust or other foreign matters"}
+/* yText/nText = keterangan otomatis yang diisi ke kolom Remark begitu
+   Pass/Fail dipilih (pola sama dgn id_fan_line_purging.html). */
+var HK_ITEMS = [
+  {no:1,  label:'Make sure PTW already issue.',
+    yText:'PTW Sudah Diterbitkan dan Berlaku', nText:'PTW Belum Diterbitkan / Belum Berlaku'},
+  {no:2,  label:'Prepare tool & material required.',
+    yText:'Tool & Material Sudah Disiapkan dan Siap Pakai', nText:'Tool & Material Belum Lengkap / Belum Siap'},
+  {no:3,  label:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.',
+    yText:'Panel Sudah Dibersihkan, Kondisi Bersih', nText:'Panel Belum Dibersihkan / Masih Kotor'},
+  {no:4,  label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress). * replace if required',
+    yText:'Sealing & Conduit Dalam Kondisi Baik, Tidak Ada Debu/Air Masuk', nText:'Ditemukan Debu, Indikasi Air Masuk, atau Kondisi Rusak pada Sealing/Conduit'},
+  {no:5,  label:'Check connection was tightened and no looses.',
+    yText:'Koneksi Sudah Kencang, Tidak Ada yang Kendor', nText:'Ditemukan Koneksi yang Kendor, Perlu Dikencangkan'},
+  {no:6,  label:'Disconnect power Ultra sonic transmitter',
+    yText:'Power Ultrasonic Transmitter Sudah Dilepas', nText:'Power Ultrasonic Transmitter Belum Dilepas'},
+  {no:7,  label:'Cleaning sensor and analyzer power Ultra sonic transmitter',
+    yText:'Sensor & Analyzer Ultrasonic Transmitter Sudah Dibersihkan', nText:'Sensor & Analyzer Ultrasonic Transmitter Belum Dibersihkan / Masih Kotor'},
+  {no:8,  label:'Reconnect power supply and retighten all connector cable Ultra sonic transmitter',
+    yText:'Power Supply Sudah Tersambung Kembali, Semua Konektor Kencang', nText:'Power Supply Belum Tersambung / Ada Konektor yang Kendor'},
+  {no:9,  label:'Simulation level transmitter and check level at DCS',
+    yText:'Simulasi Level Sudah Dilakukan, Pembacaan DCS Sesuai', nText:'Pembacaan DCS Tidak Sesuai dengan Simulasi Level'},
+  {no:10, label:'Raise new WO & repair if any defect found.',
+    yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
+  {no:11, label:'Leave the location within safe condition.',
+    yText:'Lokasi Kerja Sudah Ditinggalkan dalam Kondisi Aman dan Rapi', nText:'Lokasi Kerja Belum dalam Kondisi Aman / Masih Perlu Dirapikan'}
 ];
+// Alias -- fungsi evidence per-baris di bawah (asal mark_vie_inspection.html)
+// membaca MV_ITEMS[i].label utk caption default foto.
+var MV_ITEMS = HK_ITEMS;
 
-/* ── DATA: Table 5.2 — Regularly Maintenance Check (selalu tampil, statis) ── */
-var TABLE52 = [
-  {no:1,  label:"Determine the current status of the overall measuring system", ref:"Menu 41 \u2026. 46"},
-  {no:2,  label:"Read out, document and check all parameters, sensor information and operating data", ref:"Menu 41 \u2026. 46"},
-  {no:3,  label:"Read out, document and check the fault log and calibration messages", ref:"USB/Memory stick"},
-  {no:4,  label:"Check the leak-tightness of the HM-1400 TRX 2", ref:"Menu: 224"},
-  {no:5,  label:"Check the sampling system, including a test of the leak-tightness and the cold spots and a check of the heating systems.", ref:"Leak: menu 224 / Temperature: menu 41 \u2026. 46"},
-  {no:6,  label:"Function test of the internal gas generator including a check of the flow rate and zero gas test.", ref:"Zero: 32111 / Ref#0: 242"},
-  {no:7,  label:"Reference point check with Hg\u207f\u207a", ref:"Manual Ref: 241\u2026. / Cycle: 32515"},
-  {no:8,  label:"Check the flow measurement", ref:"Menu 41 \u2026. 46"},
-  {no:9,  label:"Measurement-based check of the temperature sensors in the reactor (A6) and on the 3-way valve (Y1)", ref:"Menu 41\u202646 / Adjustment: menu 3214"},
-  {no:10, label:"Check the residual current device", ref:""},
-  {no:11, label:"Check the age of the battery in the PLC and in the display", ref:"", onlyMonth:12}
+/* Tabel Simulation & Feedback: level 0/25/50/75/100 % = simulasi 4/8/12/16/20
+   mA (tetap), teknisi isi Feedback DCS dalam mA per transmitter. */
+var HK_SIM_ROWS = [
+  {pct:'0',   ma:'4'},
+  {pct:'25',  ma:'8'},
+  {pct:'50',  ma:'12'},
+  {pct:'75',  ma:'16'},
+  {pct:'100', ma:'20'}
 ];
 
-/* ── DATA: Table 5.4 — Regularly Recurring Maintenance Work for >2 Years ── */
-var TABLE54 = [
-  {no:1, label:"Fully replace the condensate pumps (M4.#)", interval:"\u2265 2 years", freq:'2Y'},
-  {no:2, label:"Replace and calibrate the UV lamp in the photometer (performed by manufacturer)", interval:"\u2265 2 years", freq:'2Y'},
-  {no:3, label:"Replace the battery in the PLC and in the display", interval:"5 years", freq:'5Y'}
-];
+function hkEmptyState(){ return HK_ITEMS.map(function(){ return {passA:false, failA:false, passB:false, failB:false, remark:''}; }); }
+function hkEmptySim(){ return HK_SIM_ROWS.map(function(){ return {fbA:'', fbB:''}; }); }
+var hkState = hkEmptyState();
+var hkSim = hkEmptySim();
+var mvRowEvidence = HK_ITEMS.map(function(){ return []; });
+var mvRowPickTarget = -1;
 
-/* ── DATA: Table 5.5 — Final Check After All Maintenance Work (selalu tampil, statis, tanpa interaksi) ── */
-var TABLE55 = [
-  {no:1, label:"Check the status of all temperature controllers and all analogue and digital sensors"},
-  {no:2, label:"Check the leak-tightness"},
-  {no:3, label:"Check the span value and linearity using an internal gas generator"},
-  {no:4, label:"Test the internal gas generator"},
-  {no:5, label:"Reset the maintenance counter, delete the fault log and set the operating data for normal operation"},
-  {no:6, label:"Check normal operation"},
-  {no:7, label:"Create current configuration file"}
-];
+function safe(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-/* ── DATA: Prosedur 5.2 — Replace Reactor Filling (A6.1 & A6.2) ── */
-var PROC_REACTOR_STEPS = [
-  "Open the reactor box.",
-  "Loose the screw reactor plate using 5mm Allen key (hex key).",
-  "Remove the plate using provided tool.",
-  "Pull the box.",
-  "Place the box in horizontal position to prevent activator charcoal washers being damage.",
-  "Wait until the box temperature cooler, around ambient temperature.",
-  "Remove 4 nuts.",
-  "Take out the plate.",
-  "Pour the charcoal & glass wool into zip lock bag. Mark the zip lock bag using label.",
-  "Replace gasket and washer behind the box with new spare part.",
-  "Re-fill the box using glass wool + charcoal + glass wool.",
-  "Close it back and secure with 4 nuts.",
-  "Use the special tool, and the box up, place the box in to the reactor.",
-  "Place the plate to the reactor.",
-  "Tighten the screw using 5mm Allen key.",
-  "Close the cover of reactor boxes."
-];
-
-/* ── DATA: Prosedur 5.3 — Replace Iodine-Carbon Hg Trap Filter ── */
-var PROC_IODINE_STEPS = [
-  "Make sure the unit already turn-off.",
-  "Loosen the tube that connected to the bottle.",
-  "Loosen the clip to remove the bottle.",
-  "Remove bottle.",
-  "Open the bottle cap (red).",
-  "Pour the charcoal & glass wool into zip lock bag. Mark the zip lock bag using label.",
-  "Re-fill the box with: glass wool + charcoal + glass wool.",
-  "Put on bottle cap.",
-  "Put the bottle back in its place.",
-  "Tighten the clip.",
-  "Re-install the tube"
-];
-
-/* ── STATE ── */
-var activeFreq = '2M';
-var stepState = {};
-STEP_DATA.forEach(function(s){ stepState[s.no] = {check:false, sparepart:'', done:false}; });
-var hgEvidence = {};
-STEP_DATA.forEach(function(s){ hgEvidence[s.no] = {before:[], after:[]}; });
-var table54State = {};
-TABLE54.forEach(function(r){ table54State[r.no] = {selesai:false}; });
-
-function safe(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function stepsFor(month){ return STEP_DATA.filter(function(s){ return s.freq.indexOf(month) >= 0; }); }
-
-/* ── RENDER: Table 5.1 Daily Routine Check (statis) ── */
-function renderTable51Html() {
-  var rows = TABLE51.map(function(r){
-    return '<tr><td style="text-align:center">'+r.no+'</td><td><b>'+safe(r.unit)+'</b></td><td>'+safe(r.work)+'</td><td>End-User</td></tr>';
-  }).join('');
-  return '<div class="section-label">Table 5.1 — Daily Routine Check</div>'+
-    '<div class="preview-wrap" style="margin-bottom:24px"><table class="manual-table">'+
-    '<thead><tr><th style="width:36px">No</th><th style="width:180px">Unit</th><th>Maintenance Work</th><th style="width:110px">Responsibility</th></tr></thead>'+
-    '<tbody>'+rows+'</tbody></table></div>';
+function hkCb(i, key, color) {
+  return '<td style="text-align:center"><input type="checkbox" '+(hkState[i][key]?'checked':'')+' onchange="hkToggle('+i+',\''+key+'\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:'+color+'"></td>';
 }
 
-/* ── RENDER: Table 5.2 Regularly Maintenance Check (statis) ── */
-function renderTable52Html() {
-  var rows = TABLE52.map(function(r){
-    var months = [3,6,9,12].map(function(m){
-      var on = r.onlyMonth ? (m===r.onlyMonth) : true;
-      return '<td style="text-align:center">'+(on?'<span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:#eafaf0;border:1.3px solid #1a6b3a;position:relative;vertical-align:middle"><span style="position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #1a6b3a;border-width:0 2px 2px 0;transform:rotate(40deg)"></span></span>':'')+'</td>';
-    }).join('');
-    return '<tr><td style="text-align:center">'+r.no+'</td><td>'+safe(r.label)+(r.ref?'<br><span style="color:var(--text3);font-size:11px">'+safe(r.ref)+'</span>':'')+'</td>'+months+'<td>Specialist</td></tr>';
-  }).join('');
-  return '<div class="section-label">Table 5.2 — Regularly Maintenance Check</div>'+
-    '<div class="preview-wrap" style="margin-bottom:24px"><table class="manual-table">'+
-    '<thead><tr><th style="width:36px">No</th><th>Maintenance Work</th><th style="width:34px">3</th><th style="width:34px">6</th><th style="width:34px">9</th><th style="width:34px">12</th><th style="width:110px">Responsibility</th></tr></thead>'+
-    '<tbody>'+rows+'</tbody></table></div>';
+function buildHkTable() {
+  var body = document.getElementById('hkTableBody');
+  var html = '';
+  HK_ITEMS.forEach(function(it, i){
+    html += '<tr>'+
+      '<td style="text-align:center">'+it.no+'</td>'+
+      '<td>'+safe(it.label)+'</td>'+
+      hkCb(i,'passA','var(--ok,#16a34a)')+hkCb(i,'failA','var(--fail,#dc2626)')+
+      hkCb(i,'passB','var(--ok,#16a34a)')+hkCb(i,'failB','var(--fail,#dc2626)')+
+      '<td><input type="text" class="mv-remark" id="hkRemark_'+i+'" value="'+safe(hkState[i].remark)+'" oninput="hkState['+i+'].remark=this.value"></td>'+
+      '<td id="mvRowEvCell_'+i+'" style="text-align:center;vertical-align:middle">'+mvRowEvidenceCellHtml(i)+'</td>'+
+    '</tr>';
+  });
+  body.innerHTML = html;
+  mvBuildGallery();
 }
 
-/* ── RENDER: Table 5.5 Final Check (statis, selalu tampil, tanpa interaksi) ── */
-function renderTable55Html() {
-  var rows = TABLE55.map(function(r){
-    return '<tr><td style="text-align:center">'+r.no+'</td><td>'+safe(r.label)+'</td><td>Specialist</td></tr>';
-  }).join('');
-  return '<div class="section-label" style="margin-top:28px">Table 5.5 — Final Check After All Maintenance Work</div>'+
-    '<div class="preview-wrap" style="margin-bottom:24px"><table class="manual-table">'+
-    '<thead><tr><th style="width:36px">No</th><th>Maintenance Work</th><th style="width:110px">Responsibility</th></tr></thead>'+
-    '<tbody>'+rows+'</tbody></table></div>';
+/* Remark 1 kolom utk 950 & 960 -- kalau kedua sisi sepakat cukup 1
+   kalimat yText/nText, kalau beda digabung per sisi (pola
+   computeChecklistRemark() di id_fan_line_purging.html). */
+function hkComputeRemark(i) {
+  var it = HK_ITEMS[i], st = hkState[i];
+  var a = st.passA ? 'Y' : st.failA ? 'N' : null;
+  var b = st.passB ? 'Y' : st.failB ? 'N' : null;
+  if (a === null && b === null) return st.remark;
+  if (a === b) return a === 'Y' ? it.yText : it.nText;
+  var txt = function(s){ return s === 'Y' ? it.yText : s === 'N' ? it.nText : '-'; };
+  return '950: ' + txt(a) + ' | 960: ' + txt(b);
 }
 
-/* ── RENDER: Blok Prosedur Khusus (statis, tampil kondisional) ── */
-function renderProcBlockHtml(title, subtitle, steps, warningHtml) {
-  var li = steps.map(function(s,i){ return '<li style="margin-bottom:4px">'+safe(s)+'</li>'; }).join('');
-  return '<div style="margin-top:24px;border:1.5px solid #f39c1250;border-radius:8px;padding:16px 20px;background:#fffdf7">'+
-    '<div style="font-family:\'Arial Narrow\',\'Rajdhani\',sans-serif;font-weight:700;font-size:14px;color:#b9770e;margin-bottom:4px">'+safe(title)+'</div>'+
-    (subtitle ? '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">'+safe(subtitle)+'</div>' : '')+
-    (warningHtml || '')+
-    '<ol style="margin:10px 0 0 18px;padding:0;font-size:12.5px;color:#333;line-height:1.5">'+li+'</ol>'+
-  '</div>';
-}
-function renderProcReactorHtml() {
-  var warn = '<div style="display:flex;gap:10px;align-items:flex-start;background:#fef5e7;border:1px solid #f39c1250;border-radius:6px;padding:10px 12px;margin-bottom:6px">'+
-    '<span style="font-size:20px">&#9888;</span>'+
-    '<div style="font-size:11.5px;color:#7d5a00"><b>Risk posed by hot surfaces!</b><br>Contact with hot components may cause serious burns. Always use suitable heat-protective equipment (such as protective gloves).</div>'+
-  '</div>';
-  return renderProcBlockHtml('5.2 Procedure of Replace Reactor Filling (A6.1 and A6.2)', '', PROC_REACTOR_STEPS, warn);
-}
-function renderProcIodineHtml() {
-  return renderProcBlockHtml('5.3 Procedure of Replace Iodine-Carbon Hg Trap Filter', '', PROC_IODINE_STEPS, '');
+function hkToggle(i, key, checked) {
+  var st = hkState[i];
+  st[key] = checked;
+  if (checked) {
+    var pair = {passA:'failA', failA:'passA', passB:'failB', failB:'passB'}[key];
+    st[pair] = false;
+  }
+  st.remark = hkComputeRemark(i);
+  buildHkTable();
+  if (typeof autosaveTrigger === 'function') autosaveTrigger();
 }
 
-/* ── RENDER: Konten per tab frequency ── */
-function hgRenderFreqContent(freq) {
-  var html = renderTable51Html() + (freq === '2M' ? '' : renderTable52Html());
-  if (freq === '2Y' || freq === '5Y') {
-    html += renderTable54Html(freq);
-    html += renderTable55Html();
-    document.getElementById('hgFreqContent').innerHTML = html;
-  } else {
-    var month = FREQ_MONTH[freq];
-    html += renderStepTableHtml(month);
-    var hasReactor = stepsFor(month).some(function(s){ return s.proc === 'reactor'; });
-    var hasIodine  = stepsFor(month).some(function(s){ return s.proc === 'iodine'; });
-    if (hasReactor) html += renderProcReactorHtml();
-    if (hasIodine)  html += renderProcIodineHtml();
-    html += renderTable55Html();
-    document.getElementById('hgFreqContent').innerHTML = html;
-    stepsFor(month).forEach(function(s){
-      hgRenderPreviews('step'+s.no+'_before');
-      hgRenderPreviews('step'+s.no+'_after');
+/* Centang Semua Y -- SEMUA baris termasuk "Raise new WO" (keputusan user
+   2026-09-21, sama seperti modul lain yang punya tombol ini). */
+function hkCheckAllY() {
+  hkState.forEach(function(st, i){
+    st.passA = true; st.failA = false; st.passB = true; st.failB = false;
+    st.remark = hkComputeRemark(i);
+  });
+  buildHkTable();
+  if (typeof autosaveTrigger === 'function') autosaveTrigger();
+}
+
+function buildHkSimTable() {
+  var body = document.getElementById('hkSimBody');
+  var html = '';
+  HK_SIM_ROWS.forEach(function(r, i){
+    var fb = function(k){
+      return '<td><input type="text" inputmode="none" readonly class="pm-num-input" id="hkSim_'+k+'_'+i+'" value="'+safe(hkSim[i][k])+'" oninput="hkSim['+i+'].'+k+'=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;color:inherit;box-sizing:border-box;text-align:center"></td>';
+    };
+    html += '<tr>'+
+      '<td style="text-align:center">'+(i+1)+'</td>'+
+      '<td style="text-align:center;font-weight:700">'+r.pct+' %</td>'+
+      '<td style="text-align:center">mA</td>'+
+      '<td style="text-align:center;background:#f4f7f6">'+r.ma+'</td>'+fb('fbA')+
+      '<td style="text-align:center;background:#f4f7f6">'+r.ma+'</td>'+fb('fbB')+
+    '</tr>';
+  });
+  body.innerHTML = html;
+}
+
+/* ── EVIDENCE PHOTO PER-BARIS (asal mark_vie_inspection.html) ── */
+function mvRowEvidenceCellHtml(i) {
+  var n = (mvRowEvidence[i]||[]).length;
+  return '<button type="button" onclick="mvRowPhotoPick('+i+',event)" title="Upload foto evidence (bisa lebih dari 1, klik lagi utk menambah)" '+
+    'style="position:relative;width:34px;height:34px;border-radius:6px;border:1.5px dashed '+(n>0?'var(--ok,#16a34a)':'var(--border)')+';background:#fff;color:'+(n>0?'var(--ok,#16a34a)':'var(--text3)')+';font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0">'+
+    '&#128247;'+
+    (n>0 ? '<span style="position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;border-radius:8px;background:var(--ok,#16a34a);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;padding:0 3px">'+n+'</span>' : '')+
+    '</button>';
+}
+
+function mvRenderRowEvidence(i) {
+  var cell = document.getElementById('mvRowEvCell_'+i);
+  if (cell) cell.innerHTML = mvRowEvidenceCellHtml(i);
+  mvBuildGallery();
+}
+
+function mvBuildGallery() {
+  var panel = document.getElementById('mvGalleryPanel');
+  var container = document.getElementById('mvGalleryContainer');
+  if (!panel || !container) return;
+  var html = '';
+  var any = false;
+  HK_ITEMS.forEach(function(it, i){
+    (mvRowEvidence[i]||[]).forEach(function(img, pi){
+      any = true;
+      var shortLabel = it.label.length > 70 ? it.label.slice(0,70)+'…' : it.label;
+      html += '<div class="mv-gallery-item" style="width:170px;border:1px solid var(--border);border-radius:8px;padding:8px;background:#fff">'+
+        '<div style="position:relative">'+
+          '<img src="'+safe(img.dataUrl)+'" alt="" style="width:100%;height:105px;object-fit:cover;border-radius:6px;cursor:pointer;display:block" onclick="mvGalleryPhotoReEdit('+i+','+pi+')" title="Klik untuk crop ulang" onerror="this.style.display=\'none\'">'+
+          '<button type="button" onclick="event.stopPropagation();mvGalleryPhotoRemove('+i+','+pi+')" title="Hapus foto" style="position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0">&#215;</button>'+
+        '</div>'+
+        '<div style="font-size:10px;color:var(--text3);margin-top:6px" title="'+safe(it.label)+'">'+it.no+'. '+safe(shortLabel)+'</div>'+
+        '<input type="text" class="mv-gallery-caption" value="'+safe(img.caption||'')+'" oninput="mvGalleryCaptionChange('+i+','+pi+',this.value)" placeholder="Keterangan foto..." style="width:100%;margin-top:4px;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;box-sizing:border-box">'+
+      '</div>';
     });
+  });
+  container.innerHTML = html;
+  panel.style.display = any ? 'block' : 'none';
+}
+
+function mvGalleryPhotoRemove(rowIdx, photoIdx) {
+  var img = mvRowEvidence[rowIdx] && mvRowEvidence[rowIdx][photoIdx];
+  if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+  if (mvRowEvidence[rowIdx]) mvRowEvidence[rowIdx].splice(photoIdx, 1);
+  mvRenderRowEvidence(rowIdx);
+}
+
+function mvGalleryPhotoReEdit(rowIdx, photoIdx) {
+  var img = mvRowEvidence[rowIdx] && mvRowEvidence[rowIdx][photoIdx];
+  if (!img) return;
+  imgOpenCropper(img.dataUrl, img.name, img.type, mvRowEvidence[rowIdx], 'row:'+rowIdx, 'mv', photoIdx);
+}
+
+function mvGalleryCaptionChange(rowIdx, photoIdx, value) {
+  var img = mvRowEvidence[rowIdx] && mvRowEvidence[rowIdx][photoIdx];
+  if (img) img.caption = value;
+}
+
+function mvRowPhotoPick(i, ev) {
+  mvRowPickTarget = i;
+  var popup = document.getElementById('mvRowSrcChoice');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'mvRowSrcChoice';
+    popup.style.cssText = 'display:none;position:absolute;background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.18);padding:8px;gap:6px;z-index:9999;flex-direction:column';
+    popup.innerHTML =
+      '<button type="button" onclick="event.stopPropagation();mvRowPickSource(\'storage\')" style="padding:7px 14px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:110px;white-space:nowrap">&#128193; Penyimpanan</button>' +
+      '<button type="button" onclick="event.stopPropagation();mvRowPickSource(\'camera\')" style="padding:7px 14px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:110px;white-space:nowrap">&#128247; Kamera</button>';
+    document.body.appendChild(popup);
+    document.addEventListener('click', function(){ popup.style.display = 'none'; });
+  }
+  if (ev) ev.stopPropagation();
+  var btn = (ev && ev.currentTarget) ? ev.currentTarget : (ev && ev.target);
+  var rect = btn ? btn.getBoundingClientRect() : {left:100, bottom:100, width:34};
+  popup.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+  popup.style.left = (window.scrollX + rect.left + rect.width/2) + 'px';
+  popup.style.transform = 'translateX(-50%)';
+  popup.style.display = 'flex';
+  var pr = popup.getBoundingClientRect();
+  if (pr.right > window.innerWidth - 8) {
+    popup.style.left = (window.scrollX + window.innerWidth - 8) + 'px';
+    popup.style.transform = 'translateX(-100%)';
+  } else if (pr.left < 8) {
+    popup.style.left = (window.scrollX + 8) + 'px';
+    popup.style.transform = 'none';
   }
 }
 
-/* ── POPUP pengingat prosedur, muncul saat tab frequency dipilih ── */
-function hgShowProcPopup(freq) {
-  if (freq === '2Y' || freq === '5Y' || freq === 'manual') return;
-  var month = FREQ_MONTH[freq];
-  var hasReactor = stepsFor(month).some(function(s){ return s.proc === 'reactor'; });
-  var hasIodine  = stepsFor(month).some(function(s){ return s.proc === 'iodine'; });
-  if (!hasReactor && !hasIodine) return;
-  var items = [];
-  if (hasReactor) items.push('Lihat Prosedur Replace Reactor Filling Di Bawah Tabel Input');
-  if (hasIodine)  items.push('Lihat Prosedur replace iodine-carbon Hg trap filter');
-  document.getElementById('hgProcModalBody').innerHTML = '<ul style="margin:0 0 0 16px;padding:0">'+items.map(function(t){return '<li style="margin-bottom:6px">'+safe(t)+'</li>';}).join('')+'</ul>';
-  document.getElementById('hgProcModal').style.display = 'flex';
+function mvRowPickSource(source) {
+  var popup = document.getElementById('mvRowSrcChoice');
+  if (popup) popup.style.display = 'none';
+  openFileInputSource('mvRowFileInput', source);
 }
 
-/* ── PDF BACKGROUND TEMPLATE (sama seperti modul lain) ── */
-var reportBgImg = null, reportBgReady = false, reportBgCallbacks = [];
-function initReportBackground() {
-  if (reportBgImg) return;
-  reportBgImg = new Image();
-  reportBgImg.onload = function() { reportBgReady = true; var cbs = reportBgCallbacks.splice(0); for (var i=0;i<cbs.length;i++) cbs[i](); };
-  reportBgImg.onerror = function() { reportBgReady = false; var cbs = reportBgCallbacks.splice(0); for (var i=0;i<cbs.length;i++) cbs[i](); };
-  reportBgImg.src = 'DRAFT PM KOSONG.jpg';
-}
-function ensureReportBackground(callback) {
-  if (!reportBgImg) { reportBgCallbacks.push(callback); initReportBackground(); return; }
-  if (reportBgReady) { callback(); return; }
-  if (reportBgImg.complete && reportBgImg.naturalWidth > 0) { reportBgReady = true; callback(); return; }
-  reportBgCallbacks.push(callback);
-}
-function drawBg(doc, pw, ph) {
-  if (!reportBgImg || !reportBgImg.naturalWidth) return;
-  try { doc.addImage(reportBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+function mvRowFileSelected(input) {
+  var files = input.files;
+  var i = mvRowPickTarget;
+  var fileArr = files ? Array.prototype.slice.call(files) : [];
+  input.value = '';
+  if (!fileArr.length || i < 0) return;
+  var imgFiles = fileArr.filter(isImageFile);
+  if (!imgFiles.length) { alert('File harus berupa gambar.'); return; }
+  imgOpenCropperQueue(imgFiles, mvRowEvidence[i], 'row:'+i, 'mv', HK_ITEMS[i].label);
 }
 
-/* ── Preload gambar Reference (assets/hg-stepN-ref.png) supaya bisa dipakai di PDF ── */
-var hgRefImgCache = {};
-function hgPreloadRefImages(callback) {
-  var toLoad = STEP_DATA.filter(function(s){ return s.refImg && !hgRefImgCache[s.refImg]; });
-  var remaining = toLoad.length;
-  if (remaining === 0) { callback(); return; }
-  toLoad.forEach(function(s){
-    var img = new Image();
-    img.onload  = function(){ hgRefImgCache[s.refImg] = img; if (--remaining === 0) callback(); };
-    img.onerror = function(){ hgRefImgCache[s.refImg] = null; if (--remaining === 0) callback(); };
-    img.src = s.refImg;
-  });
+/* Dipanggil oleh cropAndSave() lewat p.modulePrefix==='mv' setelah crop selesai. */
+function mvRenderPreviews(side) {
+  if (side && String(side).indexOf('row:') === 0) {
+    var ri = parseInt(String(side).split(':')[1], 10);
+    if (!isNaN(ri)) mvRenderRowEvidence(ri);
+  }
 }
 
-function hgDownloadPdf() {
-  var totalImgs = Object.keys(hgEvidence).reduce(function(sum,no){
-    return sum + hgEvidence[no].before.length + hgEvidence[no].after.length;
-  }, 0);
+/* ─── BACKGROUND TEMPLATE PDF ─── */
+var mvBgImg = null, mvBgReady = false, mvBgCallbacks = [];
+function initMvBackground() {
+  if (mvBgImg) return;
+  mvBgImg = new Image();
+  mvBgImg.onload = function() { mvBgReady = true; var cbs = mvBgCallbacks.splice(0); for (var i=0;i<cbs.length;i++) cbs[i](); };
+  mvBgImg.onerror = function() { mvBgReady = false; var cbs = mvBgCallbacks.splice(0); for (var i=0;i<cbs.length;i++) cbs[i](); };
+  mvBgImg.src = 'DRAFT PM KOSONG.jpg';
+}
+function ensureMvBackground(callback) {
+  if (!mvBgImg) { mvBgCallbacks.push(callback); initMvBackground(); return; }
+  if (mvBgReady) { callback(); return; }
+  if (mvBgImg.complete && mvBgImg.naturalWidth > 0) { mvBgReady = true; callback(); return; }
+  mvBgCallbacks.push(callback);
+}
+function drawMvBg(doc, pw, ph) {
+  if (!mvBgImg || !mvBgImg.naturalWidth) return;
+  try { doc.addImage(mvBgImg, 'JPEG', 0, 0, pw, ph); } catch(e) {}
+}
+function iePhotoDrawSize(entry, maxW, maxH) {
+  var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
+  var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
+  var w = wCm * 10, h = hCm * 10;
+  if (w > maxW) { h = h * (maxW / w); w = maxW; }
+  if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
+  return { w: w, h: h };
+}
+
+/* Checkbox vektor (BUKAN karakter unicode -- helvetica jsPDF tidak
+   mendukungnya, lihat CLAUDE.md konvensi drawCheckboxBs). */
+function mvDrawCheckbox(doc, x, y, w, h, checked, fail) {
+  var size=3.5, cx=x+w/2, cy=y+h/2;
+  doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+  doc.rect(cx-size/2, cy-size/2, size, size, 'S');
+  if (checked) {
+    if (fail) doc.setDrawColor(185,28,28); else doc.setDrawColor(26,107,58);
+    doc.setLineWidth(0.5);
+    doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.5);
+    doc.line(cx-size/2+size*0.38, cy+size/2-0.5, cx+size/2-0.3, cy-size/2+0.5);
+  }
+}
+
+function downloadPdf(){
+  var totalImgs = mvRowEvidence.reduce(function(acc, arr){ return acc + arr.length; }, 0);
   var loadingMsg = totalImgs>0 ? '⏳ Membuat PDF... memproses '+totalImgs+' gambar, mohon tunggu' : '⏳ Membuat PDF, mohon tunggu';
   dbShowSavingOverlay(true, 'Sedang memuat print preview...', loadingMsg);
-  hgPreloadRefImages(function() {
-  ensureReportBackground(function() {
+  ensureMvBackground(function() {
     try {
       var jsPDF = window.jspdf.jsPDF;
-      var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+      var doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
       var pw = doc.internal.pageSize.getWidth();
       var ph = doc.internal.pageSize.getHeight();
-      var marginX = 25, marginTop = 25, marginBottom = 25;
-      var contentW = pw - marginX*2;
+      var marginX = 20, marginTop = 20, marginBottom = 20;
+      var contentW = pw - (marginX * 2);
 
-      function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
+      var now = new Date();
+      var BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      var dd = String(now.getDate()).padStart(2,'0');
+      var yy = now.getFullYear();
+      var nowStr = dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+
       function pdfSafe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
 
       var y = marginTop;
-      function checkPage(need) { if (y + need > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; } }
+      function drawBg(doc, pw, ph) { drawMvBg(doc, pw, ph); }
+      function checkPage(h) { if (y + h > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; } return y; }
       function secHeader(title) {
-        checkPage(12);
-        doc.setFillColor(232,240,253);
+        checkPage(16);
+        doc.setFillColor(44, 62, 48);
         doc.rect(marginX, y, contentW, 8, 'F');
-        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(30,64,175);
-        doc.text(title, marginX+3, y+5.5);
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(210, 230, 215);
+        doc.text(title, pw/2, y+5.5, {align:'center'});
         y += 11;
       }
-      function drawCheckbox(x, yy, w, h, checked) {
-        var size=3.5, cx=x+w/2, cy=yy+h/2;
-        doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
-        doc.rect(cx-size/2, cy-size/2, size, size, 'S');
-        if (checked) {
-          doc.setDrawColor(26,107,58); doc.setLineWidth(0.5);
-          doc.line(cx-size/2+0.4, cy, cx-size/2+size*0.38, cy+size/2-0.5);
-          doc.line(cx-size/2+size*0.38, cy+size/2-0.5, cx+size/2-0.3, cy-size/2+0.5);
-        }
-      }
+
+      var rawDate = document.getElementById('hkTanggal').value;
+      var tanggalStr = '—';
+      if (rawDate) { var parts=rawDate.split('-'); tanggalStr=parts[2]+' '+BULAN[parseInt(parts[1])-1]+' '+parts[0]; }
+      var workorder = document.getElementById('hkWorkorder').value || '—';
+      var pic = document.getElementById('hkPIC').value || '—';
 
       drawBg(doc, pw, ph);
+      secHeader('2 YEARLY - CALIBRATION OF HAWK LIQUID LEVEL TRANSMITTER');
 
-      secHeader('PM Hg Analyzer — Unit 7 ('+(FREQ_LABEL[activeFreq]||'')+')');
-
-      /* ═══ INFO BOX — Fitur L: Tabel Info Pekerjaan Grid Full-Width (Label | Value) ═══ */
-      var padIn = 3;
-      var labelColW = 32;
+      // ═══ INFORMASI PEKERJAAN ═══
+      var padIn = 3, labelColW = 40;
       var valueX = marginX + labelColW + padIn;
       var valueW = contentW - labelColW - padIn*2;
-
       var infoFields = [
-        ['Frequency', pdfSafe(FREQ_LABEL[activeFreq]||'')],
-        ['Tanggal', pdfSafe(gv('hgTanggal'))],
-        ['Work Order', pdfSafe(gv('hgWorkOrder'))],
-        ['PIC', pdfSafe(gv('hgPIC'))],
-        ['Asset', pdfSafe(gv('hgAsset'))],
-        ['Asset Description', pdfSafe(gv('hgAssetDesc'))]
+        ['Work Order', pdfSafe(workorder)],
+        ['Tanggal', pdfSafe(tanggalStr)],
+        ['PIC', pdfSafe(pic)],
+        ['Asset', pdfSafe(HK_ASSET)],
+        ['Asset Description', pdfSafe(HK_TAGS.map(function(t){ return t.tag+' - '+t.desc; }).join('\n'))],
+        ['Work To Be Done', pdfSafe(HK_MODUL_NAME)],
+        ['Dicetak', pdfSafe(nowStr)]
       ];
-
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
       var infoRows = infoFields.map(function(f){
-        var lines = doc.splitTextToSize(String(f[1]||''), valueW);
+        var lines = [];
+        String(f[1]||'').split('\n').forEach(function(p){ lines = lines.concat(doc.splitTextToSize(p, valueW)); });
         var h = Math.max(7.5, 4.6 + (lines.length-1)*3.8 + 2.5);
         return {label:f[0], lines:lines, h:h};
       });
-      var infoTotalH = infoRows.reduce(function(s,r){ return s + r.h; }, 0);
-      checkPage(infoTotalH + 4);
-
+      var totalH = infoRows.reduce(function(s,r){ return s + r.h; }, 0);
+      checkPage(totalH + 4);
       doc.setFillColor(255, 251, 214);
       doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.35);
-      doc.rect(marginX, y, contentW, infoTotalH, 'FD');
-      doc.line(marginX+labelColW, y, marginX+labelColW, y+infoTotalH);
-
-      var infoRowY = y;
+      doc.rect(marginX, y, contentW, totalH, 'FD');
+      doc.line(marginX+labelColW, y, marginX+labelColW, y+totalH);
+      var rowY = y;
       doc.setLineWidth(0.25); doc.setDrawColor(0, 0, 0);
       infoRows.forEach(function(r, idx){
-        if (idx > 0) doc.line(marginX, infoRowY, marginX+contentW, infoRowY);
+        if (idx > 0) doc.line(marginX, rowY, marginX+contentW, rowY);
         doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(55,80,140);
-        doc.text(r.label, marginX+padIn, infoRowY+4.6);
+        doc.text(r.label, marginX+padIn, rowY+4.6);
         doc.setFont('helvetica','bold'); doc.setTextColor(20,30,25);
-        doc.text(r.lines, valueX, infoRowY+4.6);
-        infoRowY += r.h;
+        doc.text(r.lines, valueX, rowY+4.6);
+        rowY += r.h;
       });
+      y += totalH + 8;
 
-      y += infoTotalH + 6;
-
-      /* Table 5.1 Daily Routine Check */
-      secHeader('Table 5.1 \u2014 Daily Routine Check');
+      // ═══ CHECKLIST (Pass/Fail per transmitter + Remark) ═══
+      secHeader('CHECKLIST - INSPECT ULTRA SONIC TRANSMITTER');
+      var body = HK_ITEMS.map(function(it, i){
+        var st = hkState[i];
+        return [String(it.no), pdfSafe(it.label),
+          st.passA?'__CHK__':'__BOX__', st.failA?'__CHKF__':'__BOX__',
+          st.passB?'__CHK__':'__BOX__', st.failB?'__CHKF__':'__BOX__',
+          pdfSafe(st.remark||'')];
+      });
+      var cbW = 11;
       doc.autoTable({
-        startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
-        head: [['No','Unit','Maintenance Work','Resp.']],
-        body: TABLE51.map(function(r){ return [String(r.no), pdfSafe(r.unit), pdfSafe(r.work), 'End-User']; }),
-        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
-        bodyStyles:{fontSize:7,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-        columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:38},2:{cellWidth:99},3:{cellWidth:20,halign:'center'}},
-        willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
+        startY: y,
+        head: [
+          [{content:'No',rowSpan:2},{content:'Step Of Work',rowSpan:2},{content:'CWT-LT-950',colSpan:2},{content:'CWT-LT-960',colSpan:2},{content:'Remark / Note',rowSpan:2}],
+          ['Pass','Fail','Pass','Fail']
+        ],
+        body: body,
+        theme: 'grid',
+        margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
+        headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:7.5, halign:'center', valign:'middle', font:'helvetica'},
+        bodyStyles: {fontSize:7.2, textColor:[20,30,25], font:'helvetica', cellPadding:1.8, valign:'middle'},
+        columnStyles: {0:{cellWidth:8,halign:'center'}, 1:{cellWidth:70}, 2:{cellWidth:cbW,halign:'center'}, 3:{cellWidth:cbW,halign:'center'}, 4:{cellWidth:cbW,halign:'center'}, 5:{cellWidth:cbW,halign:'center'}, 6:{cellWidth:contentW-8-70-cbW*4}},
+        alternateRowStyles: {fillColor:[246,249,247]},
+        didParseCell: function(data){
+          if (data.section === 'body' && data.column.index >= 2 && data.column.index <= 5) data.cell.text = [''];
+        },
+        didDrawCell: function(data){
+          if (data.section !== 'body') return;
+          if (data.column.index < 2 || data.column.index > 5) return;
+          var val = data.cell.raw;
+          mvDrawCheckbox(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val==='__CHK__' || val==='__CHKF__', val==='__CHKF__');
+        },
+        willDrawPage: function(data){ if (data.pageNumber>1) drawBg(doc,pw,ph); }
       });
       y = doc.lastAutoTable.finalY + 8;
 
-      /* Table 5.2 Regularly Maintenance Check (tidak tampil untuk 2 Monthly) */
-      if (activeFreq !== '2M') {
-        secHeader('Table 5.2 \u2014 Regularly Maintenance Check');
-        var CHK_COL_52 = {2:true,3:true,4:true,5:true};
-        doc.autoTable({
-          startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
-          head: [['No','Maintenance Work','3','6','9','12','Resp.']],
-          body: TABLE52.map(function(r){
-            var lbl = pdfSafe(r.label) + (r.ref?(' ['+pdfSafe(r.ref)+']'):'');
-            var m = [3,6,9,12].map(function(mm){ var on = r.onlyMonth?(mm===r.onlyMonth):true; return on?'__CHK__':''; });
-            return [String(r.no), lbl].concat(m).concat(['Specialist']);
-          }),
-          headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
-          bodyStyles:{fontSize:6.8,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:97},2:{cellWidth:8,halign:'center'},3:{cellWidth:8,halign:'center'},4:{cellWidth:8,halign:'center'},5:{cellWidth:8,halign:'center'},6:{cellWidth:20,halign:'center'}},
-          didDrawCell:function(d){
-            if (d.section!=='body' || !CHK_COL_52[d.column.index]) return;
-            var val = d.cell.raw; if (val!=='__CHK__') return;
-            var bg=(d.row.index%2===0)?[255,255,255]:[246,249,247];
-            doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(d.cell.x+0.2,d.cell.y+0.2,d.cell.width-0.4,d.cell.height-0.4,'F');
-            drawCheckbox(d.cell.x, d.cell.y, d.cell.width, d.cell.height, true);
-          },
-          willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
-        });
-        y = doc.lastAutoTable.finalY + 8;
-      }
-
-      if (activeFreq === '2Y' || activeFreq === '5Y') {
-        /* Table 5.4 (2/5 Yearly) */
-        secHeader('Table 5.4 \u2014 Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')');
-        var t54Rows = TABLE54.filter(function(r){ return r.freq === activeFreq; });
-        var CHK_COL_54 = {4:true};
-        doc.autoTable({
-          startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
-          head: [['No','Maintenance Work','Time Intervals','Resp.','Selesai']],
-          body: t54Rows.map(function(r){ return [String(r.no), pdfSafe(r.label), pdfSafe(r.interval), 'Specialist', table54State[r.no].selesai?'__CHK__':'__BOX__']; }),
-          headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
-          bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:97},2:{cellWidth:24,halign:'center'},3:{cellWidth:20,halign:'center'},4:{cellWidth:14,halign:'center'}},
-          didDrawCell:function(d){
-            if (d.section!=='body' || !CHK_COL_54[d.column.index]) return;
-            var val = d.cell.raw; if (val!=='__CHK__' && val!=='__BOX__') return;
-            var bg=(d.row.index%2===0)?[255,255,255]:[246,249,247];
-            doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(d.cell.x+0.2,d.cell.y+0.2,d.cell.width-0.4,d.cell.height-0.4,'F');
-            drawCheckbox(d.cell.x, d.cell.y, d.cell.width, d.cell.height, val==='__CHK__');
-          },
-          willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
-        });
-        y = doc.lastAutoTable.finalY + 8;
-      } else {
-        /* Table 5.3 — step of work sesuai frequency aktif */
-        var month = FREQ_MONTH[activeFreq];
-        var rowsStep = stepsFor(month);
-        secHeader('Table 5.3 \u2014 Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')');
-        var CHK_COL_53 = {3:true};
-        doc.autoTable({
-          startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
-          head: [['No','Step Of Work','Ref','Check','Sparepart / Selesai']],
-          body: rowsStep.map(function(s){
-            var st = stepState[s.no];
-            // 2026-09-11: step tanpa sparepart (replace:false) SEKARANG cetak
-            // teks literal "Selesai"/"Belum" (bukan checkbox vektor lagi) --
-            // permintaan eksplisit user, konsisten dgn kolom Sparepart yang
-            // sudah lama pakai teks "Ready"/"Kosong" (bukan checkbox) di sini.
-            var spCell = s.replace ? (st.sparepart || '-') : (st.done ? 'Selesai' : 'Belum');
-            return [String(s.no), pdfSafe(s.label), pdfSafe(s.ref||'-'), st.check?'__CHK__':'__BOX__', spCell];
-          }),
-          headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
-          bodyStyles:{fontSize:7,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-          columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:87},2:{cellWidth:24,halign:'center',minCellHeight:24},3:{cellWidth:14,halign:'center'},4:{cellWidth:24,halign:'center'}},
-          didParseCell:function(d){
-            if (d.section==='body' && d.column.index===2) {
-              var s = rowsStep[d.row.index];
-              if (s && s.refImg && hgRefImgCache[s.refImg]) { d.cell.text = []; }
-            }
-            if (d.section==='body' && d.column.index===4) {
-              var s2 = rowsStep[d.row.index];
-              if (s2 && s2.replace && (d.cell.raw==='Ready'||d.cell.raw==='Kosong')) {
-                d.cell.styles.fillColor = d.cell.raw==='Ready' ? [200,240,205] : [250,210,205];
-              }
-              if (s2 && !s2.replace && (d.cell.raw==='Selesai'||d.cell.raw==='Belum')) {
-                d.cell.styles.fillColor = d.cell.raw==='Selesai' ? [200,240,205] : [250,210,205];
-              }
-            }
-          },
-          didDrawCell:function(d){
-            if (d.section==='body' && d.column.index===2) {
-              var s = rowsStep[d.row.index];
-              if (s && s.refImg && hgRefImgCache[s.refImg]) {
-                var img = hgRefImgCache[s.refImg];
-                var maxW = d.cell.width - 3, maxH = d.cell.height - 3;
-                var ratio = Math.min(maxW/img.naturalWidth, maxH/img.naturalHeight, 1);
-                var iw = img.naturalWidth*ratio, ih = img.naturalHeight*ratio;
-                var ix = d.cell.x + (d.cell.width-iw)/2, iy = d.cell.y + (d.cell.height-ih)/2;
-                try { doc.addImage(img, 'PNG', ix, iy, iw, ih); } catch(e) {}
-              }
-            }
-            if (d.section!=='body' || !CHK_COL_53[d.column.index]) return;
-            var val = d.cell.raw; if (val!=='__CHK__' && val!=='__BOX__') return;
-            var bg=(d.row.index%2===0)?[255,255,255]:[246,249,247];
-            doc.setFillColor(bg[0],bg[1],bg[2]); doc.rect(d.cell.x+0.2,d.cell.y+0.2,d.cell.width-0.4,d.cell.height-0.4,'F');
-            drawCheckbox(d.cell.x, d.cell.y, d.cell.width, d.cell.height, val==='__CHK__');
-          },
-          willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
-        });
-        y = doc.lastAutoTable.finalY + 8;
-
-        /* Prosedur khusus (teks), tampil kondisional sesuai frequency aktif */
-        function addProcText(title, steps, warnLines) {
-          var titleH = 7, warnH = warnLines ? (warnLines.length*4+4) : 0;
-          var lineH = 4.3;
-          var firstLinesH = titleH + warnH + lineH*2; // judul + warning + minimal 2 baris pertama prosedur
-          if (firstLinesH <= (ph-marginTop-marginBottom) && (y+firstLinesH > ph-marginBottom)) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
-          else { checkPage(10); }
-          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(185,119,14);
-          doc.text(title, marginX+2, y); y += 6;
-          if (warnLines) {
-            doc.setFillColor(254,245,231); doc.rect(marginX+2, y-3.5, contentW-4, warnLines.length*4+3, 'F');
-            doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(125,90,0);
-            warnLines.forEach(function(wl,i){ doc.text(wl, marginX+5, y+i*4); });
-            y += warnLines.length*4+4;
-          }
-          doc.setFont('helvetica','normal'); doc.setFontSize(7.8); doc.setTextColor(30,30,30);
-          steps.forEach(function(st,i){
-            checkPage(lineH+2);
-            var lines = doc.splitTextToSize((i+1)+'. '+st, contentW-8);
-            lines.forEach(function(l){ checkPage(lineH); doc.text(l, marginX+4, y); y += lineH; });
-          });
-          y += 4;
-        }
-        var hasReactor = rowsStep.some(function(s){ return s.proc==='reactor'; });
-        var hasIodine  = rowsStep.some(function(s){ return s.proc==='iodine'; });
-        if (hasReactor) addProcText('5.2 Procedure of Replace Reactor Filling (A6.1 and A6.2)', PROC_REACTOR_STEPS, ['Risk posed by hot surfaces! Contact with hot components may cause serious burns.','Always use suitable heat-protective equipment (such as protective gloves).']);
-        if (hasIodine)  addProcText('5.3 Procedure of Replace Iodine-Carbon Hg Trap Filter', PROC_IODINE_STEPS, null);
-
-        /* Evidence foto per step (judul + foto pertama tidak terpisah halaman) */
-        var evidRows = rowsStep.filter(function(s){ return hgEvidence[s.no].before.length || hgEvidence[s.no].after.length; });
-        if (evidRows.length) {
-          secHeader('CATATAN & EVIDENCE PHOTO');
-          function iePhotoDrawSize(entry, maxW, maxH) {
-            var wCm = entry.widthCm || DEFAULT_CROP_W_CM;
-            var hCm = entry.heightCm || DEFAULT_CROP_H_CM;
-            var w = wCm * 10, h = hCm * 10;
-            if (w > maxW) { h = h * (maxW / w); w = maxW; }
-            if (maxH && h > maxH) { w = w * (maxH / h); h = maxH; }
-            return { w: w, h: h };
-          }
-          var gap=6, colW=(contentW-gap)/2, maxPhotoH=90;
-          evidRows.forEach(function(s){
-            if (s.evidenceMode === 'single') {
-              // Step single-evidence (Zero Adjustment/Validation/Reading HG After
-              // Calibration): fotonya disimpan di array 'before', dirender 1 kolom
-              // penuh (bukan split before/after), label header "EVIDENCE".
-              var imgs = hgEvidence[s.no].before.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
-              if (!imgs.length) return;
-              var firstDim = iePhotoDrawSize(imgs[0], contentW-6, maxPhotoH);
-              var firstBlockH2 = 10 + 5 + (firstDim.h + 9);
-              if (firstBlockH2 <= (ph-marginTop-marginBottom) && (y+firstBlockH2 > ph-marginBottom)) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
-              else { checkPage(14); }
-              doc.setFillColor(60,90,70);
-              doc.rect(marginX, y, contentW, 7, 'F');
-              doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220,240,225);
-              doc.text('Step '+s.no+'  |  '+pdfSafe(s.label).substring(0,70), marginX+4, y+5);
-              y += 10;
-              doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,90,70);
-              doc.text('EVIDENCE', marginX+3, y);
-              y += 5;
-              imgs.forEach(function(im){
-                var dim = iePhotoDrawSize(im, contentW-6, maxPhotoH);
-                var rowH = dim.h + 9;
-                if (y+rowH > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
-                var ix = Math.max(marginX, Math.min(marginX+3 + (im.offsetX||0)*10, pw-marginX-dim.w));
-                try{ doc.addImage(im.dataUrl,'JPEG',ix,y,dim.w,dim.h); }catch(e){}
-                if (im.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(im.caption), dim.w), ix + dim.w/2, y+dim.h+3, {align:'center'}); }
-                y += rowH;
-              });
-              y += 3;
-              return;
-            }
-            var befImgs = hgEvidence[s.no].before.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
-            var aftImgs = hgEvidence[s.no].after.filter(function(f){return f.dataUrl && f.type && f.type.indexOf('image/')===0;});
-            if (!befImgs.length && !aftImgs.length) return;
-            var firstB = befImgs[0] ? iePhotoDrawSize(befImgs[0], colW, maxPhotoH) : null;
-            var firstA = aftImgs[0] ? iePhotoDrawSize(aftImgs[0], colW, maxPhotoH) : null;
-            var firstRowH = Math.max(firstB ? firstB.h : 0, firstA ? firstA.h : 0, 20);
-            var firstBlockH = 10 + 5 + (firstRowH + 9);
-            if (firstBlockH <= (ph-marginTop-marginBottom) && (y+firstBlockH > ph-marginBottom)) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
-            else { checkPage(14); }
-            doc.setFillColor(60,90,70);
-            doc.rect(marginX, y, contentW, 7, 'F');
-            doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220,240,225);
-            doc.text('Step '+s.no+'  |  '+pdfSafe(s.label).substring(0,70), marginX+4, y+5);
-            y += 10;
-            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(160,90,20);
-            doc.text('BEFORE', marginX+3, y);
-            doc.setTextColor(15,110,90);
-            doc.text('AFTER', marginX+colW+gap+3, y);
-            y += 5;
-            var xBef=marginX+2, xAft=marginX+colW+gap;
-            var maxImgs = Math.max(befImgs.length, aftImgs.length);
-            for (var ii=0; ii<maxImgs; ii++) {
-              var bImg = befImgs[ii] || null, aImg = aftImgs[ii] || null;
-              var bDim = bImg ? iePhotoDrawSize(bImg, colW, maxPhotoH) : null;
-              var aDim = aImg ? iePhotoDrawSize(aImg, colW, maxPhotoH) : null;
-              var rowH = Math.max(bDim ? bDim.h : 0, aDim ? aDim.h : 0, 20);
-              if (y+rowH+10 > ph-marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y=marginTop; }
-              if (bImg) {
-                var drawXBef = Math.max(marginX, Math.min(xBef + (colW - bDim.w)/2 + ((bImg.offsetX||0)*10), pw - marginX - bDim.w));
-                try{ doc.addImage(bImg.dataUrl,'JPEG',drawXBef,y,bDim.w,bDim.h); }catch(e){}
-                if (bImg.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(bImg.caption), bDim.w), drawXBef + bDim.w/2, y+bDim.h+3, {align:'center'}); }
-              }
-              if (aImg) {
-                var drawXAft = Math.max(marginX, Math.min(xAft + (colW - aDim.w)/2 + ((aImg.offsetX||0)*10), pw - marginX - aDim.w));
-                try{ doc.addImage(aImg.dataUrl,'JPEG',drawXAft,y,aDim.w,aDim.h); }catch(e){}
-                if (aImg.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(pdfSafe(aImg.caption), aDim.w), drawXAft + aDim.w/2, y+aDim.h+3, {align:'center'}); }
-              }
-              y += rowH + 9;
-            }
-            y += 3;
-          });
-        }
-      }
-
-      /* Table 5.5 Final Check — selalu tampil */
-      secHeader('Table 5.5 \u2014 Final Check After All Maintenance Work');
+      // ═══ SIMULATION & FEEDBACK ═══
+      checkPage(16 + 40);
+      secHeader('PENGUKURAN - SIMULATION & FEEDBACK');
       doc.autoTable({
-        startY: y, margin:{top:marginTop,bottom:marginBottom,left:marginX,right:marginX}, theme:'grid',
-        head: [['No','Final Check After All Maintenance Work','Resp.']],
-        body: TABLE55.map(function(r){ return [String(r.no), pdfSafe(r.label), 'Specialist']; }),
-        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:7.5,halign:'center',font:'helvetica'},
-        bodyStyles:{fontSize:7.5,textColor:[20,30,25],font:'helvetica',cellPadding:2},
-        columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:137},2:{cellWidth:20,halign:'center'}},
-        willDrawPage:function(d){ if (d.pageNumber>1) drawBg(doc,pw,ph); }
+        startY: y,
+        head: [
+          [{content:'No',rowSpan:2},{content:'Simulation Level Ultrasonic',rowSpan:2},{content:'Unit',rowSpan:2},{content:'CWT-LT-950',colSpan:2},{content:'CWT-LT-960',colSpan:2}],
+          ['Simulation','Feedback','Simulation','Feedback']
+        ],
+        body: HK_SIM_ROWS.map(function(r, i){
+          var d = function(v){ return v ? pdfSafe(v) : '—'; };
+          return [String(i+1), r.pct+' %', 'mA', r.ma, d(hkSim[i].fbA), r.ma, d(hkSim[i].fbB)];
+        }),
+        theme: 'grid',
+        margin: {top:marginTop, bottom:marginBottom, left:marginX, right:marginX},
+        headStyles: {fillColor:[21,153,87], textColor:[255,255,255], fontStyle:'bold', fontSize:7.5, halign:'center', valign:'middle'},
+        bodyStyles: {fontSize:7.5, halign:'center', cellPadding:2},
+        columnStyles: {0:{cellWidth:10}},
+        willDrawPage: function(data){ if (data.pageNumber>1) drawBg(doc,pw,ph); }
       });
-      y = doc.lastAutoTable.finalY + 6;
+      y = doc.lastAutoTable.finalY + 8;
 
-      var now = new Date();
-      var dateStr = now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+      // ═══ EVIDENCE PHOTO — semua foto dari semua baris, berurutan ═══
+      var evList = [];
+      HK_ITEMS.forEach(function(it, gi){
+        (mvRowEvidence[gi]||[]).forEach(function(img){
+          if (img && img.dataUrl) evList.push({img:img, caption: pdfSafe(img.caption || it.label)});
+        });
+      });
+      if (evList.length) {
+        var maxPhotoW = (contentW - 6) / 2, maxPhotoH = 75;
+        doc.setFont('helvetica','bold'); doc.setFontSize(8);
+        var firstDim = iePhotoDrawSize(evList[0].img, maxPhotoW, maxPhotoH);
+        var firstCapLines = doc.splitTextToSize(evList[0].caption, firstDim.w);
+        var firstBlockH = 11 + firstDim.h + 3 + firstCapLines.length*3.5 + 6;
+        if (firstBlockH <= (ph - marginTop - marginBottom) && (y + firstBlockH > ph - marginBottom)) {
+          doc.addPage(); drawBg(doc,pw,ph); y = marginTop;
+        }
+        secHeader('EVIDENCE PHOTO');
+        var gap = 6, maxRowW = contentW;
+        var rows = [], curRow = [], curRowW = 0;
+        evList.forEach(function(ev){
+          var dim = iePhotoDrawSize(ev.img, maxPhotoW, maxPhotoH);
+          doc.setFont('helvetica','bold'); doc.setFontSize(8);
+          var capLines = doc.splitTextToSize(ev.caption, dim.w);
+          var capH = capLines.length*3.5 + 3;
+          var addW = curRow.length ? gap + dim.w : dim.w;
+          if (curRow.length && curRowW + addW > maxRowW) { rows.push(curRow); curRow = []; curRowW = 0; addW = dim.w; }
+          curRow.push({ev:ev, dim:dim, capLines:capLines, capH:capH});
+          curRowW += addW;
+        });
+        if (curRow.length) rows.push(curRow);
+        rows.forEach(function(row){
+          var totalRowW = row.reduce(function(s,it,idx){ return s + it.dim.w + (idx>0?gap:0); }, 0);
+          var rowMaxH = Math.max.apply(null, row.map(function(it){ return it.dim.h + it.capH; }));
+          if (y + rowMaxH + 6 > ph - marginBottom) { doc.addPage(); drawBg(doc,pw,ph); y = marginTop; }
+          var curX = marginX + (contentW - totalRowW) / 2;
+          row.forEach(function(it){
+            var ev=it.ev, dim=it.dim;
+            var drawX = Math.max(marginX, Math.min(curX + ((ev.img.offsetX||0)*10), pw - marginX - dim.w));
+            try { doc.addImage(ev.img.dataUrl, 'JPEG', drawX, y, dim.w, dim.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(drawX,y,dim.w,dim.h,'S'); }
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140);
+            doc.text(it.capLines, drawX + dim.w/2, y+dim.h+3.5, {align:'center'});
+            curX += dim.w + gap;
+          });
+          y += rowMaxH + gap;
+        });
+      }
+
       if (typeof hideImgLoading === 'function') hideImgLoading();
       dbShowSavingOverlay(false);
-      showPdfPreview(doc, 'PM_HG_Analyzer_'+FREQ_LABEL[activeFreq].replace(' ','')+'_'+dateStr+'.pdf');
-    } catch(err) {
+      showPdfPreview(doc, 'Hawk_Level_Transmitter_Calibration_'+ yy + String(now.getMonth()+1).padStart(2,'0') + dd + '.pdf');
+    } catch(e) {
       if (typeof hideImgLoading === 'function') hideImgLoading();
       dbShowSavingOverlay(false);
-      alert('Gagal membuat PDF: ' + (err.message||err));
+      alert('Gagal membuat PDF: ' + (e.message||e));
+      console.error(e);
     }
-  });
   });
 }
 
-
+/* ── dbCollectData — dipanggil shared.js saat Simpan / autosave ── */
 function dbCollectData(modul) {
-  if (modul !== HG_MODUL_NAME) return null;
-  var ki = function(img){var o={name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;if(img.offsetX)o.offsetX=img.offsetX;return o;};
-  var stepsOut = {};
-  STEP_DATA.forEach(function(s){
-    stepsOut[s.no] = {
-      check: !!stepState[s.no].check,
-      sparepart: stepState[s.no].sparepart || '',
-      done: !!stepState[s.no].done,
-      before: hgEvidence[s.no].before.map(ki),
-      after: hgEvidence[s.no].after.map(ki)
-    };
+  if (modul !== HK_MODUL_NAME) return null;
+  var BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  var rawDate = document.getElementById('hkTanggal').value;
+  var tanggalStr = '—';
+  if (rawDate) { var parts=rawDate.split('-'); tanggalStr=parts[2]+' '+BULAN[parseInt(parts[1])-1]+' '+parts[0]; }
+  var header = {
+    tanggal: tanggalStr,
+    workorder: document.getElementById('hkWorkorder').value || '—',
+    pic: document.getElementById('hkPIC').value || '—',
+    asset: HK_ASSET,
+    assetDesc: HK_ASSET_DESC,
+    workToBeDone: HK_MODUL_NAME
+  };
+  var ki = function(img){
+    var o = {name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};
+    if (img.offsetX) o.offsetX = img.offsetX;
+    if (img.widthCm) o.widthCm = img.widthCm;
+    if (img.heightCm) o.heightCm = img.heightCm;
+    if (img.driveUrl) o.driveUrl = img.driveUrl;
+    if (img.driveFileId) o.driveFileId = img.driveFileId;
+    return o;
+  };
+  var items = hkState.map(function(st, i){
+    var it = {passA:!!st.passA, failA:!!st.failA, passB:!!st.passB, failB:!!st.failB, remark:st.remark||''};
+    var imgs = (mvRowEvidence[i]||[]).map(ki);
+    if (imgs.length) it.evidences = imgs;
+    return it;
   });
-  var t54Out = {};
-  TABLE54.forEach(function(r){ t54Out[r.no] = {selesai: !!table54State[r.no].selesai}; });
   return {
-    // Nama laporan dinamis "PM HG Analyzer (<Frekuensi>)" -- dikirim ke
-    // Riwayat & Review Approval Dashboard (historyReportName()/
-    // raSendFinalPdfToFirebaseDashboard() di shared.js keduanya fallback ke
-    // record.modul apa adanya kalau tidak ada override khusus/asset field,
-    // jadi cukup ubah di sini saja). Argumen `modul` yang di-cek di baris
-    // atas (dbCollectData(modul)) TETAP HG_MODUL_NAME polos (tanpa frekuensi)
-    // -- itu cuma buat validasi pemanggil, bukan nilai yang disimpan.
-    modul: HG_MODUL_NAME + ' (' + (FREQ_LABEL[activeFreq] || activeFreq) + ')',
-    tanggal: document.getElementById('hgTanggal').value || '',
-    pic: document.getElementById('hgPIC').value || '',
-    work_order: document.getElementById('hgWorkOrder').value || '',
+    modul: HK_MODUL_NAME,
+    tanggal: header.tanggal,
+    pic: header.pic,
+    work_order: (header.workorder && header.workorder !== '—') ? header.workorder : '',
     unit: 'Unit 7',
-    data: { frequency: activeFreq, steps: stepsOut, table54: t54Out, asset: document.getElementById('hgAsset').value || '', assetDesc: document.getElementById('hgAssetDesc').value || '' }
+    data: { header: header, items: items, simulation: hkSim.map(function(s){ return {fbA:s.fbA||'', fbB:s.fbB||''}; }) }
   };
 }
 
-/* ── RESTORE record (dipakai untuk load dari RIWAYAT maupun lanjutkan draft autosave) ── */
-function hgRestoreRecord(rec, opts) {
-  opts = opts || {};
-  var data = rec.data || {};
-  document.getElementById('hgTanggal').value = rec.tanggal || '';
-  document.getElementById('hgWorkOrder').value = rec.work_order || '';
-  document.getElementById('hgPIC').value = rec.pic || '';
-  if (data.asset) document.getElementById('hgAsset').value = data.asset;
-  if (data.assetDesc) document.getElementById('hgAssetDesc').value = data.assetDesc;
-  if (data.steps) {
-    Object.keys(data.steps).forEach(function(no){
-      var s = data.steps[no];
-      if (!stepState[no]) return;
-      stepState[no].check = !!s.check;
-      stepState[no].sparepart = s.sparepart || '';
-      stepState[no].done = !!s.done;
-      hgEvidence[no] = {
-        before: (s.before||[]).map(function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;if(img.offsetX)o.offsetX=img.offsetX;return o;}),
-        after:  (s.after ||[]).map(function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;if(img.offsetX)o.offsetX=img.offsetX;return o;})
-      };
-    });
-  }
-  if (data.table54) {
-    Object.keys(data.table54).forEach(function(no){ if (table54State[no]) table54State[no].selesai = !!data.table54[no].selesai; });
-  }
-  hgSwitchTab(data.frequency || '3M');
-  dbShowToast(opts.fromDraft ? 'Draft berhasil dilanjutkan \u2713' : 'Data dimuat dari riwayat \u2713');
-}
-function restoreDraftData(rec, editingId) {
-  window._editingId = editingId || null;
-  hgRestoreRecord(rec, {fromDraft:true});
+window.CURRENT_MODUL = HK_MODUL_NAME; // HARUS sama persis dengan check di dbCollectData(modul)
+
+function hkFillFixedHeader() {
+  document.getElementById('hkAsset').value = HK_ASSET;
+  document.getElementById('hkAssetDesc').value = HK_ASSET_DESC;
+  document.getElementById('hkWorkToBeDone').value = HK_MODUL_NAME;
 }
 
-/* ── RESET ── */
-function hgResetAll() {
-  if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
+function applyRecordToForm(rec, editingId) {
+  var data = rec.data || {};
+  var header = data.header || {};
+  if (editingId) window._editingId = editingId;
+
+  var tRaw = rec.tanggal || header.tanggal || '';
+  var BULAN2 = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  if (tRaw && tRaw.length === 10 && tRaw.indexOf('-') > 0) {
+    var el = document.getElementById('hkTanggal'); if (el) el.value = tRaw;
+  } else if (tRaw && tRaw !== '—') {
+    var parts = tRaw.split(' ');
+    if (parts.length === 3) {
+      var dd = parts[0].padStart(2,'0');
+      var mm = String(BULAN2.indexOf(parts[1]) + 1).padStart(2,'0');
+      var el2 = document.getElementById('hkTanggal'); if (el2) el2.value = parts[2]+'-'+mm+'-'+dd;
+    }
+  }
+  var woEl = document.getElementById('hkWorkorder'); var woVal = rec.work_order || header.workorder || '';
+  if (woEl && woVal && woVal !== '—') woEl.value = woVal;
+  var pcEl = document.getElementById('hkPIC'); var picVal = rec.pic || header.pic || '';
+  if (pcEl && picVal && picVal !== '—') pcEl.value = picVal;
+  hkFillFixedHeader();
+
+  if (Array.isArray(data.items)) {
+    hkState = hkEmptyState();
+    mvRowEvidence = HK_ITEMS.map(function(){ return []; });
+    data.items.forEach(function(it, i){
+      if (i >= hkState.length || !it) return;
+      hkState[i] = {passA:!!it.passA, failA:!!it.failA, passB:!!it.passB, failB:!!it.failB, remark:it.remark||''};
+      if (Array.isArray(it.evidences)) {
+        mvRowEvidence[i] = it.evidences.map(function(img){
+          var o = {name:img.name, dataUrl:img.dataUrl, type:img.type||'image/jpeg', caption:img.caption||''};
+          if (img.offsetX) o.offsetX = img.offsetX;
+          if (img.widthCm) o.widthCm = img.widthCm;
+          if (img.heightCm) o.heightCm = img.heightCm;
+          if (img.driveUrl) o.driveUrl = img.driveUrl;
+          if (img.driveFileId) o.driveFileId = img.driveFileId;
+          return o;
+        });
+      }
+    });
+  }
+  if (Array.isArray(data.simulation)) {
+    hkSim = hkEmptySim();
+    data.simulation.forEach(function(s, i){ if (i < hkSim.length && s) hkSim[i] = {fbA:s.fbA||'', fbB:s.fbB||''}; });
+  }
+  buildHkTable();
+  buildHkSimTable();
+  if (typeof pmNumpadInit === 'function') pmNumpadInit();
+}
+
+// Dipanggil otomatis oleh shared.js (autosaveCheckAndPrompt) kalau ada draft tersimpan
+function restoreDraftData(rec, editingId) {
+  if (!rec) return;
+  setTimeout(function(){
+    applyRecordToForm(rec, editingId);
+    if (typeof dbShowToast === 'function') dbShowToast('Draft sebelumnya berhasil dipulihkan ✓');
+  }, 400);
+}
+
+function resetAll() {
+  if (!confirm('Reset semua isian form? Data yang belum disimpan akan hilang.')) return;
+  document.getElementById('hkWorkorder').value = '';
+  document.getElementById('hkPIC').value = '';
+  hkState = hkEmptyState();
+  hkSim = hkEmptySim();
+  mvRowEvidence = HK_ITEMS.map(function(){ return []; });
+  buildHkTable();
+  buildHkSimTable();
+  if (typeof pmNumpadInit === 'function') pmNumpadInit();
   window._editingId = null;
-  var t = new Date();
-  document.getElementById('hgTanggal').value = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-  document.getElementById('hgWorkOrder').value = '';
-  document.getElementById('hgPIC').value = '';
-  STEP_DATA.forEach(function(s){ stepState[s.no] = {check:false, sparepart:'', done:false}; hgEvidence[s.no] = {before:[], after:[]}; });
-  TABLE54.forEach(function(r){ table54State[r.no] = {selesai:false}; });
-  hgSwitchTab(activeFreq);
   if (typeof autosaveClear === 'function') autosaveClear();
   if (window.history && window.history.replaceState) {
     var url = new URL(window.location.href);
@@ -2195,260 +2075,48 @@ function hgResetAll() {
     url.searchParams.delete('print');
     window.history.replaceState({}, '', url.toString());
   }
+  var today=new Date();
+  document.getElementById('hkTanggal').value = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
 }
 
-/* ── LOAD FROM HISTORY (URL ?id=xxx&print=1) ── */
+/* ── INIT ── */
+setInterval(function(){var el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});},1000);
+hkFillFixedHeader();
+buildHkTable();
+buildHkSimTable();
+initMvBackground();
 renderPresetButtons();
 initCropDrag();
+pmNumpadInit();
 (function(){
-  var params = new URLSearchParams(window.location.search);
-  var id = params.get('id');
-  var doPrint = params.get('print') === '1';
+  var today=new Date();
+  var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var el=document.getElementById('hkTanggal'); if(el&&!el.value)el.value=todayStr;
+})();
+
+/* ── LOAD FROM HISTORY (URL ?id=xxx) ── */
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var id=params.get('id');
+  var doPrint=params.get('print')==='1';
   if (params.get('embed') === '1') window._pdfEmbedMode = true;
   var doAutosubmit = params.get('autosubmit') === '1';
-  if (!id) {
-    var todayEl = document.getElementById('hgTanggal');
-    if (todayEl && !todayEl.value) {
-      var t = new Date();
-      todayEl.value = t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-    }
-    hgSwitchTab('2M');
-    return;
-  }
+  if(!id) return;
   dbLoad(id, function(rec){
-    window._editingId = id;
-    hgRestoreRecord(rec, {});
-    pmMaybeEnterRevisionMode(rec);
+    setTimeout(function(){
+      applyRecordToForm(rec, id);
+      pmMaybeEnterRevisionMode(rec);
       pmMaybeEnterUpdateSubmitMode(rec);
-    if (doPrint) setTimeout(function(){ hgDownloadPdf(); }, 500);
-    if (doAutosubmit) { window._raBuildPdf = hgDownloadPdf; raSubmitReportAuto(); }
+      dbShowToast('Data dimuat dari riwayat ✓');
+      if(doPrint)setTimeout(function(){downloadPdf();},500);
+      if(doAutosubmit){ window._raBuildPdf = downloadPdf; raSubmitReportAuto(); }
+    },400);
   });
 })();
 
-
-function hgCheckManualBookFile() {
-  var pdfPath = 'assets/HM1400-TRX2OperatingMaintenanceHG.pdf';
-  var area = document.getElementById('hgManualBookArea');
-  fetch(pdfPath, {method:'HEAD'}).then(function(res){
-    if (!res.ok) throw new Error('not found');
-    area.innerHTML = '<iframe id="hgManualIframe" src="'+pdfPath+'" style="width:100%;height:80vh;border:1px solid var(--panel-border);border-radius:8px"></iframe>';
-  }).catch(function(){
-    area.innerHTML = '<div style="padding:24px;background:#fef2f2;border:1px dashed #c33;border-radius:8px;color:#900;font-size:13px;text-align:center">'+
-      '&#9888; File PDF belum ditemukan di <b>'+pdfPath+'</b><br><br>'+
-      'Pastikan file PDF sudah di-upload ke folder <b>assets/</b> di repo GitHub dengan nama persis sama (huruf besar/kecil ikut berpengaruh di GitHub Pages).'+
-      '</div>';
-  });
-}
-
-function hgSwitchTab(freq) {
-  activeFreq = freq;
-  var manualBtn = document.querySelector('#hgTabBar .tab-btn[data-freq="manual"]');
-  if (manualBtn) manualBtn.classList.toggle('active', freq === 'manual');
-  var sel = document.getElementById('hgFreqSelect');
-  if (sel && freq !== 'manual') sel.value = freq;
-  if (freq === 'manual') {
-    document.getElementById('hgFreqContent').style.display = 'none';
-    document.getElementById('hgTabManual').style.display = 'block';
-    document.getElementById('hgActionRow').style.display = 'none';
-    hgCheckManualBookFile();
-  } else {
-    document.getElementById('hgFreqContent').style.display = 'block';
-    document.getElementById('hgTabManual').style.display = 'none';
-    document.getElementById('hgActionRow').style.display = 'flex';
-    hgRenderFreqContent(freq);
-    hgShowProcPopup(freq);
-  }
-}
-
-
-function hgEvidenceCellHtml(no, phase) {
-  return '<div id="hgEvBox_'+no+'_'+phase+'" style="display:flex;flex-wrap:wrap;gap:4px;align-items:flex-start">'+
-    hgAddBtnHtml(no, phase)+
-  '</div>';
-}
-
-function hgAddBtnHtml(no, phase) {
-  return '<div style="position:relative;flex-shrink:0">'+
-    '<input type="file" accept="image/*,.heic,.heif" multiple style="display:none" id="hgFile_'+no+'_'+phase+'" onchange="hgHandleFiles(this.files,'+no+',\''+phase+'\')">'+
-    '<div onclick="hgOpenSrcMenu(this,'+no+',\''+phase+'\')" style="width:110px;height:85px;border:1.5px dashed var(--panel-border);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:26px;color:var(--text3)" title="Upload foto">+</div>'+
-  '</div>';
-}
-
-/* 🔴 REVISI TOTAL 2026-09-11 (2 iterasi fix "ikuti posisi tombol" -- reposisi
-   saat scroll, lalu reposisi terus-menerus via requestAnimationFrame --
-   TERBUKTI TETAP GAGAL di kondisi nyata: user tetap melaporkan popup muncul
-   JAUH dari tombol "+" yang diklik, dgn screenshot yg sama persis walau
-   sudah 2x ditambal). Alih-alih terus mengejar akar masalah pergeseran
-   posisi tombol yang ternyata sulit direproduksi persis, PENDEKATANNYA
-   DIGANTI TOTAL atas saran eksplisit user: BUKAN LAGI popup yang "menempel"
-   ke tombol yang diklik sama sekali -- sekarang cuma SATU popup TUNGGAL
-   (dipakai bersama oleh SEMUA tombol "+" di halaman ini), posisinya SELALU
-   TETAP di dekat bagian atas layar (position:fixed, top+center, TIDAK
-   PERNAH dihitung dari getBoundingClientRect() tombol manapun). Ini
-   membuat SELURUH KELAS bug "popup salah posisi" mustahil terjadi lagi --
-   tidak peduli scroll, ganti frequency (tabel hilang/muncul), foto yang
-   masih loading, atau zoom, karena popup ini sama sekali tidak pernah
-   mencoba mengikuti posisi elemen apa pun. Konsekuensinya: HANYA SATU
-   popup bisa terbuka dalam satu waktu (sudah selalu begitu sebelumnya
-   juga), dan label "Upload Foto -- Step X (Before/After)" WAJIB
-   ditampilkan di dalam popup supaya user tetap tahu foto ini akan masuk
-   ke step/fase yang mana (karena popup TIDAK lagi berada di dekat baris
-   step-nya secara visual). */
-var HG_SRC_POPUP_ID = 'hgSrcPopupShared';
-function hgEnsureSrcPopup() {
-  var el = document.getElementById(HG_SRC_POPUP_ID);
-  if (el) return el;
-  el = document.createElement('div');
-  el.id = HG_SRC_POPUP_ID;
-  el.style.cssText = 'display:none;position:fixed;top:80px;left:50%;transform:translateX(-50%);'+
-    'background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:10px;'+
-    'box-shadow:0 12px 32px rgba(0,0,0,0.2);padding:12px;z-index:2147482000;min-width:200px;text-align:center';
-  el.innerHTML =
-    '<div id="hgSrcPopupLabel" style="font-size:12px;font-weight:700;color:var(--steel);margin-bottom:8px;white-space:nowrap"></div>'+
-    '<button type="button" id="hgSrcPopupStorage" style="display:block;width:100%;margin-bottom:6px;padding:8px 12px;border:1px solid rgba(0,0,0,.1);border-radius:6px;background:#fff;color:#111;font-size:12.5px;cursor:pointer">&#128193; Penyimpanan</button>'+
-    '<button type="button" id="hgSrcPopupCamera" style="display:block;width:100%;padding:8px 12px;border:1px solid rgba(0,0,0,.1);border-radius:6px;background:#fff;color:#111;font-size:12.5px;cursor:pointer">&#128247; Kamera</button>'+
-    '<button type="button" onclick="event.stopPropagation();hgCloseAllSrcMenus()" style="display:block;width:100%;margin-top:8px;padding:6px 12px;border:none;background:none;color:var(--text3);font-size:11px;cursor:pointer">Batal</button>';
-  document.body.appendChild(el);
-  return el;
-}
-var _hgSrcMenuClickHandler = null;
-function hgCloseAllSrcMenus() {
-  var el = document.getElementById(HG_SRC_POPUP_ID);
-  if (el) el.style.display = 'none';
-  if (_hgSrcMenuClickHandler) {
-    document.removeEventListener('click', _hgSrcMenuClickHandler, true);
-    _hgSrcMenuClickHandler = null;
-  }
-}
-function hgOpenSrcMenu(anchorEl, no, phase) {
-  var el = hgEnsureSrcPopup();
-  var alreadyOpenSame = (el.style.display === 'block' && el.dataset.no === String(no) && el.dataset.phase === phase);
-  hgCloseAllSrcMenus();
-  if (alreadyOpenSame) return; // klik tombol yang sama lagi -> toggle tutup
-  el.dataset.no = no; el.dataset.phase = phase;
-  document.getElementById('hgSrcPopupLabel').textContent = 'Upload Foto — Step ' + no + ' (' + (phase === 'before' ? 'Before' : 'After') + ')';
-  document.getElementById('hgSrcPopupStorage').onclick = function(e){ e.stopPropagation(); hgCloseAllSrcMenus(); openFileInputSource('hgFile_'+no+'_'+phase, 'storage'); };
-  document.getElementById('hgSrcPopupCamera').onclick = function(e){ e.stopPropagation(); hgCloseAllSrcMenus(); openFileInputSource('hgFile_'+no+'_'+phase, 'camera'); };
-  el.style.display = 'block';
-  _hgSrcMenuClickHandler = function(ev) {
-    if (el.contains(ev.target) || anchorEl.contains(ev.target)) return;
-    hgCloseAllSrcMenus();
-  };
-  document.addEventListener('click', _hgSrcMenuClickHandler, true);
-}
-
-function hgHandleFiles(files, no, phase) {
-  var side = 'step'+no+'_'+phase;
-  var fileArr = Array.from(files);
-  if (fileArr.length > 1) { imgOpenCropperQueue(fileArr, hgEvidence[no][phase], side, 'hg'); return; }
-  fileArr.forEach(function(file) {
-    if (!isImageFile(file)) return;
-    fileToJpegDataUrl(file, function(dataUrl){
-      if (!dataUrl) return;
-      var name = file.name.replace(/\.[^.]+$/, '.jpg');
-      imgOpenCropper(dataUrl, name, 'image/jpeg', hgEvidence[no][phase], side, 'hg', -1);
-    });
-  });
-}
-
-function hgReEdit(no, phase, idx) {
-  var img = hgEvidence[no][phase][idx];
-  if (!img) return;
-  var side = 'step'+no+'_'+phase;
-  imgOpenCropper(img.dataUrl, img.name, img.type, hgEvidence[no][phase], side, 'hg', idx);
-}
-
-function hgRenderPreviews(side) {
-  var us = side.lastIndexOf('_');
-  var stepKey = side.slice(0, us);           // "step3"
-  var phase = side.slice(us+1);              // "before" / "after"
-  var no = parseFloat(stepKey.replace('step',''));
-  var box = document.getElementById('hgEvBox_'+no+'_'+phase);
-  if (!box) return;
-  var arr = hgEvidence[no][phase];
-  var safeAttr = function(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
-  var thumbsHtml = arr.map(function(img, idx){
-    var isImg = img.type && img.type.indexOf('image/') === 0;
-    var thumb = isImg
-      ? '<img src="'+img.dataUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer" onclick="hgReEdit('+no+',\''+phase+'\','+idx+')" title="Klik untuk crop ulang">'
-      : '';
-    return '<div style="position:relative;text-align:center;width:110px;flex-shrink:0">'+
-      '<div style="position:relative;width:110px;height:85px;border-radius:4px;overflow:hidden;background:#111">'+
-        thumb+
-        '<button onclick="pmDeleteImgFromArr(hgEvidence['+no+']['+"'"+phase+"'"+'],'+idx+');hgRenderPreviews(\''+side+'\')" style="position:absolute;top:2px;right:2px;background:rgba(180,0,0,0.85);color:#fff;border:none;border-radius:3px;font-size:12px;line-height:1;padding:3px 6px;cursor:pointer">&#10005;</button>'+
-      '</div>'+
-      '<input type="text" placeholder="Keterangan" value="'+safeAttr(img.caption||'')+'" oninput="hgEvidence['+no+']['+"'"+phase+"'"+']['+idx+'].caption=this.value" style="width:100%;margin-top:4px;padding:4px 5px;font-size:14px;border:1px solid var(--panel-border,#ccc);border-radius:4px;background:#fff;color:#111;box-sizing:border-box">'+
-      (isImg ? ('<div class="img-nudge"><div class="img-nudge-label">Geser posisi di hasil PDF</div><div class="img-nudge-controls">' +
-        '<button type="button" onclick="nudgeImageInArray(hgEvidence['+no+']['+"'"+phase+"'"+'],'+idx+',-0.5,function(){hgRenderPreviews(\''+side+'\')})" title="Geser ke kiri di hasil PDF">&#9664;</button>' +
-        '<span>'+(img.offsetX||0)+'cm</span>' +
-        '<button type="button" onclick="nudgeImageInArray(hgEvidence['+no+']['+"'"+phase+"'"+'],'+idx+',0.5,function(){hgRenderPreviews(\''+side+'\')})" title="Geser ke kanan di hasil PDF">&#9654;</button>' +
-      '</div></div>') : '') +
-    '</div>';
-  }).join('');
-  var addBtn = hgAddBtnHtml(no, phase);
-  box.innerHTML = thumbsHtml + addBtn;
-}
-
-/* ── RENDER: Table 5.4 (2 Yearly / 5 Yearly) — dengan checkbox Selesai ── */
-function renderTable54Html(freq) {
-  var rows = TABLE54.filter(function(r){ return r.freq === freq; }).map(function(r){
-    var st = table54State[r.no];
-    return '<tr><td style="text-align:center">'+r.no+'</td><td>'+safe(r.label)+'</td><td style="text-align:center">'+safe(r.interval)+'</td><td>Specialist</td>'+
-      '<td style="text-align:center"><input type="checkbox" '+(st.selesai?'checked':'')+' onchange="table54State['+r.no+'].selesai=this.checked" style="width:20px;height:20px;cursor:pointer"></td></tr>';
-  }).join('');
-  return '<div class="section-label">Table 5.4 — Regularly Recurring Maintenance Work ('+FREQ_LABEL[freq]+')</div>'+
-    '<div class="preview-wrap" style="margin-bottom:24px"><table class="manual-table">'+
-    '<thead><tr><th style="width:36px">No</th><th>Maintenance Work</th><th style="width:100px">Time Intervals</th><th style="width:110px">Responsibility</th><th style="width:70px">Selesai</th></tr></thead>'+
-    '<tbody>'+rows+'</tbody></table></div>';
-}
-
-
-function hgRefCellHtml(s) {
-  if (s.refImg) {
-    return '<img src="'+s.refImg+'" alt="Referensi step '+s.no+'" style="width:130px;height:auto;border-radius:4px;border:1px solid var(--panel-border);cursor:zoom-in" '+
-      'onclick="window.open(this.src,\'_blank\')" title="Klik untuk lihat ukuran penuh" '+
-      'onerror="this.onerror=null;this.outerHTML=\'<em>&#9888; gambar tidak ditemukan</em>\'">';
-  }
-  if (s.ref) return safe(s.ref);
-  return '<em>gambar menyusul</em>';
-}
-
-function renderStepTableHtml(month) {
-  var rows = stepsFor(month).map(function(s){
-    var st = stepState[s.no];
-    var sparepartCell = s.replace
-      ? '<select onchange="stepState['+s.no+'].sparepart=this.value" style="min-width:90px">'+
-          '<option value=""'+(st.sparepart===''?' selected':'')+'>— pilih —</option>'+
-          '<option value="Ready"'+(st.sparepart==='Ready'?' selected':'')+'>Ready</option>'+
-          '<option value="Kosong"'+(st.sparepart==='Kosong'?' selected':'')+'>Sparepart Kosong</option>'+
-        '</select>'
-      : '<select onchange="stepState['+s.no+'].done=(this.value===\'Selesai\')" style="min-width:90px">'+
-          '<option value="Belum"'+(!st.done?' selected':'')+'>Belum</option>'+
-          '<option value="Selesai"'+(st.done?' selected':'')+'>Selesai</option>'+
-        '</select>';
-    var procBadge = s.proc ? ' <span style="font-size:10px;color:#c0392b;font-weight:700">&#9888; lihat prosedur</span>' : '';
-    // Step dengan evidenceMode:'single' (mis. Zero Adjustment, Validation, Reading HG
-    // After Calibration) tidak punya Before/After -- cuma 1 kolom Evidence gabungan
-    // (colspan 2), fotonya disimpan di array 'before' (array 'after' sengaja tidak
-    // dipakai sama sekali untuk step jenis ini).
-    var evidenceCells = (s.evidenceMode === 'single')
-      ? '<td colspan="2">'+hgEvidenceCellHtml(s.no,'before')+'</td>'
-      : '<td>'+hgEvidenceCellHtml(s.no,'before')+'</td>'+'<td>'+hgEvidenceCellHtml(s.no,'after')+'</td>';
-    return '<tr>'+
-      '<td style="text-align:center">'+s.no+'</td>'+
-      '<td>'+safe(s.label)+procBadge+'</td>'+
-      '<td id="hgRef_'+s.no+'" style="min-width:80px;color:var(--text3);font-size:11px;text-align:center">'+hgRefCellHtml(s)+'</td>'+
-      '<td style="text-align:center"><input type="checkbox" '+(st.check?'checked':'')+' onchange="stepState['+s.no+'].check=this.checked" style="width:20px;height:20px;cursor:pointer"></td>'+
-      '<td style="text-align:center">'+sparepartCell+'</td>'+
-      evidenceCells+
-    '</tr>';
-  }).join('');
-  return '<div class="section-label" style="margin-top:8px">Table 5.3 — Regularly Recurring Maintenance Work ('+FREQ_LABEL[activeFreq]+')</div>'+
-    '<div class="preview-wrap" style="margin-bottom:8px"><table class="manual-table">'+
-    '<thead><tr><th style="width:32px">No</th><th style="min-width:220px">Step Of Work</th><th style="width:150px">Reference</th><th style="width:50px">Check</th><th style="width:110px">Sparepart Replacement</th><th style="width:240px">Evidence Before</th><th style="width:240px">Evidence After</th></tr></thead>'+
-    '<tbody>'+rows+'</tbody></table></div>';
-}
 </script>
+
+<!-- PDF PREVIEW MODAL -->
 <div id="pdfPreviewModal" class="pdf-preview-modal">
     <div class="pdf-preview-dialog">
         <div class="pdf-preview-header">
@@ -2463,5 +2131,6 @@ function renderStepTableHtml(month) {
         </div>
     </div>
 </div>
+
 </body>
 </html>

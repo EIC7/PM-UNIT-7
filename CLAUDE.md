@@ -3914,3 +3914,30 @@ Supabase sebagai backend, jsPDF untuk export PDF).
 - Ikut di tabel PDF Before/After (kolom setelah O2 Reading), `dbCollectData()`,
   `applyRecordToForm()`, dan `resetAll()` (array `fieldKeys`). Record lama
   tanpa field ini tetap terbuka normal (kosong).
+
+## Modul baru: 2 Yearly Calibration of Hawk Liquid Level Transmitter (MOD-28, 2026-09-24)
+
+- File `hawk_level_transmitter.html`, area **`wwtp`** (`RA_MODUL_AREA`), asset
+  `CWT-LT-950` (Waste Water Equalization Basin A) & `CWT-LT-960` (Basin B) --
+  dua transmitter dalam SATU form (pola Pass/Fail per transmitter seperti
+  `id_fan_line_purging.html`). Sumber tabel: `Ultrasonic_level.xlsx` dari user.
+- `pm_records.modul` = **`'2 Yearly- Calibration of Hawk Liquid Level Transmitter'`**
+  (nama yang tampil di Riwayat). Ke Review Approval Dashboard otomatis jadi
+  `"<WO> 2 Yearly- Calibration of ..."` lewat awalan WO generik di
+  `raSendFinalPdfToFirebaseDashboard()` -- tidak ada kode khusus.
+- `normalizeModul()` -> `'HAWK_LEVEL_TX'` lewat substring `'HAWK'`, dicek
+  **SEBELUM** cek generik `'TRANSMITTER'` (yang me-return `PH-ANALYZER`) --
+  kalau urutannya dibalik record ini kebuka lewat `ph-analyzer.html`.
+- Checklist 11 step (Excel) dgn 4 checkbox Pass/Fail 950/960, Remark Y/N
+  otomatis (`hkComputeRemark()`, kalimat digabung "950: ... | 960: ..." kalau
+  kedua sisi beda), tombol Centang Semua Y (termasuk "Raise new WO").
+- Evidence **per baris step** (bisa banyak foto/baris, galeri "Evidence Photo"
+  di bawah, caption default = nama step) -- kode diambil dari
+  `mark_vie_inspection.html`, prefix crop **`'mv'`** SENGAJA dipertahankan
+  (dispatch `imgCompressAndStore()`/`cropAndSave()` memanggil
+  `mvRenderPreviews()` lewat prefix itu); `MV_ITEMS` = alias `HK_ITEMS`.
+- Tabel Simulation & Feedback: level 0/25/50/75/100 % = simulasi 4/8/12/16/20
+  mA (TETAP, tidak bisa diedit), teknisi isi Feedback DCS dalam **mA** per
+  transmitter (numpad custom). TIDAK ada kolom error/deviasi (keputusan user).
+- Data: `data.items[i] = {passA,failA,passB,failB,remark,evidences[]}`,
+  `data.simulation[i] = {fbA,fbB}`.

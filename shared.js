@@ -2053,6 +2053,11 @@ function normalizeModul(name) {
   // (jatuh ke fallback `return n` di paling bawah) -- history.html
   // jadinya gak tahu mesti buka file mana buat modul ini.
   if (n.indexOf('MARK VI')>=0) return 'MARK_VIE';
+  // HARUS sebelum cek generik 'TRANSMITTER' (-> PH-ANALYZER) di bawah --
+  // modul hawk_level_transmitter.html ('2 Yearly- Calibration of Hawk
+  // Liquid Level Transmitter') mengandung substring 'TRANSMITTER', kalau
+  // tidak dicek duluan ke-normalize salah jadi PH-ANALYZER (file salah).
+  if (n.indexOf('HAWK')>=0) return 'HAWK_LEVEL_TX';
   // HARUS sebelum cek O2 generik di bawah -- modul dari
   // weekly_calibration_o2_inlet.html/_outlet.html juga mengandung substring
   // 'O2' (PM_O2_WEEKLY_INLET/OUTLET), jadi kalau urutan dibalik record ini
@@ -2143,6 +2148,7 @@ function raModulToUrl(modul, id) {
   if (norm === 'O2_OUTLET_MONTHLY_CAL') return 'O2_Outlet_monthly_cal.html?id=' + id;
   if (norm === 'GENERATOR_STATOR_LEAK') return 'generator_stator_leak_monitoring.html?id=' + id;
   if (norm === 'MARK_VIE')              return 'mark_vie_inspection.html?id=' + id;
+  if (norm === 'HAWK_LEVEL_TX')         return 'hawk_level_transmitter.html?id=' + id;
   if (norm === 'ID_FAN_LINE_PURGING')   return 'id_fan_line_purging.html?id=' + id;
   if (norm === 'ID_FAN_INSPECT_BLADE')  return 'id_fan_inspect_blade.html?id=' + id;
   if (norm === 'CEC_CONSOLE_CHCB')      return 'dcs-console-chcb.html?id=' + id;
@@ -3453,6 +3459,7 @@ var RA_ASSET_LABEL = {
   FLOWMETER_FGD: 'Flow Meter FGD', 'PH-ANALYZER': 'Analyzer Indicator Transmitter (pH)',
   PM_HG_ANALYZER: 'PM HG Analyzer', GENERATOR_STATOR_LEAK: 'Generator Stator Leak Monitoring',
   MARK_VIE: 'Mark VIe Alarm & Module Inspection',
+  HAWK_LEVEL_TX: '2 Yearly- Calibration of Hawk Liquid Level Transmitter',
   ID_FAN_LINE_PURGING: 'ID Fan Flow Transmitter Line Purging',
   CEC_CONSOLE_CHCB: 'Inspection & Cleaning DCS Console - Common CHCB',
   CEC_CONSOLE_WWTP: 'Inspection & Cleaning DCS Console - Common WWTP',
@@ -3483,7 +3490,7 @@ var RA_MODUL_AREA = {
   FEGT: 'boiler', SO2: 'boiler', O2: 'boiler', O2_WEEKLY_INLET: 'boiler', O2_WEEKLY_OUTLET: 'boiler', O2_OUTLET_MONTHLY_CAL: 'boiler', OPACITY: 'boiler', CEMS_CALIBRATION: 'boiler',
   COAL_SILO_LEVEL: 'boiler', COAL_FEEDER: 'boiler', FLOWMETER_FGD: 'boiler', PM_HG_ANALYZER: 'boiler', ID_FAN_LINE_PURGING: 'boiler', ID_FAN_INSPECT_BLADE: 'boiler',
   BELT_E45: 'common', BELT_E23: 'common', BELT_B12: 'common', DCS_HMI: 'common', CEC_CONSOLE_CHCB: 'common', PM_STACKER: 'common',
-  'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp', CEC_CONSOLE_WWTP: 'wwtp',
+  'PH-ANALYZER': 'wwtp', CONDUCTIVITY: 'wwtp', CEC_CONSOLE_WWTP: 'wwtp', HAWK_LEVEL_TX: 'wwtp',
   GENERATOR_STATOR_LEAK: 'turbine', MARK_VIE: 'turbine'
   // MAINTENANCE_REPORT dan FLOW_SWITCH SENGAJA TIDAK ada di sini -- keduanya
   // dipakai/dipasang di banyak lokasi berbeda, jadi areanya TIDAK tetap
