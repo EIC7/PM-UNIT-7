@@ -45,6 +45,12 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
 .ph-result-input{font-size:16px;padding:3px 5px;border:1px solid var(--border);border-radius:3px;width:100%;box-sizing:border-box;color:#111}
 .ph-result-input:focus{border-color:var(--ok);outline:none}
 .ph-chk-center{text-align:center;vertical-align:middle}
+.ph-yn-lbl{display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:700;margin:0 3px;cursor:pointer}
+.ph-yn-lbl input{width:16px;height:16px;cursor:pointer;margin:0}
+.ph-remark{width:100%;min-width:150px;padding:4px 6px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:#fff;color:#111;box-sizing:border-box;resize:vertical}
+.ph-ev-btn{position:relative;width:32px;height:32px;border-radius:6px;border:1.5px dashed var(--border);background:#fff;color:var(--text3);font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.ph-ev-btn.has{border-color:var(--ok,#16a34a);color:var(--ok,#16a34a)}
+.ph-ev-btn span{position:absolute;top:-6px;right:-6px;min-width:15px;height:15px;border-radius:8px;background:var(--ok,#16a34a);color:#fff;font-size:9.5px;font-weight:700;line-height:15px;text-align:center;padding:0 3px}
 .ph-ok-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;color:#1a6b3a;background:#d4edda;border:1px solid #b8dfc7}
 .ph-fail-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;color:#b91c1c;background:#fde8e8;border:1px solid #f5c6cb}
 
@@ -157,6 +163,7 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   <!-- STEP OF WORK TABLE -->
   <div class="panel">
     <div class="section-label">Step of Work — Analyzer Calibration &amp; Maintenance</div>
+    <button type="button" class="btn btn-outline" onclick="phCheckAllY()" style="margin-bottom:10px">&#9989; Centang Semua Y</button>
     <div class="ph-table-wrap">
       <table class="ph-main-table" id="phMainTable">
         <thead id="phTableHead"></thead>
@@ -164,6 +171,14 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
       </table>
     </div>
   </div>
+
+  <!-- EVIDENCE PER STEP -- galeri gabungan semua foto dari kolom 📷 tabel di
+       atas, disembunyikan kalau belum ada foto (phBuildStepGallery()). -->
+  <div class="panel" id="phStepGalleryPanel" style="display:none">
+    <div class="section-label">Evidence Photo — Step of Work</div>
+    <div id="phStepGallery" style="display:flex;flex-wrap:wrap;gap:12px"></div>
+  </div>
+  <input type="file" id="phStepFileInput" accept="image/*,.heic,.heif" multiple style="display:none" onchange="phStepFileSelected(this)">
 
   <!-- CATATAN & FOTO -->
   <div class="panel">
@@ -1506,11 +1521,11 @@ var PH_UNITS = [
 
 // Step of work definitions
 var PH_STEPS = [
-  {no:1,  label:'Make sure PTW already issue.', criteria:'', type:'check'},
-  {no:2,  label:'Prepare tool & material required.', criteria:'', type:'check'},
-  {no:3,  label:'Cleaning outside/Inside all of panel/Transmitter and Probe — use soft cloth/purging with low air instrument or use flushing water or spray air/ultra dryer.', criteria:'Cleanliness', type:'check'},
-  {no:4,  label:'Make sure all sealing panel/transmitter, conduit connection is good (no dust & water ingress into inside of panel/conduit/transmitter), no damage conduit/installation instrumentation, no leak connection of probe, tidy up the loosen cable probe. *replace if required', criteria:'No dust or dirty\nNo Sign of water ingress\nNo broken condition', type:'check'},
-  {no:5,  label:'Check connection and inspection was tightened, no looses/defective (termination cable, probe, conduit connection).', criteria:'Good condition', type:'check'},
+  {no:1,  label:'Make sure PTW already issue.', criteria:'', type:'check', yText:'PTW Sudah Diterbitkan dan Berlaku', nText:'PTW Belum Diterbitkan / Belum Berlaku'},
+  {no:2,  label:'Prepare tool & material required.', criteria:'', type:'check', yText:'Tool & Material Sudah Disiapkan dan Siap Pakai', nText:'Tool & Material Belum Lengkap / Belum Siap'},
+  {no:3,  label:'Cleaning outside/Inside all of panel/Transmitter and Probe — use soft cloth/purging with low air instrument or use flushing water or spray air/ultra dryer.', criteria:'Cleanliness', type:'check', yText:'Panel, Transmitter & Probe Sudah Dibersihkan, Kondisi Bersih', nText:'Panel/Transmitter/Probe Belum Dibersihkan / Masih Kotor'},
+  {no:4,  label:'Make sure all sealing panel/transmitter, conduit connection is good (no dust & water ingress into inside of panel/conduit/transmitter), no damage conduit/installation instrumentation, no leak connection of probe, tidy up the loosen cable probe. *replace if required', criteria:'No dust or dirty\nNo Sign of water ingress\nNo broken condition', type:'check', yText:'Sealing, Conduit & Koneksi Probe Baik, Tidak Ada Debu/Air/Bocor', nText:'Ditemukan Debu/Air Masuk, Conduit Rusak, atau Koneksi Probe Bocor'},
+  {no:5,  label:'Check connection and inspection was tightened, no looses/defective (termination cable, probe, conduit connection).', criteria:'Good condition', type:'check', yText:'Koneksi Sudah Kencang, Tidak Ada yang Kendor/Rusak', nText:'Ditemukan Koneksi Kendor/Rusak, Perlu Perbaikan'},
   {no:'6a', label:'Grab Sampling / Verification — Buffer 1', criteria:'', type:'buffer', bufNo:1, bufVal:4},
   {no:'6b', label:'Grab Sampling / Verification — Buffer 2', criteria:'', type:'buffer', bufNo:2, bufVal:7},
   {no:'6c', label:'Grab Sampling / Verification — Buffer 3', criteria:'', type:'buffer', bufNo:3, bufVal:10},
@@ -1521,14 +1536,16 @@ var PH_STEPS = [
   {no:'6h', label:'Reading — mAmp (Local)', criteria:'', type:'reading_mamp_local'},
   {no:'6i', label:'Reading — DCS (pH)', criteria:'', type:'reading_dcs'},
   {no:'6j', label:'Reading — mAmp (DCS)', criteria:'', type:'reading_mamp_dcs'},
-  {no:9,   label:'Raise new WO & repair if any defect found.', criteria:'', type:'check'},
-  {no:10,  label:'Leave the location within safe condition.', criteria:'', type:'check'},
+  {no:9,   label:'Raise new WO & repair if any defect found.', criteria:'', type:'check', yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
+  {no:10,  label:'Leave the location within safe condition.', criteria:'', type:'check', yText:'Lokasi Kerja Sudah Ditinggalkan dalam Kondisi Aman dan Rapi', nText:'Lokasi Kerja Belum dalam Kondisi Aman / Masih Perlu Dirapikan'},
 ];
 
 // State
 var phActiveUnits = {};   // unitId -> true/false
 var phImages = {};        // unitId -> [{name,dataUrl,type,caption}]
 var phTableBuilt = false;
+var phStepEv = PH_STEPS.map(function(){ return []; }); // foto evidence per step (kolom 📷)
+var phStepPickIdx = -1;
 
 // Init: aktifkan semua unit by default
 PH_UNITS.forEach(function(u){ phActiveUnits[u.id] = true; phImages[u.id] = []; });
@@ -1587,16 +1604,19 @@ function phBuildTable() {
   var activeUnits = phGetActiveUnits();
   var thead = document.getElementById('phTableHead');
   var tbody = document.getElementById('phTableBody');
+  // Simpan remark yang sudah diketik sebelum tabel dibangun ulang
+  var keepRemark = {};
+  PH_STEPS.forEach(function(_, idx){ var e = document.getElementById('phRemark_'+idx); if (e) keepRemark[idx] = e.value; });
   thead.innerHTML = '';
   tbody.innerHTML = '';
 
-  // Header row
+  // Header row -- kolom "✓" global lama DIHAPUS (revisi 2026-09-24, pola Y/N
+  // per unit seperti modul terbaru); ada kolom Evidence 📷 per step.
   var tr = document.createElement('tr');
   var baseHeaders = [
     {label:'No.', w:'36px'},
     {label:'Step of Work', cls:'step-col'},
     {label:'Criteria', cls:'criteria-col'},
-    {label:'&#10003;', w:'40px'},
   ];
   baseHeaders.forEach(function(h){
     var th = document.createElement('th');
@@ -1611,65 +1631,35 @@ function phBuildTable() {
     th.innerHTML = u.label+'<br><span style="font-weight:400;font-size:9px;opacity:0.8">'+u.desc.split('\n')[0]+'</span>';
     tr.appendChild(th);
   });
+  var thEv = document.createElement('th');
+  thEv.style.width='60px';
+  thEv.textContent = 'Evidence';
+  tr.appendChild(thEv);
   var thRem = document.createElement('th');
-  thRem.style.minWidth='100px';
+  thRem.style.minWidth='170px';
   thRem.textContent = 'Result / Remark';
   tr.appendChild(thRem);
   thead.appendChild(tr);
-
-  // Check-all row
-  var trAll = document.createElement('tr');
-  trAll.style.cssText='background:#e8f2ff;border-left:4px solid #1d74c7';
-  var tdA = document.createElement('td');
-  tdA.colSpan=3;
-  tdA.style.cssText='padding:7px 14px;font-size:11px;font-style:italic;color:#1d74c7;font-weight:600';
-  tdA.textContent='✓ Centang Semua';
-  trAll.appendChild(tdA);
-  var tdAChk = document.createElement('td');
-  tdAChk.style.textAlign='center';
-  tdAChk.innerHTML='<input type="checkbox" id="phAllCheck" onchange="phCheckAll(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7">';
-  trAll.appendChild(tdAChk);
-  activeUnits.forEach(function(){
-    var td=document.createElement('td');
-    td.style.cssText='text-align:center;background:#f0f7ff';
-    td.innerHTML='<span style="font-size:10px;color:#1d74c7">—</span>';
-    trAll.appendChild(td);
-  });
-  var tdR=document.createElement('td');
-  tdR.style.cssText='font-size:11px;color:#1d74c7;font-style:italic;padding-left:8px';
-  tdR.textContent='semua OK';
-  trAll.appendChild(tdR);
-  tbody.appendChild(trAll);
 
   // Data rows
   PH_STEPS.forEach(function(step, idx) {
     var tr2 = document.createElement('tr');
 
-    // No.
     var tdNo=document.createElement('td');
     tdNo.style.cssText='text-align:center;font-size:12px;color:var(--text3);white-space:nowrap';
     tdNo.textContent=step.no;
     tr2.appendChild(tdNo);
 
-    // Label
     var tdLabel=document.createElement('td');
     tdLabel.style.cssText='font-size:12px;padding:6px 10px';
     tdLabel.textContent=step.label;
     tr2.appendChild(tdLabel);
 
-    // Criteria
     var tdCrit=document.createElement('td');
     tdCrit.style.cssText='font-size:11px;color:var(--text3);font-style:italic;white-space:pre-line';
     tdCrit.textContent=step.criteria;
     tr2.appendChild(tdCrit);
 
-    // Global check (✓)
-    var tdChk=document.createElement('td');
-    tdChk.className='ph-chk-center';
-    tdChk.innerHTML='<input type="checkbox" id="phChk_'+idx+'" onchange="phUpdateResult('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)">';
-    tr2.appendChild(tdChk);
-
-    // Per-unit cells
     activeUnits.forEach(function(u){
       var tdU=document.createElement('td');
       tdU.className='ph-unit-cell';
@@ -1679,82 +1669,189 @@ function phBuildTable() {
       tr2.appendChild(tdU);
     });
 
-    // Result
+    var tdEv=document.createElement('td');
+    tdEv.className='ph-chk-center';
+    tdEv.id='phStepEvCell_'+idx;
+    tdEv.innerHTML=phStepEvBtnHtml(idx);
+    tr2.appendChild(tdEv);
+
     var tdRes=document.createElement('td');
-    tdRes.id='phRes_'+idx;
-    tdRes.style.cssText='font-size:11px;font-family:"Courier New",monospace;padding:4px 8px;vertical-align:middle';
+    tdRes.style.cssText='padding:4px 6px;vertical-align:middle';
+    tdRes.innerHTML='<textarea class="ph-remark" rows="2" id="phRemark_'+idx+'"></textarea>';
+    tdRes.firstChild.value = keepRemark[idx] || '';
     tr2.appendChild(tdRes);
 
     tbody.appendChild(tr2);
-    phUpdateResult(idx);
   });
+  phBuildStepGallery();
+  if (typeof pmNumpadInit === 'function') pmNumpadInit();
+}
+
+/* Remark otomatis Y/N utk step type 'check' (pola terbaru, lihat
+   conductivity.html): semua unit Y -> yText, semua N -> nText, campur ->
+   "TAG, TAG: yText | TAG: nText". Step angka (buffer/slope/reading) tidak
+   diubah otomatis -- remark-nya diisi manual. */
+function phComputeRemark(idx){
+  var step = PH_STEPS[idx];
+  var el = document.getElementById('phRemark_'+idx);
+  if (!el || step.type !== 'check') return;
+  var units = phGetActiveUnits();
+  var ys = [], ns = [];
+  units.forEach(function(u){
+    var uid2 = u.id.replace(/-/g,'_');
+    var y = document.getElementById('phUY_'+uid2+'_'+idx), n = document.getElementById('phUN_'+uid2+'_'+idx);
+    if (y && y.checked) ys.push(u.label); else if (n && n.checked) ns.push(u.label);
+  });
+  if (!ys.length && !ns.length) return;
+  if (ys.length === units.length) { el.value = step.yText; return; }
+  if (ns.length === units.length) { el.value = step.nText; return; }
+  var parts = [];
+  if (ys.length) parts.push(ys.join(', ') + ': ' + step.yText);
+  if (ns.length) parts.push(ns.join(', ') + ': ' + step.nText);
+  el.value = parts.join(' | ');
+}
+
+function phSetYN(uid2, idx, which, checked){
+  if (checked) {
+    var other = document.getElementById((which === 'Y' ? 'phUN_' : 'phUY_') + uid2 + '_' + idx);
+    if (other) other.checked = false;
+  }
+  phComputeRemark(idx);
+  if (typeof autosaveTrigger === 'function') autosaveTrigger();
+}
+
+/* Centang Semua Y -- SEMUA step type 'check' (termasuk "Raise new WO") utk
+   semua unit aktif. */
+function phCheckAllY(){
+  PH_STEPS.forEach(function(step, idx){
+    if (step.type !== 'check') return;
+    phGetActiveUnits().forEach(function(u){
+      var uid2 = u.id.replace(/-/g,'_');
+      var y = document.getElementById('phUY_'+uid2+'_'+idx), n = document.getElementById('phUN_'+uid2+'_'+idx);
+      if (y) y.checked = true;
+      if (n) n.checked = false;
+    });
+    phComputeRemark(idx);
+  });
+  if (typeof autosaveTrigger === 'function') autosaveTrigger();
+}
+
+/* ── EVIDENCE PER STEP (kolom 📷) -- bisa banyak foto per step, dikumpulkan
+   di panel "Evidence Photo — Step of Work" di bawah tabel. Prefix crop
+   'phstep' -> cropAndSave() memanggil phstepRenderPreviews(side). ── */
+function phStepEvBtnHtml(idx){
+  var n = (phStepEv[idx]||[]).length;
+  return '<button type="button" class="ph-ev-btn'+(n?' has':'')+'" onclick="phStepPhotoPick('+idx+',event)" title="Upload foto evidence step ini (bisa lebih dari 1)">&#128247;'+(n?'<span>'+n+'</span>':'')+'</button>';
+}
+function phStepPhotoPick(idx, ev){
+  phStepPickIdx = idx;
+  var popup = document.getElementById('phStepSrcChoice');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'phStepSrcChoice';
+    popup.style.cssText = 'display:none;position:absolute;background:rgba(255,255,255,0.98);border:1px solid rgba(0,0,0,0.12);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.18);padding:8px;gap:6px;z-index:9999;flex-direction:column';
+    popup.innerHTML =
+      '<button type="button" onclick="event.stopPropagation();phStepPickSource(\'storage\')" style="padding:7px 14px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:110px;white-space:nowrap">&#128193; Penyimpanan</button>' +
+      '<button type="button" onclick="event.stopPropagation();phStepPickSource(\'camera\')" style="padding:7px 14px;border:1px solid rgba(0,0,0,.08);border-radius:6px;background:#fff;color:#111;font-size:12px;cursor:pointer;min-width:110px;white-space:nowrap">&#128247; Kamera</button>';
+    document.body.appendChild(popup);
+    document.addEventListener('click', function(){ popup.style.display = 'none'; });
+  }
+  if (ev) ev.stopPropagation();
+  var btn = (ev && ev.currentTarget) ? ev.currentTarget : (ev && ev.target);
+  var rect = btn ? btn.getBoundingClientRect() : {left:100, bottom:100, width:34};
+  popup.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+  popup.style.left = (window.scrollX + rect.left + rect.width/2) + 'px';
+  popup.style.transform = 'translateX(-50%)';
+  popup.style.display = 'flex';
+  var pr = popup.getBoundingClientRect();
+  if (pr.right > window.innerWidth - 8) { popup.style.left = (window.scrollX + window.innerWidth - 8) + 'px'; popup.style.transform = 'translateX(-100%)'; }
+  else if (pr.left < 8) { popup.style.left = (window.scrollX + 8) + 'px'; popup.style.transform = 'none'; }
+}
+function phStepPickSource(source){
+  var popup = document.getElementById('phStepSrcChoice');
+  if (popup) popup.style.display = 'none';
+  openFileInputSource('phStepFileInput', source);
+}
+function phStepFileSelected(input){
+  var fileArr = input.files ? Array.prototype.slice.call(input.files) : [];
+  var idx = phStepPickIdx;
+  input.value = '';
+  if (!fileArr.length || idx < 0) return;
+  var imgFiles = fileArr.filter(isImageFile);
+  if (!imgFiles.length) { alert('File harus berupa gambar.'); return; }
+  var st = PH_STEPS[idx];
+  imgOpenCropperQueue(imgFiles, phStepEv[idx], 'step:'+idx, 'phstep', st.no + '. ' + st.label);
+}
+function phstepRenderPreviews(side){
+  var idx = parseInt(String(side||'').split(':')[1], 10);
+  if (isNaN(idx)) return;
+  var cell = document.getElementById('phStepEvCell_'+idx);
+  if (cell) cell.innerHTML = phStepEvBtnHtml(idx);
+  phBuildStepGallery();
+}
+function phBuildStepGallery(){
+  var panel = document.getElementById('phStepGalleryPanel'), box = document.getElementById('phStepGallery');
+  if (!panel || !box) return;
+  var esc = function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var html = '', any = false;
+  PH_STEPS.forEach(function(st, i){
+    (phStepEv[i]||[]).forEach(function(img, pi){
+      any = true;
+      var short = st.label.length > 60 ? st.label.slice(0,60)+'…' : st.label;
+      html += '<div style="width:170px;border:1px solid var(--border);border-radius:8px;padding:8px;background:#fff">'+
+        '<div style="position:relative">'+
+          '<img src="'+esc(img.dataUrl)+'" alt="" style="width:100%;height:105px;object-fit:cover;border-radius:6px;cursor:pointer;display:block" onclick="phStepReEdit('+i+','+pi+')" title="Klik untuk crop ulang" onerror="this.style.display=\'none\'">'+
+          '<button type="button" onclick="event.stopPropagation();phStepRemove('+i+','+pi+')" title="Hapus foto" style="position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;background:var(--fail,#e74c3c);color:#fff;border:none;cursor:pointer;font-size:12px;line-height:20px;text-align:center;padding:0">&#215;</button>'+
+        '</div>'+
+        '<div style="font-size:10px;color:var(--text3);margin-top:6px" title="'+esc(st.label)+'">'+esc(st.no)+'. '+esc(short)+'</div>'+
+        '<input type="text" value="'+esc(img.caption||'')+'" oninput="phStepEv['+i+']['+pi+'].caption=this.value" placeholder="Keterangan foto..." style="width:100%;margin-top:4px;font-size:11px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;box-sizing:border-box">'+
+      '</div>';
+    });
+  });
+  box.innerHTML = html;
+  panel.style.display = any ? 'block' : 'none';
+}
+function phStepRemove(i, pi){
+  var img = phStepEv[i] && phStepEv[i][pi];
+  if (img && img.driveFileId && typeof deleteFotoDariGDrive === 'function') deleteFotoDariGDrive(img.driveFileId);
+  phStepEv[i].splice(pi, 1);
+  phstepRenderPreviews('step:'+i);
+}
+function phStepReEdit(i, pi){
+  var img = phStepEv[i] && phStepEv[i][pi];
+  if (img) imgOpenCropper(img.dataUrl, img.name, img.type, phStepEv[i], 'step:'+i, 'phstep', pi);
 }
 
 function phBuildUnitCell(step, idx, uid) {
   var uid2 = uid.replace(/-/g,'_');
   switch(step.type){
     case 'check':
-      return '<div class="ph-chk-center" style="padding:4px 0"><input type="checkbox" id="phU_'+uid2+'_'+idx+'" onchange="phUpdateResult('+idx+')" style="width:15px;height:15px;cursor:pointer;accent-color:var(--ok)"></div>';
+      return '<div class="ph-chk-center" style="padding:4px 0;white-space:nowrap">'+
+        '<label class="ph-yn-lbl" style="color:var(--ok,#16a34a)"><input type="checkbox" id="phUY_'+uid2+'_'+idx+'" onchange="phSetYN(\''+uid2+'\','+idx+',\'Y\',this.checked)" style="accent-color:var(--ok,#16a34a)">Y</label>'+
+        '<label class="ph-yn-lbl" style="color:var(--fail,#dc2626)"><input type="checkbox" id="phUN_'+uid2+'_'+idx+'" onchange="phSetYN(\''+uid2+'\','+idx+',\'N\',this.checked)" style="accent-color:var(--fail,#dc2626)">N</label>'+
+        '</div>';
     case 'buffer':
       return '<div class="ph-unit-cell-inner">'+
         '<div class="ph-buf-row"><span class="ph-buf-label">Buffer '+step.bufNo+' ('+step.bufVal+')</span></div>'+
-        '<input class="ph-buf-input" id="phBuf_'+uid2+'_'+idx+'" type="number" step="0.01" placeholder="Reading..." oninput="phUpdateResult('+idx+')">'+
+        '<input class="ph-buf-input" id="phBuf_'+uid2+'_'+idx+'" type="number" step="0.01" placeholder="Reading...">'+
         '</div>';
     case 'perf_slope':
-      return '<input class="ph-buf-input" style="margin-top:4px" id="phSlope_'+uid2+'" type="number" step="0.01" placeholder="Slope..." oninput="phUpdateResult('+idx+')">';
+      return '<input class="ph-buf-input" style="margin-top:4px" id="phSlope_'+uid2+'" type="number" step="0.01" placeholder="Slope...">';
     case 'perf_offset':
-      return '<input class="ph-buf-input" style="margin-top:4px" id="phOffset_'+uid2+'" type="number" step="0.01" placeholder="Offset..." oninput="phUpdateResult('+idx+')">';
+      return '<input class="ph-buf-input" style="margin-top:4px" id="phOffset_'+uid2+'" type="number" step="0.01" placeholder="Offset...">';
     case 'perf_temp':
-      return '<input class="ph-buf-input" style="margin-top:4px" id="phTemp_'+uid2+'" type="number" step="0.1" placeholder="Temp °C..." oninput="phUpdateResult('+idx+')">';
+      return '<input class="ph-buf-input" style="margin-top:4px" id="phTemp_'+uid2+'" type="number" step="0.1" placeholder="Temp °C...">';
     case 'reading_local':
-      return '<div class="ph-unit-cell-inner"><label style="font-size:9px;color:var(--text3)">Local (pH)</label><input class="ph-buf-input" id="phLocalpH_'+uid2+'" type="number" step="0.01" placeholder="pH..." oninput="phUpdateResult('+idx+')"></div>';
+      return '<div class="ph-unit-cell-inner"><label style="font-size:9px;color:var(--text3)">Local (pH)</label><input class="ph-buf-input" id="phLocalpH_'+uid2+'" type="number" step="0.01" placeholder="pH..."></div>';
     case 'reading_mamp_local':
-      return '<div class="ph-unit-cell-inner"><label style="font-size:9px;color:var(--text3)">mAmp Local</label><input class="ph-buf-input" id="phLocalmA_'+uid2+'" type="number" step="0.01" placeholder="mA..." oninput="phUpdateResult('+idx+')"></div>';
+      return '<div class="ph-unit-cell-inner"><label style="font-size:9px;color:var(--text3)">mAmp Local</label><input class="ph-buf-input" id="phLocalmA_'+uid2+'" type="number" step="0.01" placeholder="mA..."></div>';
     case 'reading_dcs':
-      return '<div class="ph-unit-cell-inner"><label style="font-size:9px;color:var(--text3)">DCS (pH)</label><input class="ph-buf-input" id="phDCSpH_'+uid2+'" type="number" step="0.01" placeholder="pH..." oninput="phUpdateResult('+idx+')"></div>';
+      return '<div class="ph-unit-cell-inner"><label style="font-size:9px;color:var(--text3)">DCS (pH)</label><input class="ph-buf-input" id="phDCSpH_'+uid2+'" type="number" step="0.01" placeholder="pH..."></div>';
     case 'reading_mamp_dcs':
-      return '<div class="ph-unit-cell-inner"><label style="font-size:9px;color:var(--text3)">mAmp DCS</label><input class="ph-buf-input" id="phDCSmA_'+uid2+'" type="number" step="0.01" placeholder="mA..." oninput="phUpdateResult('+idx+')"></div>';
+      return '<div class="ph-unit-cell-inner"><label style="font-size:9px;color:var(--text3)">mAmp DCS</label><input class="ph-buf-input" id="phDCSmA_'+uid2+'" type="number" step="0.01" placeholder="mA..."></div>';
     default:
       return '';
   }
-}
-
-function phUpdateResult(idx) {
-  var step=PH_STEPS[idx];
-  var resEl=document.getElementById('phRes_'+idx);
-  if(!resEl)return;
-  var globalChk=document.getElementById('phChk_'+idx);
-  var hasValue=false;
-  if(globalChk&&globalChk.checked) hasValue=true;
-
-  var activeUnits=phGetActiveUnits();
-  activeUnits.forEach(function(u){
-    var uid2=u.id.replace(/-/g,'_');
-    if(step.type==='check'){
-      var el=document.getElementById('phU_'+uid2+'_'+idx);
-      if(el&&el.checked) hasValue=true;
-    } else {
-      // any input has a value?
-      var possibles=['phBuf_'+uid2+'_'+idx,'phSlope_'+uid2,'phOffset_'+uid2,'phTemp_'+uid2,'phLocalpH_'+uid2,'phLocalmA_'+uid2,'phDCSpH_'+uid2,'phDCSmA_'+uid2];
-      possibles.forEach(function(pid){var e=document.getElementById(pid);if(e&&e.value.trim())hasValue=true;});
-    }
-  });
-  resEl.innerHTML = hasValue ? '<span class="ph-ok-badge">ok</span>' : '';
-}
-
-function phCheckAll(checked){
-  PH_STEPS.forEach(function(step,idx){
-    var el=document.getElementById('phChk_'+idx);
-    if(el) el.checked=checked;
-    if(step.type==='check'){
-      phGetActiveUnits().forEach(function(u){
-        var uid2=u.id.replace(/-/g,'_');
-        var e=document.getElementById('phU_'+uid2+'_'+idx);
-        if(e) e.checked=checked;
-      });
-    }
-    phUpdateResult(idx);
-  });
 }
 
 /* ══════════════════════════════════════════════
@@ -1911,7 +2008,9 @@ function phReset(){
     if(el.type==='checkbox') el.checked=false;
     else el.value='';
   });
-  PH_STEPS.forEach(function(_,idx){ phUpdateResult(idx); });
+  document.querySelectorAll('#phTableBody textarea').forEach(function(el){ el.value=''; });
+  phStepEv = PH_STEPS.map(function(){ return []; });
+  phBuildTable();
   // Reset images
   PH_UNITS.forEach(function(u){ phImages[u.id]=[]; phRenderPreviews(u.id); });
   // Reset notes
@@ -1940,14 +2039,16 @@ function dbCollectData(modul){
   var steps={};
   PH_STEPS.forEach(function(step,idx){
     var uid2s={};
-    // Global check disimpan sekali, bukan per-unit
-    var chkG=document.getElementById('phChk_'+idx);
-    uid2s.__globalChk = !!(chkG&&chkG.checked);
+    var remEl=document.getElementById('phRemark_'+idx);
+    uid2s.__remark = remEl ? remEl.value : '';
     activeUnits.forEach(function(u){
       var uid2=u.id.replace(/-/g,'_');
       var cell={};
       if(step.type==='check'){
-        var chkU=document.getElementById('phU_'+uid2+'_'+idx); cell.unitChk=!!(chkU&&chkU.checked);
+        // Y/N per unit (revisi 2026-09-24). unitChk (= Y) tetap ditulis supaya
+        // bentuk data lama tetap konsisten utk pembaca lain (trend dsb).
+        var cy=document.getElementById('phUY_'+uid2+'_'+idx), cn=document.getElementById('phUN_'+uid2+'_'+idx);
+        cell.y=!!(cy&&cy.checked); cell.n=!!(cn&&cn.checked); cell.unitChk=cell.y;
       } else {
         var fields=['phBuf_'+uid2+'_'+idx,'phSlope_'+uid2,'phOffset_'+uid2,'phTemp_'+uid2,'phLocalpH_'+uid2,'phLocalmA_'+uid2,'phDCSpH_'+uid2,'phDCSmA_'+uid2];
         fields.forEach(function(fid){ var e=document.getElementById(fid); if(e) cell[fid]=e.value; });
@@ -1961,6 +2062,10 @@ function dbCollectData(modul){
   activeUnits.forEach(function(u){
     images[u.id]=(phImages[u.id]||[]).map(function(img){return{name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||'',widthCm:img.widthCm,heightCm:img.heightCm,offsetX:img.offsetX||0};});
   });
+  var stepEvidence={};
+  PH_STEPS.forEach(function(_, i){
+    if ((phStepEv[i]||[]).length) stepEvidence[i] = phStepEv[i].map(function(img){ var o={name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||'',widthCm:img.widthCm,heightCm:img.heightCm,offsetX:img.offsetX||0}; if(img.driveUrl)o.driveUrl=img.driveUrl; if(img.driveFileId)o.driveFileId=img.driveFileId; return o; });
+  });
   var notes={};
   activeUnits.forEach(function(u){
     var uid2=u.id.replace(/-/g,'_');
@@ -1973,7 +2078,7 @@ function dbCollectData(modul){
     pic:gv('phPIC'),
     work_order:gv('phWO'),
     unit:'CWT',
-    data:{activeUnits:Object.keys(phActiveUnits).filter(function(k){return phActiveUnits[k];}),steps:steps,images:images,notes:notes,docNo:gv('phDocNo'),asset:gv('phAsset'),assetDesc:gv('phAssetDesc')}
+    data:{activeUnits:Object.keys(phActiveUnits).filter(function(k){return phActiveUnits[k];}),steps:steps,stepEvidence:stepEvidence,images:images,notes:notes,docNo:gv('phDocNo'),asset:gv('phAsset'),assetDesc:gv('phAssetDesc')}
   };
 }
 
@@ -2006,7 +2111,7 @@ function phDownloadPdf(){
       var nowStr=dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
       function gv(id){var e=document.getElementById(id);return e?e.value:'';}
-      function safe(s){return String(s||'').replace(/[^\x00-\xFF]/g,'?');}
+      function safe(s){return String(s||'').replace(/[–—]/g,'-').replace(/[^\x00-\xFF]/g,'?');}
       var y=marginTop;
       function checkPage(need){
         if(y+need>ph-bgFooterH){
@@ -2095,82 +2200,53 @@ function phDownloadPdf(){
       secHeader('STEP OF WORK — Analyzer Indicator Transmitter (pH)');
 
       // ── Helper: draw checkbox ──
-      function drawCheckbox(doc,x,y2,w2,h2,checked){
+      function drawCheckbox(doc,x,y2,w2,h2,checked,fail){
         var size=3; var cx=x+w2/2, cy=y2+h2/2;
         doc.setDrawColor(80,80,80); doc.setLineWidth(0.25);
         doc.rect(cx-size/2,cy-size/2,size,size,'S');
-        if(checked){ doc.setDrawColor(26,107,58); doc.setLineWidth(0.4); doc.line(cx-size/2+0.3,cy,cx-size/2+size*0.38,cy+size/2-0.4); doc.line(cx-size/2+size*0.38,cy+size/2-0.4,cx+size/2-0.2,cy-size/2+0.4); }
+        if(checked){ if(fail) doc.setDrawColor(185,28,28); else doc.setDrawColor(26,107,58); doc.setLineWidth(0.4); doc.line(cx-size/2+0.3,cy,cx-size/2+size*0.38,cy+size/2-0.4); doc.line(cx-size/2+size*0.38,cy+size/2-0.4,cx+size/2-0.2,cy-size/2+0.4); }
       }
 
-      // ── Hitung lebar kolom — fully adaptive, total HARUS = contentW ──
+      // ── Lebar kolom -- tiap unit = 2 sub-kolom (Y | N); baris angka
+      //    (buffer/slope/reading) memakai colSpan 2. Total HARUS = contentW.
       var nUnits = activeUnits.length;
-      // Font size adaptif berdasar jumlah unit
-      var tableFontSize = nUnits <= 3 ? 7.5 : nUnits <= 5 ? 7 : nUnits <= 7 ? 6.5 : 6;
+      var tableFontSize = nUnits <= 3 ? 7.2 : nUnits <= 5 ? 6.6 : 6;
+      var wNo = 7;
+      var wRes = nUnits <= 3 ? 34 : nUnits <= 5 ? 28 : 24;
+      var wCrit = nUnits <= 3 ? 24 : nUnits <= 5 ? 18 : 14;
+      var wFixed = wNo + wRes + wCrit;
+      var wHalf = Math.max(6.5, Math.floor((contentW - wFixed) / (nUnits*2 + 5) * 10) / 10);
+      var wStep = contentW - wFixed - wHalf*2*nUnits;
 
-      // Kolom tetap (mm)
-      var wNo   = 7;
-      var wChk  = 7;
-      var wRes  = 12;
-      // Kriteria: kurangi kalau unit banyak
-      var wCrit = nUnits <= 3 ? 28 : nUnits <= 5 ? 24 : nUnits <= 7 ? 18 : 14;
-      // Lebar per unit: sisa dibagi (nUnits + porsi step)
-      // Step of Work mendapat 2x porsi unit untuk teks panjang
-      // total = wNo + wChk + wRes + wCrit + wStep + (nUnits * wUnit)
-      // wStep = 2 * wUnit  →  total = fixed + wUnit*(nUnits+2)
-      var wFixed = wNo + wChk + wRes + wCrit;
-      var wUnit  = Math.floor((contentW - wFixed) / (nUnits + 2));
-      wUnit = Math.max(10, wUnit);
-      // wStep = sisa setelah semua kolom — agar total tepat contentW
-      var wStep = contentW - wFixed - (wUnit * nUnits);
-      wStep = Math.max(20, wStep);
-
-      // Build table rows
-      var tableHead=[['No','Step of Work','Criteria','✓'].concat(activeUnits.map(function(u){return u.label;})).concat(['Result'])];
+      var head1=[{content:'No',rowSpan:2},{content:'Step of Work',rowSpan:2},{content:'Criteria',rowSpan:2}];
+      var head2=[];
+      activeUnits.forEach(function(u){ head1.push({content:u.label,colSpan:2}); head2.push('Y','N'); });
+      head1.push({content:'Result / Remark',rowSpan:2});
       var tableRows=[];
 
       PH_STEPS.forEach(function(step,idx){
-        var globalChk=document.getElementById('phChk_'+idx);
-        var chkVal=(globalChk&&globalChk.checked)?'__CHK__':'__BOX__';
-        var row=[String(step.no), safe(step.label), safe(step.criteria), chkVal];
-
+        var row=[String(step.no), safe(step.label), safe(step.criteria)];
         activeUnits.forEach(function(u){
           var uid2=u.id.replace(/-/g,'_');
-          var cellVal='';
           if(step.type==='check'){
-            var el=document.getElementById('phU_'+uid2+'_'+idx);
-            cellVal=(el&&el.checked)?'__CHK__':'__BOX__';
-          } else if(step.type==='buffer'){
-            var el=document.getElementById('phBuf_'+uid2+'_'+idx);
-            var v=el?el.value.trim():'';
-            cellVal='Buf '+step.bufNo+' ('+step.bufVal+')\n'+(v||'—');
-          } else if(step.type==='perf_slope'){
-            var el=document.getElementById('phSlope_'+uid2);
-            cellVal='Slope: '+(el&&el.value?el.value:'—');
-          } else if(step.type==='perf_offset'){
-            var el=document.getElementById('phOffset_'+uid2);
-            cellVal='Offset: '+(el&&el.value?el.value:'—');
-          } else if(step.type==='perf_temp'){
-            var el=document.getElementById('phTemp_'+uid2);
-            cellVal='Temp: '+(el&&el.value?el.value:'—')+'°C';
-          } else if(step.type==='reading_local'){
-            var el=document.getElementById('phLocalpH_'+uid2);
-            cellVal='Lokal: '+(el&&el.value?el.value:'—')+' pH';
-          } else if(step.type==='reading_mamp_local'){
-            var el=document.getElementById('phLocalmA_'+uid2);
-            cellVal='mA: '+(el&&el.value?el.value:'—')+' mA';
-          } else if(step.type==='reading_dcs'){
-            var el=document.getElementById('phDCSpH_'+uid2);
-            cellVal='DCS: '+(el&&el.value?el.value:'—')+' pH';
-          } else if(step.type==='reading_mamp_dcs'){
-            var el=document.getElementById('phDCSmA_'+uid2);
-            cellVal='DCS mA: '+(el&&el.value?el.value:'—')+' mA';
+            var ey=document.getElementById('phUY_'+uid2+'_'+idx), en=document.getElementById('phUN_'+uid2+'_'+idx);
+            row.push((ey&&ey.checked)?'__CHK__':'__BOX__', (en&&en.checked)?'__CHKF__':'__BOX__');
+            return;
           }
-          row.push(cellVal);
+          var cellVal='';
+          var gvv=function(id){ var e=document.getElementById(id); return e&&e.value?e.value:'-'; };
+          if(step.type==='buffer') cellVal='Buf '+step.bufNo+' ('+step.bufVal+')\n'+gvv('phBuf_'+uid2+'_'+idx);
+          else if(step.type==='perf_slope') cellVal='Slope: '+gvv('phSlope_'+uid2);
+          else if(step.type==='perf_offset') cellVal='Offset: '+gvv('phOffset_'+uid2);
+          else if(step.type==='perf_temp') cellVal='Temp: '+gvv('phTemp_'+uid2)+' °C';
+          else if(step.type==='reading_local') cellVal='Lokal: '+gvv('phLocalpH_'+uid2)+' pH';
+          else if(step.type==='reading_mamp_local') cellVal='mA: '+gvv('phLocalmA_'+uid2);
+          else if(step.type==='reading_dcs') cellVal='DCS: '+gvv('phDCSpH_'+uid2)+' pH';
+          else if(step.type==='reading_mamp_dcs') cellVal='DCS mA: '+gvv('phDCSmA_'+uid2);
+          row.push({content:safe(cellVal), colSpan:2});
         });
-
-        var resEl=document.getElementById('phRes_'+idx);
-        var resText=resEl?resEl.textContent.replace(/[^\x00-\xFF]/g,'ok'):'';
-        row.push(safe(resText));
+        var remEl=document.getElementById('phRemark_'+idx);
+        row.push(safe(remEl?remEl.value:''));
         tableRows.push(row);
       });
 
@@ -2178,31 +2254,29 @@ function phDownloadPdf(){
         0:{cellWidth:wNo,  halign:'center'},
         1:{cellWidth:wStep, overflow:'linebreak'},
         2:{cellWidth:wCrit, overflow:'linebreak'},
-        3:{cellWidth:wChk, halign:'center'},
       };
-      activeUnits.forEach(function(_,i){ colStyles[4+i]={cellWidth:wUnit,halign:'center',overflow:'linebreak'}; });
-      colStyles[4+nUnits]={cellWidth:wRes,halign:'center'};
+      for (var ci=0; ci<nUnits*2; ci++) colStyles[3+ci]={cellWidth:wHalf,halign:'center',overflow:'linebreak'};
+      colStyles[3+nUnits*2]={cellWidth:wRes,overflow:'linebreak'};
 
       doc.autoTable({
         startY:y,
-        head:tableHead,
+        head:[head1, head2],
         body:tableRows,
         theme:'grid',
         tableWidth: contentW,
-        margin:{left:marginX, right:marginX},
-        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:tableFontSize,halign:'center',font:'helvetica',cellPadding:1.5},
-        bodyStyles:{fontSize:tableFontSize,textColor:[20,30,25],font:'helvetica',cellPadding:1.5},
+        margin:{left:marginX, right:marginX, top:marginTop2, bottom:bgFooterH},
+        headStyles:{fillColor:[30,58,138],textColor:[210,225,255],fontStyle:'bold',fontSize:tableFontSize,halign:'center',valign:'middle',font:'helvetica',cellPadding:1.2},
+        bodyStyles:{fontSize:tableFontSize,textColor:[20,30,25],font:'helvetica',cellPadding:1.5,valign:'middle'},
         columnStyles:colStyles,
         alternateRowStyles:{fillColor:[246,249,252]},
+        didParseCell:function(data){
+          if(data.section==='body' && (data.cell.raw==='__CHK__'||data.cell.raw==='__CHKF__'||data.cell.raw==='__BOX__')) data.cell.text=[''];
+        },
         didDrawCell:function(data){
           if(data.section!=='body') return;
           var val=data.cell.raw;
-          if(val==='__CHK__'||val==='__BOX__'){
-            var x=data.cell.x, y2=data.cell.y, w2=data.cell.width, h2=data.cell.height;
-            var bg=(data.row.index%2===0)?[255,255,255]:[246,249,252];
-            doc.setFillColor(bg[0],bg[1],bg[2]);
-            doc.rect(x+0.2,y2+0.2,w2-0.4,h2-0.4,'F');
-            drawCheckbox(doc,x,y2,w2,h2,val==='__CHK__');
+          if(val==='__CHK__'||val==='__CHKF__'||val==='__BOX__'){
+            drawCheckbox(doc,data.cell.x,data.cell.y,data.cell.width,data.cell.height,val!=='__BOX__',val==='__CHKF__');
           }
         },
         willDrawPage:function(data){
@@ -2213,12 +2287,38 @@ function phDownloadPdf(){
             doc.rect(marginX, marginTop2, contentW, ph-marginTop2-bgFooterH, 'F');
             if (doc.setGState) doc.setGState(new doc.GState({opacity: 1}));
             doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(30,58,95);
-            doc.text('Analyzer Indicator Transmitter (pH) — (lanjutan)', pw/2, marginTop2-3, {align:'center'});
+            doc.text('Analyzer Indicator Transmitter (pH) - (lanjutan)', pw/2, marginTop2-3, {align:'center'});
           }
         }
       });
 
       y=doc.lastAutoTable.finalY+8;
+
+      // ── EVIDENCE PHOTO PER STEP (kolom foto di tabel) -- 2 foto per baris,
+      //    caption default = nama step, bold rata tengah di bawah foto ──
+      (function(){
+        var evList=[];
+        PH_STEPS.forEach(function(st,i){ (phStepEv[i]||[]).forEach(function(img){ if(img&&img.dataUrl) evList.push({img:img,cap:safe(img.caption||(st.no+'. '+st.label))}); }); });
+        if(!evList.length) return;
+        var gap=6, maxW=(contentW-gap)/2, maxH=70;
+        var dimOf=function(img){ var w=(img.widthCm||DEFAULT_CROP_W_CM)*10, h=(img.heightCm||DEFAULT_CROP_H_CM)*10; if(w>maxW){h=h*maxW/w;w=maxW;} if(h>maxH){w=w*maxH/h;h=maxH;} return {w:w,h:h}; };
+        var d0=dimOf(evList[0].img);
+        checkPage(12 + d0.h + 10);
+        secHeader('EVIDENCE PHOTO - STEP OF WORK');
+        for(var k=0;k<evList.length;k+=2){
+          var pair=evList.slice(k,k+2).map(function(e){ var d=dimOf(e.img); doc.setFont('helvetica','bold'); doc.setFontSize(8); return {e:e,d:d,lines:doc.splitTextToSize(e.cap,d.w)}; });
+          var rowH=Math.max.apply(null,pair.map(function(p){ return p.d.h+p.lines.length*3.5+4; }));
+          checkPage(rowH+4);
+          pair.forEach(function(p,j){
+            var colX=marginX+j*(maxW+gap);
+            var x=Math.max(marginX, Math.min(colX+(maxW-p.d.w)/2+((p.e.img.offsetX||0)*10), pw-marginX-p.d.w));
+            try{ doc.addImage(p.e.img.dataUrl,'JPEG',x,y,p.d.w,p.d.h); }catch(err){ doc.setDrawColor(200,200,200); doc.rect(x,y,p.d.w,p.d.h,'S'); }
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(50,70,130);
+            doc.text(p.lines, x+p.d.w/2, y+p.d.h+3.5, {align:'center'});
+          });
+          y+=rowH+4;
+        }
+      })();
 
       // ── CATATAN & EVIDENCE ──
       var hasNotes=false;
@@ -2320,34 +2420,32 @@ function applyRecordToForm(rec, editingId) {
     Object.keys(data.steps).forEach(function(idx){
       var stepData=data.steps[idx];
       var step=PH_STEPS[parseInt(idx)]; if(!step) return;
-      // Restore global checkbox — dari __globalChk (baru) atau cell.chk pertama (lama)
-      var chkG=document.getElementById('phChk_'+idx);
-      if(chkG){
-        if(stepData.__globalChk !== undefined){
-          chkG.checked = !!stepData.__globalChk;
-        } else {
-          // fallback format lama: ambil dari unit pertama
-          var firstUnit = activeUnits[0];
-          if(firstUnit){
-            var firstCell = stepData[firstUnit.id]||{};
-            chkG.checked = !!firstCell.chk;
-          }
-        }
-      }
+      var remEl=document.getElementById('phRemark_'+idx);
       activeUnits.forEach(function(u){
         var uid2=u.id.replace(/-/g,'_');
         var cell=stepData[u.id]||{};
         if(step.type==='check'){
-          var chkU=document.getElementById('phU_'+uid2+'_'+idx); if(chkU) chkU.checked=!!cell.unitChk;
+          // Format baru {y,n}; format LAMA cuma unitChk (centang = Y).
+          var isY = ('y' in cell) ? !!cell.y : !!cell.unitChk, isN = !!cell.n;
+          var ey=document.getElementById('phUY_'+uid2+'_'+idx); if(ey) ey.checked=isY;
+          var en=document.getElementById('phUN_'+uid2+'_'+idx); if(en) en.checked=isN && !isY;
         } else {
           Object.keys(cell).forEach(function(fid){
             var e=document.getElementById(fid); if(e) e.value=cell[fid]||'';
           });
         }
       });
-      phUpdateResult(parseInt(idx));
+      if(remEl){
+        if(stepData.__remark !== undefined) remEl.value = stepData.__remark || '';
+        else { remEl.value=''; phComputeRemark(parseInt(idx)); } // record lama: hitung dari Y/N
+      }
     });
   }
+  phStepEv = PH_STEPS.map(function(_, i){
+    return ((data.stepEvidence||{})[i]||[]).map(function(img){ var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||'',widthCm:img.widthCm,heightCm:img.heightCm,offsetX:img.offsetX||0}; if(img.driveUrl)o.driveUrl=img.driveUrl; if(img.driveFileId)o.driveFileId=img.driveFileId; return o; });
+  });
+  PH_STEPS.forEach(function(_, i){ var c=document.getElementById('phStepEvCell_'+i); if(c) c.innerHTML=phStepEvBtnHtml(i); });
+  phBuildStepGallery();
 
   // Restore images & notes
   if(data.images){

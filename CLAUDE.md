@@ -4009,3 +4009,27 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   seolah "Centang Semua Y kelewat 1" di 813B baris 9 (laporan user 2026-09-24).
 - PDF: kolom Pass/Fail vektor per transmitter (centang Fail merah), `safe()` PDF
   sekarang mengganti "—" jadi "-" (sebelumnya tercetak "?").
+
+## pH Analyzer: Y/N per unit + kolom Evidence per step (2026-09-24)
+
+- `ph-analyzer.html` Step of Work: kolom "✓" global + "Centang Semua" baris +
+  badge "ok" (pola lama) DIHAPUS. Step `type:'check'` sekarang punya **Y / N per
+  unit** (`phUY_<uid>_<idx>` / `phUN_<uid>_<idx>`, saling eksklusif) + yText/nText
+  di `PH_STEPS`; Remark = `<textarea id="phRemark_<idx>">` yang diisi otomatis
+  (`phComputeRemark()`: semua Y -> yText, semua N -> nText, campur -> "TAG, TAG:
+  yText | TAG: nText") tapi tetap bisa diedit. Step angka (buffer/slope/offset/
+  temp/reading) TIDAK diubah otomatis -- remark manual. Tombol **Centang Semua Y**
+  di atas tabel (semua step check, termasuk "Raise new WO").
+- **Kolom Evidence 📷 per step** (bukan per unit) -> `phStepEv[idx]` (bisa banyak
+  foto), galeri "Evidence Photo — Step of Work" di bawah tabel, caption default
+  "<no>. <step>". Prefix crop **`'phstep'`** (cropAndSave() lokal file ini
+  memanggil `window[prefix+'RenderPreviews']` -> `phstepRenderPreviews()`),
+  side `'step:<idx>'`. Panel "Catatan & Evidence Photo" per unit yang lama TETAP
+  ada (tidak diubah).
+- Data: `steps[idx][unitId] = {y,n,unitChk}` (unitChk = y, dipertahankan utk
+  pembaca lama/trend), `steps[idx].__remark`, `data.stepEvidence[idx] = [foto]`.
+  Record LAMA (cuma `unitChk`, ada `__globalChk`, tanpa `__remark`) tetap
+  terbaca: unitChk -> Y, remark dihitung ulang.
+- PDF: tiap unit 2 sub-kolom Y|N (checkbox vektor, Fail merah), baris angka
+  `colSpan:2`; section "EVIDENCE PHOTO - STEP OF WORK" 2 foto per baris sebelum
+  Catatan per unit. `safe()` PDF mengganti "—" jadi "-".
