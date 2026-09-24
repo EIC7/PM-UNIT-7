@@ -119,14 +119,17 @@ body{background-image:radial-gradient(ellipse at 20% 10%,rgba(170,205,235,0.45) 
   </div>
   <div class="panel">
     <div class="section-label">Step of Work — Opacity ID Fan Inlet 7A &amp; 7B</div>
+    <button type="button" class="btn btn-outline" onclick="opCheckAllY()" style="margin-bottom:10px">&#9989; Centang Semua Y</button>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table class="manual-table" id="opCheckTable">
+      <table class="manual-table" id="opCheckTable" style="min-width:900px">
         <thead><tr>
-          <th style="width:36px">No.</th><th>Step of Work</th><th style="width:120px">Criteria</th>
-          <th style="width:46px;text-align:center">&#10003;</th>
-          <th style="width:120px;text-align:center">7BG-AIT-813A<br><span style="font-weight:400;font-size:10px">(Opacity Inlet 7A)</span></th>
-          <th style="width:120px;text-align:center">7BG-AIT-813B<br><span style="font-weight:400;font-size:10px">(Opacity Inlet 7B)</span></th>
-          <th>Result / Remark</th>
+          <th rowspan="2" style="width:36px">No.</th><th rowspan="2" style="min-width:240px">Step of Work</th><th rowspan="2" style="width:120px">Criteria</th>
+          <th colspan="2" style="text-align:center">7BG-AIT-813A<br><span style="font-weight:400;font-size:10px">(Opacity Inlet 7A)</span></th>
+          <th colspan="2" style="text-align:center">7BG-AIT-813B<br><span style="font-weight:400;font-size:10px">(Opacity Inlet 7B)</span></th>
+          <th rowspan="2" style="min-width:190px">Result / Remark</th>
+        </tr><tr>
+          <th style="width:54px">Pass</th><th style="width:54px">Fail</th>
+          <th style="width:54px">Pass</th><th style="width:54px">Fail</th>
         </tr></thead>
         <tbody id="opCheckBody"></tbody>
       </table>
@@ -1451,19 +1454,36 @@ function closePdfPreview() {
     pdfPreviewState.doc = null;
 }
 
+/* Checklist Pass/Fail per transmitter (813A/813B) + Remark Y/N otomatis --
+   revisi 2026-09-24 menyamakan pola terbaru (hawk_level_transmitter.html /
+   id_fan_line_purging.html). Kolom "✓" generik lama dihapus; baris "Raise
+   new WO" sekarang juga diisi kedua sisi (dulu 813B dikosongkan). */
 var OP_CHECKS = [
-  {no:1,   label:'Make sure PTW already issue.', criteria:'', both:true},
-  {no:2,   label:'Prepare tool & material required.', criteria:'', both:true},
-  {no:3,   label:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', criteria:'Cleanliness', both:true},
-  {no:4,   label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress). * replace if required', criteria:'No dust / No water ingress / No broken', both:true},
-  {no:5,   label:'Check connection was tightened and no looses.', criteria:'Tight Connection', both:true},
-  {no:'6a',label:'OPACITY ANALYZER INSPECTION — Record / Note the faulty or alarm active', criteria:'Opacity Monitor', both:true},
-  {no:'6b',label:'Cleaning Mirror/lens, chamber opacity, record if any abnormality found.', criteria:'', both:true},
-  {no:'6c',label:'Air Regulator Flushing / Cleaning.', criteria:'', both:true},
-  {no:'6d',label:'Seal Air Filter and Air Filter Replacement (*inspection and cleaning if Spare not Available)', criteria:'', both:true},
-  {no:9,   label:'Raise new WO & repair if any defect found.', criteria:'', both:false},
-  {no:10,  label:'Leave the location within safe condition.', criteria:'', both:true}
+  {no:1,   label:'Make sure PTW already issue.', criteria:'',
+    yText:'PTW Sudah Diterbitkan dan Berlaku', nText:'PTW Belum Diterbitkan / Belum Berlaku'},
+  {no:2,   label:'Prepare tool & material required.', criteria:'',
+    yText:'Tool & Material Sudah Disiapkan dan Siap Pakai', nText:'Tool & Material Belum Lengkap / Belum Siap'},
+  {no:3,   label:'Cleaning outside/inside all of panel use soft cloth/purging with low air instrument air/ultra dryer.', criteria:'Cleanliness',
+    yText:'Panel Sudah Dibersihkan, Kondisi Bersih', nText:'Panel Belum Dibersihkan / Masih Kotor'},
+  {no:4,   label:'Make sure all sealing panel, conduit connection is good (no dust & water ingress). * replace if required', criteria:'No dust / No water ingress / No broken',
+    yText:'Sealing & Conduit Dalam Kondisi Baik, Tidak Ada Debu/Air Masuk', nText:'Ditemukan Debu, Indikasi Air Masuk, atau Kondisi Rusak pada Sealing/Conduit'},
+  {no:5,   label:'Check connection was tightened and no looses.', criteria:'Tight Connection',
+    yText:'Koneksi Sudah Kencang, Tidak Ada yang Kendor', nText:'Ditemukan Koneksi yang Kendor, Perlu Dikencangkan'},
+  {no:'6a',label:'OPACITY ANALYZER INSPECTION — Record / Note the faulty or alarm active', criteria:'Opacity Monitor',
+    yText:'Opacity Analyzer Normal, Tidak Ada Fault/Alarm Aktif', nText:'Ditemukan Fault/Alarm Aktif pada Opacity Analyzer, Sudah Dicatat'},
+  {no:'6b',label:'Cleaning Mirror/lens, chamber opacity, record if any abnormality found.', criteria:'',
+    yText:'Mirror/Lens & Chamber Sudah Dibersihkan, Tidak Ada Abnormality', nText:'Ditemukan Abnormality pada Mirror/Lens/Chamber, Sudah Dicatat'},
+  {no:'6c',label:'Air Regulator Flushing / Cleaning.', criteria:'',
+    yText:'Air Regulator Sudah Di-flushing/Dibersihkan', nText:'Air Regulator Belum Di-flushing/Dibersihkan'},
+  {no:'6d',label:'Seal Air Filter and Air Filter Replacement (*inspection and cleaning if Spare not Available)', criteria:'',
+    yText:'Seal Air Filter & Air Filter Sudah Diganti/Dibersihkan', nText:'Seal Air Filter/Air Filter Belum Diganti/Dibersihkan'},
+  {no:9,   label:'Raise new WO & repair if any defect found.', criteria:'',
+    yText:'Tidak Ditemukan Defect, WO Baru Tidak Diperlukan', nText:'Ditemukan Defect, WO Baru Sudah/Perlu Diajukan'},
+  {no:10,  label:'Leave the location within safe condition.', criteria:'',
+    yText:'Lokasi Kerja Sudah Ditinggalkan dalam Kondisi Aman dan Rapi', nText:'Lokasi Kerja Belum dalam Kondisi Aman / Masih Perlu Dirapikan'}
 ];
+function opEmptyState(){ return OP_CHECKS.map(function(){ return {passA:false, failA:false, passB:false, failB:false, remark:''}; }); }
+var opState = opEmptyState();
 
 var opImages = {'7A':[], '7B':[]};
 var opTableBuilt = false;
@@ -1502,58 +1522,52 @@ function drawBg(doc, pw, ph) {
 }
 
 // ── TABLE ────────────────────────────────────────────────────────────────────
+function opEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function opCb(i, key, color) {
+  return '<td style="text-align:center"><input type="checkbox" '+(opState[i][key]?'checked':'')+' onchange="opToggle('+i+',\''+key+'\',this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:'+color+'"></td>';
+}
 function opBuildTable() {
-  if (opTableBuilt) return; opTableBuilt = true;
   var tbody = document.getElementById('opCheckBody');
-  var trAll = document.createElement('tr');
-  trAll.style.cssText = 'background:#e8f2ff;border-left:4px solid #1d74c7;';
-  trAll.innerHTML =
-    '<td colspan="3" style="padding:7px 14px;font-size:11px;font-style:italic;color:#1d74c7;font-weight:600">&#10003; Centang Semua</td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAllCheck" onchange="opCheckAll(\'check\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAll7A" onchange="opCheckAll(\'7a\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
-    '<td style="text-align:center"><input type="checkbox" id="opAll7B" onchange="opCheckAll(\'7b\',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:#1d74c7"></td>'+
-    '<td style="font-size:11px;color:#1d74c7;font-style:italic;padding-left:8px">semua OK</td>';
-  tbody.appendChild(trAll);
-  OP_CHECKS.forEach(function(item, idx) {
-    var tr = document.createElement('tr');
-    tr.innerHTML =
+  tbody.innerHTML = OP_CHECKS.map(function(item, i) {
+    return '<tr>'+
       '<td style="text-align:center;font-size:12px;color:var(--text3);white-space:nowrap">'+item.no+'</td>'+
-      '<td style="font-size:13px;padding:8px 12px">'+item.label+'</td>'+
-      '<td style="font-size:12px;color:var(--text3);font-style:italic">'+item.criteria+'</td>'+
-      '<td style="text-align:center"><input type="checkbox" id="opChk_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>'+
-      '<td style="text-align:center"><input type="checkbox" id="op7A_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)"></td>'+
-      '<td style="text-align:center">'+(item.both?'<input type="checkbox" id="op7B_'+idx+'" onchange="opChk('+idx+')" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ok)">':'<span style="color:var(--text3);font-size:12px">—</span>')+'</td>'+
-      '<td id="opRec_'+idx+'" style="font-size:12px;font-family:\'Courier New\',monospace;color:var(--ok);font-weight:600;padding-left:8px"></td>';
-    tbody.appendChild(tr);
-  });
+      '<td style="font-size:13px;padding:8px 12px">'+opEsc(item.label)+'</td>'+
+      '<td style="font-size:12px;color:var(--text3);font-style:italic">'+opEsc(item.criteria)+'</td>'+
+      opCb(i,'passA','var(--ok,#16a34a)')+opCb(i,'failA','var(--fail,#dc2626)')+
+      opCb(i,'passB','var(--ok,#16a34a)')+opCb(i,'failB','var(--fail,#dc2626)')+
+      '<td><input type="text" id="opRemark_'+i+'" value="'+opEsc(opState[i].remark)+'" oninput="opState['+i+'].remark=this.value" style="width:100%;border:1px solid var(--border);border-radius:4px;padding:4px 6px;font:inherit;font-size:12px;color:inherit;box-sizing:border-box"></td>'+
+    '</tr>';
+  }).join('');
 }
-
-function opChk(idx) {
-  var chk=document.getElementById('opChk_'+idx), a=document.getElementById('op7A_'+idx), b=document.getElementById('op7B_'+idx), rec=document.getElementById('opRec_'+idx);
-  if (!rec) return;
-  rec.textContent = ((chk&&chk.checked)||(a&&a.checked)||(b&&b.checked)) ? 'ok' : '';
+/* Remark 1 kolom utk 813A & 813B -- kalau kedua sisi sepakat cukup 1
+   kalimat yText/nText, kalau beda digabung per sisi (pola
+   computeChecklistRemark() di id_fan_line_purging.html). */
+function opComputeRemark(i) {
+  var it = OP_CHECKS[i], st = opState[i];
+  var a = st.passA ? 'Y' : st.failA ? 'N' : null;
+  var b = st.passB ? 'Y' : st.failB ? 'N' : null;
+  if (a === null && b === null) return st.remark;
+  if (a === b) return a === 'Y' ? it.yText : it.nText;
+  var txt = function(v){ return v === 'Y' ? it.yText : v === 'N' ? it.nText : '-'; };
+  return '813A: ' + txt(a) + ' | 813B: ' + txt(b);
 }
-
-function opCheckAll(which, checked) {
-  OP_CHECKS.forEach(function(item, idx) {
-    var id = which==='check'?'opChk_'+idx:which==='7a'?'op7A_'+idx:'op7B_'+idx;
-    var el = document.getElementById(id);
-    if (el && (which!=='7b'||item.both)) el.checked = checked;
-    opChk(idx);
-  });
+function opToggle(i, key, checked) {
+  var st = opState[i];
+  st[key] = checked;
+  if (checked) st[{passA:'failA', failA:'passA', passB:'failB', failB:'passB'}[key]] = false;
+  st.remark = opComputeRemark(i);
+  opBuildTable();
+  if (typeof autosaveTrigger === 'function') autosaveTrigger();
 }
-
-function opRefreshAllChecks() {
-  var allCheck=true, all7A=true, all7B=true, has7B=false;
-  OP_CHECKS.forEach(function(item,idx){
-    var chk=document.getElementById('opChk_'+idx), a=document.getElementById('op7A_'+idx), b=document.getElementById('op7B_'+idx);
-    if(!(chk&&chk.checked)) allCheck=false;
-    if(!(a&&a.checked)) all7A=false;
-    if(item.both){has7B=true;if(!(b&&b.checked)) all7B=false;}
+/* Centang Semua Y -- SEMUA baris termasuk "Raise new WO" (keputusan user
+   2026-09-21, sama seperti modul lain yang punya tombol ini). */
+function opCheckAllY() {
+  opState.forEach(function(st, i){
+    st.passA = true; st.failA = false; st.passB = true; st.failB = false;
+    st.remark = opComputeRemark(i);
   });
-  var el=document.getElementById('opAllCheck');if(el)el.checked=allCheck;
-  el=document.getElementById('opAll7A');if(el)el.checked=all7A;
-  el=document.getElementById('opAll7B');if(el)el.checked=has7B&&all7B;
+  opBuildTable();
+  if (typeof autosaveTrigger === 'function') autosaveTrigger();
 }
 
 // ── IMAGES ───────────────────────────────────────────────────────────────────
@@ -1662,11 +1676,8 @@ function opRemoveImg(side,idx){ opSyncCaptions(); pmDeleteImgFromArr(opImages[si
 function opReset() {
   if (!confirm('Reset dan buat entri baru? Isian saat ini akan dikosongkan, dan penyimpanan berikutnya akan membuat data BARU (data yang sudah tersimpan sebelumnya tidak akan tertimpa/hilang).')) return;
   window._editingId = null; // mulai entri baru — jangan lagi update record lama
-  OP_CHECKS.forEach(function(item,idx){
-    ['opChk_','op7A_','op7B_'].forEach(function(p){var e=document.getElementById(p+idx);if(e)e.checked=false;});
-    var r=document.getElementById('opRec_'+idx);if(r)r.textContent='';
-  });
-  ['opAllCheck','opAll7A','opAll7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.checked=false;});
+  opState = opEmptyState();
+  opBuildTable();
   ['opDate','opPIC','opWO','opNote7A','opNote7B'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('opAsset7A').value='7BG-AIT-813A';
   document.getElementById('opAsset7B').value='7BG-AIT-813B';
@@ -1708,7 +1719,7 @@ function opDownloadPdf() {
       var nowStr = dd+' '+BULAN[now.getMonth()]+' '+yy+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 
       function gv(id){ var e=document.getElementById(id); return e?e.value:''; }
-      function safe(s){ return String(s||'').replace(/[^\x00-\xFF]/g,'?'); }
+      function safe(s){ return String(s||'').replace(/[\u2013\u2014]/g,'-').replace(/[^\x00-\xFF]/g,'?'); }
       function pad(n){ return String(n).padStart(2,'0'); }
 
       var y = marginTop;
@@ -1787,7 +1798,7 @@ function opDownloadPdf() {
       secHeader('STEP OF WORK — Opacity ID Fan Inlet 7A & 7B');
 
       // ── Helper: gambar checkbox manual ──
-      function drawCheckbox(doc, x, y, w, h, checked) {
+      function drawCheckbox(doc, x, y, w, h, checked, fail) {
         var size = 3.5;
         var cx = x + w/2;
         var cy = y + h/2;
@@ -1795,63 +1806,54 @@ function opDownloadPdf() {
         doc.setLineWidth(0.3);
         doc.rect(cx - size/2, cy - size/2, size, size, 'S');
         if (checked) {
-          doc.setDrawColor(26, 107, 58);
+          if (fail) doc.setDrawColor(185, 28, 28); else doc.setDrawColor(26, 107, 58);
           doc.setLineWidth(0.5);
           doc.line(cx - size/2 + 0.4, cy, cx - size/2 + size*0.38, cy + size/2 - 0.5);
           doc.line(cx - size/2 + size*0.38, cy + size/2 - 0.5, cx + size/2 - 0.3, cy - size/2 + 0.5);
         }
       }
 
-      // Build table rows
+      // Build table rows -- Pass/Fail per transmitter (vektor, BUKAN unicode)
       var tableRows = OP_CHECKS.map(function(item, idx) {
-        var chk=document.getElementById('opChk_'+idx), a7=document.getElementById('op7A_'+idx), b7=document.getElementById('op7B_'+idx), rec=document.getElementById('opRec_'+idx);
+        var st = opState[idx];
         return [
-          String(item.no),
-          safe(item.label),
-          safe(item.criteria),
-          (chk&&chk.checked)?'__CHK__':'__BOX__',
-          (a7&&a7.checked)?'__CHK__':'__BOX__',
-          (b7&&b7.checked)?'__CHK__':(item.both?'__BOX__':'__DASH__'),
-          rec?safe(rec.textContent):''
+          String(item.no), safe(item.label), safe(item.criteria),
+          st.passA?'__CHK__':'__BOX__', st.failA?'__CHKF__':'__BOX__',
+          st.passB?'__CHK__':'__BOX__', st.failB?'__CHKF__':'__BOX__',
+          safe(st.remark||'')
         ];
       });
 
-      var CHK_COLS_OP = {3:true, 4:true, 5:true};
-
-      // Kolom total = contentW 170mm: 9+79+28+9+11+11+23 = 170
+      // Kolom total = contentW 170mm: 8+58+22+11*4+38 = 170
       doc.autoTable({
         startY: y,
-        head: [['No','Step of Work','Criteria','v','7A','7B','Result']],
+        head: [
+          [{content:'No',rowSpan:2},{content:'Step of Work',rowSpan:2},{content:'Criteria',rowSpan:2},{content:safe(gv('opAsset7A')||'7BG-AIT-813A'),colSpan:2},{content:safe(gv('opAsset7B')||'7BG-AIT-813B'),colSpan:2},{content:'Result / Remark',rowSpan:2}],
+          ['Pass','Fail','Pass','Fail']
+        ],
         body: tableRows,
         theme: 'grid',
         margin: {top: marginTop, bottom: marginBottom, left: marginX, right: marginX},
-        headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:8, halign:'center', font:'helvetica'},
-        bodyStyles: {fontSize:7.5, textColor:[20,30,25], font:'helvetica', cellPadding:2},
+        headStyles: {fillColor:[30,58,138], textColor:[210,225,255], fontStyle:'bold', fontSize:6.8, halign:'center', valign:'middle', font:'helvetica', cellPadding:1.2},
+        bodyStyles: {fontSize:7.2, textColor:[20,30,25], font:'helvetica', cellPadding:1.8, valign:'middle'},
         columnStyles: {
-          0:{cellWidth:9,  halign:'center'},
-          1:{cellWidth:79},
-          2:{cellWidth:28},
-          3:{cellWidth:9,  halign:'center'},
+          0:{cellWidth:8, halign:'center'},
+          1:{cellWidth:58},
+          2:{cellWidth:22},
+          3:{cellWidth:11, halign:'center'},
           4:{cellWidth:11, halign:'center'},
           5:{cellWidth:11, halign:'center'},
-          6:{cellWidth:23, halign:'center'}
+          6:{cellWidth:11, halign:'center'},
+          7:{cellWidth:38}
         },
         alternateRowStyles: {fillColor:[246,249,247]},
+        didParseCell: function(data) {
+          if (data.section === 'body' && data.column.index >= 3 && data.column.index <= 6) data.cell.text = [''];
+        },
         didDrawCell: function(data) {
-          if (data.section !== 'body') return;
-          if (!CHK_COLS_OP[data.column.index]) return;
+          if (data.section !== 'body' || data.column.index < 3 || data.column.index > 6) return;
           var val = data.cell.raw;
-          if (val !== '__CHK__' && val !== '__BOX__' && val !== '__DASH__') return;
-          var x = data.cell.x, y = data.cell.y, w = data.cell.width, h = data.cell.height;
-          var bg = (data.row.index % 2 === 0) ? [255,255,255] : [246,249,247];
-          doc.setFillColor(bg[0], bg[1], bg[2]);
-          doc.rect(x+0.2, y+0.2, w-0.4, h-0.4, 'F');
-          if (val === '__DASH__') {
-            doc.setDrawColor(150,150,150); doc.setLineWidth(0.3);
-            doc.line(x+w/2-2, y+h/2, x+w/2+2, y+h/2);
-          } else {
-            drawCheckbox(doc, x, y, w, h, val === '__CHK__');
-          }
+          drawCheckbox(doc, data.cell.x, data.cell.y, data.cell.width, data.cell.height, val === '__CHK__' || val === '__CHKF__', val === '__CHKF__');
         },
         willDrawPage: function(data) {
           if (data.pageNumber > 1) {
@@ -1972,7 +1974,8 @@ function dbCollectData(modul) {
   var gv=function(id){var e=document.getElementById(id);return e?e.value:'';};
   var checks={};
   OP_CHECKS.forEach(function(item,idx){
-    checks[idx]={chk:!!(document.getElementById('opChk_'+idx)&&document.getElementById('opChk_'+idx).checked),a7:!!(document.getElementById('op7A_'+idx)&&document.getElementById('op7A_'+idx).checked),b7:!!(document.getElementById('op7B_'+idx)&&document.getElementById('op7B_'+idx).checked)};
+    var st=opState[idx];
+    checks[idx]={passA:!!st.passA,failA:!!st.failA,passB:!!st.passB,failB:!!st.failB,remark:st.remark||''};
   });
   var ki=function(img){
     var o={name:img.name,dataUrl:img.dataUrl||'',type:img.type||'image/jpeg',caption:img.caption||''};
@@ -2002,12 +2005,19 @@ function applyRecordToForm(rec, editingId) {
     opRenderPreviews('7A'); opRenderPreviews('7B');
   }
   if(data.checks){
+    opState = opEmptyState();
     Object.keys(data.checks).forEach(function(i){
-      var c=data.checks[i];
-      var set=function(id2,val){var e=document.getElementById(id2);if(e&&e.type==='checkbox')e.checked=val;};
-      set('opChk_'+i,c.chk); set('op7A_'+i,c.a7); set('op7B_'+i,c.b7); opChk(i);
+      var c=data.checks[i]; i=parseInt(i,10);
+      if(!c||isNaN(i)||i>=opState.length) return;
+      if('passA' in c || 'passB' in c){
+        opState[i]={passA:!!c.passA,failA:!!c.failA,passB:!!c.passB,failB:!!c.failB,remark:c.remark||''};
+      } else {
+        // Format LAMA (sebelum 2026-09-24): {chk,a7,b7} -- centang lama = Pass.
+        opState[i]={passA:!!c.a7,failA:false,passB:!!c.b7,failB:false,remark:''};
+        opState[i].remark=opComputeRemark(i);
+      }
     });
-    opRefreshAllChecks();
+    opBuildTable();
   }
 }
 

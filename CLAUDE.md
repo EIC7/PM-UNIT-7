@@ -3992,3 +3992,17 @@ Supabase sebagai backend, jsPDF untuk export PDF).
 - Data: `data.assets[{tag,desc,loc}]`, `data.checks[i]={remark,res:{tag:'Y'|'N'}}`,
   `data.measurement[tag]={bc,bt,ac,at,pc,pt}`, `data.evidence[key]=[foto]`,
   `data.area`. `shared.js?v=20260924b`.
+
+## Opacity: checklist disamakan ke pola Y/N terbaru (2026-09-24)
+
+- `opacity.html` Step of Work: kolom "✓" generik + 1 checkbox per transmitter +
+  Remark "ok" (pola lama) diganti **Pass/Fail per transmitter** (7BG-AIT-813A /
+  813B) + **Remark Y/N otomatis** (`opComputeRemark()`, gabung "813A: ... |
+  813B: ..." kalau beda, pola sama `hawk_level_transmitter.html`) + tombol
+  **Centang Semua Y** (termasuk "Raise new WO"). Baris "Raise new WO" sekarang
+  diisi kedua sisi (dulu 813B dikosongkan `—`). State di `opState[]`
+  (`opEmptyState()`), tabel dirender ulang dari state (`opBuildTable()`).
+- Data `data.checks[i] = {passA,failA,passB,failB,remark}`. Record LAMA
+  (`{chk,a7,b7}`) tetap terbaca: `a7`/`b7` = Pass, remark dihitung ulang.
+- PDF: kolom Pass/Fail vektor per transmitter (centang Fail merah), `safe()` PDF
+  sekarang mengganti "—" jadi "-" (sebelumnya tercetak "?").
