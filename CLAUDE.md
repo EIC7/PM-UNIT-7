@@ -4004,5 +4004,8 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   (`opEmptyState()`), tabel dirender ulang dari state (`opBuildTable()`).
 - Data `data.checks[i] = {passA,failA,passB,failB,remark}`. Record LAMA
   (`{chk,a7,b7}`) tetap terbaca: `a7`/`b7` = Pass, remark dihitung ulang.
+  Khusus baris 9 "Raise new WO" (format lama TIDAK punya kotak 813B, `b7`
+  selalu false) -> `passB` ikut `a7`. Tanpa ini draft/record lama muncul
+  seolah "Centang Semua Y kelewat 1" di 813B baris 9 (laporan user 2026-09-24).
 - PDF: kolom Pass/Fail vektor per transmitter (centang Fail merah), `safe()` PDF
   sekarang mengganti "—" jadi "-" (sebelumnya tercetak "?").

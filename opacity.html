@@ -2013,7 +2013,11 @@ function applyRecordToForm(rec, editingId) {
         opState[i]={passA:!!c.passA,failA:!!c.failA,passB:!!c.passB,failB:!!c.failB,remark:c.remark||''};
       } else {
         // Format LAMA (sebelum 2026-09-24): {chk,a7,b7} -- centang lama = Pass.
-        opState[i]={passA:!!c.a7,failA:false,passB:!!c.b7,failB:false,remark:''};
+        // Baris 9 "Raise new WO" di format lama TIDAK punya kotak 813B sama
+        // sekali (dulu both:false) -- b7 selalu false di situ, jadi pakai
+        // centang 813A utk kedua sisi supaya tidak muncul "813B belum diisi".
+        var b7 = (OP_CHECKS[i].no === 9) ? !!c.a7 : !!c.b7;
+        opState[i]={passA:!!c.a7,failA:false,passB:b7,failB:false,remark:''};
         opState[i].remark=opComputeRemark(i);
       }
     });
