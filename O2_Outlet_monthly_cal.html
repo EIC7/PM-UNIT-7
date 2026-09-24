@@ -1570,6 +1570,7 @@ var O2_OUTLET_CHANNELS = [
 function o2EmptyChannelData() {
   return {
     o2Reading:'', voltage:'', temperature:'', lifetime:'', resistance:'',
+    gasRatioSpanBefore:'', gasRatioZeroBefore:'', gasRatioSpanAfter:'', gasRatioZeroAfter:'',
     calibrationO2Span:'', calibrationO2Zero:'',
     o2ReadingAfter:'', voltageAfter:'', temperatureAfter:'', lifetimeAfter:'', resistanceAfter:''
   };
@@ -1629,12 +1630,15 @@ function buildO2ChannelCards() {
     card.className = 'o2-channel-card';
     card.innerHTML =
       '<div class="o2-channel-head-num o2chlabel-'+ck+'" style="margin-bottom:10px">'+o2ChLabel(c)+'</div>'+
-      // 🆕 Urutan field SENGAJA diminta user: baris 1 = O2 Reading & Lifetime,
-      // baris 2 = Temp & Voltage, baris 3 = Resistance (grid 2 kolom TETAP,
+      // 🆕 Urutan field SENGAJA diminta user (revisi 2026-09-24): baris 1 =
+      // O2 Reading & Gas Ratio Span, baris 2 = Gas Ratio Zero & Lifetime,
+      // baris 3 = Temp & Voltage, baris 4 = Resistance (grid 2 kolom TETAP,
       // bukan auto-fit lagi -- auto-fit bisa jadi 3+ kolom di layar lebar,
       // yang bikin urutan baris tidak konsisten dengan permintaan ini).
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
         '<div class="meta-field"><label>O2 Reading (%)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_o2Reading" oninput="o2UpdateChannelField(\''+ck+'\',\'o2Reading\',this.value)"></div>'+
+        '<div class="meta-field"><label>Gas Ratio Span</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_gasRatioSpanBefore" oninput="o2UpdateChannelField(\''+ck+'\',\'gasRatioSpanBefore\',this.value)"></div>'+
+        '<div class="meta-field"><label>Gas Ratio Zero</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_gasRatioZeroBefore" oninput="o2UpdateChannelField(\''+ck+'\',\'gasRatioZeroBefore\',this.value)"></div>'+
         '<div class="meta-field"><label>Lifetime (mo)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_lifetime" oninput="o2UpdateChannelField(\''+ck+'\',\'lifetime\',this.value)"></div>'+
         '<div class="meta-field"><label>Temp (°C)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_temperature" oninput="o2UpdateChannelField(\''+ck+'\',\'temperature\',this.value)"></div>'+
         '<div class="meta-field"><label>Voltage (mV)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_voltage" oninput="o2UpdateChannelField(\''+ck+'\',\'voltage\',this.value)"></div>'+
@@ -1686,6 +1690,8 @@ function buildO2ChannelCardsAfter() {
       '<div class="o2-channel-head-num o2chlabel-'+ck+'" style="margin-bottom:10px">'+o2ChLabel(c)+'</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
         '<div class="meta-field"><label>O2 Reading (%)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_o2ReadingAfter" oninput="o2UpdateChannelField(\''+ck+'\',\'o2ReadingAfter\',this.value)"></div>'+
+        '<div class="meta-field"><label>Gas Ratio Span</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_gasRatioSpanAfter" oninput="o2UpdateChannelField(\''+ck+'\',\'gasRatioSpanAfter\',this.value)"></div>'+
+        '<div class="meta-field"><label>Gas Ratio Zero</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_gasRatioZeroAfter" oninput="o2UpdateChannelField(\''+ck+'\',\'gasRatioZeroAfter\',this.value)"></div>'+
         '<div class="meta-field"><label>Lifetime (mo)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_lifetimeAfter" oninput="o2UpdateChannelField(\''+ck+'\',\'lifetimeAfter\',this.value)"></div>'+
         '<div class="meta-field"><label>Temp (°C)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_temperatureAfter" oninput="o2UpdateChannelField(\''+ck+'\',\'temperatureAfter\',this.value)"></div>'+
         '<div class="meta-field"><label>Voltage (mV)</label><input type="text" inputmode="none" readonly class="pm-num-input" id="o2fld_'+ck+'_voltageAfter" oninput="o2UpdateChannelField(\''+ck+'\',\'voltageAfter\',this.value)"></div>'+
@@ -2135,55 +2141,86 @@ function downloadPdf(){
         });
         y = doc.lastAutoTable.finalY + 6;
 
-        O2_OUTLET_CHANNELS.forEach(function(c) {
+        // Evidence per channel dicetak BERPASANGAN kiri-kanan (Channel 1|2,
+        // 3|4, 5|6) supaya PDF lebih ringkas -- pola sama persis dengan
+        // weekly_calibration_o2_outlet.html (lihat CLAUDE.md 2026-09-24).
+        var chCol = function(c){
+          if (!c) return null;
           var ck = 'och'+c.id;
           var catEl = document.getElementById(catatanPrefix+ck);
           var catatan = catEl ? catEl.value : '';
           var evImgs = o2Images[evPrefix+c.id].evidence.filter(imgFilter);
-          if (!catatan && !evImgs.length) return;
-          // Hitung TOTAL tinggi minimum judul channel + isi PERTAMA yang
-          // menyertainya (baris Keterangan + baris pertama Evidence) SEBELUM
-          // menggambar apa pun, lalu checkPage() SATU KALI di awal -- supaya
-          // judul TIDAK PERNAH tercetak sendirian di ujung halaman lalu
-          // isinya baru muncul di halaman berikutnya (lihat CLAUDE.md,
-          // "Judul section harus tetap 1 halaman dengan isi pertamanya").
-          var blockH = 10; // tinggi bar judul (rect 7 + y+=10)
+          if (!catatan && !evImgs.length) return null;
+          var catLines = [];
           if (catatan) {
             doc.setFont('helvetica','italic'); doc.setFontSize(8);
-            var catLinesPeek = doc.splitTextToSize('Keterangan: '+safe(catatan), contentW-4);
-            blockH += catLinesPeek.length*4 + 5;
+            catLines = doc.splitTextToSize('Keterangan: '+safe(catatan), evColW-4);
           }
-          if (evImgs.length) {
-            var peekE1 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
-            var peekE2 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
-            var peekRowH = Math.max(peekE1?peekE1.h:0, peekE2?peekE2.h:0, 20);
-            blockH += 5 + peekRowH + 9; // label "EVIDENCE" + baris foto pertama
-          }
-          // Guard sama seperti printEvidenceGallery(): cuma paksa pindah
-          // halaman kalau blockH BENAR-BENAR muat di halaman kosong -- kalau
-          // blockH sendiri lebih besar dari 1 halaman penuh (catatan sangat
-          // panjang dsb), checkPage(blockH) akan SELALU true walau y sudah di
-          // marginTop dan bikin halaman kosong sia-sia sebelum konten mulai.
+          return { c:c, catLines:catLines, imgs:evImgs };
+        };
+        var photoRowH = function(cols, i){
+          var h = 0;
+          cols.forEach(function(col){
+            if (col && col.imgs[i]) h = Math.max(h, iePhotoDrawSize(col.imgs[i], evColW, maxPhotoH).h);
+          });
+          return Math.max(h, 20);
+        };
+        for (var pi = 0; pi < O2_OUTLET_CHANNELS.length; pi += 2) {
+          var cols = [chCol(O2_OUTLET_CHANNELS[pi]), chCol(O2_OUTLET_CHANNELS[pi+1])];
+          if (!cols[0] && !cols[1]) continue;
+          var colX = [marginX, marginX + evColW + evGap];
+          var catH = Math.max(cols[0] ? cols[0].catLines.length : 0, cols[1] ? cols[1].catLines.length : 0);
+          var catBlockH = catH ? catH*4 + 5 : 0;
+          var anyImg = (cols[0] && cols[0].imgs.length) || (cols[1] && cols[1].imgs.length);
+          var maxImgs = Math.max(cols[0] ? cols[0].imgs.length : 0, cols[1] ? cols[1].imgs.length : 0);
+          // Judul + Keterangan + baris foto PERTAMA dihitung sekaligus lalu
+          // checkPage() SATU KALI -- judul tidak pernah tercetak sendirian di
+          // ujung halaman (lihat CLAUDE.md, judul section vs isi pertamanya).
+          var blockH = 10 + catBlockH + (anyImg ? 5 + photoRowH(cols, 0) + 9 : 0);
           if (blockH <= (ph - marginTop - marginBottom)) checkPage(blockH); else checkPage(10);
-          doc.setFillColor(60, 90, 70);
-          doc.rect(marginX, y, contentW, 7, 'F');
-          doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
-          doc.text(safe(o2ChLabel(c)), marginX+4, y+5);
+          cols.forEach(function(col, k){
+            if (!col) return;
+            doc.setFillColor(60, 90, 70);
+            doc.rect(colX[k], y, evColW, 7, 'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
+            doc.text(safe(o2ChLabel(col.c)), colX[k]+3, y+5);
+          });
           y += 10;
-          printCatatan('Keterangan', catatan);
-          printEvidenceGallery(evImgs);
+          if (catH) {
+            doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(60,80,60);
+            cols.forEach(function(col, k){ if (col && col.catLines.length) doc.text(col.catLines, colX[k]+2, y+3); });
+            y += catBlockH;
+          }
+          if (anyImg) {
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(37,99,235);
+            cols.forEach(function(col, k){ if (col && col.imgs.length) doc.text('EVIDENCE', colX[k]+2, y); });
+            y += 5;
+            for (var ri = 0; ri < maxImgs; ri++) {
+              var rowH = photoRowH(cols, ri);
+              if (ri > 0 && y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+              cols.forEach(function(col, k){
+                var e = col && col.imgs[ri];
+                if (!e) return;
+                var dm = iePhotoDrawSize(e, evColW, maxPhotoH);
+                var ex = Math.max(colX[k], Math.min(colX[k] + (evColW - dm.w)/2 + ((e.offsetX||0)*10), colX[k] + evColW - dm.w));
+                try { doc.addImage(e.dataUrl, 'JPEG', ex, y, dm.w, dm.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(ex,y,dm.w,dm.h,'S'); }
+                if (e.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e.caption), dm.w), ex + dm.w/2, y+dm.h+3, {align:'center'}); }
+              });
+              y += rowH + 9;
+            }
+          }
           checkPage(5);
           doc.setDrawColor(180, 210, 185); doc.setLineWidth(0.3);
           doc.line(marginX, y, marginX + contentW, y);
           y += 5;
-        });
+        }
       }
 
       // Section 2: O2 Reading + Cell Measurements — Before Calibration
       printChannelCardsSection(
         'O2 READING & CELL MEASUREMENTS — BEFORE CALIBRATION',
-        ['Channel','O2 Reading (%)','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ω)'],
-        function(d){ return [d.o2Reading, d.voltage, d.temperature, d.lifetime, d.resistance]; },
+        ['Channel','O2 Reading (%)','Gas Ratio Span','Gas Ratio Zero','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ohm)'],
+        function(d){ return [d.o2Reading, d.gasRatioSpanBefore, d.gasRatioZeroBefore, d.voltage, d.temperature, d.lifetime, d.resistance]; },
         'o2cat_reading_', 'reading_och'
       );
 
@@ -2250,8 +2287,8 @@ function downloadPdf(){
       // Section 4: O2 Reading + Cell Measurements — After Calibration
       printChannelCardsSection(
         'O2 READING & CELL MEASUREMENTS — AFTER CALIBRATION',
-        ['Channel','O2 Reading (%)','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ω)'],
-        function(d){ return [d.o2ReadingAfter, d.voltageAfter, d.temperatureAfter, d.lifetimeAfter, d.resistanceAfter]; },
+        ['Channel','O2 Reading (%)','Gas Ratio Span','Gas Ratio Zero','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ohm)'],
+        function(d){ return [d.o2ReadingAfter, d.gasRatioSpanAfter, d.gasRatioZeroAfter, d.voltageAfter, d.temperatureAfter, d.lifetimeAfter, d.resistanceAfter]; },
         'o2cat_readingAfter_', 'readingAfter_och'
       );
 
@@ -2316,6 +2353,8 @@ function dbCollectData(modul) {
     channels[ck] = {
       tag: c.tag,
       o2Reading: d.o2Reading,
+      gasRatioSpanBefore: d.gasRatioSpanBefore,
+      gasRatioZeroBefore: d.gasRatioZeroBefore,
       readingCatatan: catReadEl ? catReadEl.value||'' : '',
       voltage: d.voltage,
       temperature: d.temperature,
@@ -2325,6 +2364,8 @@ function dbCollectData(modul) {
       calibrationO2Zero: d.calibrationO2Zero,
       calibCatatan: catCalibEl ? catCalibEl.value||'' : '',
       o2ReadingAfter: d.o2ReadingAfter,
+      gasRatioSpanAfter: d.gasRatioSpanAfter,
+      gasRatioZeroAfter: d.gasRatioZeroAfter,
       voltageAfter: d.voltageAfter,
       temperatureAfter: d.temperatureAfter,
       lifetimeAfter: d.lifetimeAfter,
@@ -2384,7 +2425,7 @@ function applyRecordToForm(rec, editingId) {
       var catCalibEl = document.getElementById('o2cat_calib_'+ck); if (catCalibEl) catCalibEl.value = chData.calibCatatan || '';
       var catAfterEl = document.getElementById('o2cat_readingAfter_'+ck); if (catAfterEl) catAfterEl.value = chData.readingAfterCatatan || '';
       o2ChannelData[ck] = o2EmptyChannelData();
-      var fieldKeys = ['o2Reading','voltage','temperature','lifetime','resistance','calibrationO2Span','calibrationO2Zero','o2ReadingAfter','voltageAfter','temperatureAfter','lifetimeAfter','resistanceAfter'];
+      var fieldKeys = ['o2Reading','voltage','temperature','lifetime','resistance','calibrationO2Span','calibrationO2Zero','o2ReadingAfter','voltageAfter','temperatureAfter','lifetimeAfter','resistanceAfter','gasRatioSpanBefore','gasRatioZeroBefore','gasRatioSpanAfter','gasRatioZeroAfter'];
       fieldKeys.forEach(function(field){
         o2ChannelData[ck][field] = chData[field] || '';
         var el = document.getElementById('o2fld_'+ck+'_'+field);
@@ -2434,7 +2475,7 @@ function resetAll() {
     var catCalibEl = document.getElementById('o2cat_calib_'+ck); if (catCalibEl) catCalibEl.value = '';
     var catAfterEl = document.getElementById('o2cat_readingAfter_'+ck); if (catAfterEl) catAfterEl.value = '';
     o2ChannelData[ck] = o2EmptyChannelData();
-    var fieldKeys = ['o2Reading','voltage','temperature','lifetime','resistance','calibrationO2Span','calibrationO2Zero','o2ReadingAfter','voltageAfter','temperatureAfter','lifetimeAfter','resistanceAfter'];
+    var fieldKeys = ['o2Reading','voltage','temperature','lifetime','resistance','calibrationO2Span','calibrationO2Zero','o2ReadingAfter','voltageAfter','temperatureAfter','lifetimeAfter','resistanceAfter','gasRatioSpanBefore','gasRatioZeroBefore','gasRatioSpanAfter','gasRatioZeroAfter'];
     fieldKeys.forEach(function(field){
       var el = document.getElementById('o2fld_'+ck+'_'+field); if (el) el.value = '';
     });

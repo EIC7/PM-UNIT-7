@@ -3879,3 +3879,38 @@ Supabase sebagai backend, jsPDF untuk export PDF).
   normal/kecil. Karena pola ini TERDUPLIKASI per file (bukan fungsi shared),
   tidak ada 1 titik pusat yang otomatis berlaku ke modul baru -- harus
   ditulis eksplisit tiap kali.
+
+## PDF O2 Weekly Outlet: evidence per channel dicetak berpasangan kiri-kanan (2026-09-24)
+
+- Permintaan user: evidence per channel di PDF `weekly_calibration_o2_outlet.html`
+  (setelah tabel "O2 READING & CELL MEASUREMENTS") dicetak **2 kolom** --
+  Channel 1|2, 3|4, 5|6 -- bukan 1 channel per baris penuh, supaya PDF lebih
+  ringkas (6 channel dengan 1 foto masing-masing muat di 2 halaman, dulu ~4).
+- Pasangan TETAP berdasarkan urutan `O2_OUTLET_CHANNELS` (bukan "channel yang
+  berisi saja dipadatkan") -- kalau salah satu channel kosong (tanpa foto &
+  keterangan), kolomnya dibiarkan kosong; pasangan yang dua-duanya kosong
+  dilewati. Tiap kolom punya judul channel (`o2ChLabel(c)`), Keterangan, dan
+  foto sendiri; foto ke-N kiri & kanan dicetak di baris yang sama. Pola
+  "hitung judul + keterangan + baris foto pertama lalu checkPage() sekali"
+  tetap dipertahankan (lihat bagian judul "yatim" di atas).
+- `printEvidenceGallery()` (dipakai section Calibration Gas Pressure) TIDAK
+  diubah. Pola yang sama juga dipakai di `O2_Outlet_monthly_cal.html`
+  (`printChannelCardsSection()`, section Before & After -- section Calibration
+  Readings TIDAK ikut dipasangkan). Belum diterapkan ke
+  `weekly_calibration_o2_inlet.html`.
+- Judul kolom PDF "Resistance (Ω)" diganti "Resistance (Ohm)" di kedua file
+  Outlet -- simbol Ω tidak didukung font helvetica jsPDF, header tercetak
+  renggang/terpotong (sama jenisnya dengan larangan karakter unicode di
+  checkbox PDF). Label di FORM (HTML) tetap "Ω".
+
+## O2 Outlet Monthly: Gas Ratio Span & Zero Before/After (2026-09-24)
+
+- `O2_Outlet_monthly_cal.html` dapat 4 field baru per channel:
+  `gasRatioSpanBefore`/`gasRatioZeroBefore` (kartu Before) dan
+  `gasRatioSpanAfter`/`gasRatioZeroAfter` (kartu After) -- nama key SAMA
+  dengan field Gas Ratio di `weekly_calibration_o2_inlet.html`.
+- Urutan grid 2 kolom di kedua kartu (permintaan user): O2 Reading | Gas Ratio
+  Span, Gas Ratio Zero | Lifetime, Temp | Voltage, Resistance.
+- Ikut di tabel PDF Before/After (kolom setelah O2 Reading), `dbCollectData()`,
+  `applyRecordToForm()`, dan `resetAll()` (array `fieldKeys`). Record lama
+  tanpa field ini tetap terbuka normal (kosong).

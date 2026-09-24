@@ -2042,7 +2042,7 @@ function downloadPdf(){
           margin: { left: marginX, right: marginX, top: marginTop, bottom: marginBottom },
           headStyles: { fillColor: [21,153,87], textColor:[255,255,255], fontStyle:'bold', fontSize:7 },
           columnStyles: { 0: { halign:'left', fontStyle:'bold' } },
-          head: [['Channel','O2 Reading (%)','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ω)']],
+          head: [['Channel','O2 Reading (%)','Voltage (mV)','Temp (°C)','Lifetime (mo)','Resistance (Ohm)']],
           body: O2_OUTLET_CHANNELS.map(function(c){
             var d=o2ChannelData['och'+c.id];
             var dash=function(v){return v?safe(v):'—';};
@@ -2052,48 +2052,80 @@ function downloadPdf(){
         });
         y = doc.lastAutoTable.finalY + 6;
 
-        O2_OUTLET_CHANNELS.forEach(function(c) {
+        // Evidence per channel dicetak BERPASANGAN kiri-kanan (Channel 1|2,
+        // 3|4, 5|6) supaya PDF lebih ringkas -- tiap kolom punya judul
+        // channel, Keterangan, dan foto evidence-nya sendiri. Foto ke-N
+        // kolom kiri & kanan dicetak di baris yang sama.
+        var chCol = function(c){
+          if (!c) return null;
           var ck = 'och'+c.id;
           var catEl = document.getElementById('o2cat_reading_'+ck);
           var catatan = catEl ? catEl.value : '';
           var evImgs = o2Images['reading_'+ck].evidence.filter(imgFilter);
-          if (!catatan && !evImgs.length) return;
-          // Hitung TOTAL tinggi minimum judul channel + isi PERTAMA yang
-          // menyertainya (baris Keterangan + baris pertama Evidence) SEBELUM
-          // menggambar apa pun, lalu checkPage() SATU KALI di awal -- supaya
-          // judul TIDAK PERNAH tercetak sendirian di ujung halaman lalu
-          // isinya baru muncul di halaman berikutnya (lihat CLAUDE.md,
-          // "Judul section harus tetap 1 halaman dengan isi pertamanya").
-          var blockH = 10; // tinggi bar judul (rect 7 + y+=10)
+          if (!catatan && !evImgs.length) return null;
+          var catLines = [];
           if (catatan) {
             doc.setFont('helvetica','italic'); doc.setFontSize(8);
-            var catLinesPeek = doc.splitTextToSize('Keterangan: '+safe(catatan), contentW-4);
-            blockH += catLinesPeek.length*4 + 5;
+            catLines = doc.splitTextToSize('Keterangan: '+safe(catatan), evColW-4);
           }
-          if (evImgs.length) {
-            var peekE1 = evImgs[0] ? iePhotoDrawSize(evImgs[0], evColW, maxPhotoH) : null;
-            var peekE2 = evImgs[1] ? iePhotoDrawSize(evImgs[1], evColW, maxPhotoH) : null;
-            var peekRowH = Math.max(peekE1?peekE1.h:0, peekE2?peekE2.h:0, 20);
-            blockH += 5 + peekRowH + 9; // label "EVIDENCE" + baris foto pertama
-          }
-          // Guard sama seperti printEvidenceGallery(): cuma paksa pindah
-          // halaman kalau blockH BENAR-BENAR muat di halaman kosong -- kalau
-          // blockH sendiri lebih besar dari 1 halaman penuh (catatan sangat
-          // panjang dsb), checkPage(blockH) akan SELALU true walau y sudah di
-          // marginTop dan bikin halaman kosong sia-sia sebelum konten mulai.
+          return { c:c, catLines:catLines, imgs:evImgs };
+        };
+        var photoRowH = function(cols, i){
+          var h = 0;
+          cols.forEach(function(col){
+            if (col && col.imgs[i]) h = Math.max(h, iePhotoDrawSize(col.imgs[i], evColW, maxPhotoH).h);
+          });
+          return Math.max(h, 20);
+        };
+        for (var pi = 0; pi < O2_OUTLET_CHANNELS.length; pi += 2) {
+          var cols = [chCol(O2_OUTLET_CHANNELS[pi]), chCol(O2_OUTLET_CHANNELS[pi+1])];
+          if (!cols[0] && !cols[1]) continue;
+          var colX = [marginX, marginX + evColW + evGap];
+          var catH = Math.max(cols[0] ? cols[0].catLines.length : 0, cols[1] ? cols[1].catLines.length : 0);
+          var catBlockH = catH ? catH*4 + 5 : 0;
+          var anyImg = (cols[0] && cols[0].imgs.length) || (cols[1] && cols[1].imgs.length);
+          var maxImgs = Math.max(cols[0] ? cols[0].imgs.length : 0, cols[1] ? cols[1].imgs.length : 0);
+          // Judul + Keterangan + baris foto PERTAMA dihitung sekaligus lalu
+          // checkPage() SATU KALI -- judul tidak pernah tercetak sendirian di
+          // ujung halaman (lihat CLAUDE.md, judul section vs isi pertamanya).
+          var blockH = 10 + catBlockH + (anyImg ? 5 + photoRowH(cols, 0) + 9 : 0);
           if (blockH <= (ph - marginTop - marginBottom)) checkPage(blockH); else checkPage(10);
-          doc.setFillColor(60, 90, 70);
-          doc.rect(marginX, y, contentW, 7, 'F');
-          doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
-          doc.text(safe(o2ChLabel(c)), marginX+4, y+5);
+          cols.forEach(function(col, k){
+            if (!col) return;
+            doc.setFillColor(60, 90, 70);
+            doc.rect(colX[k], y, evColW, 7, 'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(220, 240, 225);
+            doc.text(safe(o2ChLabel(col.c)), colX[k]+3, y+5);
+          });
           y += 10;
-          printCatatan('Keterangan', catatan);
-          printEvidenceGallery(evImgs);
+          if (catH) {
+            doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(60,80,60);
+            cols.forEach(function(col, k){ if (col && col.catLines.length) doc.text(col.catLines, colX[k]+2, y+3); });
+            y += catBlockH;
+          }
+          if (anyImg) {
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(37,99,235);
+            cols.forEach(function(col, k){ if (col && col.imgs.length) doc.text('EVIDENCE', colX[k]+2, y); });
+            y += 5;
+            for (var ri = 0; ri < maxImgs; ri++) {
+              var rowH = photoRowH(cols, ri);
+              if (ri > 0 && y + rowH + 10 > ph - marginBottom) { doc.addPage(); drawBg(doc, pw, ph); y = marginTop; }
+              cols.forEach(function(col, k){
+                var e = col && col.imgs[ri];
+                if (!e) return;
+                var dm = iePhotoDrawSize(e, evColW, maxPhotoH);
+                var ex = Math.max(colX[k], Math.min(colX[k] + (evColW - dm.w)/2 + ((e.offsetX||0)*10), colX[k] + evColW - dm.w));
+                try { doc.addImage(e.dataUrl, 'JPEG', ex, y, dm.w, dm.h); } catch(err){ doc.setDrawColor(200,200,200); doc.rect(ex,y,dm.w,dm.h,'S'); }
+                if (e.caption) { doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(60,80,140); doc.text(doc.splitTextToSize(safe(e.caption), dm.w), ex + dm.w/2, y+dm.h+3, {align:'center'}); }
+              });
+              y += rowH + 9;
+            }
+          }
           checkPage(5);
           doc.setDrawColor(180, 210, 185); doc.setLineWidth(0.3);
           doc.line(marginX, y, marginX + contentW, y);
           y += 5;
-        });
+        }
       }
 
       if (typeof hideImgLoading === 'function') hideImgLoading();
