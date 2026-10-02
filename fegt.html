@@ -8,7 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260924b"></script>
+<script src="shared.js?v=20260929b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -248,6 +248,7 @@
   <!-- CLEANING HOLE FEGT -->
   <div class="panel" id="cleaningPanel">
     <div class="section-label">Cleaning Hole FEGT — 8 Port</div>
+    <div id="fegtFailBannerFegt" style="display:none;margin:0 0 14px;padding:10px 12px;border:1px solid #f0c36d;background:#fff8e6;border-radius:6px;font-size:12.5px;color:#7a5200;align-items:center;gap:10px;flex-wrap:wrap"><span class="fegt-fail-text"></span><button type="button" class="btn btn-outline" style="padding:4px 12px;font-size:12px" onclick="fegtRetryFailedPhotos()">&#8635; Muat ulang foto</button></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px" id="cleaningGrid">
       <!-- built by JS -->
     </div>
@@ -256,6 +257,7 @@
   <!-- CLEANING HOLE LD -->
   <div class="panel" id="ldCleaningPanel">
     <div class="section-label">Cleaning Hole LD — 10 Port</div>
+    <div id="fegtFailBannerLd" style="display:none;margin:0 0 14px;padding:10px 12px;border:1px solid #f0c36d;background:#fff8e6;border-radius:6px;font-size:12.5px;color:#7a5200;align-items:center;gap:10px;flex-wrap:wrap"><span class="fegt-fail-text"></span><button type="button" class="btn btn-outline" style="padding:4px 12px;font-size:12px" onclick="fegtRetryFailedPhotos()">&#8635; Muat ulang foto</button></div>
     <div id="ldCleaningGrid" style="display:flex;flex-direction:column;gap:10px">
       <!-- built by JS -->
     </div>
@@ -1044,7 +1046,7 @@ function applyImageEdits(){
                 cropImg.style.width = dw+'px'; cropImg.style.height = dh+'px';
                 cropImg.style.left = ((ww-dw)/2)+'px'; cropImg.style.top = ((wh-dh)/2)+'px';
                 if (cropModalState._mode === 'default') fitCropBoxToFullImage();
-                else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+                else if (cropModalState._ratioLocked) { fitCropBoxToFullImage(); reshapeCropBoxToRatio(); } // rasio terkunci (mis. 1:1): mulai dari full gambar, lalu diperbesar maksimal ke rasio itu -- bukan 80% di tengah
                 cropStartHistoryTracking();
         cropUpdateRestoreOriginalButton();
         cropUpdateQueueProgressUI(); // Fitur U: tampilkan "Foto X dari Y" kalau lagi jalan antrean multi-crop
@@ -1392,7 +1394,7 @@ function imgOpenCropper(dataUrl, name, type, imgArr, side, modulePrefix, replace
         box.style.width = bw+'px'; box.style.height = bh+'px';
         box.style.left = ((ww-bw)/2)+'px'; box.style.top = ((wh-bh)/2)+'px';
         if (cropModalState._mode === 'default') fitCropBoxToFullImage();
-        else if (cropModalState._ratioLocked) reshapeCropBoxToRatio();
+        else if (cropModalState._ratioLocked) { fitCropBoxToFullImage(); reshapeCropBoxToRatio(); } // rasio terkunci (mis. 1:1): mulai dari full gambar, lalu diperbesar maksimal ke rasio itu -- bukan 80% di tengah
         cropStartHistoryTracking();
         cropUpdateRestoreOriginalButton();
         cropUpdateQueueProgressUI(); // Fitur U: tampilkan "Foto X dari Y" kalau lagi jalan antrean multi-crop
@@ -3180,7 +3182,7 @@ function ldRenderPreviews(side) {
     var s = function(v){ return String(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
     var isImg = img.type && img.type.startsWith('image/');
     var thumb = isImg
-      ? '<img src="' + s(img.dataUrl) + '" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onclick="'+(st.active?'':'ldReEdit(\''+portKey+'\',\''+phase+'\','+idx+')')+'" title="Klik untuk crop ulang">'
+      ? '<img src="' + s(img.dataUrl) + '" style="width:100%;height:100%;object-fit:contain;display:block;cursor:pointer" onerror="this.style.display=\'none\';this.parentNode.style.background=\'#5a2a2a\';this.parentNode.title=\'Foto gagal dimuat - klik Muat ulang\'" onclick="'+(st.active?'':'ldReEdit(\''+portKey+'\',\''+phase+'\','+idx+')')+'" title="Klik untuk crop ulang">'
       : '<div style="color:#aaa;font-size:18px;line-height:60px;text-align:center">&#128444;</div>';
     var cropBtn = (isImg && !st.active)
       ? '<button onclick="ldReEdit(\''+portKey+'\',\''+phase+'\','+idx+')" style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:3px;font-size:8px;padding:1px 5px;cursor:pointer;white-space:nowrap">&#9988; Crop</button>'
@@ -3218,6 +3220,7 @@ function ldRenderPreviews(side) {
   var totalKb = arr.reduce(function(a,img){ return a+(img.dataUrl?Math.round(img.dataUrl.length*0.75/1024):0); }, 0);
   var szEl = document.getElementById(uid + '_size');
   if (szEl) szEl.textContent = totalKb + ' KB / 1024 KB';
+  fegtUpdateFailedBanner();
 }
 var ldReorderState = {};
 function ldToggleReorder(side){
@@ -3331,7 +3334,7 @@ function clRenderPreviews(portKey, phase) {
     wrap.style.cssText = 'position:relative;display:inline-block;text-align:center;width:112px;vertical-align:top';
     var isImg = IMG_EXTS.test(img.name)||(img.type&&img.type.startsWith('image/'));
     var safe = function(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
-    var fallback = '<span style=&quot;font-size:10px;color:#c0392b;padding:6px;text-align:center;line-height:1.35&quot;>Preview gagal<br>upload ulang</span>';
+    var fallback = '<span style=&quot;font-size:10px;color:#c0392b;padding:6px;text-align:center;line-height:1.35&quot;>Foto gagal dimuat<br>klik Muat ulang</span>';
     var thumbStyle = 'width:112px;height:84px;border-radius:4px;border:2px solid var(--ok);overflow:hidden;display:flex;align-items:center;justify-content:center';
     var openCropCall = "clReEdit('"+portKey+"','"+phase+"',"+idx+")";
     var thumb = isImg
@@ -3382,6 +3385,43 @@ function clRenderPreviews(portKey, phase) {
   var totalKb = arr.reduce(function(a,img){return a+(img.dataUrl?Math.round(img.dataUrl.length*0.75/1024):0);},0);
   var sizeEl = document.getElementById(uid+'_size');
   if (sizeEl) sizeEl.textContent = totalKb+' KB / 1024 KB';
+  fegtUpdateFailedBanner();
+}
+/* ── FOTO GAGAL DIMUAT DARI DRIVE: deteksi, banner, & muat ulang ──
+   Foto yang gagal diambil dari Drive saat buka dari Riwayat punya dataUrl
+   kosong / 'pmdrive:<id>' tapi driveFileId-nya TETAP dibawa, jadi aman
+   kalau Simpan ditekan (shared.js mengembalikannya jadi driveUrl). */
+function fegtAllPhotoArrays(kind) {
+  var out = [];
+  if (kind !== 'ld') CLEANING_PORTS.forEach(function(p){ var o = cleaningImages['port'+p.id]; out.push(o.before, o.after); });
+  if (kind !== 'fegt') LD_CLEANING_PORTS.forEach(function(p){ var o = ldCleaningImages['ldport'+p.id]; out.push(o.before||[], o.after||[]); });
+  return out;
+}
+function fegtCountFailedPhotos(kind) {
+  var n = 0;
+  fegtAllPhotoArrays(kind).forEach(function(arr){ (arr||[]).forEach(function(img){ if (pmIsFailedDrivePhoto(img)) n++; }); });
+  return n;
+}
+function fegtUpdateFailedBanner() {
+  [['fegtFailBannerFegt','fegt'],['fegtFailBannerLd','ld']].forEach(function(x){
+    var el = document.getElementById(x[0]); if (!el) return;
+    var n = fegtCountFailedPhotos(x[1]);
+    el.style.display = n ? 'flex' : 'none';
+    var t = el.querySelector('.fegt-fail-text');
+    if (t) t.textContent = n + ' foto gagal dimuat dari Drive. Data fotonya masih aman \u2014 klik Muat ulang.';
+  });
+}
+function fegtRetryFailedPhotos() {
+  var flat = [];
+  fegtAllPhotoArrays().forEach(function(arr){ (arr||[]).forEach(function(img){ flat.push(img); }); });
+  var btns = document.querySelectorAll('#fegtFailBannerFegt button, #fegtFailBannerLd button');
+  btns.forEach(function(b){ b.disabled = true; b.textContent = 'Memuat...'; });
+  pmRetryFailedDrivePhotos(flat, function(still){
+    btns.forEach(function(b){ b.disabled = false; b.innerHTML = '&#8635; Muat ulang foto'; });
+    CLEANING_PORTS.forEach(function(p){ ['before','after'].forEach(function(ph){ clRenderPreviews('port'+p.id, ph); }); });
+    LD_CLEANING_PORTS.forEach(function(p){ ['before','after'].forEach(function(ph){ ldRenderPreviews('ldport'+p.id+'_'+ph); }); });
+    if (typeof dbShowToast === 'function') dbShowToast(still ? still + ' foto masih gagal, coba lagi sebentar lagi' : 'Semua foto berhasil dimuat \u2713');
+  });
 }
 var clReorderState = {};
 function clToggleReorder(portKey, phase){
@@ -3468,6 +3508,8 @@ function dbCollectData(modul) {
     if (img.offsetX) o.offsetX = img.offsetX;
     if (img.widthCm) o.widthCm = img.widthCm;
     if (img.heightCm) o.heightCm = img.heightCm;
+    if (img.driveUrl) o.driveUrl = img.driveUrl;
+    if (img.driveFileId) o.driveFileId = img.driveFileId;
     return o;
   };
   var cleaningData = {};
@@ -3537,7 +3579,7 @@ function applyRecordToForm(rec, editingId) {
       if(data.cleaning[pk]){
         ['before','after'].forEach(function(phase){
           if(data.cleaning[pk][phase]){
-            cleaningImages[pk][phase]=(data.cleaning[pk][phase]||[]).map(function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.offsetX)o.offsetX=img.offsetX;if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;return o;});
+            cleaningImages[pk][phase]=(data.cleaning[pk][phase]||[]).map(function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.offsetX)o.offsetX=img.offsetX;if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;if(img.driveUrl)o.driveUrl=img.driveUrl;if(img.driveFileId)o.driveFileId=img.driveFileId;return o;});
             clRenderPreviews(pk,phase);
           }
         });
@@ -3555,7 +3597,7 @@ function applyRecordToForm(rec, editingId) {
         }
         ['before','after'].forEach(function(phase){
           if(data.cleaningLd[pk][phase]){
-            ldCleaningImages[pk][phase]=(data.cleaningLd[pk][phase]||[]).map(function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.offsetX)o.offsetX=img.offsetX;if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;return o;});
+            ldCleaningImages[pk][phase]=(data.cleaningLd[pk][phase]||[]).map(function(img){var o={name:img.name,dataUrl:img.dataUrl,type:img.type||'image/jpeg',caption:img.caption||''};if(img.offsetX)o.offsetX=img.offsetX;if(img.widthCm)o.widthCm=img.widthCm;if(img.heightCm)o.heightCm=img.heightCm;if(img.driveUrl)o.driveUrl=img.driveUrl;if(img.driveFileId)o.driveFileId=img.driveFileId;return o;});
             ldRenderPreviews(pk+'_'+phase);
           }
         });

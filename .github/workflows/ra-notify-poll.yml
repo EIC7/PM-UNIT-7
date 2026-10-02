@@ -30,7 +30,7 @@ name: RA Status Notify Poll
 # jam seperti sebelum ini dipasang.
 #
 # 🔴 2026-09-11: interval DINAIKKAN dari */5 ke */10 -- percobaan mengurangi
-# beban poller ke kuota Firestore project pomi-checksheet-e7 (RESOURCE_
+# beban poller ke kuota Firestore project database-eic7 (RESOURCE_
 # EXHAUSTED berulang, lihat riwayat commit/CLAUDE.md 2026-09-10 &
 # 2026-09-11). CATATAN JUJUR: poller ini BUKAN konsumen kuota dominan --
 # dari perhitungan (kuota 50.000/hari habis dalam ~20 jam = ~2.500

@@ -13,11 +13,10 @@ window.DCS_CONFIG = {
 
   /* ------------------------------------------------------------------
    * DATA SOURCE — SUPABASE (dipakai untuk HISTORICAL TREND)
-   * Sengaja pakai project + anon key yang SAMA dengan shared.js di repo
-   * ini (project EIC7/PM-UNIT-7, hasil migrasi dari ruvvximnnacpvvoogbzs
-   * per 2026-09-04) supaya trend menampilkan data PM/kalibrasi yang REAL,
-   * bukan dummy. Anon key ini read-only by design (RLS di sisi Supabase),
-   * aman dipakai di client-side.
+   * Sengaja pakai project + anon key yang SAMA dengan repo PM-UNIT-7
+   * (Mahfudjtf/PM-UNIT-7 -> shared.js) supaya trend menampilkan data
+   * PM/kalibrasi yang REAL, bukan dummy. Anon key ini read-only by
+   * design (RLS di sisi Supabase), aman dipakai di client-side.
    * ------------------------------------------------------------------ */
   SUPABASE: {
     URL: 'https://xzjayhjierilqxwucnkn.supabase.co',

@@ -7,7 +7,7 @@
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/jspdf-autotable@3.6.0/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="shared.js?v=20260924b"></script>
+<script src="shared.js?v=20260929b"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
@@ -394,7 +394,7 @@ body{
       </div>
       <div class="meta-field">
         <label>Asset</label>
-        <input type="text" id="dcsAsset" value="7EC-DROP-200 / 7EC-DROP-210~214">
+        <input type="text" id="dcsAsset" value="7EC-DROP-200 / 7EC-DROP-210~214 / CEC-DROP-211">
       </div>
       <div class="meta-field">
         <label>Asset Description</label>
@@ -1807,6 +1807,7 @@ var DCS_DROPS = [
   {id:'drop212', label:'7EC-DROP-212',   desc:'U#7 MCR Operator Work Station 212'},
   {id:'drop213', label:'7EC-DROP-213',   desc:'U#7 MCR Operator Work Station 213'},
   {id:'drop214', label:'7EC-DROP-214',   desc:'U#7 OPR, operation and as EDS server'},
+  {id:'dropcec211', label:'CEC-DROP-211', desc:'COMMON MCR OPERATOR INTERFACE CONSOLE DROP 211'}, // ditambah 2026-09-30 -- SENGAJA paling akhir = kolom paling kanan; id beda dari 'drop211' (7EC-DROP-211)
 ];
 
 var dcsImages = {}; // key: '<dropId>_evidence'/'<dropId>_defect' -> array foto

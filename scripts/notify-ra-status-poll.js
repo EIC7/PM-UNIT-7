@@ -58,11 +58,6 @@ const HEALTH_STATE_FILE = '.health-state.json';
 // tetap ada tapi kembali ke masalah telat berjam-jam di atas). Tanggal di
 // bawah ini HARUS diupdate manual tiap kali token di-regenerate/diperbarui.
 const PAT_EXPIRY_DATE = '2026-12-03'; // token "AUTO REFRESH HISTORY EIC7", scope khusus
-// repo EIC7/PM-UNIT-7, dibuat 2026-09-05 -- KEBETULAN expired di tanggal yang sama
-// dengan PAT punya Mahfudjtf/PM-UNIT-7 (juga 2026-12-03, dibuat 2026-09-04), karena
-// durasi 90 hari dipilih di kedua PAT. Ini 2 PAT TERPISAH (beda repo, beda cron-job.org
-// job) yang cuma kebetulan sama tanggal -- kalau salah satu diperpanjang/diganti nanti,
-// jangan asumsikan yang lain otomatis ikut sinkron.
 const PAT_REMINDER_DAYS = [3, 2, 1]; // cuma alert kalau SISA hari PERSIS salah satu ini
 
 function daysUntil(isoDateStr) {
@@ -107,7 +102,7 @@ async function sendTelegramDirect(text) {
   }
 }
 
-async function checkSupabaseHealth() {
+async function checkSupabaseHealthOnce() {
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 10000) : null;
   try {
@@ -124,6 +119,33 @@ async function checkSupabaseHealth() {
     if (timer) clearTimeout(timer);
     return 'down';
   }
+}
+
+function sleep(ms) {
+  return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+// 2026-09-14: dulu 1x fetch gagal (termasuk timeout/network blip sesaat)
+// langsung disimpulkan "down" dan kirim alert Telegram -- terbukti lewat
+// laporan user: alert "Unhealthy" lalu "sudah kembali normal" dalam
+// hitungan menit, berulang beberapa kali sehari, padahal Supabase-nya
+// sendiri kemungkinan besar TIDAK pernah benar-benar down selama itu --
+// job ini jalan tiap 5 menit dengan timeout cuma 10 detik, jadi SATU KALI
+// SAJA jaringan GitHub Actions runner <-> Supabase lag sesaat/timeout
+// sudah cukup memicu alert palsu. Sekarang retry 3x dengan jeda 5 detik
+// SEBELUM menyimpulkan down -- alert cuma terkirim kalau gagal 3x
+// BERTURUT-TURUT dalam 1 run yang sama, jadi 1 hiccup sesaat (yang
+// biasanya pulih dalam beberapa detik) tidak lagi memicu alert. Kalau
+// memang down beneran, 3x percobaan ini cuma menambah ~10 detik total
+// sebelum alert terkirim -- tidak signifikan dibanding siklus poll 5 menit.
+async function checkSupabaseHealth() {
+  var lastResult = 'down';
+  for (var i = 0; i < 3; i++) {
+    lastResult = await checkSupabaseHealthOnce();
+    if (lastResult === 'ok') return 'ok';
+    if (i < 2) await sleep(5000);
+  }
+  return lastResult;
 }
 
 // State gabungan (health Supabase + reminder PAT expiry) disimpan SATU
@@ -203,7 +225,19 @@ async function fetchRecentApprovals() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error('Gagal query Firestore approvals: ' + res.status + ' ' + (await res.text()));
+  if (!res.ok) {
+    const bodyText = await res.text().catch(function () { return ''; });
+    const err = new Error('Gagal query Firestore approvals: ' + res.status + ' ' + bodyText);
+    // 2026-09-25: 429 RESOURCE_EXHAUSTED (kuota Firestore Spark plan habis
+    // buat hari itu) TERBUKTI bisa terjadi lagi meski limit sudah diturunkan
+    // ke 50 (lihat komentar di atas) -- ditandai flag khusus supaya main()
+    // bisa skip siklus ini dgn tenang (log + return, TIDAK exit(1)) alih-
+    // alih bikin seluruh job GitHub Actions merah tiap 5 menit sampai kuota
+    // reset besok. Kuota Firestore reset harian, jadi ini transient by
+    // design -- treat spt itu, jangan disamakan dgn bug beneran.
+    err.firestoreQuotaExceeded = (res.status === 429);
+    throw err;
+  }
   const rows = await res.json();
 
   const byChecksheetId = {};
@@ -263,10 +297,19 @@ async function main() {
     return;
   }
 
-  const [records, approvalsByChecksheetId] = await Promise.all([
-    fetchRecentRecords(),
-    fetchRecentApprovals()
-  ]);
+  let records, approvalsByChecksheetId;
+  try {
+    [records, approvalsByChecksheetId] = await Promise.all([
+      fetchRecentRecords(),
+      fetchRecentApprovals()
+    ]);
+  } catch (err) {
+    if (err.firestoreQuotaExceeded) {
+      console.warn('Firestore quota (429) habis -- lewati siklus poll ini, akan otomatis coba lagi run berikutnya. Tidak dianggap kegagalan job.');
+      return;
+    }
+    throw err;
+  }
 
   let candidates = 0;
   for (const r of records) {
